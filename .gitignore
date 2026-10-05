@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.tools/
+extracted/
+public/generated/
+.superpowers/
+test-results/
+playwright-report/
+*.log
