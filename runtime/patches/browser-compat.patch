@@ -1,0 +1,299 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b44b96d..3361a4f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -629,8 +629,6 @@ if(PLATFORM STREQUAL "cli" OR PLATFORM STREQUAL "vita" OR PLATFORM STREQUAL "swi
+                 "-sFULL_ES3=1"
+                 "-sALLOW_MEMORY_GROWTH"
+                 "-sINVOKE_RUN=0"
+-                "-sJSPI"
+-                "-sJSPI_EXPORTS=['startRunner', 'parseDataWin', 'mountOpfs']"
+                 # Useful to know when a stack overflow (that is, the WASM stack) happens
+                 "-sSTACK_OVERFLOW_CHECK=2"
+                 # Increases the stack size, needed because for some reason MiniAudio causes a stack overflow in DELTARUNE
+@@ -641,6 +639,12 @@ if(PLATFORM STREQUAL "cli" OR PLATFORM STREQUAL "vita" OR PLATFORM STREQUAL "swi
+                 # "explicitSwapControl" and "renderViaOffscreenBackBuffer", see the web.c file
+                 "-sOFFSCREEN_FRAMEBUFFER=1"
+         )
++        option(BROWSER_PORTABLE "Use Asyncify instead of JSPI for broad browser compatibility" OFF)
++        if(BROWSER_PORTABLE)
++            target_link_options(butterscotch PRIVATE "-sASYNCIFY=1" "-sASYNCIFY_STACK_SIZE=65536")
++        else()
++            target_link_options(butterscotch PRIVATE "-sJSPI" "-sJSPI_EXPORTS=['startRunner', 'parseDataWin', 'mountOpfs']")
++        endif()
+     endif()
+     if(BACKEND STREQUAL "appkit")
+         target_sources(butterscotch PRIVATE src/backends/${BACKEND}.m)
+diff --git a/src/audio/miniaudio/ma_audio_system.c b/src/audio/miniaudio/ma_audio_system.c
+index 295d269..cd70118 100644
+--- a/src/audio/miniaudio/ma_audio_system.c
++++ b/src/audio/miniaudio/ma_audio_system.c
+@@ -33,6 +33,7 @@
+ #endif
+ 
+ #include "ma_audio_system.h"
++#include "browser_audio_spatial.h"
+ #include "data_win.h"
+ #include "utils.h"
+ 
+@@ -348,10 +349,11 @@ static void maSetSoundSpatial(AudioSystem* audio, int32_t instanceId, float x, f
+     SoundInstance* inst = findInstanceById((MaAudioSystem*)audio, instanceId);
+     if (inst == nullptr) return;
+     ma_sound_set_position(&inst->maSound, x, y, z);
+-    ma_sound_set_attenuation_model(&inst->maSound, ma_attenuation_model_inverse);
++    inst->spatialRolloff = factor;
++    ma_sound_set_attenuation_model(&inst->maSound, browserFalloffModel(audio->falloffModel));
+     ma_sound_set_min_distance(&inst->maSound, ref > 0 ? ref : 0.0001f);
+     ma_sound_set_max_distance(&inst->maSound, max > 0 ? max : 0.0001f);
+-    ma_sound_set_rolloff(&inst->maSound, factor);
++    ma_sound_set_rolloff(&inst->maSound, audio->falloffModel == 0 ? 0.0f : factor);
+     ma_sound_set_spatialization_enabled(&inst->maSound, MA_TRUE);
+ }
+ 
+@@ -359,6 +361,21 @@ static void maSetListenerPosition(AudioSystem* audio, float x, float y, float z)
+     ma_engine_listener_set_position(&((MaAudioSystem*)audio)->engine, 0, x, y, z);
+ }
+ 
++static void maSetListenerOrientation(AudioSystem* audio, float fx, float fy, float fz, float ux, float uy, float uz) {
++    ma_engine* engine = &((MaAudioSystem*)audio)->engine;
++    browserListenerOrientation(engine, fx, fy, fz, ux, uy, uz);
++}
++
++static void maSetFalloffModel(AudioSystem* audio, int32_t model) {
++    audio->falloffModel = model;
++    MaAudioSystem* ma = (MaAudioSystem*)audio;
++    repeat(MAX_SOUND_INSTANCES, i) {
++        if (!ma->instances[i].active) continue;
++        ma_sound_set_attenuation_model(&ma->instances[i].maSound, browserFalloffModel(model));
++        ma_sound_set_rolloff(&ma->instances[i].maSound, model == 0 ? 0.0f : ma->instances[i].spatialRolloff);
++    }
++}
++
+ static void maStopSound(AudioSystem* audio, int32_t soundOrInstance) {
+     MaAudioSystem* ma = (MaAudioSystem*) audio;
+ 
+@@ -936,6 +953,8 @@ MaAudioSystem* MaAudioSystem_create(DataWin* dataWin) {
+     maAudioSystemVtable.playSound = maPlaySound;
+     maAudioSystemVtable.setSoundSpatial = maSetSoundSpatial;
+     maAudioSystemVtable.setListenerPosition = maSetListenerPosition;
++    maAudioSystemVtable.setListenerOrientation = maSetListenerOrientation;
++    maAudioSystemVtable.setFalloffModel = maSetFalloffModel;
+     maAudioSystemVtable.stopSound = maStopSound;
+     maAudioSystemVtable.stopAll = maStopAll;
+     maAudioSystemVtable.isPlaying = maIsPlaying;
+diff --git a/src/audio/miniaudio/ma_audio_system.h b/src/audio/miniaudio/ma_audio_system.h
+index ec50f08..224eaa7 100644
+--- a/src/audio/miniaudio/ma_audio_system.h
++++ b/src/audio/miniaudio/ma_audio_system.h
+@@ -26,6 +26,7 @@ typedef struct {
+     float fadeTotalTime;
+     float startGain;
+     int32_t priority;
++    float spatialRolloff;
+ } SoundInstance;
+ 
+ typedef struct {
+diff --git a/src/audio_system.h b/src/audio_system.h
+index 4ec4474..452e0ec 100644
+--- a/src/audio_system.h
++++ b/src/audio_system.h
+@@ -28,6 +28,8 @@ typedef struct {
+     int32_t (*playSound)(AudioSystem* audio, int32_t soundIndex, int32_t priority, bool loop);
+     void (*setSoundSpatial)(AudioSystem* audio, int32_t instanceId, float x, float y, float z, float ref, float max, float factor);
+     void (*setListenerPosition)(AudioSystem* audio, float x, float y, float z);
++    void (*setListenerOrientation)(AudioSystem* audio, float fx, float fy, float fz, float ux, float uy, float uz);
++    void (*setFalloffModel)(AudioSystem* audio, int32_t model);
+     void (*stopSound)(AudioSystem* audio, int32_t soundOrInstance);
+     void (*stopAll)(AudioSystem* audio);
+     bool (*isPlaying)(AudioSystem* audio, int32_t soundOrInstance);
+@@ -63,6 +65,7 @@ struct AudioSystem {
+     DataWin* dw;
+     DataWin** audioGroups;
+     float listenerX, listenerY, listenerZ;
++    int32_t falloffModel;
+     AudioGroupGain* groupGains;
+     uint32_t groupGainCount;
+ };
+diff --git a/src/browser_audio_spatial.h b/src/browser_audio_spatial.h
+new file mode 100644
+index 0000000..a89a04c
+--- /dev/null
++++ b/src/browser_audio_spatial.h
+@@ -0,0 +1,15 @@
++#ifndef UNDERRUNE_BROWSER_AUDIO_SPATIAL_H
++#define UNDERRUNE_BROWSER_AUDIO_SPATIAL_H
++// GameMaker distance-model values: see the pinned official HTML5 runner.
++static inline ma_attenuation_model browserFalloffModel(int32_t model) {
++    switch (model) {
++        case 3: case 4: return ma_attenuation_model_linear;
++        case 5: case 6: return ma_attenuation_model_exponential;
++        default: return ma_attenuation_model_inverse;
++    }
++}
++static inline void browserListenerOrientation(ma_engine* engine, float fx, float fy, float fz, float ux, float uy, float uz) {
++    ma_engine_listener_set_direction(engine, 0, fx, fy, fz);
++    ma_engine_listener_set_world_up(engine, 0, ux, uy, uz);
++}
++#endif
+diff --git a/src/gl/gl_renderer.c b/src/gl/gl_renderer.c
+index b19aece..897ed02 100644
+--- a/src/gl/gl_renderer.c
++++ b/src/gl/gl_renderer.c
+@@ -1072,8 +1072,7 @@ bool GLRenderer_ensureTextureLoaded(GLRenderer* gl, uint32_t pageId) {
+ 
+     free(pixels);
+ 
+-    bool isPOT = (w & (w - 1)) == 0 && (h & (h - 1)) == 0;
+-    GLint wrapMode = isPOT ? GL_REPEAT : GL_CLAMP_TO_EDGE;
++    GLint wrapMode = gl->base.texRepeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+ 
+     GLCommon_applyTexFilter(gl->base.texFilter);
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
+@@ -2359,8 +2358,7 @@ static int32_t glCreateSurface(Renderer* renderer, int32_t width, int32_t height
+     glGenTextures(1, &gl->surfaceTexture[surfaceIndex]);
+     glBindTexture(GL_TEXTURE_2D, gl->surfaceTexture[surfaceIndex]);
+     glTexImage2D(GL_TEXTURE_2D, 0, GLCommon_surfaceInternalFormat(gl), width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+-    bool isPOT = (width & (width - 1)) == 0 && (height & (height - 1)) == 0;
+-    GLint wrapMode = isPOT ? GL_REPEAT : GL_CLAMP_TO_EDGE;
++    GLint wrapMode = renderer->texRepeat ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+ 
+     GLCommon_applyTexFilter(renderer->texFilter);
+     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
+@@ -2900,6 +2898,29 @@ static void glGpuSetTexFilter(Renderer* renderer, bool enable) {
+     GLCommon_setTexFilter(renderer, enable);
+ }
+ 
++static void glGpuSetTexRepeat(Renderer* renderer, bool enable) {
++    if (renderer->texRepeat == enable) return;
++    GLRenderer* gl = (GLRenderer*)renderer;
++    flushBatch(gl);
++    renderer->texRepeat = enable;
++    GLint previousTexture;
++    glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousTexture);
++    GLint mode = enable ? GL_REPEAT : GL_CLAMP_TO_EDGE;
++    repeat(gl->textureCount, i) {
++        if (!gl->textureLoaded[i]) continue;
++        glBindTexture(GL_TEXTURE_2D, gl->glTextures[i]);
++        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mode);
++        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mode);
++    }
++    repeat(gl->surfaceCount, i) {
++        if (!gl->surfaceTexture[i]) continue;
++        glBindTexture(GL_TEXTURE_2D, gl->surfaceTexture[i]);
++        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mode);
++        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mode);
++    }
++    glBindTexture(GL_TEXTURE_2D, (GLuint)previousTexture);
++}
++
+ static bool glGpuGetBlendEnable(Renderer* renderer) {
+     GLRenderer* gl = (GLRenderer*) renderer;
+     return gl->blendEnable;
+@@ -3289,6 +3310,7 @@ Renderer* GLRenderer_create(void) {
+     glVtable.gpuSetBlendModeExt = glGpuSetBlendModeExt;
+     glVtable.gpuSetBlendEnable = glGpuSetBlendEnable;
+     glVtable.gpuSetTexFilter = glGpuSetTexFilter;
++    glVtable.gpuSetTexRepeat = glGpuSetTexRepeat;
+     glVtable.gpuSetAlphaTestEnable = glGpuSetAlphaTestEnable;
+     glVtable.gpuGetAlphaTestEnable = glGpuGetAlphaTestEnable;
+     glVtable.gpuSetAlphaTestRef = glGpuSetAlphaTestRef;
+diff --git a/src/renderer.h b/src/renderer.h
+index 2dbc8b3..2c9de15 100644
+--- a/src/renderer.h
++++ b/src/renderer.h
+@@ -176,6 +176,7 @@ typedef struct {
+     void (*gpuSetBlendModeExt)(Renderer* renderer, int32_t sfactor, int32_t dfactor, int32_t sfactor_alpha, int32_t dfactor_alpha);
+     void (*gpuSetBlendEnable)(Renderer* renderer, bool enable);
+     void (*gpuSetTexFilter)(Renderer* renderer, bool enable);
++    void (*gpuSetTexRepeat)(Renderer* renderer, bool enable);
+     void (*gpuSetAlphaTestEnable)(Renderer* renderer, bool enable);
+     bool (*gpuGetAlphaTestEnable)(Renderer* renderer);
+     void (*gpuSetAlphaTestRef)(Renderer* renderer, uint8_t ref);
+@@ -259,6 +260,7 @@ struct Renderer {
+     Matrix4f gmlMatrices[MATRICES_MAX];
+     int32_t currentShader;
+     bool texFilter;
++    bool texRepeat;
+     BlendFactors blendFactors;
+     int32_t cameraCurrent;
+ };
+diff --git a/src/vm_builtins.c b/src/vm_builtins.c
+index 3d33803..c7bc703 100644
+--- a/src/vm_builtins.c
++++ b/src/vm_builtins.c
+@@ -7704,6 +7704,41 @@ static RValue builtin_audio_listener_position(VMContext* ctx, RValue* args, int3
+     return RValue_makeUndefined();
+ }
+ 
++static RValue builtin_audio_listener_orientation(VMContext* ctx, RValue* args, int32_t argCount) {
++    REQUIRE_ARGC_AT_LEAST("audio_listener_orientation", 6, RValue_makeUndefined());
++    AudioSystem* audio = ctx->runner->audioSystem;
++    if (audio == nullptr) return RValue_makeUndefined();
++    requireMessageFormatted(__FILE__, __LINE__, audio->vtable->setListenerOrientation != nullptr, "Backend lacks listener orientation\n");
++    audio->vtable->setListenerOrientation(audio, (float)RValue_toReal(args[0]), (float)RValue_toReal(args[1]), (float)RValue_toReal(args[2]),
++                                        (float)RValue_toReal(args[3]), (float)RValue_toReal(args[4]), (float)RValue_toReal(args[5]));
++    return RValue_makeUndefined();
++}
++
++static RValue builtin_audio_falloff_set_model(VMContext* ctx, RValue* args, int32_t argCount) {
++    REQUIRE_ARGC_AT_LEAST("audio_falloff_set_model", 1, RValue_makeUndefined());
++    AudioSystem* audio = ctx->runner->audioSystem;
++    if (audio == nullptr) return RValue_makeUndefined();
++    int32_t model = RValue_toInt32(args[0]);
++    requireMessageFormatted(__FILE__, __LINE__, model >= 0 && model <= 6, "Unsupported distance model %d\n", model);
++    requireMessageFormatted(__FILE__, __LINE__, audio->vtable->setFalloffModel != nullptr, "Backend lacks falloff model\n");
++    audio->vtable->setFalloffModel(audio, model);
++    return RValue_makeUndefined();
++}
++
++static RValue builtin_audio_play_sound_at(VMContext* ctx, RValue* args, int32_t argCount) {
++    REQUIRE_ARGC_AT_LEAST("audio_play_sound_at", 9, RValue_makeReal(-1));
++    AudioSystem* audio = ctx->runner->audioSystem;
++    if (audio == nullptr || args[0].type == RVALUE_UNDEFINED) return RValue_makeReal(-1);
++    int32_t voice = audio->vtable->playSound(audio, RValue_toInt32(args[0]), RValue_toInt32(args[8]), RValue_toBool(args[7]));
++    if (voice < 0) return RValue_makeReal(-1);
++    audio->vtable->setSoundSpatial(audio, voice, (float)RValue_toReal(args[1]), (float)RValue_toReal(args[2]), (float)RValue_toReal(args[3]),
++                                 (float)RValue_toReal(args[4]), (float)RValue_toReal(args[5]), (float)RValue_toReal(args[6]));
++    if (argCount > 9 && args[9].type != RVALUE_UNDEFINED) audio->vtable->setSoundGain(audio, voice, audio->vtable->getSoundGain(audio, voice) * (float)GMLReal_fmax(0, RValue_toReal(args[9])), 0);
++    if (argCount > 10 && args[10].type != RVALUE_UNDEFINED) audio->vtable->setTrackPosition(audio, voice, (float)GMLReal_fmax(0, RValue_toReal(args[10])));
++    if (argCount > 11 && args[11].type != RVALUE_UNDEFINED) audio->vtable->setSoundPitch(audio, voice, audio->vtable->getSoundPitch(audio, voice) * (float)GMLReal_fmax((GMLReal)FLT_MIN, RValue_toReal(args[11])));
++    return RValue_makeReal((GMLReal)voice);
++}
++
+ static RValue builtin_audio_emitter_exists(VMContext* ctx, RValue* args, int32_t argCount) {
+     REQUIRE_ARGC_AT_LEAST("audio_emitter_exists", 1, RValue_makeBool(false));
+     if (args[0].type == RVALUE_UNDEFINED) return RValue_makeBool(false);
+@@ -19390,6 +19425,14 @@ static RValue builtin_gpu_set_texfilter(VMContext* ctx, RValue* args, int32_t ar
+     return RValue_makeUndefined();
+ }
+ 
++static RValue builtin_gpu_set_texrepeat(VMContext* ctx, RValue* args, int32_t argCount) {
++    REQUIRE_ARGC_AT_LEAST("gpu_set_tex_repeat", 1, RValue_makeUndefined());
++    Renderer* renderer = ctx->runner->renderer;
++    requireMessageFormatted(__FILE__, __LINE__, renderer->vtable->gpuSetTexRepeat != nullptr, "Backend lacks texture repetition\n");
++    renderer->vtable->gpuSetTexRepeat(renderer, RValue_toBool(args[0]));
++    return RValue_makeUndefined();
++}
++
+ static RValue builtin_gpu_get_texfilter(VMContext* ctx, MAYBE_UNUSED RValue* args, MAYBE_UNUSED int32_t argCount) {
+     return RValue_makeReal(ctx->runner->renderer->texFilter ? 1.0 : 0.0);
+ }
+@@ -23455,6 +23498,9 @@ void VMBuiltins_registerAll(VMContext* ctx) {
+     VM_registerBuiltin(ctx, "audio_emitter_falloff", builtin_audio_emitter_falloff);
+     VM_registerBuiltin(ctx, "audio_emitter_position", builtin_audio_emitter_position);
+     VM_registerBuiltin(ctx, "audio_listener_position", builtin_audio_listener_position);
++    VM_registerBuiltin(ctx, "audio_listener_orientation", builtin_audio_listener_orientation);
++    VM_registerBuiltin(ctx, "audio_falloff_set_model", builtin_audio_falloff_set_model);
++    VM_registerBuiltin(ctx, "audio_play_sound_at", builtin_audio_play_sound_at);
+     VM_registerBuiltin(ctx, "audio_play_sound_on", builtin_audio_play_sound_on);
+     VM_registerBuiltin(ctx, "audio_emitter_exists", builtin_audio_emitter_exists);
+     VM_registerBuiltin(ctx, "audio_emitter_free", builtin_audio_emitter_free);
+@@ -24360,6 +24406,8 @@ void VMBuiltins_registerAll(VMContext* ctx) {
+     VM_registerBuiltin(ctx,"gpu_get_blendenable", builtin_gpu_get_blendenable);
+     VM_registerBuiltin(ctx,"gpu_set_texfilter", builtin_gpu_set_texfilter);
+     VM_registerBuiltin(ctx,"gpu_set_tex_filter", builtin_gpu_set_texfilter);
++    VM_registerBuiltin(ctx,"gpu_set_tex_repeat", builtin_gpu_set_texrepeat);
++    VM_registerBuiltin(ctx,"gpu_set_texrepeat", builtin_gpu_set_texrepeat);
+     VM_registerBuiltin(ctx,"gpu_get_texfilter", builtin_gpu_get_texfilter);
+     VM_registerBuiltin(ctx,"gpu_set_alphatestenable", builtin_gpu_set_alphatestenable);
+     VM_registerBuiltin(ctx,"gpu_get_alphatestenable", builtin_gpu_get_alphatestenable);

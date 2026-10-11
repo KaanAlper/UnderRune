@@ -1,0 +1,33 @@
+audio_falloff_set_model(audio_falloff_linear_distance);
+audio_listener_position(0, 0, 0);
+audio_listener_orientation(0, 0, 1000, 0, -1, 0);
+var voice = audio_play_sound_at(snd_impact, -150, 0, 0, 100, 300, 1, false, 1);
+if (is_undefined(voice) || !is_real(voice) || voice < 0) show_debug_message("API_FAIL spatial voice");
+else show_debug_message("API_PASS spatial voice");
+var tex = surface_create(8, 8);
+surface_set_target(tex);
+draw_clear_alpha(c_green, 1);
+draw_set_colour(c_red);
+draw_rectangle(0, 0, 3, 8, false);
+surface_reset_target();
+var target = surface_create(16, 8);
+for (var mode = 0; mode < 2; mode++) {
+    surface_set_target(target);
+    draw_clear_alpha(c_black, 1);
+    gpu_set_tex_repeat(mode == 1);
+    draw_primitive_begin_texture(pr_trianglestrip, surface_get_texture(tex));
+    draw_vertex_texture_colour(0, 0, 0, 0, c_white, 1);
+    draw_vertex_texture_colour(16, 0, 2, 0, c_white, 1);
+    draw_vertex_texture_colour(0, 8, 0, 1, c_white, 1);
+    draw_vertex_texture_colour(16, 8, 2, 1, c_white, 1);
+    draw_primitive_end();
+    surface_reset_target();
+    var pixel = surface_getpixel(target, 9, 4);
+    var expected = mode == 1 ? c_red : c_green;
+    show_debug_message("API_PIXEL mode=" + string(mode) + " value=" + string(pixel) + " expected=" + string(expected));
+    if (pixel != expected) show_debug_message("API_FAIL texture mode " + string(mode));
+    else show_debug_message("API_PASS texture mode " + string(mode));
+}
+gpu_set_tex_repeat(false);
+surface_free(tex);
+surface_free(target);

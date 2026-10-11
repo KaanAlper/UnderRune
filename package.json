@@ -1,24 +1,41 @@
 {
- "name": "shadowcrystal-local",
- "version": "0.1.0",
- "private": true,
- "type": "module",
- "scripts": {
-  "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
-  "build": "tsc --noEmit && vite build",
-  "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
-  "test:tools": "node --test tests/*.test.mjs",
-  "test": "vitest run",
-  "typecheck": "tsc --noEmit",
-  "extract": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/extract.ps1",
-  "inventory": "node tools/catalog.mjs",
-  "coverage:bosses": "node tools/check-coverage.mjs"
- },
- "devDependencies": {
-  "@playwright/test": "1.63.0",
-  "@types/node": "26.6.4",
-  "typescript": "7.0.2",
-  "vite": "8.3.2",
-  "vitest": "5.0.3"
- }
+  "name": "underrune",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
+    "test:tools": "node --test tests/*.test.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "extract": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/extract.ps1",
+    "inventory": "node tools/catalog.mjs",
+    "coverage:bosses": "node tools/check-coverage.mjs",
+    "assets": "node tools/build-assets.mjs",
+    "prepare:game": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/prepare-game.ps1",
+    "test:e2e": "playwright test",
+    "audit:source": "node tools/audit-source.mjs",
+    "audit:gml": "node tools/audit-gml.mjs",
+    "audit:parity": "node tools/audit-parity.mjs",
+    "audit:bytecode": "node tools/audit-bytecode-probe.mjs",
+    "audit:runtime": "node tools/audit-runtime-blockers.mjs",
+    "bytecode:probe": "node tools/probe-bytecode.mjs",
+    "bytecode:diagnostic": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-bytecode-diagnostic.ps1",
+    "runtime:build": "node tools/build-official-runtime.mjs",
+    "runtime:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup-runtime.ps1",
+    "bytecode:browser": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-bytecode-browser.ps1",
+    "bytecode:portable": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-bytecode-browser.ps1 -Portable",
+    "test:bytecode": "node tools/test-bytecode-browser.mjs",
+    "test:bytecode-audio": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-bytecode-audio.ps1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "26.6.4",
+    "sharp": "0.35.5",
+    "typescript": "7.0.2",
+    "vite": "8.3.2",
+    "vitest": "5.0.3"
+  }
 }

@@ -1,0 +1,57 @@
+{
+  "package": {
+    "id": "chapter3_windows",
+    "relativePath": "chapter3_windows/data.win",
+    "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+    "bytes": 126284402,
+    "unchanged": true
+  },
+  "fps": 30,
+  "scripts": [
+    {
+      "name": "gml_Object_obj_knight_stream_Create_0",
+      "sha256": "0df811f57e8633ac2de434829845509919e87d47337228af2f1db7a150edb11a"
+    },
+    {
+      "name": "gml_Object_obj_knight_stream_Step_0",
+      "sha256": "cd9ca540f179ae94dd621ccf9084f464024de0e25b69423a34458a52e14d23d9"
+    },
+    {
+      "name": "gml_Object_obj_bullet_knight_stream_Create_0",
+      "sha256": "aff10c944f10216341cc27181bcaf6657fa8fe34f0108b301693dafb9b44248b"
+    },
+    {
+      "name": "gml_Object_obj_bullet_knight_stream_Step_0",
+      "sha256": "b882f9b268b2893b0facfc20b058596c51c270894d3158421ee04e43d9e6ae21"
+    },
+    {
+      "name": "gml_Object_obj_knight_stream_Draw_0",
+      "sha256": "a5211e1f22aa16d70b7d15b02693bcf21ea56c0f5bdb62015a6f34368276012c"
+    },
+    {
+      "name": "gml_Object_obj_knight_streamline_Step_0",
+      "sha256": "bfc0f09ecf0533009e49c4ae6f92be962d3e911685f575e677aba981624517cb"
+    }
+  ],
+  "stream": {
+    "spawnFrames": [
+      20,
+      23,
+      26,
+      29
+    ],
+    "period": 45,
+    "angleBase": 90,
+    "angleRange": 45,
+    "offsetStep": 60,
+    "speed": 15,
+    "lifetime": 50,
+    "hitStart": 15,
+    "hitPeriod": 8,
+    "hitEnd": 40,
+    "lineLength": 400,
+    "lineGrowth": 60,
+    "warningLifetime": 12
+  },
+  "scope": "Source-derived stream controller timing, offsets, velocities and beam rendering. Arena, damage resolution, encounter phase selection and total turn duration remain adapted."
+}

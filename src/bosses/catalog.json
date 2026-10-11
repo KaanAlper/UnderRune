@@ -1,0 +1,2387 @@
+[
+  {
+    "id": "ch1-2",
+    "name": "Lancer",
+    "chapter": 1,
+    "encounter": 2,
+    "variant": "2",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter1_windows",
+        "sha256": "82c2bb61b8d78cd287120f6301588fecba34ec5a890bac711b7a8774c760ec70",
+        "encounter": 2,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_lancerboss",
+        "type": 2,
+        "name": "Lancer",
+        "hp": 540,
+        "at": 5,
+        "df": 1,
+        "acts": [
+          "Check",
+          "Warning",
+          "Compliment"
+        ],
+        "sourceBlockHash": "8ccddb10d8d1ad6a7e1852f219d194034e47b44adfac5c72ed8246438b0efa5f",
+        "sprite": "spr_lancerbike"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch1-8",
+    "name": "Clover",
+    "chapter": 1,
+    "encounter": 8,
+    "variant": "8",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter1_windows",
+        "sha256": "82c2bb61b8d78cd287120f6301588fecba34ec5a890bac711b7a8774c760ec70",
+        "encounter": 8,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 8,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 8,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 8,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_clubsenemy",
+        "type": 16,
+        "name": "Clover",
+        "hp": 270,
+        "at": 6,
+        "df": 1,
+        "acts": [
+          "Check",
+          "TalkBday",
+          "TalkBoys",
+          "TalkSports",
+          "TalkAnimals",
+          "TalkTrees"
+        ],
+        "sourceBlockHash": "348dc71a7e3a30602fc14fb927366512bca1b0b3d7aec0574369f80fd7d3befa",
+        "sprite": "spr_clubs_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch1-12",
+    "name": "K.Round",
+    "chapter": 1,
+    "encounter": 12,
+    "variant": "12",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter1_windows",
+        "sha256": "82c2bb61b8d78cd287120f6301588fecba34ec5a890bac711b7a8774c760ec70",
+        "encounter": 12,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 12,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 12,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 12,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_checkers_enemy",
+        "type": 10,
+        "name": "K.Round",
+        "hp": 1300,
+        "at": 7.5,
+        "df": 3,
+        "acts": [
+          "Check",
+          "Bow",
+          "Deep Bow",
+          "Warning"
+        ],
+        "sourceBlockHash": "9f87735af7d697ef0df6c7332f5c5c2a4b21b0fabc0f729e4d63fec44a0986dd",
+        "sprite": "spr_checkers_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch1-15",
+    "name": "Clover & Hathy",
+    "chapter": 1,
+    "encounter": 15,
+    "variant": "15",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter1_windows",
+        "sha256": "82c2bb61b8d78cd287120f6301588fecba34ec5a890bac711b7a8774c760ec70",
+        "encounter": 15,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_clubsenemy",
+        "type": 7,
+        "name": "Clover",
+        "hp": 270,
+        "at": 8,
+        "df": 1,
+        "acts": [
+          "Check",
+          "Politics",
+          "Religion",
+          "Sports",
+          "Kindness",
+          "Cuteboys",
+          "GunControl",
+          "Trees",
+          "Ghosts",
+          "Games",
+          "Warning"
+        ],
+        "sourceBlockHash": "28cf1e180a8ed37f3a558e73dd26a9b6e909c99fc5b1dd0b61bf61d69ec56fc4",
+        "sprite": "spr_clubs_idle"
+      },
+      {
+        "slot": 1,
+        "object": "obj_heartenemy",
+        "type": 6,
+        "name": "Hathy",
+        "hp": 150,
+        "at": 6,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Flatter",
+          "X-Flatter",
+          "Warning",
+          "S-Flatter"
+        ],
+        "sourceBlockHash": "9e375f023d783f5a57bfe0f1541a95ab3e7032e31da50cee36efb080a12d366c",
+        "sprite": "spr_heartenemy_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch1-20",
+    "name": "Lancer",
+    "chapter": 1,
+    "encounter": 20,
+    "variant": "20",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter1_windows",
+        "sha256": "82c2bb61b8d78cd287120f6301588fecba34ec5a890bac711b7a8774c760ec70",
+        "encounter": 20,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_lancerboss2",
+        "type": 12,
+        "name": "Lancer",
+        "hp": 2400,
+        "at": 4,
+        "df": 0,
+        "acts": [
+          "Check"
+        ],
+        "sourceBlockHash": "35611c367dd0ac2837eaf4427192f07ae6aa54b28084b87af07830fc54f64dbf",
+        "sprite": "spr_lancer_battle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch1-25",
+    "name": "JEVIL",
+    "chapter": 1,
+    "encounter": 25,
+    "variant": "25",
+    "kind": "secret",
+    "sources": [
+      {
+        "packageId": "chapter1_windows",
+        "sha256": "82c2bb61b8d78cd287120f6301588fecba34ec5a890bac711b7a8774c760ec70",
+        "encounter": 25,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_joker",
+        "type": 20,
+        "name": "JEVIL",
+        "hp": 3500,
+        "at": 10,
+        "df": 5,
+        "acts": [
+          "Check",
+          "Pirouette",
+          "Hypnosis"
+        ],
+        "sourceBlockHash": "e22aab518a02ee3459a9c0946fd3baae2f4871fba8895ebc75d43b8562f1a788",
+        "sprite": "spr_joker_main"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch1-27",
+    "name": "K.Round",
+    "chapter": 1,
+    "encounter": 27,
+    "variant": "27",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter1_windows",
+        "sha256": "82c2bb61b8d78cd287120f6301588fecba34ec5a890bac711b7a8774c760ec70",
+        "encounter": 27,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 27,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 27,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 27,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_checkers_enemy",
+        "type": 21,
+        "name": "K.Round",
+        "hp": 1300,
+        "at": 8,
+        "df": 3,
+        "acts": [
+          "Check",
+          "Checkers",
+          "Bow",
+          "Susie's Idea"
+        ],
+        "sourceBlockHash": "f553b2fc3f09eb09d0530cac8fa14cb3ad9ef4b5843ba59ed740d586f90bf25c",
+        "sprite": "spr_checkers_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch1-31",
+    "name": "Susie & Lancer",
+    "chapter": 1,
+    "encounter": 31,
+    "variant": "31",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter1_windows",
+        "sha256": "82c2bb61b8d78cd287120f6301588fecba34ec5a890bac711b7a8774c760ec70",
+        "encounter": 31,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_susieenemy",
+        "type": 19,
+        "name": "Susie",
+        "hp": 120,
+        "at": 7,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Anything",
+          "Sing"
+        ],
+        "sourceBlockHash": "6351b4d7dffdbda8d98a8c524da8b791c8ad80ce041ec4d2a1d6e584158913e1",
+        "sprite": "spr_susie_enemy"
+      },
+      {
+        "slot": 1,
+        "object": "obj_lancerboss3",
+        "type": 18,
+        "name": "Lancer",
+        "hp": 800,
+        "at": 6,
+        "df": 1,
+        "acts": [
+          "Check",
+          "Anything",
+          "X-Anything"
+        ],
+        "sourceBlockHash": "a2c3f2d9d5b100c2f9981dde425a67192a48b78db27677b69417dcb14e687fb4",
+        "sprite": "spr_lancerbike"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch1-40",
+    "name": "King",
+    "chapter": 1,
+    "encounter": 40,
+    "variant": "40",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter1_windows",
+        "sha256": "82c2bb61b8d78cd287120f6301588fecba34ec5a890bac711b7a8774c760ec70",
+        "encounter": 40,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_king_boss",
+        "type": 25,
+        "name": "King",
+        "hp": 2800,
+        "at": 8,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Talk",
+          "Courage",
+          "RedBuster",
+          "DualHeal"
+        ],
+        "sourceBlockHash": "5d344153835d3628a294387cbcd28e11e3dd53b0e3d8b31ca4fa0ce0368bb7ca",
+        "sprite": "spr_chainking_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-57",
+    "name": "Tasque & Tasque Manager",
+    "chapter": 2,
+    "encounter": 57,
+    "variant": "57",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 57,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_tasque_enemy",
+        "type": 32,
+        "name": "Tasque",
+        "hp": 240,
+        "at": 8,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Petting",
+          "Roar",
+          "SoftVoice",
+          "PettingX"
+        ],
+        "sourceBlockHash": "a66cafbe60fa6f468d11f46a71337a15033bdce5cbce7af25c6e838896bc2c96",
+        "sprite": "spr_tasque_idle"
+      },
+      {
+        "slot": 1,
+        "object": "obj_tasque_manager_enemy",
+        "type": 42,
+        "name": "Tasque Manager",
+        "hp": 1367,
+        "at": 10,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Order",
+          "OrderX"
+        ],
+        "sourceBlockHash": "d29120e6a319f5ccb0909357bb94727c2f205760205dd18901812203db498776",
+        "sprite": "spr_npc_tasquemanager"
+      },
+      {
+        "slot": 2,
+        "object": "obj_tasque_enemy",
+        "type": 32,
+        "name": "Tasque",
+        "hp": 240,
+        "at": 8,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Petting",
+          "Roar",
+          "SoftVoice",
+          "PettingX"
+        ],
+        "sourceBlockHash": "a66cafbe60fa6f468d11f46a71337a15033bdce5cbce7af25c6e838896bc2c96",
+        "sprite": "spr_tasque_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-58",
+    "name": "Berdly",
+    "chapter": 2,
+    "encounter": 58,
+    "variant": "58",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 58,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_berdlyb_enemy",
+        "type": 43,
+        "name": "Berdly",
+        "hp": 1985,
+        "at": 10,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Bump",
+          "BumpX"
+        ],
+        "sourceBlockHash": "186e75925d020a8da993abf010711c3fcce94e6d34f9d32f5fdb1e2c3f3980a2",
+        "sprite": "spr_berdlyb_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-59",
+    "name": "Queen",
+    "chapter": 2,
+    "encounter": 59,
+    "variant": "59",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 59,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_queen_enemy",
+        "type": 48,
+        "name": "Queen",
+        "hp": 1510,
+        "at": 10,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Loosen",
+          "GroupLoosen",
+          "Throw",
+          "RedBuster",
+          "DualHeal"
+        ],
+        "sourceBlockHash": "2da03af0ef03c9deab6820fa4ba97f26d9d21ac045aafbd812dd5fb0e684471f",
+        "sprite": "spr_queen_chair_1_old"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-60",
+    "name": "Spamton",
+    "chapter": 2,
+    "encounter": 60,
+    "variant": "60",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 60,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_spamton_enemy",
+        "type": 49,
+        "name": "Spamton",
+        "hp": 600,
+        "at": 8,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Deal",
+          "HealDeal"
+        ],
+        "sourceBlockHash": "c28d85cf4c5851e67b08382527dc1a97e309f1c6f8c9b653b0058d8cf11dce57",
+        "sprite": "spr_spamton_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-61",
+    "name": "Spamton NEO",
+    "chapter": 2,
+    "encounter": 61,
+    "variant": "61",
+    "kind": "secret",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 61,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_spamton_neo_enemy",
+        "type": 50,
+        "name": "Spamton NEO",
+        "hp": 4809,
+        "at": 13,
+        "df": 0,
+        "acts": [
+          "Check",
+          "X-Slash",
+          "FriedPipis",
+          "Snap",
+          "SnapAll"
+        ],
+        "sourceBlockHash": "127c252d68ad7f09929e6b7ca6661d6eab40c8fb3aca3ca4951821056edd54c8",
+        "sprite": "spr_sneo_example"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-62",
+    "name": "Sweet & K_K & Cap'n",
+    "chapter": 2,
+    "encounter": 62,
+    "variant": "62",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 62,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_sweet_enemy",
+        "type": 39,
+        "name": "Sweet",
+        "hp": 120,
+        "at": 8,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Dance",
+          "Dance X"
+        ],
+        "sourceBlockHash": "8c4fabfb75845c988a1adf875b78f2329cb5b03443980164bca75f5ccf242827",
+        "sprite": "spr_sweet_idle"
+      },
+      {
+        "slot": 1,
+        "object": "obj_kk_enemy",
+        "type": 38,
+        "name": "K_K",
+        "hp": 120,
+        "at": 8,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Dance",
+          "Dance X"
+        ],
+        "sourceBlockHash": "16344c6b14a6b1e26319ff90450340bbec79e4c3b58aff3624cec970c6aae7a1",
+        "sprite": "spr_kk_button_press"
+      },
+      {
+        "slot": 2,
+        "object": "obj_hatguy_enemy",
+        "type": 37,
+        "name": "Cap'n",
+        "hp": 120,
+        "at": 8,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Dance",
+          "Dance X"
+        ],
+        "sourceBlockHash": "828e875e517b2ec5677ac446ce0ac82111c618bcaa19646a9a8d3cf5c029727c",
+        "sprite": "spr_hatguy_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-63",
+    "name": "Rouxls",
+    "chapter": 2,
+    "encounter": 63,
+    "variant": "63",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 63,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_rouxls_enemy",
+        "type": 45,
+        "name": "Rouxls",
+        "hp": 600,
+        "at": 9,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Take House",
+          "Take House 2",
+          "Take House 3",
+          "Take House 4"
+        ],
+        "sourceBlockHash": "168fd1f5d04335d80980566a9c95f4d87eb4594b5f3396551f820bc8e6959c2b",
+        "sprite": "spr_rurus_pirate"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-65",
+    "name": "Werewerewire",
+    "chapter": 2,
+    "encounter": 65,
+    "variant": "65",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 65,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_werewerewire_enemy",
+        "type": 40,
+        "name": "Werewerewire",
+        "hp": 1753,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "BeCold",
+          "BeTough",
+          "BeSweet"
+        ],
+        "sourceBlockHash": "82ed32084a24db7c42e8e99acd91f2f1cd2ff0ae5af5d1653562ff22f54c0dc1",
+        "sprite": "spr_werewerewire_idle"
+      },
+      {
+        "slot": 1,
+        "object": "obj_werewerewire_enemy",
+        "type": 40,
+        "name": "Werewerewire",
+        "hp": 1753,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "BeCold",
+          "BeTough",
+          "BeSweet"
+        ],
+        "sourceBlockHash": "82ed32084a24db7c42e8e99acd91f2f1cd2ff0ae5af5d1653562ff22f54c0dc1",
+        "sprite": "spr_werewerewire_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-71",
+    "name": "Clover",
+    "chapter": 2,
+    "encounter": 71,
+    "variant": "71",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 71,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 71,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 71,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_clubsenemy",
+        "type": 47,
+        "name": "Clover",
+        "hp": 1500,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Topic",
+          "Topic(Long)"
+        ],
+        "sourceBlockHash": "22ed1cc662433e6828824f739c2b40ff1a5018b9ded721ddc18aade9b325e6a7",
+        "sprite": "spr_clubs_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-81",
+    "name": "Werewerewire",
+    "chapter": 2,
+    "encounter": 81,
+    "variant": "81",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 81,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_werewerewire_enemy",
+        "type": 40,
+        "name": "Werewerewire",
+        "hp": 1753,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "BeCold",
+          "BeTough",
+          "BeSweet"
+        ],
+        "sourceBlockHash": "82ed32084a24db7c42e8e99acd91f2f1cd2ff0ae5af5d1653562ff22f54c0dc1",
+        "sprite": "spr_werewerewire_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-82",
+    "name": "Berdly",
+    "chapter": 2,
+    "encounter": 82,
+    "variant": "82",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 82,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_berdlyb2_enemy",
+        "type": 46,
+        "name": "Berdly",
+        "hp": 900,
+        "at": 9,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Glare",
+          "Wake"
+        ],
+        "sourceBlockHash": "16acdb6ba24349ffcc9994e23f83842cbfeb14add9e262211879fa07de09cce2",
+        "sprite": "spr_berdlyb_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-83",
+    "name": "Mauswheel",
+    "chapter": 2,
+    "encounter": 83,
+    "variant": "83",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 83,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_mauswheel_enemy",
+        "type": 44,
+        "name": "Mauswheel",
+        "hp": 1753,
+        "at": 10,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Catch",
+          "CatchX"
+        ],
+        "sourceBlockHash": "e63a74f6c001ff139ec16e519d64d05b2be0e4931c8050d581844e529be1f61f",
+        "sprite": "spr_nothing"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-84",
+    "name": "GIGA Queen",
+    "chapter": 2,
+    "encounter": 84,
+    "variant": "84",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 84,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_gigaqueen_enemy",
+        "type": 51,
+        "name": "GIGA Queen",
+        "hp": 4500,
+        "at": 7.5,
+        "df": 0,
+        "acts": [
+          "FireMode",
+          "SwordMode",
+          "LaserMode",
+          "DuckMode",
+          "TurboDodge",
+          "SELF-FIX"
+        ],
+        "sourceBlockHash": "6b55080f65a32068da0287ee690a6e7eeacfeff9affe1d9ce95ff020f1acf272",
+        "sprite": "spr_cutscene_27_queen_giga_surprise"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-89",
+    "name": "Tasque Manager",
+    "chapter": 2,
+    "encounter": 89,
+    "variant": "89",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 89,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 89,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      },
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 89,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_tasque_manager_enemy",
+        "type": 42,
+        "name": "Tasque Manager",
+        "hp": 1367,
+        "at": 10,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Order",
+          "OrderX"
+        ],
+        "sourceBlockHash": "d29120e6a319f5ccb0909357bb94727c2f205760205dd18901812203db498776",
+        "sprite": "spr_npc_tasquemanager"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch2-94",
+    "name": "Werewerewire",
+    "chapter": 2,
+    "encounter": 94,
+    "variant": "94",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter2_windows",
+        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
+        "encounter": 94,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_werewerewire_enemy",
+        "type": 40,
+        "name": "Werewerewire",
+        "hp": 1753,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "BeCold",
+          "BeTough",
+          "BeSweet"
+        ],
+        "sourceBlockHash": "82ed32084a24db7c42e8e99acd91f2f1cd2ff0ae5af5d1653562ff22f54c0dc1",
+        "sprite": "spr_werewerewire_idle"
+      },
+      {
+        "slot": 1,
+        "object": "obj_werewerewire_enemy",
+        "type": 40,
+        "name": "Werewerewire",
+        "hp": 1753,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "BeCold",
+          "BeTough",
+          "BeSweet"
+        ],
+        "sourceBlockHash": "82ed32084a24db7c42e8e99acd91f2f1cd2ff0ae5af5d1653562ff22f54c0dc1",
+        "sprite": "spr_werewerewire_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch3-113",
+    "name": "Lanino & Elnina",
+    "chapter": 3,
+    "encounter": 113,
+    "variant": "113",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 113,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_lanino_enemy",
+        "type": 61,
+        "name": "Lanino",
+        "hp": 8880,
+        "at": 12,
+        "df": 0,
+        "acts": [
+          "Check",
+          "ILoveTV",
+          "ILoveTVX"
+        ],
+        "sourceBlockHash": "63993233b87cfaf2a85d19af31c4bba2f7fd8f56257f9f6e36d7bb8c66faf55e",
+        "sprite": "spr_battle_laninomarker"
+      },
+      {
+        "slot": 1,
+        "object": "obj_elnina_enemy",
+        "type": 60,
+        "name": "Elnina",
+        "hp": 8880,
+        "at": 12,
+        "df": 0,
+        "acts": [
+          "Check",
+          "ILoveTV",
+          "ILoveTVX"
+        ],
+        "sourceBlockHash": "83483ce8a808341a8735924a0603598415cfac650eb0e61e442794b5c0e0db4c",
+        "sprite": "spr_battle_elninamarker"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch3-114",
+    "name": "Rouxls",
+    "chapter": 3,
+    "encounter": 114,
+    "variant": "114",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 114,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_rouxls_ch3_enemy",
+        "type": 102,
+        "name": "Rouxls",
+        "hp": 1,
+        "at": 10,
+        "df": 0,
+        "acts": [
+          "Acting"
+        ],
+        "sourceBlockHash": "7dd456b923d9972c5d83b527ffc4e475b6984f5bc1dd83b4634857161f629f21",
+        "sprite": "spr_rouxls_chef"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch3-115",
+    "name": "Roaring Knight",
+    "chapter": 3,
+    "encounter": 115,
+    "variant": "115",
+    "kind": "secret",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 115,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_knight_enemy",
+        "type": 104,
+        "name": "Roaring Knight",
+        "hp": 7300,
+        "at": 40,
+        "df": 0,
+        "acts": [
+          "Check",
+          "HoldBreath"
+        ],
+        "sourceBlockHash": "6b54cf8a67348b4c1052c93ec766386085925648f6ac493cee0d49fa65ddffee",
+        "sprite": "spr_roaringknight_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch3-121",
+    "name": "Tenna",
+    "chapter": 3,
+    "encounter": 121,
+    "variant": "121",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 121,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_tenna_enemy",
+        "type": 103,
+        "name": "Tenna",
+        "hp": 5500,
+        "at": 13,
+        "df": 0,
+        "acts": [
+          "Check",
+          "ILoveTV"
+        ],
+        "sourceBlockHash": "864a3a7c2fbbef544639f7405c36b1a3c2b0a09b985babff42bbb02dff1abc34",
+        "sprite": "spr_tenna_pose_podium"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch3-133",
+    "name": "Tenna",
+    "chapter": 3,
+    "encounter": 133,
+    "variant": "133",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 133,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_tenna_board4_enemy",
+        "type": 105,
+        "name": "Tenna",
+        "hp": 5500,
+        "at": 13,
+        "df": 0,
+        "acts": [
+          "ILOVETV",
+          "Resist"
+        ],
+        "sourceBlockHash": "3c24f7c9373a9b7fd3e40b9848bd648098adee3daf17542a9b28fbdb55eb4ad4",
+        "sprite": "spr_tenna_pose_podium"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch3-134",
+    "name": "Shadowguy & Tenna",
+    "chapter": 3,
+    "encounter": 134,
+    "variant": "134",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 134,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_shadowman_enemy",
+        "type": 54,
+        "name": "Shadowguy",
+        "hp": 421,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Boogie",
+          "Sharpshoot"
+        ],
+        "sourceBlockHash": "a3b5975b4573bd8346432bef40397b70484b9320eb9534a0da30582d5d9dbab9",
+        "sprite": "spr_shadowman_idle_b"
+      },
+      {
+        "slot": 1,
+        "object": "obj_tenna_board4_enemy",
+        "type": 105,
+        "name": "Tenna",
+        "hp": 5500,
+        "at": 13,
+        "df": 0,
+        "acts": [
+          "ILOVETV",
+          "Resist"
+        ],
+        "sourceBlockHash": "3c24f7c9373a9b7fd3e40b9848bd648098adee3daf17542a9b28fbdb55eb4ad4",
+        "sprite": "spr_tenna_pose_podium"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch3-135",
+    "name": "Zapper & Tenna",
+    "chapter": 3,
+    "encounter": 135,
+    "variant": "135",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 135,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_zapper_enemy",
+        "type": 56,
+        "name": "Zapper",
+        "hp": 421,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "VolumeUp",
+          "Mute",
+          "OffButton"
+        ],
+        "sourceBlockHash": "28d526d882ec23832d15e0e98b50e8d43020bf76b8a0a05356af3a084c05e351",
+        "sprite": "spr_zapper_jump"
+      },
+      {
+        "slot": 1,
+        "object": "obj_tenna_board4_enemy",
+        "type": 105,
+        "name": "Tenna",
+        "hp": 5500,
+        "at": 13,
+        "df": 0,
+        "acts": [
+          "ILOVETV",
+          "Resist"
+        ],
+        "sourceBlockHash": "3c24f7c9373a9b7fd3e40b9848bd648098adee3daf17542a9b28fbdb55eb4ad4",
+        "sprite": "spr_tenna_pose_podium"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch3-141",
+    "name": "Lanino & Elnina",
+    "chapter": 3,
+    "encounter": 141,
+    "variant": "141",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": 141,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_lanino_rematch_enemy",
+        "type": 107,
+        "name": "Lanino",
+        "hp": 4440,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Telescope",
+          "Sunglasses"
+        ],
+        "sourceBlockHash": "b0be2b4fc6f4a399bcab41b36be1ffb2ffa64157f0e94b8f436085f234fa255f",
+        "sprite": "spr_battle_laninomarker"
+      },
+      {
+        "slot": 1,
+        "object": "obj_elnina_rematch_enemy",
+        "type": 106,
+        "name": "Elnina",
+        "hp": 4440,
+        "at": 11,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Umbrella",
+          "WarmHat"
+        ],
+        "sourceBlockHash": "bd564503d3760ed2d2cdb54f94d259083619dca0d8100402683b218d8750a498",
+        "sprite": "spr_battle_elninamarker"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch4-160",
+    "name": "Hammer of Justice",
+    "chapter": 4,
+    "encounter": 160,
+    "variant": "160",
+    "kind": "secret",
+    "sources": [
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 160,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_hammer_of_justice_enemy",
+        "type": 105,
+        "name": "Hammer of Justice",
+        "hp": 1350,
+        "at": 14,
+        "df": 0,
+        "acts": [],
+        "sourceBlockHash": "9998e0374e378580309b6f775856768e09161218589c9ddbdf8f36d9e3dd582f",
+        "sprite": "spr_gerson_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch4-174",
+    "name": "Jackenstein",
+    "chapter": 4,
+    "encounter": 174,
+    "variant": "174",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 174,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_jackenstein_enemy",
+        "type": 107,
+        "name": "Jackenstein",
+        "hp": 1350,
+        "at": 14,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Unleash",
+          "ScaredyCat"
+        ],
+        "sourceBlockHash": "4721c357e3af32c0daa60fc89b7c627b6b9a17c95f70295febec37553e94f2d0",
+        "sprite": "spr_jackenstein_battle_eyes"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch4-175",
+    "name": "Titan",
+    "chapter": 4,
+    "encounter": 175,
+    "variant": "175",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 175,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_titan_enemy",
+        "type": 108,
+        "name": "Titan",
+        "hp": 21000,
+        "at": 18,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Brighten",
+          "DualHeal",
+          "Unleash"
+        ],
+        "sourceBlockHash": "1c49f1b629ac48446e1170cdf9df50d5fa930116c18f5c64c8ee92971ca454cd",
+        "sprite": "spr_titan_rumble"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch4-177",
+    "name": "Titan Spawn",
+    "chapter": 4,
+    "encounter": 177,
+    "variant": "177",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 177,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_titan_spawn_enemy",
+        "type": 109,
+        "name": "Titan Spawn",
+        "hp": 3000,
+        "at": 18,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Brighten",
+          "DualHeal",
+          "Banish"
+        ],
+        "sourceBlockHash": "db7300a81e7295a94e8149a4069ada04ece5016c4cfe8c7ce7880562ae666533",
+        "sprite": "spr_titan_spawn_idle"
+      },
+      {
+        "slot": 1,
+        "object": "obj_titan_spawn_enemy",
+        "type": 109,
+        "name": "Titan Spawn",
+        "hp": 3000,
+        "at": 18,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Brighten",
+          "DualHeal",
+          "Banish"
+        ],
+        "sourceBlockHash": "db7300a81e7295a94e8149a4069ada04ece5016c4cfe8c7ce7880562ae666533",
+        "sprite": "spr_titan_spawn_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch4-178",
+    "name": "Lanino & Elnina",
+    "chapter": 4,
+    "encounter": 178,
+    "variant": "178",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 178,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_lanino_rematch_enemy",
+        "type": 111,
+        "name": "Lanino",
+        "hp": 4440,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Telescope",
+          "Sunglasses"
+        ],
+        "sourceBlockHash": "f454524f165d5be33895bf83a4f4564262fd06d56bbd3736d65143ab264b915c",
+        "sprite": "spr_lanino_idle"
+      },
+      {
+        "slot": 1,
+        "object": "obj_elnina_rematch_enemy",
+        "type": 110,
+        "name": "Elnina",
+        "hp": 4440,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Umbrella",
+          "WarmHat"
+        ],
+        "sourceBlockHash": "29454fbc7ff908071b1cd3949c848a6b2f25fe7456dabae92ce2a19dcc32bdd5",
+        "sprite": "spr_elnina_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch4-183",
+    "name": "HolywaterCooler",
+    "chapter": 4,
+    "encounter": 183,
+    "variant": "183",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter4_windows",
+        "sha256": "ed64789586238b52375e994e1c1cf13694dd2d0dab57d13e639b9c892e37d8f2",
+        "encounter": 183,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_holywatercooler_enemy",
+        "type": 69,
+        "name": "HolywaterCooler",
+        "hp": 1740,
+        "at": 14,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Flirt",
+          "BegForMercy",
+          "Chat"
+        ],
+        "sourceBlockHash": "2b2656c6d550e012bc82e5686bbd824a5e82f8fb7c87f67f74897a0ef53f4af9",
+        "sprite": "spr_watercooler"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch5-206",
+    "name": "Netskie",
+    "chapter": 5,
+    "encounter": 206,
+    "variant": "206",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter5_windows",
+        "sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+        "encounter": 206,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_netskie_enemy",
+        "type": 76,
+        "name": "Netskie",
+        "hp": 1545,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Faker",
+          "Impression"
+        ],
+        "sourceBlockHash": "2b23f8c364b7e7ca7ddb7101d8267e1a344d6c65eec38248a5190b2ee16c6b49",
+        "sprite": "spr_tree_fox_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch5-207",
+    "name": "Terakota",
+    "chapter": 5,
+    "encounter": 207,
+    "variant": "207",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter5_windows",
+        "sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+        "encounter": 207,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_terracota_enemy",
+        "type": 77,
+        "name": "Terakota",
+        "hp": 1545,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "WateringCan",
+          "SlowerCan"
+        ],
+        "sourceBlockHash": "2cf4abbe6d04d4ee1782db5364f2ceadcd7cc8098e030a0f7088f81fb3ac43c9",
+        "sprite": "spr_terracotta_attack"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch5-220",
+    "name": "Aqua",
+    "chapter": 5,
+    "encounter": 220,
+    "variant": "220",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter5_windows",
+        "sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+        "encounter": 220,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_aqua_enemy",
+        "type": 112,
+        "name": "Aqua",
+        "hp": 3060,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Spin",
+          "Dance",
+          "Care",
+          "Coolpose",
+          "Flatter"
+        ],
+        "sourceBlockHash": "168d16bdb7a88855a0d2ea019c5fb768322f9709fcf73c6970b1f23cb205726f",
+        "sprite": "spr_enemy_aqua_idle",
+        "sourceDisplayName": "???"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch5-221",
+    "name": "Orange & Green",
+    "chapter": 5,
+    "encounter": 221,
+    "variant": "221",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter5_windows",
+        "sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+        "encounter": 221,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_orange_enemy",
+        "type": 113,
+        "name": "Orange",
+        "hp": 2060,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "GetAlong"
+        ],
+        "sourceBlockHash": "f6dcd1986b459807bc08520cc5e03d54c511cee902de1b14084ea0cd7b209357",
+        "sprite": "spr_enemy_orange_idle_base"
+      },
+      {
+        "slot": 1,
+        "object": "obj_green_enemy",
+        "type": 114,
+        "name": "Green",
+        "hp": 2060,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "FeastX"
+        ],
+        "sourceBlockHash": "c225ab728ffefd4e67a4b8f2f137e9f9b70e1217187e2f8cc461d9ba45a211a2",
+        "sprite": "spr_green_together"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch5-222",
+    "name": "Blue & Yellow",
+    "chapter": 5,
+    "encounter": 222,
+    "variant": "222",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter5_windows",
+        "sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+        "encounter": 222,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_blue_enemy",
+        "type": 115,
+        "name": "Blue",
+        "hp": 2060,
+        "at": 16,
+        "df": 0,
+        "acts": [],
+        "sourceBlockHash": "db8e3ca5045cfd0ee621b3d2875678eb49de704cc3670af7870f4bf541511f4a",
+        "sprite": "spr_enemy_blue_ballet"
+      },
+      {
+        "slot": 1,
+        "object": "obj_yellow_enemy",
+        "type": 116,
+        "name": "Yellow",
+        "hp": 2060,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check"
+        ],
+        "sourceBlockHash": "92a1b6f9ce7ee1f991e626d304064105817c8fcfc2deee7c913710f872c0f1e2",
+        "sprite": "spr_yellow_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch5-223",
+    "name": "Seth & Aqua",
+    "chapter": 5,
+    "encounter": 223,
+    "variant": "223",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter5_windows",
+        "sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+        "encounter": 223,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_purple_enemy",
+        "type": 117,
+        "name": "Seth",
+        "hp": 3600,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "FlatterX"
+        ],
+        "sourceBlockHash": "56ab1190bc3194bce07f4809d8ed90b4b521546ad8a0cb409f07bf2eaefab7f5",
+        "sprite": "spr_seth_battle"
+      },
+      {
+        "slot": 1,
+        "object": "obj_aqua_enemy",
+        "type": 112,
+        "name": "Aqua",
+        "hp": 3060,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Spin",
+          "Dance",
+          "Care",
+          "Coolpose",
+          "Flatter"
+        ],
+        "sourceBlockHash": "168d16bdb7a88855a0d2ea019c5fb768322f9709fcf73c6970b1f23cb205726f",
+        "sprite": "spr_enemy_aqua_idle",
+        "sourceDisplayName": "???"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch5-224",
+    "name": "Pink",
+    "chapter": 5,
+    "encounter": 224,
+    "variant": "224",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter5_windows",
+        "sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+        "encounter": 224,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_pink_enemy",
+        "type": 118,
+        "name": "Pink",
+        "hp": 7000,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Flirt",
+          "MegaFlirt",
+          "MegaFlirtX",
+          "GigaFlirt"
+        ],
+        "sourceBlockHash": "7119c27ae2cd954a13fdd64080c1e1f1d52dd131cf2b273931fd4b4ad2b6c97e",
+        "sprite": "spr_pink_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch5-225",
+    "name": "Flowery",
+    "chapter": 5,
+    "encounter": 225,
+    "variant": "225",
+    "kind": "main",
+    "sources": [
+      {
+        "packageId": "chapter5_windows",
+        "sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+        "encounter": 225,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_flowery_enemy",
+        "type": 119,
+        "name": "Flowery",
+        "hp": 7000,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Posey",
+          "PoseyZ"
+        ],
+        "sourceBlockHash": "65807caa8b7d7e10e84335700136fe5d2dfd2ca99646d39217e467353774b137",
+        "sprite": "spr_flowery_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch5-229",
+    "name": "Netskie",
+    "chapter": 5,
+    "encounter": 229,
+    "variant": "229",
+    "kind": "miniboss",
+    "sources": [
+      {
+        "packageId": "chapter5_windows",
+        "sha256": "370dfd141d2955d5a1960122919b16e4092b52ffbb85fda541bc4680c6b3b85c",
+        "encounter": 229,
+        "code": [
+          "gml_GlobalScript_scr_monstersetup",
+          "gml_GlobalScript_scr_encountersetup"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_netskie_enemy",
+        "type": 76,
+        "name": "Netskie",
+        "hp": 1545,
+        "at": 16,
+        "df": 0,
+        "acts": [
+          "Check",
+          "Faker",
+          "Impression"
+        ],
+        "sourceBlockHash": "2b23f8c364b7e7ca7ddb7101d8267e1a344d6c65eec38248a5190b2ee16c6b49",
+        "sprite": "spr_tree_fox_idle"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "not-ported"
+  },
+  {
+    "id": "ch3-mantle",
+    "name": "Shadow Mantle",
+    "chapter": 3,
+    "encounter": -1,
+    "variant": "action",
+    "kind": "secret",
+    "combatSystem": "action",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": -1,
+        "code": [
+          "gml_Object_obj_shadow_mantle_enemy_Create_0",
+          "gml_Object_obj_shadow_mantle_enemy_Step_2"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_shadow_mantle_enemy",
+        "type": -1,
+        "name": "Shadow Mantle",
+        "hp": 30,
+        "at": 0,
+        "df": 0,
+        "acts": [],
+        "sprite": "spr_shadow_mantle_idle",
+        "sourceBlockHash": "93d0003a045e5a62d86b10411b91c97470e36277a239d3a339a67649dfb59a3b"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "browser-action-adaptation"
+  },
+  {
+    "id": "ch3-susiezilla",
+    "name": "Susiezilla: Tenna",
+    "chapter": 3,
+    "encounter": -1,
+    "variant": "action",
+    "kind": "secret",
+    "combatSystem": "action",
+    "sources": [
+      {
+        "packageId": "chapter3_windows",
+        "sha256": "c1a0925343694ec9b9adcbf2f916a720b02fd1b999286cfe8fe6a52f3320f714",
+        "encounter": -1,
+        "code": [
+          "gml_Object_obj_susiezilla_singlescreen_kickboxin_tenna_Create_0",
+          "gml_Object_obj_susiezilla_singlescreen_kickboxin_tenna_Step_0"
+        ],
+        "rooms": []
+      }
+    ],
+    "enemies": [
+      {
+        "slot": 0,
+        "object": "obj_susiezilla_singlescreen_kickboxin_tenna",
+        "type": -1,
+        "name": "Susiezilla: Tenna",
+        "hp": 2,
+        "at": 0,
+        "df": 0,
+        "acts": [],
+        "sprite": "spr_tenna_point_up",
+        "sourceBlockHash": "07d53909658fccedf46d4174e533160827aeeb5e4dd35b0ddaa0d789c0d31053"
+      }
+    ],
+    "status": "identified",
+    "adaptation": "browser-action-adaptation"
+  }
+]

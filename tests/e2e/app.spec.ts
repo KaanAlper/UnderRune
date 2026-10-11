@@ -1,0 +1,81 @@
+import {test,expect} from '@playwright/test';
+test.beforeEach(async({page})=>{await page.goto('/');await expect(page.getByRole('button',{name:'Connect device'})).toBeVisible();});
+test('connect, select a source boss, fight, reset and return',async({page})=>{
+ await page.getByRole('button',{name:'Connect device'}).click();
+ await page.getByRole('button',{name:'Chapter 1'}).click();
+ await page.getByRole('button',{name:'Battle JEVIL ch1-25'}).click();
+ await expect(page.locator('#status')).toContainText('JEVIL');
+ await page.getByRole('button',{name:'FIGHT',exact:true}).click();
+ await page.getByRole('button',{name:'Target JEVIL 0'}).click();
+ await page.keyboard.press('z');
+ await page.keyboard.press('r');
+ await expect(page.locator('#status')).toContainText('command');
+ await page.getByRole('button',{name:'Device menu',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Battle JEVIL ch1-25'})).toBeVisible();
+});
+test('practice reaches defense and pauses without capturing browser shortcuts',async({page})=>{
+ await page.getByRole('button',{name:'Connect device'}).click();await page.getByRole('button',{name:'Chapter 1'}).click();
+ await page.getByRole('button',{name:'Practice selected boss'}).click();
+ await expect(page.locator('#status')).toContainText('defense');
+ await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('paused');
+ await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('defense');
+});
+test('game is self-contained and does not contact remote servers',async({page})=>{
+ const remote:string[]=[];page.on('request',r=>{if(!new URL(r.url()).hostname.match(/^(127\.0\.0\.1|localhost)$/))remote.push(r.url());});
+ await page.reload();await page.getByRole('button',{name:'Connect device'}).click();await page.getByRole('button',{name:'Chapter 3'}).click();
+ await page.getByRole('button',{name:'Battle Roaring Knight ch3-115'}).click();
+ await expect(page.locator('#status')).toContainText('Roaring Knight');expect(remote).toEqual([]);
+});
+
+test('retry recovers an interrupted initial sprite load',async({page})=>{
+ let blocked=false;
+ await page.route('**/generated/**/font.png',async route=>{if(!blocked){blocked=true;await route.abort();}else await route.continue();});
+ await page.reload();
+ await expect(page.locator('#error')).toBeVisible();
+ await page.locator('#retry').click();
+ await expect(page.getByRole('button',{name:'Connect device'})).toBeVisible();
+});
+
+test('about dialog does not allow keyboard navigation behind it',async({page})=>{
+ await page.locator('#credits').click();
+ await page.keyboard.press('z');
+ await page.locator('#close-about').click();
+ await expect(page.getByRole('button',{name:'Connect device'})).toBeVisible();
+});
+
+test('blocked localStorage getter does not prevent startup',async({page})=>{
+ await page.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new DOMException('blocked','SecurityError');}}));
+ await page.reload();await expect(page.getByRole('button',{name:'Connect device'})).toBeVisible();
+});
+
+test('native practice selector receives arrows and Enter without starting a battle',async({page})=>{
+ await page.getByRole('button',{name:'Connect device'}).click();await page.getByRole('button',{name:'Chapter 1'}).click();
+ const select=page.locator('#attack-select');await expect(select.locator('option')).toHaveCount(3);await select.focus();await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+ await expect(select).toHaveValue('1');await expect(page.locator('#status')).toContainText('CHAPTER 1');
+});
+
+test('custom Shadow Mantle action battle is reachable by pointer and resets',async({page})=>{
+ await page.getByRole('button',{name:'Connect device'}).click();await page.getByRole('button',{name:'Chapter 3'}).click();
+ await page.getByRole('button',{name:'Next encounters'}).click();
+ await page.getByRole('button',{name:'Battle Shadow Mantle ch3-mantle'}).click();
+ await expect(page.locator('#status')).toContainText('Shadow Mantle / defense');
+ await expect(page.getByRole('button',{name:'FIGHT',exact:true})).toHaveCount(0);
+ await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('paused');
+ await page.keyboard.press('r');await expect(page.locator('#status')).toContainText('defense');
+});
+test.describe('mobile controls',()=>{
+ test.use({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
+ test('touch navigation, command selection and pausing remain reachable',async({page})=>{
+  await page.getByRole('button',{name:'Connect device'}).tap();
+  await page.getByRole('button',{name:'Chapter 1'}).tap();
+  await page.getByRole('button',{name:'Battle JEVIL ch1-25'}).tap();
+  await expect(page.locator('#touch')).toBeVisible();
+  const canvas=await page.locator('#screen').boundingBox();expect(canvas).not.toBeNull();expect(canvas!.x).toBeGreaterThanOrEqual(0);expect(canvas!.width).toBeLessThanOrEqual(390);
+  await page.getByRole('button',{name:'FIGHT',exact:true}).tap();
+  await page.getByRole('button',{name:'Target JEVIL 0'}).tap();
+  await page.locator('#pause').tap();await expect(page.locator('#status')).toContainText('paused');
+  await expect(page.getByRole('button',{name:'Strike now'})).toHaveCount(0);
+  await page.locator('#pause').tap();await expect(page.getByRole('button',{name:'Strike now'})).toBeVisible();
+  await page.locator('#back').tap();await expect(page.getByRole('button',{name:'Battle JEVIL ch1-25'})).toBeVisible();
+ });
+});

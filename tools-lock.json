@@ -1,5 +1,36 @@
 {
   "version": "0.9.2.0",
   "url": "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/0.9.2.0/UTMT_CLI_v0.9.2.0-Windows.zip",
-  "sha256": "e7573e45d107be34f81f955c6e4afc3c7c8f2628e5a6f307a871e3825b3dfb40"
+  "sha256": "e7573e45d107be34f81f955c6e4afc3c7c8f2628e5a6f307a871e3825b3dfb40",
+  "officialRuntime": {
+    "repository": "https://github.com/YoYoGames/GameMaker-HTML5.git",
+    "revision": "60e51be51ce7f3d52025ef18106cf172b8e22a00",
+    "license": "Apache-2.0"
+  },
+  "bytecodeRuntime": {
+    "repository": "https://github.com/ButterscotchRunner/Butterscotch",
+    "revision": "4f01f7bf37479169075eb29e0c96dcf49a7830b2",
+    "artifactId": 11676533513,
+    "url": "https://nightly.link/ButterscotchRunner/Butterscotch/actions/artifacts/11676533513.zip",
+    "sha256": "00f9ce3096480267345ae7d9904f078c548e93aa6e5242419cd240581fb38a39",
+    "license": "AGPL-3.0",
+    "status": "compatibility-probe-only",
+    "unknownAndStubbedFunctionDiagnostics": false,
+    "diagnosticBuild": {
+      "emscriptenVersion": "6.0.12",
+      "emscriptenReleaseHash": "6e9f6885cb17a3d6c8fd488a5cff730f50aba61d",
+      "unknownAndStubbedFunctionDiagnostics": true,
+      "exceptionDiagnostics": true,
+      "parallelJobs": 2
+    },
+    "browserBuild": {
+      "patch": "runtime/patches/browser-compat.patch",
+      "patchSha256": "fff375ab4b08e9a5f7bed31e2f29e5bb85247b1ae9bfd6a99ffe0b0e488c9620",
+      "status": "compatibility-probe-only",
+      "spatialAudioVerified": true,
+      "textureRepeatVerified": true,
+      "portableVerified": true,
+      "verificationScope": "Native API fixture and Chapter 1 Jevil smoke test; full boss parity is not verified"
+    }
+  }
 }

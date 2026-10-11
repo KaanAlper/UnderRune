@@ -1,0 +1,21 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {execFileSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const source=path.join(root,'.tools/gamemaker-html5'),out=path.join(root,'public/generated/official-runtime');
+const revision=execFileSync('git',['rev-parse','HEAD'],{cwd:source,encoding:'utf8'}).trim();
+const lock=JSON.parse(await fs.readFile(path.join(root,'tools-lock.json'),'utf8')).officialRuntime;
+if(revision!==lock.revision)throw Error(`Runtime revision differs from tools-lock.json. Run npm run runtime:setup. Found ${revision}`);
+execFileSync('git',['diff','--exit-code','HEAD','--','scripts','licence.txt'],{cwd:source,stdio:'pipe'});
+const loader=await fs.readFile(path.join(source,'scripts/runner.js'),'utf8');
+const files=[...loader.matchAll(/^document\.write\('.*?src="([^"]+)"/gm)].map(x=>x[1]);
+await fs.mkdir(out,{recursive:true});
+const records=[],chunks=[];
+for(const file of files){const code=await fs.readFile(path.join(source,file),'utf8');records.push({file,sha256:createHash('sha256').update(code).digest('hex')});chunks.push(`\n/* Upstream: ${file} */\n${code}\n`);}
+const bundle=chunks.join('');
+await fs.writeFile(path.join(out,'runner.js'),bundle);
+await fs.copyFile(path.join(source,'licence.txt'),path.join(out,'LICENSE.txt'));
+await fs.writeFile(path.join(out,'manifest.json'),JSON.stringify({repository:lock.repository,revision,license:lock.license,bytes:Buffer.byteLength(bundle),sha256:createHash('sha256').update(bundle).digest('hex'),files:records},null,2));
+console.log(`Official HTML5 runtime: ${files.length} unmodified files, revision ${revision}`);

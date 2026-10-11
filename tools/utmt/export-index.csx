@@ -9,10 +9,18 @@ var output = Environment.GetEnvironmentVariable("LL_EXPORT_DIR");
 if (String.IsNullOrWhiteSpace(output)) throw new Exception("Missing LL_EXPORT_DIR");
 Directory.CreateDirectory(output);
 var index = new {
+    timing = Data.GeneralInfo.GetType().GetProperties().Where(p=>p.Name.Contains("FPS")||p.Name.Contains("Speed")).ToDictionary(p=>p.Name,p=>p.GetValue(Data.GeneralInfo)),
+    roomTiming = Data.Rooms.Select(r=>new {name=r.Name.Content,values=r.GetType().GetProperties().Where(p=>p.Name.Contains("Speed")).ToDictionary(p=>p.Name,p=>p.GetValue(r))}),
     objects = Data.GameObjects.Select(x => new { name=x.Name.Content, sprite=x.Sprite == null ? null : x.Sprite.Name.Content }),
     rooms = Data.Rooms.Select(x => x.Name.Content),
     sounds = Data.Sounds.Select(x => x.Name.Content),
     code = Data.Code.Where(x=>x.ParentEntry == null).Select(x => x.Name.Content),
+    fonts = Data.Fonts.Where(x=>x.Texture!=null).Select(x=>new {
+      name=x.Name.Content, size=x.EmSize,
+      page=Data.EmbeddedTextures.IndexOf(x.Texture.TexturePage),
+      sx=x.Texture.SourceX, sy=x.Texture.SourceY,
+      glyphs=x.Glyphs.Select(g=>new {charCode=g.Character,x=g.SourceX,y=g.SourceY,w=g.SourceWidth,h=g.SourceHeight,shift=g.Shift,offset=g.Offset})
+    }),
     sprites = Data.Sprites.Select(x=>new {
        name=x.Name.Content, width=x.Width, height=x.Height, originX=x.OriginX, originY=x.OriginY,
        frames=x.Textures.Select(t=>t.Texture==null?null:new {
