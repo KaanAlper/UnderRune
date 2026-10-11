@@ -12,6 +12,7 @@ import {NativeBattle,fetchNativeProfiles,type NativeEvent} from './game/native';
 import {PreparationPanel} from './ui/preparation';
 import {loadoutIni,type EquipmentCatalog} from './game/loadout';
 import type {EncounterRecord} from './game/types';
+import {TheaterState,TheaterView,THEATER_HITS} from './game/theater';
 const element=<T extends HTMLElement>(id:string)=>document.getElementById(id)! as T;
 const canvas=element<HTMLCanvasElement>('screen'),ctx=canvas.getContext('2d')!;
 const overlay=element('interactions'),status=element('status'),loading=element('loading'),error=element('error');
@@ -19,12 +20,16 @@ const input=new Input(),clock=new FixedClock(),storage=browserStore(),prefs=load
 let assets:AssetStore,renderer:Renderer,audio:AudioManager,battle:BattleSession|null=null;
 // Original-bytecode battles run in an iframe; `battle` stays the browser adaptation (practice and unsupported encounters).
 let native:NativeBattle|null=null,nativeRecord:EncounterRecord|null=null,nativeIds=new Set<string>(),equipment:EquipmentCatalog|null=null,prep:PreparationPanel|null=null;
-let scene:'intro'|'room'|'menu'|'battle'|'native'='intro',chapter=1,selection=0,frame=0,last=0,raf=0,busy=false,sceneKey='',keyCooldown=0,sessionToken=0,victoryRecorded=false;
+// The theater opens the app; choosing DELTARUNE leads to the device intro.
+const reducedMotion=()=>prefs.reducedEffects||matchMedia('(prefers-reduced-motion: reduce)').matches;
+let theater=new TheaterState(reducedMotion()),theaterView:TheaterView|null=null;
+let scene:'theater'|'intro'|'room'|'menu'|'battle'|'native'='theater',chapter=1,selection=0,frame=0,last=0,raf=0,busy=false,sceneKey='',keyCooldown=0,sessionToken=0,victoryRecorded=false;
 const empty={x:0,y:0,confirm:false,cancel:false,restart:false,pause:false,slow:false,shoot:false};
 const menuRecords=()=>catalog.filter(r=>r.chapter===chapter);
 function updatePreferences(){document.body.classList.toggle('reduced',prefs.reducedEffects);element('mute').textContent=prefs.muted?'SOUND OFF':'SOUND ON';element('mute').setAttribute('aria-pressed',String(prefs.muted));element('effects').textContent=prefs.reducedEffects?'CRT OFF':'CRT ON';element('effects').setAttribute('aria-pressed',String(prefs.reducedEffects));savePrefs(storage,prefs);}
 function closeBattle(){battle?.dispose();battle=null;native?.dispose();native=null;nativeRecord=null;element('outcome').hidden=true;element('stage').classList.remove('battle-over');audio?.stop();input.clear();clock.reset();victoryRecorded=false;}
 function goMenu(){sessionToken++;loading.hidden=true;busy=false;closeBattle();scene='menu';sceneKey='';selection=Math.min(selection,menuRecords().length-1);}
+function openTheater(){sessionToken++;closeBattle();theater=new TheaterState(reducedMotion());scene='theater';sceneKey='';input.clear();}
 function showError(cause:unknown){loading.hidden=true;busy=false;element('error-text').textContent=cause instanceof Error?cause.message:String(cause);error.hidden=false;}
 async function launchNative(record:EncounterRecord,ini:string){
  if(busy)throw Error('Başka bir savaş yükleniyor.');busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* '+record.name.toUpperCase()+' / ÖZGÜN MOTOR YÜKLENİYOR...';const token=++sessionToken;
@@ -60,11 +65,17 @@ async function startBattle(practice=false){
 }
 function addHitbox(name:string,x:number,y:number,w:number,h:number,run:()=>void){const button=document.createElement('button');button.className='hitbox';button.setAttribute('aria-label',name);button.style.cssText=`left:${x/6.4}%;top:${y/4.8}%;width:${w/6.4}%;height:${h/4.8}%`;button.addEventListener('click',()=>{audio.unlock();run();sceneKey='';});overlay.append(button);}
 function updateControls(){
- const key=[scene,chapter,selection,battle?.phase,battle?.actor,battle?.cursor,battle?.paused,native?.paused,busy].join(':');
- if(key===sceneKey)return;sceneKey=key;overlay.replaceChildren();element('menu-tools').hidden=scene!=='menu';element('pause').hidden=scene!=='battle'&&scene!=='native';element('back').hidden=scene==='intro';
+ const key=[scene,theater?.active,theater?.selected,chapter,selection,battle?.phase,battle?.actor,battle?.cursor,battle?.paused,native?.paused,busy].join(':');
+ if(key===sceneKey)return;sceneKey=key;overlay.replaceChildren();element('menu-tools').hidden=scene!=='menu';element('pause').hidden=scene!=='battle'&&scene!=='native';element('back').hidden=scene==='theater';
  if(scene==='native'&&nativeRecord)status.textContent=`${nativeRecord.name} / ÖZGÜN MOTOR${native?.paused?' / paused':''}`;
  element('controls-hint').textContent=scene==='native'?'ARROWS · Z / ENTER CONFIRM · X / SHIFT CANCEL · P PAUSE':'ARROWS / WASD · Z CONFIRM · X BACK · R RESTART · P PAUSE';
  element('adaptation').textContent=scene==='native'?'FAN PROJECT · ORIGINAL GAME CODE':'FAN PROJECT · BROWSER ADAPTATION';
+ if(scene==='theater'){
+  const t=theater,H=THEATER_HITS;status.textContent=t.active==='undertale'?'UNDERTALE / COMING SOON':t.active==='deltarune'?'DELTARUNE / SIGNAL':'THEATER';
+  addHitbox('UNDERTALE remote',H.undertale.x,H.undertale.y,H.undertale.w,H.undertale.h,()=>t.press('undertale'));
+  addHitbox('DELTARUNE remote',H.deltarune.x,H.deltarune.y,H.deltarune.w,H.deltarune.h,()=>t.press('deltarune'));
+  addHitbox(t.active==='deltarune'?'Connect DELTARUNE':'Television',H.tv.x,H.tv.y,H.tv.w,H.tv.h,()=>t.press(t.active??t.selected));
+ }
  if(scene==='intro'){addHitbox('Connect device',70,60,500,360,()=>{scene='room';});status.textContent='LOCAL SIGNAL';}
  if(scene==='room'){
   for(let i=1;i<=5;i++)addHitbox('Chapter '+i,175,112+(i-1)*32,270,31,()=>{chapter=i;selection=0;scene='menu';});status.textContent='DEVICE_MENU';
@@ -90,7 +101,9 @@ function updateControls(){
 }
 function step(){
  frame++;if(busy)return;if(element<HTMLDialogElement>('about').open){input.clear();return;}const keys=input.read();
- if(scene==='intro'&&keys.confirm){audio.unlock();scene='room';sceneKey='';}
+ if(scene==='theater'){if(theater.step(keys)==='enter-deltarune'){audio.unlock();scene='intro';sceneKey='';}}
+ else if(scene==='intro'&&keys.confirm){audio.unlock();scene='room';sceneKey='';}
+ else if(scene==='intro'&&keys.cancel){openTheater();}
  else if(scene==='room'){
   if(frame-keyCooldown>10&&(keys.y||keys.x)){chapter=(chapter-1+(keys.y||keys.x)+5)%5+1;keyCooldown=frame;sceneKey='';}
   if(keys.confirm){selection=0;scene='menu';sceneKey='';}
@@ -109,7 +122,7 @@ function step(){
 }
 function loop(time:number){
  const dt=last?(time-last)/1000:0;last=time;clock.advance(dt,step);
- if(renderer){if(scene==='intro')renderer.intro(frame);else if(scene==='room')renderer.room(chapter,catalog.length);else if(scene==='menu')renderer.menu(menuRecords(),selection,chapter,frame,prefs.completed);else if(battle)renderer.battle(battle,prefs.reducedEffects);}
+ if(renderer){if(scene==='theater'&&theaterView)theaterView.draw(ctx,theater);else if(scene==='intro')renderer.intro(frame);else if(scene==='room')renderer.room(chapter,catalog.length);else if(scene==='menu')renderer.menu(menuRecords(),selection,chapter,frame,prefs.completed);else if(battle)renderer.battle(battle,prefs.reducedEffects);}
  raf=requestAnimationFrame(loop);
 }
 input.bind(window,()=>{if(battle){battle.pause(true);audio.pause(true);}clock.reset();sceneKey='';});
@@ -119,8 +132,8 @@ window.addEventListener('pointerdown',()=>audio?.unlock(),{passive:true});
 // When focus is on the page (header buttons, after a dialog) keys still reach the original battle.
 const forwardNativeKey=(down:boolean)=>(e:KeyboardEvent)=>{if(scene!=='native'||!native||e.ctrlKey||e.metaKey||e.altKey||document.querySelector('dialog[open]')||(down&&e.repeat))return;if(native.key(e.key,down))e.preventDefault();};
 window.addEventListener('keydown',forwardNativeKey(true));window.addEventListener('keyup',forwardNativeKey(false));
-element('back').addEventListener('click',()=>{if(scene==='battle'||scene==='native')goMenu();else{sessionToken++;scene='room';sceneKey='';input.clear();}});
-element('pause').addEventListener('click',()=>{if(native){native.pause(!native.paused);if(!native.paused)native.focus();}else if(battle){battle.pause(!battle.paused);audio.pause(battle.paused);sceneKey='';}});
+element('back').addEventListener('click',()=>{if(scene==='battle'||scene==='native')goMenu();else if(scene==='intro')openTheater();else{sessionToken++;scene='room';sceneKey='';input.clear();}});
+element('pause').addEventListener('click',()=>{if(native){const resuming=native.paused;native.pause(!resuming);if(resuming)native.focus();}else if(battle){battle.pause(!battle.paused);audio.pause(battle.paused);sceneKey='';}});
 element('mute').addEventListener('click',()=>{prefs.muted=!prefs.muted;audio?.setMuted(prefs.muted);native?.mute(prefs.muted);updatePreferences();});
 element('effects').addEventListener('click',()=>{prefs.reducedEffects=!prefs.reducedEffects;updatePreferences();});
 element('practice').addEventListener('click',()=>void startBattle(true));
@@ -131,7 +144,8 @@ for(const button of document.querySelectorAll<HTMLButtonElement>('[data-key]')){
  const release=()=>{button.classList.remove('down');native?.key(key,false);input.release(key);};button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
 }
 element('outcome-menu').addEventListener('click',goMenu);
-element('outcome-again').addEventListener('click',()=>{element('outcome').hidden=true;element('stage').classList.remove('battle-over');void startBattle(false);});
+// The banner stays until a new battle actually launches (closeBattle), so dismissing preparation keeps a way back.
+element('outcome-again').addEventListener('click',()=>void startBattle(false));
 element('retry').addEventListener('click',()=>{error.hidden=true;if(renderer)void startBattle(false);else void initialize();});
 async function initialize(){
  loading.hidden=false;error.hidden=true;try{
@@ -140,6 +154,7 @@ async function initialize(){
   const [catalogJson,ids]=await Promise.all([fetch('/generated/equipment.json').then(r=>r.ok?r.json() as Promise<EquipmentCatalog>:null).catch(()=>null),fetchNativeProfiles()]);
   equipment=catalogJson;nativeIds=ids;
   if(equipment&&!prep){const source=equipment;prep=new PreparationPanel(source,assets,storage,(record,loadout)=>launchNative(record,loadoutIni(loadout,source.chapters[record.chapter])),()=>{if(native)setTimeout(()=>native?.focus());});}
+  theaterView=new TheaterView(assets);await Promise.all(theaterView.urls().map(u=>assets.loadImage(u).catch(()=>null)));
   renderer=new Renderer(ctx,assets);audio=new AudioManager(prefs.muted,assets.manifest.music);updatePreferences();loading.hidden=true;updateControls();if(!raf)raf=requestAnimationFrame(loop);
  }catch(e){showError(e);}
 }

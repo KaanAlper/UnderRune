@@ -2,6 +2,15 @@ const state=document.querySelector('#state'),canvas=document.querySelector('#can
 let runner,active=false,started=false,paused=false;const held=new Set();
 const send=(type,data={})=>parent.postMessage({source:'underrune-native',type,...data},location.origin);
 const release=()=>{if(runner)for(const key of held)runner._onKeyUp(key);held.clear();};
+// The engine reads input once per frame; a tap whose down and up land in the same frame would be lost.
+// Every key therefore stays down for at least 50 ms (3 frames at 60 fps).
+const MIN_HOLD_MS=50,downAt=new Map();
+const keyDown=code=>{if(held.has(code))return;held.add(code);downAt.set(code,performance.now());runner._onKeyDown(code);};
+const keyUp=code=>{
+ if(!held.has(code))return;held.delete(code);
+ const up=()=>{if(!held.has(code))runner?._onKeyUp(code);},wait=MIN_HOLD_MS-(performance.now()-(downAt.get(code)??0));
+ if(wait>0)setTimeout(up,wait);else up();
+};
 // Engine diagnostics stay in the console; the overlay is only shown with ?debug.
 if(new URL(location.href).searchParams.has('debug'))issues.hidden=false;
 const report=text=>{console.log(text);
@@ -50,13 +59,13 @@ async function start(id,ini){
 window.addEventListener('message',event=>{
  if(event.origin!==location.origin||event.source!==parent||event.data?.source!=='underrune-host')return;
  const data=event.data;if(data.type==='start')void start(data.id,data.ini);
- if(data.type==='key'&&active&&!paused){if(data.down){held.add(data.key);runner._onKeyDown(data.key);}else{held.delete(data.key);runner._onKeyUp(data.key);}}
+ if(data.type==='key'&&active&&!paused){if(data.down)keyDown(data.key);else keyUp(data.key);}
  if(data.type==='stop'){active=false;release();runner?._requestRunnerExit();}
  if(data.type==='pause')setPaused(!!data.value);
  if(data.type==='mute')setMuted(!!data.value);
 });
 const keys=new Set([13,16,27,32,37,38,39,40,67,88,90]);
-window.addEventListener('keydown',event=>{if(event.keyCode===80&&active&&!event.repeat&&!event.ctrlKey&&!event.metaKey&&!event.altKey){event.preventDefault();setPaused(!paused);return;}if(!active||paused||event.ctrlKey||event.metaKey||event.altKey||!keys.has(event.keyCode))return;event.preventDefault();if(!held.has(event.keyCode)){held.add(event.keyCode);runner._onKeyDown(event.keyCode);}});
-window.addEventListener('keyup',event=>{if(!active||!keys.has(event.keyCode))return;held.delete(event.keyCode);runner._onKeyUp(event.keyCode);});
+window.addEventListener('keydown',event=>{if(event.keyCode===80&&active&&!event.repeat&&!event.ctrlKey&&!event.metaKey&&!event.altKey){event.preventDefault();setPaused(!paused);return;}if(!active||paused||event.ctrlKey||event.metaKey||event.altKey||!keys.has(event.keyCode))return;event.preventDefault();keyDown(event.keyCode);});
+window.addEventListener('keyup',event=>{if(!active||!keys.has(event.keyCode))return;keyUp(event.keyCode);});
 window.addEventListener('blur',release);document.addEventListener('visibilitychange',()=>{if(document.hidden)setPaused(true);});
 send('ready');

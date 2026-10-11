@@ -6,6 +6,7 @@ A local web app that plays DELTARUNE boss battles in the browser using **the ins
 
 ## What it does
 
+- **Theater intro:** a big CRT on a stage split between UNDERTALE (red curtain, warm light, Frisk) and DELTARUNE (blue curtain, green-tinted light, Kris). Pressing a side's remote turns the TV on and sweeps that side's theme across the stage. UNDERTALE shows its logo with *coming soon*; DELTARUNE connects to the device.
 - **Device room and boss select:** 49 encounters (main, secret and minibosses), grouped by chapter.
 - **Battle preparation:** after choosing a boss, a side panel lets you equip weapons and armor on each character and fill the 12-slot item bag. Every piece of equipment and every item, with its name, description and stats, is read from the game's own data.
 - **Original battles:** the battle runs the original bytecode from the game's `data.win` on the open-source [Butterscotch](https://github.com/ButterscotchRunner/Butterscotch) GameMaker runner (WebAssembly). Attacks, dialogue, music and phases are not rewritten.
@@ -32,6 +33,7 @@ flowchart LR
 
 - Windows 10/11, [Node.js](https://nodejs.org/) 24+, Git
 - DELTARUNE installed through Steam (default path `C:/Program Files (x86)/Steam/steamapps/common/DELTARUNE`; set `DELTARUNE_DIR` if yours differs)
+- Optional: UNDERTALE through Steam for the theater's Frisk, logo and font (`UNDERTALE_DIR`); without it the theater uses text
 - About 3 GB of free disk space (extracted data, launchers and build tools all stay inside the project)
 
 ## Setup and running
@@ -75,7 +77,7 @@ npm run audit:native   # opens all 49 encounters one by one; screenshots and run
 
 ## Credits and licenses
 
-- DELTARUNE © Toby Fox. No game files are included in this repository.
+- UNDERTALE and DELTARUNE © Toby Fox. No game files are included in this repository.
 - [Butterscotch](https://github.com/ButterscotchRunner/Butterscotch): AGPL-3.0. Our changes are published in `runtime/patches/browser-compat.patch`.
 - [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool) / Underminers Team: data extraction and launcher builds.
 - [GameMaker HTML5 runtime](https://github.com/YoYoGames/GameMaker-HTML5): Apache-2.0 (compatibility experiments).
