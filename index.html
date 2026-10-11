@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UnderRune</title>
+<meta name="description" content="DELTARUNE boss battles in the browser, running the original game code from your own install. A fan project.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+ --black:#000;--ivory:#fff8ee;--muted:#b9b1c4;--dim:#7d7488;
+ --curtain-red:#8c1022;--curtain-blue:#1f3a9e;--warm:#ffab4a;--sea:#6dffc3;--soul:#ff243c;--select:#ffff00;
+ --panel:#0d0b12;--line:#2b2635;
+}
+*{box-sizing:border-box}
+html{background:var(--black);color:var(--ivory);font:400 1.0625rem/1.6 'Atkinson Hyperlegible',system-ui,sans-serif}
+body{margin:0}
+a{color:var(--select)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--select);outline-offset:3px}
+.wrap{max-width:68rem;margin:0 auto;padding:0 1rem}
+h1,h2,h3{font-family:'Pixelify Sans',monospace;font-weight:700;line-height:1.15;margin:0}
+h2{font-size:clamp(1.6rem,3.2vw,2.2rem);margin-bottom:1rem}
+p{max-width:38em;margin:0 0 1rem}
+
+/* Hero: the stage itself. Red half, blue half, the CRT in the middle. */
+.stage{position:relative;padding:3.5rem 0 3rem;background:linear-gradient(90deg,var(--curtain-red) 0 49%,#3a1a4f 50%,var(--curtain-blue) 51% 100%);overflow:hidden}
+.stage::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(0,0,0,.28) 0 6px,transparent 6px 26px);pointer-events:none}
+.stage::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5.5rem;background:#1c120c;border-top:3px solid #3d2718}
+.stage .wrap{position:relative;z-index:1;display:grid;justify-items:center;text-align:center;gap:1.4rem}
+.stage h1{font-size:clamp(2.6rem,7vw,4.8rem);letter-spacing:.02em;text-shadow:0 4px 0 #000}
+.lede{font-size:1.15rem;color:var(--ivory);max-width:34em;margin:0}
+.tv{width:min(100%,46rem);background:#2e2a36;padding:1.1rem 1.1rem 2.6rem;border-radius:.6rem;box-shadow:inset 0 3px 0 #4a4555,inset -4px 0 0 #1c1922,0 18px 0 -6px #3a2416,0 26px 40px rgba(0,0,0,.6);position:relative}
+.tv::after{content:"";position:absolute;right:1.6rem;bottom:.8rem;width:2.8rem;height:1rem;background:radial-gradient(circle at 25% 50%,#8d8899 0 .3rem,transparent .32rem),radial-gradient(circle at 75% 50%,#8d8899 0 .3rem,transparent .32rem)}
+.tv video,.tv img{display:block;width:100%;aspect-ratio:4/3;background:#000;border:.35rem solid #15131a;image-rendering:pixelated}
+.cta{display:inline-block;font-family:'Pixelify Sans',monospace;font-size:1.2rem;color:var(--black);background:var(--select);padding:.65rem 1.3rem;text-decoration:none;border:2px solid var(--black);box-shadow:4px 4px 0 var(--black)}
+.cta:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--black)}
+
+section{padding:4.5rem 0;border-top:1px solid var(--line)}
+.battles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));gap:1.4rem;margin-top:2rem}
+figure{margin:0;background:var(--panel);border:2px solid var(--line)}
+figure video{display:block;width:100%;aspect-ratio:4/3;background:#000}
+figcaption{padding:.7rem .9rem;display:flex;justify-content:space-between;gap:1rem;align-items:baseline}
+figcaption b{font-family:'Pixelify Sans',monospace;font-size:1.15rem;font-weight:500}
+figcaption span{color:var(--dim);font-size:.9rem}
+
+.steps{display:grid;gap:1.6rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));margin-top:1.6rem}
+.steps h3{font-size:1.3rem;margin-bottom:.5rem;color:var(--sea)}
+.steps p{color:var(--muted)}
+pre{background:var(--panel);border:2px solid var(--line);padding:1rem 1.1rem;overflow-x:auto;font:400 .95rem/1.7 ui-monospace,Consolas,monospace;color:var(--ivory);margin:1.2rem 0}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.92em}
+.note{border-left:4px solid var(--soul);padding-left:1rem;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:2.5rem 0 3rem;color:var(--dim);font-size:.95rem}
+footer p{max-width:none}
+@media (prefers-reduced-motion:reduce){.cta:hover{transform:none}}
+</style>
+</head>
+<body>
+<header class="stage">
+ <div class="wrap">
+  <h1>UnderRune</h1>
+  <p class="lede">DELTARUNE boss battles in your browser, running the game's own code from your own copy. Every attack is the original, not a remake.</p>
+  <div class="tv"><video id="hero" src="clips/theater.mp4" poster="clips/theater.jpg" muted loop playsinline preload="metadata" aria-label="The theater intro: pressing a remote turns the TV on and sweeps that side's colors across the stage"></video></div>
+  <a class="cta" href="https://github.com/KaanAlper/UnderRune">View the source on GitHub</a>
+ </div>
+</header>
+<main>
+ <section>
+  <div class="wrap">
+   <h2>The real fights</h2>
+   <p>All 49 boss encounters from chapters 1 to 5 load and reach combat with their original attacks, music and dialogue. These clips are recorded from the app.</p>
+   <div class="battles">
+    <figure><video src="clips/ch1-25.mp4" poster="clips/ch1-25.jpg" controls muted playsinline preload="none"></video><figcaption><b>JEVIL</b><span>Chapter 1, secret boss</span></figcaption></figure>
+    <figure><video src="clips/ch2-61.mp4" poster="clips/ch2-61.jpg" controls muted playsinline preload="none"></video><figcaption><b>Spamton NEO</b><span>Chapter 2, secret boss</span></figcaption></figure>
+    <figure><video src="clips/ch3-115.mp4" poster="clips/ch3-115.jpg" controls muted playsinline preload="none"></video><figcaption><b>Roaring Knight</b><span>Chapter 3, secret boss</span></figcaption></figure>
+    <figure><video src="clips/ch4-160.mp4" poster="clips/ch4-160.jpg" controls muted playsinline preload="none"></video><figcaption><b>Hammer of Justice</b><span>Chapter 4, Susie alone</span></figcaption></figure>
+    <figure><video src="clips/ch4-175.mp4" poster="clips/ch4-175.jpg" controls muted playsinline preload="none"></video><figcaption><b>Titan</b><span>Chapter 4, main boss</span></figcaption></figure>
+    <figure><video src="clips/ch5-224.mp4" poster="clips/ch5-224.jpg" controls muted playsinline preload="none"></video><figcaption><b>Pink</b><span>Chapter 5, main boss</span></figcaption></figure>
+   </div>
+  </div>
+ </section>
+ <section>
+  <div class="wrap">
+   <h2>How it works</h2>
+   <div class="steps">
+    <div><h3>The game's own code</h3><p>The open-source <a href="https://github.com/ButterscotchRunner/Butterscotch">Butterscotch</a> GameMaker runner, compiled to WebAssembly, runs the bytecode in your installed <code>data.win</code>. A small patch adds positional audio and compiles the game's shaders for WebGL2.</p></div>
+    <div><h3>Straight into the fight</h3><p>A launcher copy of each chapter changes only the startup step, then starts the chosen encounter through the game's own <code>scr_battle</code>. Each party is taken from the game code: Susie fights Hammer of Justice alone, as in the game.</p></div>
+    <div><h3>Your gear, their rules</h3><p>Before a fight you equip weapons and armor and pack the 12-slot bag. Names, stats and who can wear what come from the game data, and the battle uses exactly that loadout.</p></div>
+   </div>
+  </div>
+ </section>
+ <section>
+  <div class="wrap">
+   <h2>Run it yourself</h2>
+   <p class="note">You need your own copy of DELTARUNE installed through Steam. Nothing from the game is in the repository; everything is read from your installation on your computer.</p>
+<pre><code>git clone https://github.com/KaanAlper/UnderRune
+cd UnderRune
+npm install
+npm run prepare:game
+npm run setup:native
+npm run dev</code></pre>
+   <p>Then open <code>http://127.0.0.1:5173</code>. Requirements, controls and the test suite are in the <a href="https://github.com/KaanAlper/UnderRune#readme">README</a>.</p>
+  </div>
+ </section>
+</main>
+<footer>
+ <div class="wrap">
+  <p>UnderRune is a fan project and a computer engineering graduation project. Not affiliated with Toby Fox. UNDERTALE and DELTARUNE &copy; Toby Fox. Gameplay clips recorded from a legally owned copy.</p>
+  <p>Code under <a href="https://github.com/KaanAlper/UnderRune/blob/main/LICENSE">AGPL-3.0</a>. Runtime: <a href="https://github.com/ButterscotchRunner/Butterscotch">Butterscotch</a> (AGPL-3.0). Data extraction: <a href="https://github.com/UnderminersTeam/UndertaleModTool">UndertaleModTool</a>. Interface reference: <a href="https://shadowcrystal.dev/">shadowcrystal.dev</a>.</p>
+ </div>
+</footer>
+<script>
+// The hero loops the intro unless the visitor prefers reduced motion; then it waits for a click.
+const hero=document.getElementById('hero');
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){hero.controls=true;}else{hero.play().catch(()=>{hero.controls=true;});}
+</script>
+</body>
+</html>
