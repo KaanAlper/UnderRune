@@ -16,6 +16,7 @@ const frameAt=(s:SpriteFrames,frame:number)=>{const n=s.frames.length;return n?s
 
 export class CanvasGraphics implements GmGraphics{
  private tints=new Map<string,HTMLCanvasElement>();
+ private fogs=new Map<string,HTMLCanvasElement>();
  constructor(readonly ctx:CanvasRenderingContext2D,readonly assets:DrawAssets,readonly view:{x:number;y:number}){}
  private tinted(f:FrameRef,blend:number){
   const key=`${f.page}:${f.sx},${f.sy}:${blend}`;let c=this.tints.get(key);if(c)return c;
@@ -39,11 +40,20 @@ export class CanvasGraphics implements GmGraphics{
   const s=this.assets.sprite(name);if(!s||alpha<=0)return;const f=frameAt(s,frame);if(!f)return;
   this.place(x,y,xscale,yscale,angle,alpha);this.blit(f,-s.originX,-s.originY,blend);this.ctx.restore();
  }
+ spriteFog(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,color:number,alpha:number){
+  const s=this.assets.sprite(name);if(!s||alpha<=0)return;const f=frameAt(s,frame);if(!f)return;
+  const key=`${f.page}:${f.sx},${f.sy}:${color}`;let fog=this.fogs.get(key);
+  if(!fog){if(this.fogs.size>4000)this.fogs.clear();fog=document.createElement('canvas');fog.width=f.sw;fog.height=f.sh;const g=fog.getContext('2d')!;g.drawImage(this.assets.pages[f.page],f.sx,f.sy,f.sw,f.sh,0,0,f.sw,f.sh);g.globalCompositeOperation='source-in';g.fillStyle=css(color);g.fillRect(0,0,f.sw,f.sh);this.fogs.set(key,fog);}
+  this.place(x,y,xscale,yscale,angle,alpha);this.ctx.drawImage(fog,0,0,f.sw,f.sh,-s.originX+f.tx,-s.originY+f.ty,f.tw||f.sw,f.th||f.sh);this.ctx.restore();
+ }
  rect(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,outline:boolean){
   const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));
   const l=Math.min(x1,x2)-this.view.x,t=Math.min(y1,y2)-this.view.y,w=Math.abs(x2-x1)+1,h=Math.abs(y2-y1)+1;
   if(outline){c.strokeStyle=css(color);c.lineWidth=1;c.strokeRect(l+.5,t+.5,w-1,h-1);}else{c.fillStyle=css(color);c.fillRect(l,t,w,h);}
   c.restore();
+ }
+ line(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,width=1){
+  const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.strokeStyle=css(color);c.lineWidth=width;c.beginPath();c.moveTo(x1-this.view.x,y1-this.view.y);c.lineTo(x2-this.view.x,y2-this.view.y);c.stroke();c.restore();
  }
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean){
   if(r<=0)return;const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.beginPath();c.arc(x-this.view.x,y-this.view.y,r,0,Math.PI*2);

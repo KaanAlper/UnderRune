@@ -21,3 +21,17 @@ it('pause and mute stop active effects and prevent more voices until resumed',as
 it('aborts pending sample requests when the manager is disposed',async()=>{
  const {audio}=setup();let signal:AbortSignal|undefined;vi.stubGlobal('fetch',vi.fn((_url,options)=>new Promise((_resolve,reject)=>{signal=options.signal;signal!.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')));})));const pending=audio.prepareEffects({snd_laz_c:{url:'/swing.wav',volume:1,pitch:1}});const result=pending.catch(e=>e);audio.dispose();expect(signal?.aborted).toBe(true);await result;
 });
+it('keeps native loop handles independent and applies their source pitch until explicitly stopped',async()=>{
+ const {audio,voices}=setup();await audio.prepareEffects({snd_chain_wave:{url:'/chain.wav',volume:.7,pitch:1.2}});
+ const a=audio.sourceLoop('snd_chain_wave'),b=audio.sourceLoop('snd_chain_wave');
+ expect(a).not.toBe(b);expect(voices[0]).toMatchObject({loop:true});audio.sourcePitch(a!,.8);
+ expect(voices[0].playbackRate.value).toBeCloseTo(.96);expect(voices[1].playbackRate.value).toBe(1.2);
+ audio.sourceStop(a!);expect(voices[0].stop).toHaveBeenCalledOnce();expect(voices[1].stop).not.toHaveBeenCalled();
+ audio.sourceStop('snd_chain_wave');expect(voices[1].stop).toHaveBeenCalledOnce();audio.dispose();
+});
+it('suspends ongoing native loops at pause and mute, then resumes with the original handles and pitch',async()=>{
+ const {audio,voices}=setup();await audio.prepareEffects({snd_chain_wave:{url:'/chain.wav',volume:1,pitch:1}});const id=audio.sourceLoop('snd_chain_wave')!;
+ audio.pause(true);expect(voices[0].stop).toHaveBeenCalledOnce();audio.sourcePitch(id,.6);audio.pause(false);
+ expect(voices[1].playbackRate.value).toBe(.6);expect(voices[1]).toMatchObject({loop:true});audio.setMuted(true);audio.setMuted(false);
+ expect(voices).toHaveLength(3);audio.sourceStop(id);expect(voices[2].stop).toHaveBeenCalledOnce();audio.dispose();audio.pause(false);expect(voices).toHaveLength(3);
+});

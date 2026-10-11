@@ -112,9 +112,14 @@ export class GmRuntime{
  drawSprite(name:string|null,frame:number,x:number,y:number,xscale=1,yscale=1,angle=0,blend=0xffffff,alpha=1){
   if(this.gfx&&name)this.gfx.sprite(name,frame,x,y,xscale,yscale,angle,blend,alpha);
  }
+ /** The source's d3d fog at depth zero replaces sprite RGB while retaining its alpha mask. */
+ drawSpriteFog(name:string,frame:number,x:number,y:number,xscale=1,yscale=1,angle=0,color=0xffffff,alpha=1){
+  if(!this.gfx)return;if(!this.gfx.spriteFog)throw Error('Graphics backend does not support sprite fog');this.gfx.spriteFog(name,frame,x,y,xscale,yscale,angle,color,alpha);
+ }
  /** draw_self: the instance's sprite with its own frame, scale, angle, blend and alpha. */
  drawSelf(i:GmInstance){this.drawSprite(i.sprite,i.imageIndex,i.x,i.y,i.imageXscale,i.imageYscale,i.imageAngle,i.imageBlend,i.imageAlpha);}
  drawRect(x1:number,y1:number,x2:number,y2:number,outline=false){this.gfx?.rect(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,outline);}
+ drawLine(x1:number,y1:number,x2:number,y2:number,width?:number){if(!this.gfx)return;if(!this.gfx.line)throw Error('Graphics backend does not support line drawing');if(width===undefined)this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha);else this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,width);}
  drawCircle(x:number,y:number,r:number,outline=false){this.gfx?.circle(x,y,r,this.drawState.color,this.drawState.alpha,outline);}
  drawText(x:number,y:number,text:string,xscale=1,yscale=1,angle=0){
   const d=this.drawState;this.gfx?.text(x,y,text,{font:d.font,color:d.color,alpha:d.alpha,halign:d.halign,valign:d.valign,xscale,yscale,angle});
@@ -122,6 +127,9 @@ export class GmRuntime{
  /** Sound hooks; the game logic never waits on them. */
  sound?:(name:string,pitch?:number,restart?:boolean)=>void;
  stopAllSounds?:()=>void;
+ soundLoop?:(name:string)=>number|undefined;
+ soundStop?:(handle:number|string)=>void;
+ soundPitch?:(handle:number|string,pitch:number)=>void;
  /** Set by room_goto; the host decides what the room change means (game over, battle end). */
  pendingRoom:string|null=null;
  constructor(readonly bank:SpriteBank,options:{seed?:number;rng?:readonly number[];firstId?:number}={}){

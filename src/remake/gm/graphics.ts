@@ -3,7 +3,9 @@ export type HAlign=0|1|2;
 export interface TextStyle{font:string;color:number;alpha:number;halign:HAlign;valign:HAlign;xscale:number;yscale:number;angle:number}
 export interface GmGraphics{
  sprite(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,blend:number,alpha:number):void;
+ spriteFog?(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,color:number,alpha:number):void;
  rect(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,outline:boolean):void;
+ line?(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,width?:number):void;
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean):void;
  text(x:number,y:number,text:string,style:TextStyle):void;
 }

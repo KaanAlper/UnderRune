@@ -15,6 +15,7 @@ import {assetUrl} from './game/url';
 import {loadRemakeAssets} from './remake/host/assets';
 import {createJevilPractice,JEVIL_PATTERNS,type JevilPractice} from './remake/host/practice';
 import {SourceBattle} from './remake/host/battle';
+import {sourceEncounter,availabilityLabel} from './remake/host/encounters';
 import {BattleView} from './remake/host/view';
 import {CanvasGraphics} from './remake/host/canvas';
 import {KEY} from './remake/deltarune/battle';
@@ -45,14 +46,14 @@ function openTheater(){sessionToken++;closeBattle();theater=new TheaterState(red
 function showError(cause:unknown){loading.hidden=true;busy=false;element('error-text').textContent=cause instanceof Error?cause.message:String(cause);error.hidden=false;}
 function renderRemakeFrame(){if(!remake)return;remakeCtx.imageSmoothingEnabled=false;remakeCtx.fillStyle='#000';remakeCtx.fillRect(0,0,640,480);if(remake instanceof SourceBattle)remakeView?.background(remake);remake.rt.draw();if(remake instanceof SourceBattle)remakeView?.draw(remake);}
 async function launchRemake(record:EncounterRecord,loadout:Loadout){
- if(!['ch1-25','ch1-2'].includes(record.id))throw Error('This encounter is still in development. Your preparation is saved.');
+ const encounter=sourceEncounter(record.id);if(!encounter)throw Error('This encounter is still in development. Your preparation is saved.');
  if(busy)return;busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* CONNECTING '+record.name.toUpperCase()+'...';const token=++sessionToken;
  const pattern=Number(element<HTMLSelectElement>('attack-select').value)||0;
  const controller=new AbortController();remakeLoad?.abort();remakeLoad=controller;
  try{remakeAssets??=await loadRemakeAssets();if(token!==sessionToken)return;await audio.prepareEffects(remakeAssets.sounds,controller.signal);if(token!==sessionToken)return;closeBattle();publicLoadout=structuredClone(loadout);
   remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern):new SourceBattle(remakeAssets.bank,equipment!.chapters[1],loadout,record.id);remake.rt.gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);
   remakeView=new BattleView(remakeCtx,assets,remakeAssets.draw);remakeConfirm=false;remakeCancel=false;remakeMoveCooldown=0;
-  remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.stopAllSounds=()=>audio.stop();renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(record.id==='ch1-25'?'joker':'lancerfight');
+  remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.stopAllSounds=()=>audio.stop();renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(encounter.music);
  }catch(e){if(token===sessionToken)throw e;}finally{if(remakeLoad===controller)remakeLoad=null;if(token===sessionToken){busy=false;loading.hidden=true;input.clear();clock.reset();}}
 }
 async function launchNative(record:EncounterRecord,ini:string){
@@ -76,7 +77,7 @@ function onNativeEvent(event:NativeEvent){
 }
 async function startBattle(practice=false){
  const record=menuRecords()[selection];if(!record||busy)return;
- if(publicMode){publicPractice=practice&&record.id==='ch1-25';const playable=['ch1-25','ch1-2'].includes(record.id);if(prep)prep.open(record,{practiceOnly:publicPractice,available:playable,launchLabel:playable?publicPractice?'START PRACTICE':'START BATTLE':'IN DEVELOPMENT',notice:playable?publicPractice?'Single attack practice. Use START BATTLE from the encounter list for commands and continuous turns.':'Browser battle: commands, equipment stats and usable bag items. Visuals, sounds and special equipment effects are still being compared with the game.':'Browse equipment and save your loadout. This encounter is not playable in the public demo yet.'});else showError('Equipment could not load. Please retry.');return;}
+ if(publicMode){const encounter=sourceEncounter(record.id);publicPractice=practice&&!!encounter?.practice;const playable=!!encounter;if(prep)prep.open(record,{practiceOnly:publicPractice,available:playable,launchLabel:playable?publicPractice?'START PRACTICE':'START BATTLE':'IN DEVELOPMENT',notice:playable?publicPractice?'Single attack practice. Use START BATTLE from the encounter list for commands and continuous turns.':'Browser battle: commands, equipment stats and usable bag items. Visuals, sounds and special equipment effects are still being compared with the game.':'Browse equipment and save your loadout. This encounter is not playable in the public demo yet.'});else showError('Equipment could not load. Please retry.');return;}
  // Full battles use the original game code; the adaptation remains for practice and encounters without a native launcher.
  if(!practice&&nativeIds.has(record.id)){
   if(prep&&equipment?.chapters[record.chapter])prep.open(record);
@@ -118,8 +119,8 @@ function updateControls(){
   const rows=menuRecords(),start=Math.floor(selection/8)*8;for(let i=0;i<8;i++){const record=rows[start+i];if(record)addHitbox(`Battle ${record.name} ${record.id}`,30,104+i*35,345,31,()=>{selection=start+i;void startBattle(false);});}
   if(rows.length>8){addHitbox('Previous encounters',410,402,84,27,()=>{selection=start===0?Math.floor((rows.length-1)/8)*8:start-8;});addHitbox('Next encounters',510,402,94,27,()=>{selection=start+8>=rows.length?0:start+8;});}
   const select=element<HTMLSelectElement>('attack-select');select.replaceChildren();for(const [i,a]of (publicMode?JEVIL_PATTERNS:getDefinition(rows[selection]).attacks).entries()){const opt=document.createElement('option');opt.value=String(i);opt.textContent=a.name;select.append(opt);}
-  select.disabled=publicMode&&rows[selection].id!=='ch1-25';element<HTMLButtonElement>('practice').disabled=select.disabled;
-  status.textContent=`CHAPTER ${chapter} / ${rows.length} ENCOUNTERS${publicMode?' / JEVIL + LANCER AVAILABLE':''}`;
+  select.disabled=publicMode&&!sourceEncounter(rows[selection].id)?.practice;element<HTMLButtonElement>('practice').disabled=select.disabled;
+  status.textContent=`CHAPTER ${chapter} / ${rows.length} ENCOUNTERS${publicMode?' / '+availabilityLabel(chapter):''}`;
  }
  if(scene==='battle'&&battle){
   const b=battle;status.textContent=`${b.definition.record.name} / ${b.paused?'paused':b.phase} / TURN ${b.turn+1}`;
