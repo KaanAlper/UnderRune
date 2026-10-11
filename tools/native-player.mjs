@@ -43,6 +43,8 @@ function oracleArgs(oracle){
  if(typeof oracle.inputs==='string'){runner.FS.writeFile('/saves/inputs.json',oracle.inputs);args.push('--playback-inputs','/saves/inputs.json');}
  if(Number.isInteger(oracle.frames)&&oracle.frames>0)args.push('--exit-at-frame',String(oracle.frames));
  if(typeof oracle.globals==='string'&&/^[\w,]*$/.test(oracle.globals))args.push('--trace-file','/saves/trace.ndjson','--trace-globals',oracle.globals);
+ // Full state snapshots (every variable of every object) at chosen frames, for starting a remake run mid-battle.
+ if(Array.isArray(oracle.dumps)&&oracle.dumps.every(Number.isInteger)){for(const f of oracle.dumps)args.push('--dump-frame-json',String(f));if(oracle.dumps.length)args.push('--dump-frame-json-file','/saves/dump_%d.json');}
  window.__runner=runner;return args;
 }
 async function start(id,ini,oracle){

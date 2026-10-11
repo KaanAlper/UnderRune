@@ -1,7 +1,7 @@
 // Records a reference run of an original battle for parity testing: fixed seed, scripted keys,
 // one trace line per frame (every object, the RNG state and chosen globals).
 // Requires the app dev server (npm run dev). Output: .tools/oracle/<id>-s<seed>.ndjson
-// Usage: node tools/oracle-record.mjs ch1-25 [--seed=11] [--frames=1800]
+// Usage: node tools/oracle-record.mjs ch1-25 [--seed=11] [--frames=1800] [--dumps=683,700]
 import {chromium} from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -12,6 +12,7 @@ const [id, ...rest] = process.argv.slice(2);
 if (!id) throw Error('Usage: node tools/oracle-record.mjs <encounter id> [--seed=N] [--frames=N]');
 const option = (name, fallback) => Number(rest.find(a => a.startsWith(`--${name}=`))?.split('=')[1] ?? fallback);
 const seed = option('seed', 11), frames = option('frames', 1800);
+const dumps = (rest.find(a => a.startsWith('--dumps='))?.split('=')[1] ?? '').split(',').filter(Boolean).map(Number);
 // Battle state worth comparing: party HP, TP, turn timer, battle phase flags, invincibility.
 const GLOBALS = 'hp,maxhp,tension,turntimer,myfight,mnfight,inv,encounterno';
 
@@ -28,13 +29,17 @@ try {
   await page.addInitScript(() => { window.__ev = []; addEventListener('message', e => { if (e.data?.source === 'underrune-native') window.__ev.push(e.data.type); }); });
   await page.goto(`http://127.0.0.1:5173/native/?oracle=1&seed=${seed}`);
   await page.waitForFunction(() => window.__ev.includes('ready'));
-  const oracle = {inputs: JSON.stringify(zScript(frames)), frames, globals: GLOBALS};
+  const oracle = {inputs: JSON.stringify(zScript(frames)), frames, globals: GLOBALS, dumps};
   await page.evaluate(([id, oracle]) => postMessage({source: 'underrune-host', type: 'start', id, ini: '', oracle}, location.origin), [id, oracle]);
   await page.waitForFunction(() => window.__ev.includes('ended') || window.__ev.includes('failed'), null, {timeout: frames / 30 * 1000 * 4 + 120000});
   const trace = await page.evaluate(() => window.__runner.FS.readFile('/saves/trace.ndjson', {encoding: 'utf8'}));
   const out = path.join(root, '.tools', 'oracle', `${id}-s${seed}.ndjson`);
   await fs.mkdir(path.dirname(out), {recursive: true});
   await fs.writeFile(out, trace);
+  for (const f of dumps) {
+    const dump = await page.evaluate(f => window.__runner.FS.readFile(`/saves/dump_${f}.json`, {encoding: 'utf8'}), f);
+    await fs.writeFile(path.join(root, '.tools', 'oracle', `${id}-s${seed}-f${f}.json`), dump);
+  }
   const lines = trace.trim().split('\n').length;
   console.log(`${id} seed ${seed}: ${lines} frames -> ${path.relative(root, out)}`);
 } finally { await browser.close(); }
