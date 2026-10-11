@@ -95,6 +95,11 @@ describe('source hit timing and damage feedback',()=>{
   const b=create('ch1-2');advance(b,30);b.select(0);b.confirm();const sprites=capture(b);b.boltTick=b.bolts[0].frame;b.confirm();advance(b,10);
   expect(sprites.some(s=>s.name==='spr_lancerbike_hurt')).toBe(true);expect(b.body.hurttimer).toBe(29);advance(b,2);expect(b.body.shakex).toBe(-8);
  });
+ it('Lancer auto-Susie waits for Kris timing, swings sixteen frames later and lands ten frames after that',()=>{
+  const b=create('ch1-2');advance(b,30);b.select(0);b.confirm();const sounds:{name:string;pitch:number|undefined}[]=[];b.rt.sound=(name,pitch)=>sounds.push({name,pitch});b.boltTick=b.bolts[0].frame;b.confirm();advance(b,10);const afterKris=b.enemyHp;
+  expect(b.heroes[1].pose).toBe('idle');advance(b,5);expect(b.heroes[1].pose).toBe('idle');advance(b,1);expect(b.heroes[1].pose).toBe('attack');expect(b.enemyHp).toBe(afterKris);
+  advance(b,10);expect(b.enemyHp).toBe(afterKris-109);expect(sounds.some(s=>s.name==='snd_laz_c'&&s.pitch===.9)).toBe(true);expect(b.heroes[1].sprite).toBe('spr_susieb_attack');
+ });
  it('fades the party for Jevil box attacks and restores it for the following diamond attack',()=>{
   const b=create();b.rt.globals.chemg_god_mode=true;advance(b,30);for(let i=0;i<3;i++)b.select(4);b.confirm();advance(b,25);
   expect(b.pattern).toBe(0);expect(b.heroes.map(h=>h.imageAlpha)).toEqual([0,0,0]);advance(b,270);expect(b.heroes.map(h=>h.imageAlpha)).toEqual([1,1,1]);
