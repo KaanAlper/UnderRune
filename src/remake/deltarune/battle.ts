@@ -2,6 +2,7 @@
 // bullets, the damage formula, screen shake and damage numbers. Object indices are Chapter 1's; event
 // dispatch order depends on them.
 import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
+import {C} from '../gm/graphics';
 
 export const KEY={left:37,up:38,right:39,down:40,z:90,x:88,c:67,enter:13,shift:16,ctrl:17};
 const held=(rt:GmRuntime,...keys:number[])=>keys.some(k=>rt.input.held.has(k));
@@ -54,8 +55,7 @@ const mergeColor=(a:number,b:number,t:number)=>{
  const ch=(c:number,sh:number)=>(c>>sh)&255,mix=(sh:number)=>Math.trunc(ch(a,sh)+(ch(b,sh)-ch(a,sh))*t);
  return mix(0)|(mix(8)<<8)|(mix(16)<<16);
 };
-const C={white:0xffffff,purple:0x800080,aqua:0xffff00,lime:0x00ff00,red:0x0000ff,green:0x008000,black:0};
-export {mergeColor,C as colors};
+export {mergeColor};
 
 /** Damage numbers: they pop, bounce twice, then fade upward. The motion runs in the Draw event. */
 export const dmgWriter:GmObjectDef={name:'obj_dmgwriter',index:312,events:{
@@ -75,7 +75,15 @@ export const dmgWriter:GmObjectDef={name:'obj_dmgwriter',index:312,events:{
   if(s.hspeed>0)s.hspeed=s.hspeed-1;
   if(s.hspeed<0)s.hspeed=s.hspeed+1;
   if(Math.abs(s.hspeed)<1)s.hspeed=0;
-  rt.renderer?.(s,rt);
+  const d=rt.drawState;
+  d.color=s.type===0?s.lightb:s.type===1?s.lightf:s.type===2?s.lightg:s.type===3?C.lime:s.type===4?C.red:C.white;
+  d.font='damagefont';
+  if(s.message===0){
+   d.alpha=1-s.kill;d.halign=2;rt.drawText(s.x+30,s.y,String(s.damage),2-s.stretch,s.stretch+s.kill,s.spec===1?90:0);d.halign=0;d.alpha=1;
+  }else{
+   const [frame,blend]=s.message===1?[0,d.color]:s.message===2?[1,C.red]:s.message===3?[2,C.lime]:[3,C.lime];
+   rt.drawSprite('spr_battlemsg',frame,s.x+30,s.y,2-s.stretch,s.stretch+s.kill,0,blend,1-s.kill);
+  }
   if(s.bounces<2)s.vspeed=s.vspeed+1;
   if(s.y>s.ystart&&s.bounces<2&&s.killactive===0){s.y=s.ystart;s.vspeed=s.vstart/2;s.bounces+=1;}
   if(s.bounces>=2&&s.killactive===0){s.vspeed=0;s.y=s.ystart;}
@@ -106,6 +114,8 @@ export const growtangle:GmObjectDef={name:'obj_growtangle',index:311,parent:batt
   if(s.timer>=s.maxtimer&&s.growcon===1){s.growcon=2;s.imageAngle=0;}
   if(s.timer<=0&&s.growcon===3)rt.destroy(s);
  },
+ // The box's second frame is its fill, drawn under the outline.
+ draw:(s,rt)=>{rt.drawSprite(s.sprite,1,s.x,s.y,s.imageXscale,s.imageYscale,s.imageAngle,s.imageBlend,s.imageAlpha);rt.drawSelf(s);},
  endStep:(s,rt)=>{
   if(s.keep!==1)return;
   const h=rt.first(heart);if(!h)return;
@@ -139,6 +149,15 @@ export const regularBullet:GmObjectDef={name:'obj_regularbullet',index:203,paren
   if(s.y>rt.view.y+520)rt.destroy(s);
  },
 }};
+/** A bullet that hurts on contact but stays (scythes, carousel horses). */
+export const regularBulletPermanent:GmObjectDef={name:'obj_regularbullet_permanent',index:204,parent:regularBullet,events:{
+ user5:(s,rt)=>{if(s.active!==1)return;if(s.target!==3)damage(s,rt);else damageAll(s,rt);},
+}};
+/** A plain sprite holder (scr_marker). */
+export const marker:GmObjectDef={name:'obj_marker',index:86};
+export function darkMarker(rt:GmRuntime,x:number,y:number,sprite:string){
+ const m=rt.create(marker,x,y);m.sprite=sprite;m.imageSpeed=0;m.imageXscale=2;m.imageYscale=2;return m;
+}
 /** scr_bullet_inherit: a spawned bullet takes its spawner's bullet values. */
 export function inheritBullet(from:GmInstance,to:GmInstance){
  to.damage=from.damage;to.grazepoints=from.grazepoints;to.timepoints=from.timepoints;to.inv=from.inv;to.target=from.target;to.grazed=0;to.grazetimer=0;
@@ -219,7 +238,10 @@ export const grazebox:GmObjectDef={name:'obj_grazebox',index:206,sprite:'spr_gra
  events:{
   create:(s,rt)=>{const h=rt.first(heart);if(h){s.x=h.x+10;s.y=h.y+10;}s.grazetimer=0;},
   endStep:(s,rt)=>{const h=rt.first(heart);if(h){s.x=h.x+10;s.y=h.y+10;}else rt.destroy(s);},
-  draw:(s,rt)=>{if(s.grazetimer>0)rt.renderer?.(s,rt);s.grazetimer-=1;},
+  draw:(s,rt)=>{
+   if(s.grazetimer>0){rt.drawSprite(s.sprite,0,s.x,s.y,1,1,0,C.white,s.grazetimer/6);rt.drawSprite(s.sprite,3,s.x,s.y,1,1,0,C.white,s.grazetimer/6-0.2);}
+   s.grazetimer-=1;
+  },
  },
  collisions:[{target:collideBullet,run:(_s,b,rt)=>{
   const g=rt.globals;if(g.inv>=0)return;

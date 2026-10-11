@@ -26,6 +26,8 @@ global.chararmor1[hero] = ini_read_real(""armor1"", string(hero), global.chararm
 global.chararmor2[hero] = ini_read_real(""armor2"", string(hero), global.chararmor2[hero]);
 }
 for (var slot = 0; slot < 12; slot += 1) global.item[slot] = ini_read_real(""items"", string(slot), 0);
+// Reference recordings only: the debug no-damage switch keeps a run going through many enemy turns.
+if (ini_read_real(""oracle"", ""god"", 0) == 1) global.chemg_god_mode = 1;
 ini_close();
 global.charauto[2] = 0;
 global.tempflag[4] = 1;

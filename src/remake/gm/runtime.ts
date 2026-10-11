@@ -5,6 +5,7 @@ import {f32,clamp6} from './math';
 import {GmRandom} from './random';
 import {instancesMeet} from './collision';
 import type {SpriteBank} from './sprites';
+import type {DrawState,GmGraphics} from './graphics';
 
 export type GmEvent='create'|'destroy'|'beginStep'|'step'|'endStep'|'draw'|`alarm${number}`|`user${number}`|'animationEnd';
 export type GmHandler=(self:GmInstance,rt:GmRuntime)=>void;
@@ -44,6 +45,8 @@ export class GmInstance{
  get imageXscale(){return this._imageXscale;}set imageXscale(v:number){this._imageXscale=f32(v);}
  get imageYscale(){return this._imageYscale;}set imageYscale(v:number){this._imageYscale=f32(v);}
  get imageAlpha(){return this._imageAlpha;}set imageAlpha(v:number){this._imageAlpha=f32(v);}
+ /** Sets direction and speed as raw values, then the components (as move_towards_point does). */
+ setMotion(direction:number,speed:number){this._direction=f32(direction);this._speed=f32(speed);this.componentsFromSpeed();}
  // instance.c Instance_computeComponentsFromSpeed / Instance_computeSpeedFromComponents.
  componentsFromSpeed(){
   let h=f32(this._speed*clamp6(Math.cos(this._direction*(Math.PI/180))));
@@ -88,15 +91,34 @@ function flatCollisions(o:GmObjectDef):GmCollision[]{
  list.sort((a,b)=>a.target.index-b.target.index);flatCache.set(o,list);return list;
 }
 
+/** move_towards_point: aim at a point (unrounded angle) and set the speed. */
+export function moveTowardsPoint(i:GmInstance,x:number,y:number,speed:number){
+ let dir=Math.atan2(-(y-i.y),x-i.x)*(180/Math.PI);if(dir<0)dir+=360;
+ i.setMotion(dir,speed);
+}
+
 export interface GmInput{held:Set<number>;pressed:Set<number>;released:Set<number>}
 
 export class GmRuntime{
  instances:GmInstance[]=[];frame=0;nextId:number;random:GmRandom;
  view={x:0,y:0,width:640,height:480};
+ room={width:640,height:480};
  globals:Record<string,any>={};
  input:GmInput={held:new Set(),pressed:new Set(),released:new Set()};
- /** Called for each drawn instance after its Draw event, or instead of drawing its sprite when it has none. */
- renderer?:(inst:GmInstance,rt:GmRuntime)=>void;
+ /** Where draw calls go (absent in tests); `drawState` holds the GML draw state. */
+ gfx?:GmGraphics;
+ drawState:DrawState={color:0xffffff,alpha:1,font:'',halign:0,valign:0};
+ /** draw_sprite_ext. */
+ drawSprite(name:string|null,frame:number,x:number,y:number,xscale=1,yscale=1,angle=0,blend=0xffffff,alpha=1){
+  if(this.gfx&&name)this.gfx.sprite(name,frame,x,y,xscale,yscale,angle,blend,alpha);
+ }
+ /** draw_self: the instance's sprite with its own frame, scale, angle, blend and alpha. */
+ drawSelf(i:GmInstance){this.drawSprite(i.sprite,i.imageIndex,i.x,i.y,i.imageXscale,i.imageYscale,i.imageAngle,i.imageBlend,i.imageAlpha);}
+ drawRect(x1:number,y1:number,x2:number,y2:number,outline=false){this.gfx?.rect(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,outline);}
+ drawCircle(x:number,y:number,r:number,outline=false){this.gfx?.circle(x,y,r,this.drawState.color,this.drawState.alpha,outline);}
+ drawText(x:number,y:number,text:string,xscale=1,yscale=1,angle=0){
+  const d=this.drawState;this.gfx?.text(x,y,text,{font:d.font,color:d.color,alpha:d.alpha,halign:d.halign,valign:d.valign,xscale,yscale,angle});
+ }
  /** Sound hooks; the game logic never waits on them. */
  sound?:(name:string)=>void;
  stopAllSounds?:()=>void;
@@ -193,7 +215,7 @@ export class GmRuntime{
  /** Draw events by depth (deepest first), then instance id. Draw code may use the random generator. */
  draw(){
   const list=this.instances.map((i,n)=>({i,n})).filter(e=>e.i.live&&e.i.visible).sort((a,b)=>b.i.depth-a.i.depth||a.i.id-b.i.id).map(e=>e.i);
-  for(const inst of list){if(!inst.live)continue;const h=resolveEvent(inst.object,'draw');if(h)h(inst,this);else this.renderer?.(inst,this);}
+  for(const inst of list){if(!inst.live)continue;const h=resolveEvent(inst.object,'draw');if(h)h(inst,this);else this.drawSelf(inst);}
   this.instances=this.instances.filter(i=>!i.destroyed);
  }
 }
