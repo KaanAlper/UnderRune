@@ -9,14 +9,14 @@ export function pixelHeart(ctx:CanvasRenderingContext2D,x:number,y:number,color=
 }
 export class Renderer{
  private deviceRoom:DeviceRoom;
- constructor(public ctx:CanvasRenderingContext2D,public assets:AssetStore){this.deviceRoom=new DeviceRoom(assets);}
+ constructor(public ctx:CanvasRenderingContext2D,public assets:AssetStore,private publicDemo=false){this.deviceRoom=new DeviceRoom(assets);}
  private box(x:number,y:number,w:number,h:number,color='#fff',line=3){const c=this.ctx;c.fillStyle='#000';c.fillRect(x,y,w,h);c.strokeStyle=color;c.lineWidth=line;c.strokeRect(x+.5,y+.5,w,h);}
  private text(t:string,x:number,y:number,s=2,c='#fff',a:'left'|'center'|'right'='left'){this.assets.text(this.ctx,t,x,y,s,c,a);}
  clear(){this.ctx.imageSmoothingEnabled=false;this.ctx.fillStyle='#000';this.ctx.fillRect(0,0,640,480);}
  intro(frame:number){
   this.clear();const c=this.ctx;c.strokeStyle='#343039';c.lineWidth=2;c.strokeRect(72,62,496,354);this.text('THE DEVICE',320,153,4,'#fff','center');
   this.text('* ARE YOU THERE?',320,224,2,'#bfbac8','center');this.text('[ Z / ENTER ] CONNECT',320,286,2,frame%90<65?'#ffff00':'#b2a941','center');
-  this.text('DELTARUNE  /  LOCAL BOSS BATTLES',320,361,1,'#706b79','center');
+  this.text(this.publicDemo?'DELTARUNE  /  PUBLIC DEMO':'DELTARUNE  /  LOCAL BOSS BATTLES',320,361,1,'#706b79','center');
  }
  room(chapter:number,count:number){
   // Locally downloaded reference art (public/device-room, not in the repository) when present; otherwise the drawn room.
@@ -25,7 +25,7 @@ export class Renderer{
   c.fillStyle='#000';c.fillRect(157,42,306,281);this.text('DEVICE_MENU',310,50,2,'#fff','center');
   this.text('CHOOSE A SIGNAL',310,89,1,'#9a95a3','center');
   for(let i=1;i<=5;i++){const y=116+(i-1)*32;if(chapter===i){pixelHeart(c,184,y+10,'#ffff00',1);c.fillStyle='#191608';c.fillRect(197,y-1,244,27);}this.text('DEVICE_CHAPTER_'+i,207,y,1,chapter===i?'#ffff00':'#cac4cc');}
-  this.text(`${count} SOURCE ENCOUNTERS`,310,283,1,'#726b75','center');
+  this.text(this.publicDemo?'JEVIL PRACTICE AVAILABLE':`${count} SOURCE ENCOUNTERS`,310,283,1,'#726b75','center');
   if(bg){
    const glow=this.assets.images.get('/device-room/tvglow.png');if(glow){c.globalAlpha=.23;c.drawImage(glow,0,317,640,160);c.globalAlpha=1;}
    const console=this.assets.images.get('/device-room/console.png');if(console)c.drawImage(console,221,342,198,90);
@@ -51,11 +51,11 @@ export class Renderer{
    }
    this.text(record.kind==='secret'?'SECRET ENCOUNTER':record.kind==='main'?'MAIN ENCOUNTER':'BOSS ENCOUNTER',503,310,1,'#c0a4ff','center');
    this.text('HP '+record.enemies.reduce((n,e)=>n+e.hp,0),503,339,1,'#a8a2b0','center');
-   this.text('BROWSER ADAPTATION',503,365,1,'#a69876','center');
+   this.text(this.publicDemo?(record.id==='ch1-25'?'ATTACK PRACTICE':'IN DEVELOPMENT'):'BROWSER ADAPTATION',503,365,1,'#a69876','center');
   }
   this.text(`${selected+1}/${records.length}   UP/DOWN SELECT`,40,410,1,'#807b87');
   if(records.length>8){this.text('< PREV',415,410,1,'#c3bccb');this.text('NEXT >',515,410,1,'#c3bccb');}
-  this.text('[Z] BATTLE   [T] PRACTICE',40,432,1,'#c3bccb');this.text('[X] BACK',600,432,1,'#82798b','right');
+  this.text(this.publicDemo?'[Z] PREPARE   [T] PRACTICE':'[Z] BATTLE   [T] PRACTICE',40,432,1,'#c3bccb');this.text('[X] BACK',600,432,1,'#82798b','right');
  }
  drawBosses(b:BattleSession){
   const c=this.ctx,chapter=b.definition.record.chapter;

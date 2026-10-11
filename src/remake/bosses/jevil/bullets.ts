@@ -1,7 +1,7 @@
 // Jevil's bullets. Where GML passes several random expressions to one call (choose(a + random(..), b + random(..))),
 // the reference VM evaluates the arguments right to left; the code below keeps that order.
 import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
-import {lengthdirX,lengthdirY,pointDirection} from '../../gm/math';
+import {ge,gt,le,lt,lengthdirX,lengthdirY,pointDirection} from '../../gm/math';
 import {afterimage,battleSolid,bulletParent,collideBullet,damageAll,heart,inheritBullet,regularBullet,regularBulletPermanent,shake} from '../../deltarune/battle';
 import {bulletController} from './controller';
 
@@ -108,7 +108,7 @@ export const jokerTeleport:GmObjectDef={name:'obj_joker_teleport',index:276,pare
   if(s.con===0){
    if(s.sndcon===0){rt.sound?.('snd_swing');s.sndcon=1;}
    s.imageIndex=0;
-   if(s.imageXscale<2)s.imageXscale=s.imageXscale+0.4;else{s.imageXscale=2;s.con=1;s.timer=0;}
+   if(lt(s.imageXscale,2))s.imageXscale=s.imageXscale+0.4;else{s.imageXscale=2;s.con=1;s.timer=0;}
   }
   if(s.con===1){
    s.timer+=1;
@@ -131,7 +131,7 @@ export const jokerTeleport:GmObjectDef={name:'obj_joker_teleport',index:276,pare
   if(s.con===2){s.timer+=1;if(s.timer>=10){s.con=4;s.timer=0;}}
   if(s.con===4){
    if(s.sndcon===2){rt.sound?.('snd_swing');s.sndcon=3;}
-   if(s.imageXscale>0){s.imageXscale=s.imageXscale-0.4;s.imageYscale=s.imageYscale+0.2;}
+   if(gt(s.imageXscale,0)){s.imageXscale=s.imageXscale-0.4;s.imageYscale=s.imageYscale+0.2;}
    else{s.imageXscale=0;s.con=0;rt.destroy(s);}
   }
  },
@@ -216,14 +216,14 @@ export const centerScythe:GmObjectDef={name:'obj_centerscythe',index:272,parent:
   s.wall_destroy=0;
  },
  step:(s,rt)=>{
-  if(s.chasecon===1){s.imageAlpha=s.imageAlpha+0.04;if(s.imageAlpha>=1){s.imageAlpha=1;s.chasecon=2;s.active=1;}}
+  if(s.chasecon===1){s.imageAlpha=s.imageAlpha+0.04;if(ge(s.imageAlpha,1)){s.imageAlpha=1;s.chasecon=2;s.active=1;}}
   if(s.chasecon===2){
-   if(s.un===0&&s.rotspeed<=10)s.rotspeed+=1;
-   if(s.un===1&&s.rotspeed>=-10)s.rotspeed-=1;
+   if(s.un===0&&le(s.rotspeed,10))s.rotspeed+=1;
+   if(s.un===1&&ge(s.rotspeed,-10))s.rotspeed-=1;
    s.sine+=s.sinespeed;s.dir+=s.dirspeed;
    if(s.insanity===1){
-    if(s.dirspeed>0&&s.dirspeed<3)s.dirspeed+=0.01;
-    if(s.dirspeed<0&&s.dirspeed>-3)s.dirspeed-=0.01;
+    if(gt(s.dirspeed,0)&&lt(s.dirspeed,3))s.dirspeed+=0.01;
+    if(lt(s.dirspeed,0)&&gt(s.dirspeed,-3))s.dirspeed-=0.01;
    }
    s.length=Math.cos(s.sine/18)*s.radius;
    s.x=s.centerx-lengthdirX(s.length,s.dir);s.y=s.centery-lengthdirY(s.length,s.dir);

@@ -2,6 +2,7 @@ import {CHARACTERS,addItem,readLoadout,writeLoadout,validateLoadout,type Equipme
 import type {EncounterRecord} from '../game/types';
 import type {AssetStore} from '../game/assets';
 import './preparation.css';
+import {assetUrl} from '../game/url';
 
 type Slot='weapon'|'armor1'|'armor2'|'items';
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string,className?:string)=>{
@@ -14,13 +15,13 @@ export class PreparationPanel{
  private characterList=node('div',undefined,'prep-characters');private slots=node('div',undefined,'prep-slots');
  private list=node('div',undefined,'prep-list');private bag=node('div',undefined,'prep-bag');
  private heading=node('h1');private subtitle=node('p',undefined,'prep-eyebrow');private summary=node('p',undefined,'prep-summary');
+ private intro=node('p','Equip your party and pack your bag.','prep-intro');
  private search=node('input');private feedback=node('p',undefined,'prep-feedback');private counter=node('span');
- private launch=node('button','START BATTLE','prep-launch');private isLaunching=false;
+ private launch=node('button','START BATTLE','prep-launch');private isLaunching=false;private launchLabel='START BATTLE';private available=true;private practiceOnly=false;
  constructor(private catalog:EquipmentCatalog,private assets:AssetStore,private storage:Pick<Storage,'getItem'|'setItem'>,private onLaunch:(record:EncounterRecord,loadout:Loadout)=>Promise<void>,private onDismiss:()=>void){
   this.dialog.setAttribute('aria-labelledby','prep-title');this.heading.id='prep-title';
   const top=node('div',undefined,'prep-top'),close=node('button','×','prep-close');close.type='button';close.setAttribute('aria-label','Close preparation');close.onclick=()=>this.close();
   const title=node('div');title.append(this.subtitle,this.heading);top.append(title,close);
-  const intro=node('p','Equip your party and pack your bag.','prep-intro');
   this.characterList.setAttribute('role','tablist');this.characterList.setAttribute('aria-label','Character to equip');
   this.characterList.addEventListener('keydown',event=>{
    if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();
@@ -35,7 +36,7 @@ export class PreparationPanel{
   const bagHeader=node('div',undefined,'prep-baghead'),bagTitle=node('h2','BAG'),add=node('button','+ Add item','prep-add');
   add.onclick=()=>{this.slot='items';this.query='';this.search.value='';this.render();this.search.focus();};bagHeader.append(bagTitle,this.counter,add);
   const bagSection=node('section',undefined,'prep-bagsection');bagSection.setAttribute('aria-label','Battle bag');bagSection.append(bagHeader,this.bag);
-  const body=node('div',undefined,'prep-body');body.append(intro,this.characterList,this.slots,this.summary,inventory,bagSection);
+  const body=node('div',undefined,'prep-body');body.append(this.intro,this.characterList,this.slots,this.summary,inventory,bagSection);
   this.feedback.setAttribute('role','status');
   const foot=node('footer',undefined,'prep-footer'),reset=node('button','Clear','prep-reset');reset.onclick=()=>{this.loadout={...this.loadout,characters:Object.fromEntries(CHARACTERS.map(c=>[c.id,{weapon:0,armor:[0,0]}])),items:[]};this.persist();this.render();this.feedback.textContent='Equipment and bag cleared.';};
   this.launch.onclick=()=>void this.start();foot.append(this.feedback,reset,this.launch);
@@ -44,10 +45,13 @@ export class PreparationPanel{
   this.dialog.addEventListener('click',event=>{if(event.target===this.dialog){const r=this.dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)this.close();}});
   this.dialog.addEventListener('close',()=>{this.onDismiss();this.opener?.focus();});
  }
- open(record:EncounterRecord){
+ open(record:EncounterRecord,options:{available?:boolean;notice?:string;launchLabel?:string;practiceOnly?:boolean}={}){
   const source=this.catalog.chapters[record.chapter];if(!source)throw Error('No equipment catalog for this chapter.');
   this.record=record;this.source=source;this.loadout=readLoadout(this.storage,record.chapter,source);this.opener=document.activeElement instanceof HTMLElement?document.activeElement:null;
-  this.character=1;this.slot='armor1';this.query='';this.search.value='';this.feedback.textContent='Your choices for this chapter are saved on this device.';
+  this.available=options.available??true;this.launchLabel=options.launchLabel??'START BATTLE';this.launch.textContent=this.launchLabel;this.launch.disabled=!this.available;
+  this.practiceOnly=options.practiceOnly??false;
+  this.intro.textContent=options.notice??'Equip your party and pack your bag.';
+  this.character=1;this.slot='armor1';this.query='';this.search.value='';this.feedback.textContent=options.notice??'Your choices for this chapter are saved on this device.';
   this.subtitle.textContent=`CHAPTER ${record.chapter} / BATTLE PREP`;this.heading.textContent=record.name;
   this.render();this.dialog.showModal();this.characterList.querySelector<HTMLButtonElement>('button')?.focus();
  }
@@ -58,7 +62,7 @@ export class PreparationPanel{
   this.characterList.replaceChildren();
   for(const char of CHARACTERS.filter(c=>c.id!==4||this.record.chapter>1)){
    const button=node('button',undefined,'prep-character');button.type='button';button.setAttribute('role','tab');button.setAttribute('aria-selected',String(char.id===this.character));button.tabIndex=char.id===this.character?0:-1;button.style.setProperty('--char',char.color);
-   const sprite=this.assets.getSprite(char.sprite,this.record.chapter);if(sprite){const img=node('img');img.src=sprite.frames[0].url;img.alt='';img.width=34;img.height=44;button.append(img);}else button.append(node('span',char.name[0],'prep-initial'));
+   const sprite=this.assets.getSprite(char.sprite,this.record.chapter);if(sprite){const img=node('img');img.src=assetUrl(sprite.frames[0].url);img.alt='';img.width=34;img.height=44;button.append(img);}else button.append(node('span',char.name[0],'prep-initial'));
    button.append(node('span',char.name));button.onclick=()=>{this.character=char.id;this.slot=this.slot==='items'?'armor1':this.slot;this.render();};this.characterList.append(button);
   }
   this.slots.replaceChildren();
@@ -93,7 +97,7 @@ export class PreparationPanel{
    const current=this.loadout.characters[this.character],selected=!item&&(this.slot==='weapon'?current.weapon:current.armor[this.slot==='armor1'?0:1])===entry.id;
    title.append(node('span',selected?'EQUIPPED':item?'+ ADD':!allowed?"CAN'T EQUIP":'EQUIP','prep-entryaction'));button.append(title);
    if(entry.description)button.append(node('p',entry.description,'prep-description'));
-   button.append(node('span',item?((entry as {usable:boolean}).usable?'Usable in battle':'Not usable in battle'):this.stats(gear),'prep-entrymeta'));
+   button.append(node('span',item?(this.practiceOnly?'Bag preview · item use in development':(entry as {usable:boolean}).usable?'Usable in battle':'Not usable in battle'):this.stats(gear),'prep-entrymeta'));
    if(!allowed)button.append(node('span',CHARACTERS.find(c=>c.id===this.character)!.name+" can't equip this.",'prep-incompatible'));
    button.setAttribute('aria-pressed',String(selected));button.onclick=()=>{
     try{if(item)this.loadout=addItem(this.loadout,entry.id,this.source);else if(this.slot==='weapon')current.weapon=entry.id;else current.armor[this.slot==='armor1'?0:1]=entry.id;
@@ -103,9 +107,9 @@ export class PreparationPanel{
   }
  }
  private async start(){
-  if(this.isLaunching)return;this.isLaunching=true;this.launch.disabled=true;this.launch.textContent='LOADING…';
+  if(this.isLaunching||!this.available)return;this.isLaunching=true;this.launch.disabled=true;this.launch.textContent='LOADING…';
   try{validateLoadout(this.loadout,this.source);await this.onLaunch(this.record,structuredClone(this.loadout));this.dialog.close();}
   catch(error){this.feedback.textContent=error instanceof Error?error.message:String(error);}
-  finally{this.isLaunching=false;this.launch.disabled=false;this.launch.textContent='START BATTLE';}
+  finally{this.isLaunching=false;this.launch.disabled=!this.available;this.launch.textContent=this.launchLabel;}
  }
 }

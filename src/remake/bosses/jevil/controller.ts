@@ -1,7 +1,7 @@
 // Jevil's bullet controller: one attack pattern per `type`, paced by `btimer`.
 // Where one GML call takes several random arguments, they are evaluated right to left, as in the reference VM.
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
-import {lengthdirX,lengthdirY} from '../../gm/math';
+import {ge,le,lengthdirX,lengthdirY} from '../../gm/math';
 import {battleSolid,bulletGenParent,darkMarker,growtangle,heart,inheritBullet,marker,regularBullet} from '../../deltarune/battle';
 import {centerScythe,clubsBulletDark,dbulletVert,jokerTeleport,laserScythe,carouselBullet,suitBomb} from './bullets';
 import {spadeRing} from './spadering';
@@ -202,15 +202,15 @@ function finalChaos(s:GmInstance,rt:GmRuntime){
   if(t>=131){
    const l=rt.byId(s.lastscythe);if(l)l.x=l.xstart+rt.random.random(8);
    const w=rt.byId(s.fadewhite)!;w.imageAlpha=w.imageAlpha+0.01;s.vol+=0.01;
-   if(w.imageAlpha>=1){const f=rt.byId(s.darkfader);if(f)rt.destroy(f);const l2=rt.byId(s.lastscythe);if(l2)rt.destroy(l2);}
-   if(w.imageAlpha>=1.3)s.special=3;
+   if(ge(w.imageAlpha,1)){const f=rt.byId(s.darkfader);if(f)rt.destroy(f);const l2=rt.byId(s.lastscythe);if(l2)rt.destroy(l2);}
+   if(ge(w.imageAlpha,1.3))s.special=3;
   }
  }
  if(s.special===3){
   for(const h of rt.all(heart)){h.x=vx+320;h.y=vy+120;}
   s.vol-=0.1;
   const w=rt.byId(s.fadewhite)!;w.imageAlpha=w.imageAlpha-0.1;
-  if(w.imageAlpha<=0){g.turntimer=11;s.special=4;}
+  if(le(w.imageAlpha,0)){g.turntimer=11;s.special=4;}
  }
  s.realtimer+=1;
 }

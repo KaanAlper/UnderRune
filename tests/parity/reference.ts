@@ -25,30 +25,40 @@ export function restoreScene(bank:SpriteBank,dump:Dump,line:TraceLine,objects:Gm
  const byName=new Map(objects.map(o=>[o.name,o]));
  const rt=new GmRuntime(bank,{rng:line.rng});
  rt.globals=structuredClone(dump.globalVariables);
- const skipped=new Set<string>();
+ const skipped=new Set<string>(),skippedIds=new Set<number>();
  for(const d of dump.instances){
-  const def=byName.get(d.objectName);if(!def){skipped.add(d.objectName);continue;}
+  const def=byName.get(d.objectName);if(!def){skipped.add(d.objectName);skippedIds.add(d.instanceId);continue;}
   const i=rt.restore(def,d.instanceId,d.x,d.y,d.selfVariables);
   i.depth=d.depth;i.sprite=d.sprite.name;i.imageIndex=d.sprite.imageIndex;i.imageSpeed=d.sprite.imageSpeed;
   i.imageXscale=d.scale.x;i.imageYscale=d.scale.y;i.imageAngle=d.angle;i.imageAlpha=d.alpha;i.imageBlend=d.blend;i.visible=d.visible;
   for(const [a,v] of Object.entries(d.alarms))i.alarm[Number(a)]=v;
  }
  rt.nextId=Math.max(...dump.instances.map(d=>d.instanceId))+1;
- return {rt,skipped};
+ return {rt,skipped,skippedIds};
 }
 
 export type Mismatch={frame:number;what:string};
+export type Replay=Record<number,{keysPressed:number[];keysReleased:number[]}>;
+/** Replay indices are sampled before Runner_step; index N produces traced frame N+1. */
+export function replayInput(rt:GmRuntime,replay:Replay,frame:number){
+ const entry=replay[frame];if(!entry)return;
+ for(const key of entry.keysPressed){if(!rt.input.held.has(key))rt.input.pressed.add(key);rt.input.held.add(key);}
+ for(const key of entry.keysReleased){if(rt.input.held.has(key))rt.input.released.add(key);rt.input.held.delete(key);}
+}
 /** Compares the remake with the reference after a frame: tracked objects in creation order, random state, globals. */
-export function compareFrame(rt:GmRuntime,line:TraceLine,tracked:Set<string>,globals:string[]):Mismatch|undefined{
- const ref=line.o.filter(o=>tracked.has(o[1]));
+export function compareFrame(rt:GmRuntime,line:TraceLine,tracked:Set<string>,globals:string[],skippedIds=new Set<number>()):Mismatch|undefined{
+ // Instances the snapshot had but the remake did not restore (scene objects outside the battle) are not compared.
+ const ref=line.o.filter(o=>tracked.has(o[1])&&!skippedIds.has(o[0]));
  const ours=rt.instances.filter(i=>i.live&&tracked.has(i.object.name));
  for(const name of tracked){
   const r=ref.filter(o=>o[1]===name),m=ours.filter(i=>i.object.name===name);
   if(r.length!==m.length)return {frame:line.f,what:`${name}: ${m.length} instances, reference has ${r.length}`};
   for(let k=0;k<r.length;k++){
-   const [id,,x,y,img]=r[k],o:GmInstance=m[k];
+   const [id,,x,y,img,sprite,visible]=r[k],o:GmInstance=m[k];
    if(Math.abs(o.x-x)>=0.01||Math.abs(o.y-y)>=0.01)return {frame:line.f,what:`${name} #${k} (ref id ${id}): position ${o.x},${o.y} vs ${x},${y}`};
    if(Math.abs(o.imageIndex-img)>=1e-4)return {frame:line.f,what:`${name} #${k} (ref id ${id}): image ${o.imageIndex} vs ${img}`};
+   if((o.sprite??'')!==(sprite??''))return {frame:line.f,what:`${name} #${k} (ref id ${id}): sprite ${o.sprite} vs ${sprite}`};
+   if(o.visible!==visible)return {frame:line.f,what:`${name} #${k} (ref id ${id}): visible ${o.visible} vs ${visible}`};
   }
  }
  const rng=rt.random.snapshot();
@@ -61,12 +71,13 @@ export function compareFrame(rt:GmRuntime,line:TraceLine,tracked:Set<string>,glo
 }
 
 /** Runs the remake from `start` (a snapshot frame: after its step, before its draw) to `end`, stopping at the first mismatch. */
-export function runParity(rt:GmRuntime,trace:Map<number,TraceLine>,start:number,end:number,tracked:Set<string>,globals:string[]){
+export function runParity(rt:GmRuntime,trace:Map<number,TraceLine>,start:number,end:number,tracked:Set<string>,globals:string[],skippedIds=new Set<number>(),replay?:Replay){
+ if(replay){for(let n=0;n<start;n++)replayInput(rt,replay,n);rt.input.pressed.clear();rt.input.released.clear();}
  let frame=start;
  for(;frame<end;frame++){
-  rt.draw();rt.step();
-  const line=trace.get(frame+1);if(!line)break;
-  const bad=compareFrame(rt,line,tracked,globals);
+  rt.draw();if(replay)replayInput(rt,replay,frame);rt.step();
+  const line=trace.get(frame+1);if(!line)return {matched:frame-start,mismatch:{frame:frame+1,what:'Missing reference frame '+(frame+1)}};
+  const bad=compareFrame(rt,line,tracked,globals,skippedIds);
   if(bad)return {matched:frame-start,mismatch:bad};
   if(rt.pendingRoom)return {matched:frame+1-start,mismatch:undefined,room:rt.pendingRoom};
  }

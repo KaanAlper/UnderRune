@@ -1,10 +1,16 @@
 # UnderRune
 
-**Showcase and gameplay clips: https://kaanalper.github.io/UnderRune/**
+**[Play the browser demo](https://kaanalper.github.io/UnderRune/play/) · [Project and development previews](https://kaanalper.github.io/UnderRune/)**
 
-A local web app that plays DELTARUNE boss battles in the browser using **the installed game's own code and files**. Built as a graduation project, with [shadowcrystal.dev](https://shadowcrystal.dev/) as the reference experience.
+A DELTARUNE fan project with a theater intro, party preparation and browser boss practice. The public demo includes 16 Jevil attack patterns. Full public battles are still in development. The local development app also runs battles using the installed game's code and files. Built as a graduation project, with [shadowcrystal.dev](https://shadowcrystal.dev/) as the reference experience.
 
-> Fan project, not affiliated with Toby Fox or DELTARUNE. This repository contains **no** game files, extracted art, audio or decompiled code. You need a legally owned copy of the game installed on your computer.
+> Fan project, not affiliated with Toby Fox or DELTARUNE. The source branch excludes extracted art, audio and game packages. The Pages demo includes selected sprites and music, credited to Toby Fox; full game packages, bytecode and decompiled code are excluded. Playing the public demo requires no installation. Local development requires your own installed copy.
+
+## Public demo
+
+Press **PLAY** on the project page, choose the DELTARUNE remote, connect through the TV, and select Chapter 1 → JEVIL. Choose a pattern, equip your party and start practice. Armor and weapon defense stats affect contact damage. Equipment choices and the item bag are saved on your device. Full battle turns, weapon attacks, gear abilities and item consumption are still in development. Other encounters have equipment previews with battle launch disabled.
+
+`npm run build:pages` builds the public app under `dist-pages/play/` and the landing page at `dist-pages/index.html`, using an explicit asset allowlist. Deploy this output over the existing `gh-pages` branch while preserving its `clips/` directory. Local previews can enter public mode with `?demo=1`.
 
 ## What it does
 
@@ -75,11 +81,11 @@ npm run audit:native   # opens all 49 encounters one by one; screenshots and run
 - Battles start from the game's test room instead of from inside the story, so the cutscenes before and after a battle do not play (except where the battle's own intro is the scene: Jevil, Shadow Mantle and Susiezilla).
 - Character stats are each chapter's starting values.
 - Butterscotch is an independent re-implementation of GameMaker. A few platform-specific calls, such as fullscreen and display size, have no browser equivalent; they do not affect battles and can be inspected with `?debug`.
-- There is no public web version yet; game files must be read from the user's own computer.
+- The public version currently provides Jevil attack practice, not complete boss battles. Native local battle checks and recorded attack comparisons do not establish identical behavior across every original game scene.
 
 ## Credits and licenses
 
-- UNDERTALE and DELTARUNE © Toby Fox. No game files are included in this repository.
+- UNDERTALE and DELTARUNE © Toby Fox. Sprites and music in the public demo retain their original authorship; they are not covered by the project's code license.
 - [Butterscotch](https://github.com/ButterscotchRunner/Butterscotch): AGPL-3.0. Our changes are published in `runtime/patches/browser-compat.patch`.
 - [UndertaleModTool](https://github.com/UnderminersTeam/UndertaleModTool) / Underminers Team: data extraction and launcher builds.
 - [GameMaker HTML5 runtime](https://github.com/YoYoGames/GameMaker-HTML5): Apache-2.0 (compatibility experiments).

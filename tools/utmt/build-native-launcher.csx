@@ -28,17 +28,32 @@ global.chararmor2[hero] = ini_read_real(""armor2"", string(hero), global.chararm
 for (var slot = 0; slot < 12; slot += 1) global.item[slot] = ini_read_real(""items"", string(slot), 0);
 // Reference recordings only: the debug no-damage switch keeps a run going through many enemy turns.
 if (ini_read_real(""oracle"", ""god"", 0) == 1) global.chemg_god_mode = 1;
+ORACLE_JEVIL_READ
 ini_close();
 global.charauto[2] = 0;
 global.tempflag[4] = 1;
 global.ur_watch = 0;
+ORACLE_JEVIL_WATCH
 call_later(15, 1, function() {
 if (global.ur_watch == 0 && instance_exists(obj_battlecontroller)) global.ur_watch = 1;
 else if (global.ur_watch == 1 && !instance_exists(obj_battlecontroller)) { global.ur_watch = 2; show_debug_message(""UNDERRUNE_OUTCOME "" + ((room == room_gameover) ? ""defeat"" : ""victory"")); }
 }, true);
 JEvil_BRANCH
 room_goto(room_battletest);
-".Replace("HERO_MAX",chapter==1?"3":"4").Replace("JEvil_BRANCH",chapter==1?"if (global.ur_encounter == 25) { room_goto(room_cc_joker); exit; }":
+".Replace("HERO_MAX",chapter==1?"3":"4")
+.Replace("ORACLE_JEVIL_READ",chapter==1?"global.ur_oracle_jevil_turn = ini_read_real(\"oracle\", \"jevil_turn\", -1);":"")
+.Replace("ORACLE_JEVIL_WATCH",chapter==1?@"
+// Test-only initial phase preset; enemy events, damage and attack code stay unchanged.
+if (global.ur_encounter == 25 && global.ur_oracle_jevil_turn >= 0 && global.ur_oracle_jevil_turn <= 19) {
+call_later(1, 1, function() {
+if (global.ur_oracle_jevil_turn >= 0 && instance_exists(obj_joker)) {
+obj_joker.jturn = global.ur_oracle_jevil_turn;
+global.ur_oracle_jevil_turn = -1;
+}
+}, true);
+}
+":"")
+.Replace("JEvil_BRANCH",chapter==1?"if (global.ur_encounter == 25) { room_goto(room_cc_joker); exit; }":
  // Chapter 3 action encounters are not scr_battle fights: they run in their own original rooms.
  chapter==3?"if (global.ur_room == \"shadowmantle\") { room_goto(room_shadowmantle); exit; }\nif (global.ur_room == \"susiezilla\") { room_goto(room_dw_susiezilla); exit; }":"");
 var room=Data.Rooms.First(r=>r.Name.Content=="room_battletest");
