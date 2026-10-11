@@ -1,5 +1,7 @@
 # UnderRune
 
+**Showcase and gameplay clips: https://kaanalper.github.io/UnderRune/**
+
 A local web app that plays DELTARUNE boss battles in the browser using **the installed game's own code and files**. Built as a graduation project, with [shadowcrystal.dev](https://shadowcrystal.dev/) as the reference experience.
 
 > Fan project, not affiliated with Toby Fox or DELTARUNE. This repository contains **no** game files, extracted art, audio or decompiled code. You need a legally owned copy of the game installed on your computer.
