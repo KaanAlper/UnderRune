@@ -32,7 +32,7 @@ function goMenu(){sessionToken++;loading.hidden=true;busy=false;closeBattle();sc
 function openTheater(){sessionToken++;closeBattle();theater=new TheaterState(reducedMotion());scene='theater';sceneKey='';input.clear();}
 function showError(cause:unknown){loading.hidden=true;busy=false;element('error-text').textContent=cause instanceof Error?cause.message:String(cause);error.hidden=false;}
 async function launchNative(record:EncounterRecord,ini:string){
- if(busy)throw Error('Başka bir savaş yükleniyor.');busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* '+record.name.toUpperCase()+' / ÖZGÜN MOTOR YÜKLENİYOR...';const token=++sessionToken;
+ if(busy)throw Error('Another battle is loading.');busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* '+record.name.toUpperCase()+' / LOADING ORIGINAL ENGINE...';const token=++sessionToken;
  closeBattle();const frame=new NativeBattle(element('stage'),onNativeEvent);native=frame;nativeRecord=record;
  try{await frame.start(record.id,ini);}
  catch(e){if(native===frame)closeBattle();if(token===sessionToken){busy=false;loading.hidden=true;}throw e;}
@@ -46,9 +46,9 @@ function onNativeEvent(event:NativeEvent){
   const record=nativeRecord,won=event.outcome==='victory';
   if(won&&!prefs.completed.includes(record.id)){prefs.completed.push(record.id);savePrefs(storage,prefs);}
   // Let the original victory text or game-over screen play before offering the way back.
-  setTimeout(()=>{if(nativeRecord!==record)return;element('outcome-text').textContent=won?`* ${record.name} yenildi.`:'* Parti düştü.';element('outcome').hidden=false;element('stage').classList.add('battle-over');},won?1500:3000);
+  setTimeout(()=>{if(nativeRecord!==record)return;element('outcome-text').textContent=won?`* ${record.name} was defeated.`:'* The party fell.';element('outcome').hidden=false;element('stage').classList.add('battle-over');},won?1500:3000);
  }
- if(scene==='native'&&(event.type==='ended'||event.type==='failed'))showError(event.type==='ended'?'* Özgün savaş motoru durdu. RETRY ile yeniden hazırlan, DEVICE_MENU ile menüye dön.':event.message??'Özgün savaş durdu.');
+ if(scene==='native'&&(event.type==='ended'||event.type==='failed'))showError(event.type==='ended'?'* The original battle engine stopped. RETRY prepares the battle again; DEVICE_MENU returns to the menu.':event.message??'The original battle stopped.');
 }
 async function startBattle(practice=false){
  const record=menuRecords()[selection];if(!record||busy)return;
@@ -67,7 +67,7 @@ function addHitbox(name:string,x:number,y:number,w:number,h:number,run:()=>void)
 function updateControls(){
  const key=[scene,theater?.active,theater?.selected,chapter,selection,battle?.phase,battle?.actor,battle?.cursor,battle?.paused,native?.paused,busy].join(':');
  if(key===sceneKey)return;sceneKey=key;overlay.replaceChildren();element('menu-tools').hidden=scene!=='menu';element('pause').hidden=scene!=='battle'&&scene!=='native';element('back').hidden=scene==='theater';
- if(scene==='native'&&nativeRecord)status.textContent=`${nativeRecord.name} / ÖZGÜN MOTOR${native?.paused?' / paused':''}`;
+ if(scene==='native'&&nativeRecord)status.textContent=`${nativeRecord.name} / ORIGINAL ENGINE${native?.paused?' / paused':''}`;
  element('controls-hint').textContent=scene==='native'?'ARROWS · Z / ENTER CONFIRM · X / SHIFT CANCEL · P PAUSE':'ARROWS / WASD · Z CONFIRM · X BACK · R RESTART · P PAUSE';
  element('adaptation').textContent=scene==='native'?'FAN PROJECT · ORIGINAL GAME CODE':'FAN PROJECT · BROWSER ADAPTATION';
  if(scene==='theater'){
@@ -137,7 +137,7 @@ element('pause').addEventListener('click',()=>{if(native){const resuming=native.
 element('mute').addEventListener('click',()=>{prefs.muted=!prefs.muted;audio?.setMuted(prefs.muted);native?.mute(prefs.muted);updatePreferences();});
 element('effects').addEventListener('click',()=>{prefs.reducedEffects=!prefs.reducedEffects;updatePreferences();});
 element('practice').addEventListener('click',()=>void startBattle(true));
-const dialog=element<HTMLDialogElement>('about');function about(){if(battle){battle.pause(true);audio.pause(true);}native?.pause(true);input.clear();element('source-summary').textContent=`${catalog.length} kaynak karşılaşma kaydı · 5 bölüm paketi · tüm oyun varlıkları bu bilgisayardan yüklenir.`;element('difference-note').textContent=native?'Bu savaş, bilgisayarındaki DELTARUNE kurulumunun özgün oyun koduyla açık kaynak Butterscotch motorunda çalışır; saldırılar yeniden yazılmadı. Motor uyumluluğu boss boss doğrulanıyor.':battle?.definition.differences.join(' ')??'Görseller ve istatistikler yerel oyun dosyalarından çıkarıldı. Saldırılar bosslara özel tarayıcı uyarlamalarıdır; tüm faz ve mekanikler için orijinal oynanışla birebir doğrulama tamamlanmadı.';dialog.showModal();sceneKey='';}
+const dialog=element<HTMLDialogElement>('about');function about(){if(battle){battle.pause(true);audio.pause(true);}native?.pause(true);input.clear();element('source-summary').textContent=`${catalog.length} encounters from 5 chapter packages. All game files load from this computer.`;element('difference-note').textContent=native?'This battle runs the original game code from your DELTARUNE install on the open-source Butterscotch engine; no attack was rewritten. Every encounter is checked to load and reach combat.':battle?.definition.differences.join(' ')??'Art and stats come from your local game files. Full battles run the original game code; practice mode uses browser adaptations of the attacks, which do not match the original exactly.';dialog.showModal();sceneKey='';}
 element('credits').addEventListener('click',about);element('adaptation').addEventListener('click',about);element('close-about').addEventListener('click',()=>dialog.close());
 for(const button of document.querySelectorAll<HTMLButtonElement>('[data-key]')){
  const key=button.dataset.key!;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);button.classList.add('down');if(scene==='native'&&native)native.key(key,true);else input.press(key);});
@@ -149,11 +149,13 @@ element('outcome-again').addEventListener('click',()=>void startBattle(false));
 element('retry').addEventListener('click',()=>{error.hidden=true;if(renderer)void startBattle(false);else void initialize();});
 async function initialize(){
  loading.hidden=false;error.hidden=true;try{
-  assets=await loadAssets();await assets.preload(1);await Promise.all(['bg','console','tvglow','vessel_d_0'].map(n=>assets.loadImage('/device-room/'+n+'.png')));
+  assets=await loadAssets();await assets.preload(1);
   // Native battles and the equipment catalog are optional: without them every encounter keeps the browser adaptation.
   const [catalogJson,ids]=await Promise.all([fetch('/generated/equipment.json').then(r=>r.ok?r.json() as Promise<EquipmentCatalog>:null).catch(()=>null),fetchNativeProfiles()]);
   equipment=catalogJson;nativeIds=ids;
   if(equipment&&!prep){const source=equipment;prep=new PreparationPanel(source,assets,storage,(record,loadout)=>launchNative(record,loadoutIni(loadout,source.chapters[record.chapter])),()=>{if(native)setTimeout(()=>native?.focus());});}
+  // Optional local reference art for the device room; the drawn room is used when it is absent.
+  await Promise.all(['bg','console','tvglow','vessel_d_0'].map(n=>assets.loadImage('/device-room/'+n+'.png').catch(()=>null)));
   theaterView=new TheaterView(assets);await Promise.all(theaterView.urls().map(u=>assets.loadImage(u).catch(()=>null)));
   renderer=new Renderer(ctx,assets);audio=new AudioManager(prefs.muted,assets.manifest.music);updatePreferences();loading.hidden=true;updateControls();if(!raf)raf=requestAnimationFrame(loop);
  }catch(e){showError(e);}

@@ -20,19 +20,19 @@ export class NativeBattle{
   const data=event.data;
   if(data.type==='ready'){this.isReady=true;this.readyWaiters.splice(0).forEach(f=>f());}
   if(data.type==='running'){this.launch?.resolve();this.launch=null;}
-  if(data.type==='failed'||data.type==='ended'){this.launch?.reject(Error(data.message??'Özgün savaş motoru başlamadan durdu.'));this.launch=null;}
+  if(data.type==='failed'||data.type==='ended'){this.launch?.reject(Error(data.message??'The original battle engine stopped before starting.'));this.launch=null;}
   if(data.type==='paused')this.paused=!!data.value;
   this.onEvent(data);
  };
  constructor(container:HTMLElement,private onEvent:(event:NativeEvent)=>void,src='/native/'){
-  this.frame.id='native';this.frame.title='Özgün DELTARUNE savaşı';this.frame.allow='autoplay';this.frame.src=src;
+  this.frame.id='native';this.frame.title='Original DELTARUNE battle';this.frame.allow='autoplay';this.frame.src=src;
   window.addEventListener('message',this.listener);container.append(this.frame);
  }
  private post(message:Record<string,unknown>){if(!this.disposed)this.frame.contentWindow?.postMessage({source:'underrune-host',...message},location.origin);}
  async start(id:string,ini:string,timeoutMs=180000):Promise<void>{
-  if(!this.isReady)await new Promise<void>((resolve,reject)=>{this.readyWaiters.push(resolve);setTimeout(()=>reject(Error('Özgün savaş oynatıcısı yüklenemedi.')),20000);});
+  if(!this.isReady)await new Promise<void>((resolve,reject)=>{this.readyWaiters.push(resolve);setTimeout(()=>reject(Error('The original battle player did not load.')),20000);});
   await new Promise<void>((resolve,reject)=>{
-   const timer=setTimeout(()=>{this.launch=null;reject(Error('Özgün savaş motoru zamanında açılmadı.'));},timeoutMs);
+   const timer=setTimeout(()=>{this.launch=null;reject(Error('The original battle engine did not start in time.'));},timeoutMs);
    this.launch={resolve:()=>{clearTimeout(timer);resolve();},reject:e=>{clearTimeout(timer);reject(e);}};
    this.post({type:'start',id,ini});
   });
@@ -43,7 +43,7 @@ export class NativeBattle{
  focus(){this.frame.focus();}
  dispose(){
   if(this.disposed)return;this.post({type:'stop'});this.disposed=true;
-  this.launch?.reject(Error('Savaş kapatıldı.'));this.launch=null;
+  this.launch?.reject(Error('Battle closed.'));this.launch=null;
   window.removeEventListener('message',this.listener);this.frame.remove();
  }
 }

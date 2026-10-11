@@ -17,8 +17,8 @@ export class AssetStore{
   const promise=new Promise<HTMLImageElement>((resolve,reject)=>{
    const image=new Image();let settled=false;
    const finish=(cause?:Error)=>{if(settled)return;settled=true;clearTimeout(timer);image.onload=null;image.onerror=null;this.pending.delete(url);if(cause){image.src='';reject(cause);}else{this.images.set(url,image);resolve(image);}};
-   const timer=setTimeout(()=>finish(Error('Gorsel yukleme zaman asimi: '+url)),15000);
-   image.onload=()=>finish();image.onerror=()=>finish(Error('Gorsel yuklenemedi: '+url));image.src=url;
+   const timer=setTimeout(()=>finish(Error('Image load timed out: '+url)),15000);
+   image.onload=()=>finish();image.onerror=()=>finish(Error('Image failed to load: '+url));image.src=url;
   });
   this.pending.set(url,promise);return promise;
  }
@@ -47,6 +47,6 @@ export class AssetStore{
  textWidth(text:string,scale=2,font:FontName='deltarune'){return [...text].reduce((w,c)=>w+(this.glyphs[font].get(c.charCodeAt(0))?.shift??8)*scale,0);}
 }
 export async function loadAssets(url='/generated/manifest.json'){
- const response=await fetch(url);if(!response.ok)throw Error('Yerel oyun varliklari bulunamadi. npm run extract ve npm run assets komutlarini calistir.');
- const json=await response.json() as Manifest;if(json.version!==1||!json.sprites||!json.font)throw Error('Oyun varlik manifesti gecersiz.');return new AssetStore(json);
+ const response=await fetch(url);if(!response.ok)throw Error('Local game assets not found. Run npm run prepare:game.');
+ const json=await response.json() as Manifest;if(json.version!==1||!json.sprites||!json.font)throw Error('The game asset manifest is invalid.');return new AssetStore(json);
 }

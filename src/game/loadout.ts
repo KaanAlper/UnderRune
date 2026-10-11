@@ -11,16 +11,16 @@ export type Loadout={version:1;characters:Record<number,{weapon:number;armor:[nu
 export type EquipmentCatalog={version:1;chapters:Record<number,EquipmentSource>};
 export function defaultLoadout():Loadout{return {version:1,characters:Object.fromEntries(CHARACTERS.map(c=>[c.id,{weapon:0,armor:[0,0]}])),items:[]};}
 export function validateLoadout(loadout:Loadout,source:EquipmentSource):void{
- if(!loadout||loadout.version!==1||!loadout.characters||!Array.isArray(loadout.items))throw Error('Geçersiz hazırlık kaydı.');
+ if(!loadout||loadout.version!==1||!loadout.characters||!Array.isArray(loadout.items))throw Error('Invalid saved preparation.');
  for(const char of CHARACTERS){
-  const slots=loadout.characters[char.id];if(!slots||!Array.isArray(slots.armor)||slots.armor.length!==2)throw Error(char.name+': iki zırh yuvası gerekli.');
+  const slots=loadout.characters[char.id];if(!slots||!Array.isArray(slots.armor)||slots.armor.length!==2)throw Error(char.name+' needs two armor slots.');
   for(const [id,kind] of [[slots.weapon,'weapons'],...slots.armor.map(id=>[id,'armors'])] as [number,'weapons'|'armors'][]){
-   const gear=source[kind].find(g=>g.id===id);if(!gear)throw Error('Bu bölümde ekipman bulunamadı: '+id);
-   if(id!==0&&!gear.allowed.includes(char.id))throw Error(char.name+' bu ekipmanı kullanamaz: '+gear.name);
+   const gear=source[kind].find(g=>g.id===id);if(!gear)throw Error('Equipment not in this chapter: '+id);
+   if(id!==0&&!gear.allowed.includes(char.id))throw Error(char.name+" can't equip "+gear.name);
   }
  }
- if(loadout.items.length>source.bagCapacity)throw Error('Çanta en fazla '+source.bagCapacity+' eşya alır.');
- for(const id of loadout.items)if(!Number.isInteger(id)||id===0||!source.items.some(i=>i.id===id))throw Error('Bu bölümde eşya bulunamadı: '+id);
+ if(loadout.items.length>source.bagCapacity)throw Error('The bag holds at most '+source.bagCapacity+' items.');
+ for(const id of loadout.items)if(!Number.isInteger(id)||id===0||!source.items.some(i=>i.id===id))throw Error('Item not in this chapter: '+id);
 }
 export function addItem(loadout:Loadout,id:number,source:EquipmentSource):Loadout{
  const next=structuredClone(loadout);next.items.push(id);validateLoadout(next,source);return next;

@@ -1,4 +1,5 @@
 import {AssetStore} from './assets';
+import {DeviceRoom} from './device-room';
 import {BattleSession,COMMANDS} from './battle';
 import {ActionSession} from './action';
 import type {Bullet,EncounterRecord} from './types';
@@ -7,7 +8,8 @@ export function pixelHeart(ctx:CanvasRenderingContext2D,x:number,y:number,color=
  for(let j=0;j<pattern.length;j++)for(let i=0;i<8;i++)if(pattern[j][i]==='1')ctx.fillRect(Math.round(x+(i-4)*size),Math.round(y+(j-3)*size),size,size);
 }
 export class Renderer{
- constructor(public ctx:CanvasRenderingContext2D,public assets:AssetStore){}
+ private deviceRoom:DeviceRoom;
+ constructor(public ctx:CanvasRenderingContext2D,public assets:AssetStore){this.deviceRoom=new DeviceRoom(assets);}
  private box(x:number,y:number,w:number,h:number,color='#fff',line=3){const c=this.ctx;c.fillStyle='#000';c.fillRect(x,y,w,h);c.strokeStyle=color;c.lineWidth=line;c.strokeRect(x+.5,y+.5,w,h);}
  private text(t:string,x:number,y:number,s=2,c='#fff',a:'left'|'center'|'right'='left'){this.assets.text(this.ctx,t,x,y,s,c,a);}
  clear(){this.ctx.imageSmoothingEnabled=false;this.ctx.fillStyle='#000';this.ctx.fillRect(0,0,640,480);}
@@ -17,14 +19,18 @@ export class Renderer{
   this.text('DELTARUNE  /  LOCAL BOSS BATTLES',320,361,1,'#706b79','center');
  }
  room(chapter:number,count:number){
-  this.clear();const c=this.ctx,bg=this.assets.images.get('/device-room/bg.png');if(bg)c.drawImage(bg,-10,-10,660,500);
+  // Locally downloaded reference art (public/device-room, not in the repository) when present; otherwise the drawn room.
+  this.clear();const c=this.ctx,bg=this.assets.images.get('/device-room/bg.png');
+  if(bg)c.drawImage(bg,-10,-10,660,500);else this.deviceRoom.draw(c);
   c.fillStyle='#000';c.fillRect(157,42,306,281);this.text('DEVICE_MENU',310,50,2,'#fff','center');
   this.text('CHOOSE A SIGNAL',310,89,1,'#9a95a3','center');
   for(let i=1;i<=5;i++){const y=116+(i-1)*32;if(chapter===i){pixelHeart(c,184,y+10,'#ffff00',1);c.fillStyle='#191608';c.fillRect(197,y-1,244,27);}this.text('DEVICE_CHAPTER_'+i,207,y,1,chapter===i?'#ffff00':'#cac4cc');}
   this.text(`${count} SOURCE ENCOUNTERS`,310,283,1,'#726b75','center');
-  const glow=this.assets.images.get('/device-room/tvglow.png');if(glow){c.globalAlpha=.23;c.drawImage(glow,0,317,640,160);c.globalAlpha=1;}
-  const console=this.assets.images.get('/device-room/console.png');if(console)c.drawImage(console,221,342,198,90);
-  const vessel=this.assets.images.get('/device-room/vessel_d_0.png');if(vessel)c.drawImage(vessel,301,394,38,76);
+  if(bg){
+   const glow=this.assets.images.get('/device-room/tvglow.png');if(glow){c.globalAlpha=.23;c.drawImage(glow,0,317,640,160);c.globalAlpha=1;}
+   const console=this.assets.images.get('/device-room/console.png');if(console)c.drawImage(console,221,342,198,90);
+   const vessel=this.assets.images.get('/device-room/vessel_d_0.png');if(vessel)c.drawImage(vessel,301,394,38,76);
+  }
  }
  menu(records:EncounterRecord[],selected:number,chapter:number,frame:number,completed:string[]){
   this.clear();const c=this.ctx;this.box(18,19,604,437,'#aaa5b6',2);this.text('DEVICE_CHAPTER_'+chapter,40,33,2);this.text('SELECT A BATTLE',40,68,1,'#797582');

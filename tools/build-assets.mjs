@@ -10,7 +10,7 @@ const manifest={version:1,sprites:{},font:null,music:[],sourcePackages:[]};
 const common=/^spr_(krisb_idle|susieb_idle|ralseib_idle|heart|heartsmall|spadebullet|diamondbullet|clubsbullet|joker_scythebody|carousel|suitsbomb|bomb_heart|smallbullet|axebullet_b|lancerbike|kris_d|kris_walkdown|kris_down|star|bullet|sneo_body|sneo_wings|sneo_legs|sneo_head|spamton_neo|tenna_pose_podium|queen_chair_1|queen_idle|checker|knight_bullet_star|gerson_bell|titan_feather)/;
 const extra=/^spr_(shadow_mantle_idle|susiezilla_susie_idle|tenna_point_up|kris_board|kris_sword|berdlyb_idle|rurus_pirate|tasque_idle|lanino_idle|elnina_idle|mauswheel|sneo_face|sneo_body|sneo_wings|sneo_head|sneo_legs|smallbullet|heart_centered)/;
 // Theater intro, DELTARUNE side: logo, dark-world Kris, the Chapter 2 TV remote, Tenna's stage curtain and spotlight.
-const theater={1:['IMAGE_LOGO','spr_krisd_dark'],2:['spr_cutscene_16_remote_control'],3:['spr_dw_tv_curtain','spr_tenna_spotlight']};
+const theater={1:['IMAGE_LOGO','spr_krisd_dark','spr_krisu_dark'],2:['spr_cutscene_16_remote_control'],3:['spr_dw_tv_curtain','spr_tenna_spotlight']};
 for(let chapter=1;chapter<=5;chapter++){
  const packageId=`chapter${chapter}_windows`,base=path.join(root,'extracted',packageId);
  const index=JSON.parse(await fs.readFile(path.join(base,'index.json'),'utf8'));

@@ -42,7 +42,7 @@ async function listFiles(folder, prefix = '') {
   return result;
 }
 
-const playerHtml = '<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UnderRune native battle</title><style>html,body{margin:0;background:#000;color:#ddd;font:12px monospace;height:100%;overflow:hidden}canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;outline:0}#state{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#000;padding:30px;line-height:1.8}#state[hidden]{display:none}#issues{position:absolute;bottom:0;left:0;right:0;background:#151015e8;color:#ffc791;font-size:10px;padding:5px;max-height:50px;overflow:auto}#issues:empty,#issues[hidden]{display:none}</style></head><body><canvas id="canvas" width="640" height="480" tabindex="0" aria-label="Özgün DELTARUNE savaşı"></canvas><div id="state">* SAVAŞ BAŞLATICISI HAZIRLANIYOR…</div><div id="issues" role="status" hidden></div><script type="module" src="/native/player.mjs"></script></body></html>';
+const playerHtml = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UnderRune native battle</title><style>html,body{margin:0;background:#000;color:#ddd;font:12px monospace;height:100%;overflow:hidden}canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated;outline:0}#state{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#000;padding:30px;line-height:1.8}#state[hidden]{display:none}#issues{position:absolute;bottom:0;left:0;right:0;background:#151015e8;color:#ffc791;font-size:10px;padding:5px;max-height:50px;overflow:auto}#issues:empty,#issues[hidden]{display:none}</style></head><body><canvas id="canvas" width="640" height="480" tabindex="0" aria-label="Original DELTARUNE battle"></canvas><div id="state">* PREPARING THE BATTLE LAUNCHER…</div><div id="issues" role="status" hidden></div><script type="module" src="/native/player.mjs"></script></body></html>';
 const types = {'.mjs': 'text/javascript; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.wasm': 'application/wasm', '.json': 'application/json; charset=utf-8', '.ogg': 'audio/ogg'};
 
 // Connect-style middleware: handles /native/* and passes everything else to next().
@@ -76,7 +76,7 @@ export function createNativeHandler({root = projectRoot, game = defaultGameDir()
       if (url.pathname === '/native/profiles') return send(JSON.stringify(Object.keys(profiles)), types['.json']);
       if (url.pathname === '/native/config') {
         const profile = profiles[url.searchParams.get('id')];
-        if (!profile) return send('Bu karşılaşmanın native başlatıcısı yok.', 'text/plain; charset=utf-8', 404);
+        if (!profile) return send('No original-engine launcher for this encounter.', 'text/plain; charset=utf-8', 404);
         const music = new Set([profile.music, 'AUDIO_DRONE.ogg', ...battleMusic[profile.chapter]]);
         const dir = path.join(root, `extracted/chapter${profile.chapter}_windows/code`), record = catalog.find(r => r.id === profile.id);
         const objects = record.enemies.map(e => e.object);
@@ -90,18 +90,18 @@ export function createNativeHandler({root = projectRoot, game = defaultGameDir()
       }
       if (url.pathname.startsWith('/native/package/')) {
         const chapter = Number(url.pathname.split('/').at(-1));
-        if (!Number.isInteger(chapter) || chapter < 1 || chapter > 5) return send('Geçersiz bölüm.', 'text/plain; charset=utf-8', 404);
+        if (!Number.isInteger(chapter) || chapter < 1 || chapter > 5) return send('Invalid chapter.', 'text/plain; charset=utf-8', 404);
         return send(await fs.readFile(path.join(root, `.tools/native-launchers/chapter${chapter}.win`)), 'application/octet-stream');
       }
       const prefixes = {'/native/game/': game, '/native/browser-engine/': path.join(root, '.tools/butterscotch-browser-current-build'), '/native/portable-engine/': path.join(root, '.tools/butterscotch-portable-build')};
       for (const [prefix, base] of Object.entries(prefixes)) if (url.pathname.startsWith(prefix)) {
         const target = path.resolve(base, decodeURIComponent(url.pathname.slice(prefix.length)));
-        if (!target.startsWith(base + path.sep)) return send('Geçersiz yol.', 'text/plain; charset=utf-8', 404);
+        if (!target.startsWith(base + path.sep)) return send('Invalid path.', 'text/plain; charset=utf-8', 404);
         return send(await fs.readFile(target), types[path.extname(target)] ?? 'application/octet-stream');
       }
-      send('Bulunamadı.', 'text/plain; charset=utf-8', 404);
+      send('Not found.', 'text/plain; charset=utf-8', 404);
     } catch (error) {
-      send('Yerel native dosya bulunamadı: ' + (error.code === 'ENOENT' ? path.basename(error.path ?? '') : error.message), 'text/plain; charset=utf-8', 404);
+      send('Local file not found: ' + (error.code === 'ENOENT' ? path.basename(error.path ?? '') : error.message), 'text/plain; charset=utf-8', 404);
     }
   };
 }

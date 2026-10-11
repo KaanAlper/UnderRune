@@ -20,12 +20,12 @@ test('original Jevil opens through preparation, stays local and returns to the m
  await page.getByRole('button',{name:'Chapter 1'}).click();
  await page.getByRole('button',{name:'Battle JEVIL ch1-25'}).click();
  const prep=page.getByRole('dialog',{name:'JEVIL'});await expect(prep).toBeVisible();
- await expect(prep.getByRole('button',{name:/Oyunun varsayılanı/})).toBeVisible();
- await prep.getByRole('button',{name:'SAVAŞA GİR →'}).click();
- await expect(page.locator('#status')).toContainText('JEVIL / ÖZGÜN MOTOR',{timeout:90000});
+ await expect(prep.getByRole('button',{name:/Game default/})).toBeVisible();
+ await prep.getByRole('button',{name:'START BATTLE'}).click();
+ await expect(page.locator('#status')).toContainText('JEVIL / ORIGINAL ENGINE',{timeout:90000});
  await expect(page.locator('#native')).toBeVisible();await expect(prep).toBeHidden();
  await page.waitForTimeout(4000);await page.screenshot({path:'test-results/e2e-native-jevil.png'});
- await page.locator('#pause').click();await expect(page.locator('#status')).toContainText('ÖZGÜN MOTOR / paused');
+ await page.locator('#pause').click();await expect(page.locator('#status')).toContainText('ORIGINAL ENGINE / paused');
  await page.locator('#pause').click();await expect(page.locator('#status')).not.toContainText('paused');
  expect(remote).toEqual([]);
  await page.getByRole('button',{name:'Device menu',exact:true}).click();
@@ -35,11 +35,11 @@ test('winning an original battle shows the result and returns to the menu',async
  test.setTimeout(240000);
  await connect(page);await page.getByRole('button',{name:'Connect device'}).click();await page.getByRole('button',{name:'Chapter 1'}).click();
  await page.getByRole('button',{name:'Battle Lancer ch1-2',exact:true}).click();
- await page.getByRole('dialog',{name:'Lancer'}).getByRole('button',{name:'SAVAŞA GİR →'}).click();
- await expect(page.locator('#status')).toContainText('Lancer / ÖZGÜN MOTOR',{timeout:90000});
+ await page.getByRole('dialog',{name:'Lancer'}).getByRole('button',{name:'START BATTLE'}).click();
+ await expect(page.locator('#status')).toContainText('Lancer / ORIGINAL ENGINE',{timeout:90000});
  // FIGHT every turn until the original battle ends.
  for(let i=0;i<500&&await page.locator('#outcome').isHidden();i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
- await expect(page.locator('#outcome-text')).toContainText('Lancer yenildi');
+ await expect(page.locator('#outcome-text')).toContainText('Lancer was defeated');
  await page.getByRole('button',{name:'DEVICE_MENU',exact:true}).click();
  await expect(page.getByRole('button',{name:'Battle Lancer ch1-2',exact:true})).toBeVisible();await expect(page.locator('#native')).toHaveCount(0);
 });

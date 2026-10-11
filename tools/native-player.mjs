@@ -32,27 +32,27 @@ function setPaused(value){
  if(!runner||!active||paused===value)return;release();paused=value;
  runner._onKeyDown(F8);setTimeout(()=>runner?._onKeyUp(F8),80);send('paused',{value:paused});
 }
-const fetchBytes=async url=>{const res=await fetch(url);if(!res.ok)throw Error('Kaynak dosya yüklenemedi: '+url);return new Uint8Array(await res.arrayBuffer());};
+const fetchBytes=async url=>{const res=await fetch(url);if(!res.ok)throw Error('Could not load game file: '+url);return new Uint8Array(await res.arrayBuffer());};
 function mkdir(folder){const pieces=folder.split('/').filter(Boolean);let current='';for(const p of pieces){current+='/'+p;try{runner.FS.mkdir(current);}catch(error){if(error.errno!==20)try{runner.FS.stat(current);}catch{throw error;}}}}
 async function start(id,ini){
  if(started)return;started=true;
  try{
-  const response=await fetch('/native/config?id='+encodeURIComponent(id));if(!response.ok)throw Error('Bu karşılaşmanın native başlatıcısı henüz hazır değil.');const profile=await response.json();
-  if(typeof ini!=='string'||ini.length>4096||!/^[\w\[\]=\n\r]*$/.test(ini))throw Error('Geçersiz ekipman hazırlığı.');
+  const response=await fetch('/native/config?id='+encodeURIComponent(id));if(!response.ok)throw Error('This encounter has no original-engine launcher yet.');const profile=await response.json();
+  if(typeof ini!=='string'||ini.length>4096||!/^[\w\[\]=\n\r]*$/.test(ini))throw Error('Invalid equipment setup.');
   const supportsJspi=typeof WebAssembly.Suspending==='function'&&typeof WebAssembly.promising==='function';
-  state.textContent='* '+profile.name+' / ÖZGÜN OYUN MOTORU YÜKLENİYOR…';
+  state.textContent='* '+profile.name+' / LOADING THE ORIGINAL ENGINE…';
   const {default:createRunner}=await import('/native/'+(supportsJspi?'browser':'portable')+'-engine/butterscotch.mjs');
   runner=await createRunner({canvas,print:report,printErr:report});mkdir('/saves');const packageName='chapter'+profile.chapter+'_windows';mkdir('/game/'+packageName);
   runner.FS.writeFile('/saves/UnderRune.ini',ini+`[battle]\nencounter=${profile.encounter}\nspecial=${profile.special}\nmusic=${profile.music}\nroom=${profile.room??''}\n[party]\n0=${profile.party[0]}\n1=${profile.party[1]}\n2=${profile.party[2]}\n`);
   let index=0,done=0;const names=profile.files;
-  await Promise.all(Array.from({length:4},async()=>{while(index<names.length){const name=names[index++];if(!/^[\w./-]+$/.test(name)||name.includes('..'))throw Error('Geçersiz kaynak yolu');const target='/game/'+packageName+'/'+name;mkdir(target.slice(0,target.lastIndexOf('/')));runner.FS.writeFile(target,await fetchBytes(name==='data.win'?'/native/package/'+profile.chapter:'/native/game/'+packageName+'/'+name));done++;state.textContent='* '+profile.name+' / DOSYALAR '+done+' / '+names.length;}}));
+  await Promise.all(Array.from({length:4},async()=>{while(index<names.length){const name=names[index++];if(!/^[\w./-]+$/.test(name)||name.includes('..'))throw Error('Invalid game file path');const target='/game/'+packageName+'/'+name;mkdir(target.slice(0,target.lastIndexOf('/')));runner.FS.writeFile(target,await fetchBytes(name==='data.win'?'/native/package/'+profile.chapter:'/native/game/'+packageName+'/'+name));done++;state.textContent='* '+profile.name+' / FILES '+done+' / '+names.length;}}));
   mkdir('/game/'+packageName+'/mus');for(const file of profile.musicFiles){const bytes=await fetchBytes('/native/game/mus/'+file);runner.FS.writeFile('/game/'+packageName+'/mus/'+file,bytes);}
   // The original game seeds randomly; ?seed= keeps a run reproducible for tests.
   const seed=new URL(location.href).searchParams.get('seed')??String(Math.floor(Math.random()*2147483647));
   const args=['/game/'+packageName+'/data.win','--save-folder','/saves','--disable-log-colours','--seed',/^\d+$/.test(seed)?seed:'20261011'];
   const argv=runner._malloc(args.length*4),pointers=args.map(arg=>runner.stringToNewUTF8(arg));pointers.forEach((pointer,i)=>runner.setValue(argv+i*4,pointer,'i32'));
   active=true;state.hidden=true;canvas.focus();send('running',{id});
-  try{const result=await runner.ccall('startRunner','number',['number','number'],[args.length,argv],{async:true});if(active){state.textContent='Savaş motoru durdu: '+result;state.hidden=false;send('ended',{result});}}
+  try{const result=await runner.ccall('startRunner','number',['number','number'],[args.length,argv],{async:true});if(active){state.textContent='Battle engine stopped: '+result;state.hidden=false;send('ended',{result});}}
   finally{release();active=false;pointers.forEach(p=>runner._free(p));runner._free(argv);}
  }catch(error){release();active=false;state.textContent=error.message;state.hidden=false;send('failed',{message:error.message});}
 }
