@@ -9,7 +9,7 @@ export const defaultGameDir = () => path.resolve(process.env.DELTARUNE_DIR ?? 'C
 // Encounters the native launcher cannot start yet; the app keeps their browser adaptation.
 export const NATIVE_UNSUPPORTED = new Set([]);
 // Chapter 3 action encounters run in their own original rooms instead of scr_battle (see build-native-launcher.csx).
-const ACTION_ROOMS = {'ch3-mantle': {room: 'shadowmantle', code: /shadow_?mantle|board_controller/i}, 'ch3-susiezilla': {room: 'susiezilla', code: /susiezilla/i}};
+const ACTION_ROOMS = {'ch3-mantle': {room: 'shadowmantle', code: /shadow_?mantle|board_controller/i}, 'ch3-susiezilla': {room: 'susiezilla', code: /susiezilla|ch3_GSC05/i}};
 
 export async function nativeProfiles(root = projectRoot) {
   const catalog = JSON.parse(await fs.readFile(path.join(root, 'src/bosses/catalog.json'), 'utf8'));

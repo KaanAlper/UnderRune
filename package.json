@@ -31,7 +31,10 @@
     "test:bytecode-audio": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-bytecode-audio.ps1",
     "derive:parties": "node tools/derive-parties.mjs",
     "launchers:build": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-native-launchers.ps1",
-    "audit:native": "node tools/native-census.mjs"
+    "audit:native": "node tools/native-census.mjs",
+    "setup:native": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup-native.ps1",
+    "extract:battles": "node tools/extract-battle-calls.mjs",
+    "equipment": "node tools/build-equipment.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

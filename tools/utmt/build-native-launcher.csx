@@ -38,7 +38,7 @@ JEvil_BRANCH
 room_goto(room_battletest);
 ".Replace("HERO_MAX",chapter==1?"3":"4").Replace("JEvil_BRANCH",chapter==1?"if (global.ur_encounter == 25) { room_goto(room_cc_joker); exit; }":
  // Chapter 3 action encounters are not scr_battle fights: they run in their own original rooms.
- chapter==3?"if (global.ur_room == \"shadowmantle\") { room_goto(room_shadowmantle); exit; }\nif (global.ur_room == \"susiezilla\") { room_goto(room_susiezilla); exit; }":"");
+ chapter==3?"if (global.ur_room == \"shadowmantle\") { room_goto(room_shadowmantle); exit; }\nif (global.ur_room == \"susiezilla\") { room_goto(room_dw_susiezilla); exit; }":"");
 var room=Data.Rooms.First(r=>r.Name.Content=="room_battletest");
 // Remove only debug-selection/automatic-trigger instances in the copied test arena.
 // Preserve every original object and script definition, including those removed here.

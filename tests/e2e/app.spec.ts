@@ -20,6 +20,18 @@ test('original Jevil opens through preparation, stays local and returns to the m
  await page.getByRole('button',{name:'Device menu',exact:true}).click();
  await expect(page.getByRole('button',{name:'Battle JEVIL ch1-25'})).toBeVisible();await expect(page.locator('#native')).toHaveCount(0);
 });
+test('winning an original battle shows the result and returns to the menu',async({page})=>{
+ test.setTimeout(240000);
+ await page.getByRole('button',{name:'Connect device'}).click();await page.getByRole('button',{name:'Chapter 1'}).click();
+ await page.getByRole('button',{name:'Battle Lancer ch1-2'}).click();
+ await page.getByRole('dialog',{name:'Lancer'}).getByRole('button',{name:'SAVAŞA GİR →'}).click();
+ await expect(page.locator('#status')).toContainText('Lancer / ÖZGÜN MOTOR',{timeout:90000});
+ // FIGHT every turn until the original battle ends.
+ for(let i=0;i<500&&await page.locator('#outcome').isHidden();i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
+ await expect(page.locator('#outcome-text')).toContainText('Lancer yenildi');
+ await page.getByRole('button',{name:'DEVICE_MENU',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Battle Lancer ch1-2'})).toBeVisible();await expect(page.locator('#native')).toHaveCount(0);
+});
 test('adaptation: connect, select a source boss, fight, reset and return',async({page})=>{
  await withoutNative(page);
  await page.getByRole('button',{name:'Connect device'}).click();
