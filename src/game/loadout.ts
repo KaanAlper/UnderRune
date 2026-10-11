@@ -27,7 +27,8 @@ export function addItem(loadout:Loadout,id:number,source:EquipmentSource):Loadou
 }
 export function loadoutIni(loadout:Loadout,source:EquipmentSource):string{
  validateLoadout(loadout,source);
- return ['[weapon]',...CHARACTERS.map(c=>`${c.id}=${loadout.characters[c.id].weapon}`),'[armor1]',...CHARACTERS.map(c=>`${c.id}=${loadout.characters[c.id].armor[0]}`),'[armor2]',...CHARACTERS.map(c=>`${c.id}=${loadout.characters[c.id].armor[1]}`),'[items]',...Array.from({length:source.bagCapacity},(_,i)=>`${i}=${loadout.items[i]??0}`),''].join('\n');
+ // Weapon 0 means "not chosen": the launcher then keeps the game's own weapon instead of an empty slot.
+ return ['[weapon]',...CHARACTERS.filter(c=>loadout.characters[c.id].weapon!==0).map(c=>`${c.id}=${loadout.characters[c.id].weapon}`),'[armor1]',...CHARACTERS.map(c=>`${c.id}=${loadout.characters[c.id].armor[0]}`),'[armor2]',...CHARACTERS.map(c=>`${c.id}=${loadout.characters[c.id].armor[1]}`),'[items]',...Array.from({length:source.bagCapacity},(_,i)=>`${i}=${loadout.items[i]??0}`),''].join('\n');
 }
 export function readLoadout(storage:Pick<Storage,'getItem'>,chapter:number,source:EquipmentSource):Loadout{
  try{const saved=JSON.parse(storage.getItem('underrune.loadout.'+chapter)??'null');validateLoadout(saved,source);return saved;}catch{return defaultLoadout();}

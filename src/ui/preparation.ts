@@ -65,7 +65,7 @@ export class PreparationPanel{
   for(const [slot,label] of [['weapon','SİLAH'],['armor1','ZIRH 01'],['armor2','ZIRH 02']] as const){
    const id=slot==='weapon'?this.loadout.characters[this.character].weapon:this.loadout.characters[this.character].armor[slot==='armor1'?0:1];
    const gear=(slot==='weapon'?this.source.weapons:this.source.armors).find(g=>g.id===id)!;
-   const button=node('button',undefined,'prep-slot');button.setAttribute('aria-pressed',String(this.slot===slot));button.append(node('span',label),node('strong',id===0?'Boş yuva':gear.name));button.onclick=()=>{this.slot=slot;this.render();};this.slots.append(button);
+   const button=node('button',undefined,'prep-slot');button.setAttribute('aria-pressed',String(this.slot===slot));button.append(node('span',label),node('strong',id===0?(slot==='weapon'?'Oyunun varsayılanı':'Boş yuva'):gear.name));button.onclick=()=>{this.slot=slot;this.render();};this.slots.append(button);
   }
   const selected=this.loadout.characters[this.character],gears=[this.source.weapons.find(g=>g.id===selected.weapon)!,...selected.armor.map(id=>this.source.armors.find(g=>g.id===id)!)];
   this.summary.textContent=`EKİPMAN TOPLAMI   AT ${gears.reduce((v,g)=>v+g.attack,0)}   DF ${gears.reduce((v,g)=>v+g.defense,0)}   MAGIC ${gears.reduce((v,g)=>v+g.magic,0)}`;
@@ -89,7 +89,7 @@ export class PreparationPanel{
   for(const entry of entries){
    const item=this.slot==='items',gear=entry as Gear,allowed=item||entry.id===0||gear.allowed.includes(this.character),full=item&&this.loadout.items.length>=this.source.bagCapacity;
    const button=node('button',undefined,'prep-entry');button.type='button';button.disabled=!allowed||full;
-   const title=node('div',undefined,'prep-entrytitle');title.append(node('strong',entry.id===0?'Boş yuva':entry.name));
+   const title=node('div',undefined,'prep-entrytitle');title.append(node('strong',entry.id===0?(this.slot==='weapon'?'Oyunun varsayılanı':'Boş yuva'):entry.name));
    const current=this.loadout.characters[this.character],selected=!item&&(this.slot==='weapon'?current.weapon:current.armor[this.slot==='armor1'?0:1])===entry.id;
    title.append(node('span',selected?'GİYİLİ':item?'+ EKLE':!allowed?'UYUMSUZ':'KUŞAN','prep-entryaction'));button.append(title);
    if(entry.description)button.append(node('p',entry.description,'prep-description'));

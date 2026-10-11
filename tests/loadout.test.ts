@@ -15,4 +15,9 @@ describe('source loadouts',()=>{
   const l=defaultLoadout();l.characters[1].armor=[2,1];l.items=[1,1];const ini=loadoutIni(l,source);
   expect(ini).toContain('[armor1]\n1=2');expect(ini).toContain('[armor2]\n1=1');expect(ini).toContain('[items]\n0=1\n1=1\n2=0');expect(ini).toContain('11=0');
  });
+ it('leaves unchosen weapons to the game because weapons cannot be unequipped',()=>{
+  const withSword={...source,weapons:[...source.weapons,armor(5,[1])]};
+  const l=defaultLoadout();l.characters[1].weapon=5;const ini=loadoutIni(l,withSword);
+  expect(ini).toContain('[weapon]\n1=5\n[armor1]');expect(ini).not.toMatch(/\[weapon\][^[]*\b2=/);
+ });
 });

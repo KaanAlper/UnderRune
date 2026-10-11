@@ -1,6 +1,27 @@
-import {test,expect} from '@playwright/test';
+import {test,expect,type Page} from '@playwright/test';
 test.beforeEach(async({page})=>{await page.goto('/');await expect(page.getByRole('button',{name:'Connect device'})).toBeVisible();});
-test('connect, select a source boss, fight, reset and return',async({page})=>{
+// Without the native runtime (no local launchers) every encounter keeps the browser adaptation.
+const withoutNative=async(page:Page)=>{await page.route('**/native/profiles',route=>route.fulfill({status:404,body:''}));await page.reload();await expect(page.getByRole('button',{name:'Connect device'})).toBeVisible();};
+test('original Jevil opens through preparation, stays local and returns to the menu',async({page})=>{
+ test.setTimeout(120000);
+ const remote:string[]=[];page.on('request',r=>{if(!new URL(r.url()).hostname.match(/^(127\.0\.0\.1|localhost)$/))remote.push(r.url());});
+ await page.getByRole('button',{name:'Connect device'}).click();
+ await page.getByRole('button',{name:'Chapter 1'}).click();
+ await page.getByRole('button',{name:'Battle JEVIL ch1-25'}).click();
+ const prep=page.getByRole('dialog',{name:'JEVIL'});await expect(prep).toBeVisible();
+ await expect(prep.getByRole('button',{name:/Oyunun varsayılanı/})).toBeVisible();
+ await prep.getByRole('button',{name:'SAVAŞA GİR →'}).click();
+ await expect(page.locator('#status')).toContainText('JEVIL / ÖZGÜN MOTOR',{timeout:90000});
+ await expect(page.locator('#native')).toBeVisible();await expect(prep).toBeHidden();
+ await page.waitForTimeout(4000);await page.screenshot({path:'test-results/e2e-native-jevil.png'});
+ await page.locator('#pause').click();await expect(page.locator('#status')).toContainText('ÖZGÜN MOTOR / paused');
+ await page.locator('#pause').click();await expect(page.locator('#status')).not.toContainText('paused');
+ expect(remote).toEqual([]);
+ await page.getByRole('button',{name:'Device menu',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Battle JEVIL ch1-25'})).toBeVisible();await expect(page.locator('#native')).toHaveCount(0);
+});
+test('adaptation: connect, select a source boss, fight, reset and return',async({page})=>{
+ await withoutNative(page);
  await page.getByRole('button',{name:'Connect device'}).click();
  await page.getByRole('button',{name:'Chapter 1'}).click();
  await page.getByRole('button',{name:'Battle JEVIL ch1-25'}).click();
@@ -20,9 +41,9 @@ test('practice reaches defense and pauses without capturing browser shortcuts',a
  await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('paused');
  await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('defense');
 });
-test('game is self-contained and does not contact remote servers',async({page})=>{
+test('adaptation is self-contained and does not contact remote servers',async({page})=>{
  const remote:string[]=[];page.on('request',r=>{if(!new URL(r.url()).hostname.match(/^(127\.0\.0\.1|localhost)$/))remote.push(r.url());});
- await page.reload();await page.getByRole('button',{name:'Connect device'}).click();await page.getByRole('button',{name:'Chapter 3'}).click();
+ await withoutNative(page);await page.getByRole('button',{name:'Connect device'}).click();await page.getByRole('button',{name:'Chapter 3'}).click();
  await page.getByRole('button',{name:'Battle Roaring Knight ch3-115'}).click();
  await expect(page.locator('#status')).toContainText('Roaring Knight');expect(remote).toEqual([]);
 });
@@ -66,6 +87,7 @@ test('custom Shadow Mantle action battle is reachable by pointer and resets',asy
 test.describe('mobile controls',()=>{
  test.use({viewport:{width:390,height:844},hasTouch:true,isMobile:true});
  test('touch navigation, command selection and pausing remain reachable',async({page})=>{
+  await withoutNative(page);
   await page.getByRole('button',{name:'Connect device'}).tap();
   await page.getByRole('button',{name:'Chapter 1'}).tap();
   await page.getByRole('button',{name:'Battle JEVIL ch1-25'}).tap();
