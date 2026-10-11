@@ -15,7 +15,10 @@ import {assetUrl} from './game/url';
 import {loadRemakeAssets} from './remake/host/assets';
 import {createJevilPractice,JEVIL_PATTERNS,type JevilPractice} from './remake/host/practice';
 import {SourceBattle} from './remake/host/battle';
-import {sourceEncounter,availabilityLabel} from './remake/host/encounters';
+import {sourceEncounter,developmentEncounter,availabilityLabel} from './remake/host/encounters';
+// Local dev server only: ?dev=1 also opens ported encounters that are not public yet. Production builds drop this.
+const devUnlock=import.meta.env.DEV&&new URLSearchParams(location.search).has('dev');
+const playableEncounter=(id:string)=>devUnlock?developmentEncounter(id):sourceEncounter(id);
 import {BattleView} from './remake/host/view';
 import {CanvasGraphics} from './remake/host/canvas';
 import {KEY} from './remake/deltarune/battle';
@@ -27,7 +30,7 @@ const overlay=element('interactions'),status=element('status'),loading=element('
 const input=new Input(),clock=new FixedClock(),storage=browserStore(),prefs=loadPrefs(storage);
 const publicMode=import.meta.env.MODE==='pages'||new URLSearchParams(location.search).has('demo');
 let remake:JevilPractice|SourceBattle|null=null,remakeAssets:Awaited<ReturnType<typeof loadRemakeAssets>>|null=null,publicLoadout:Loadout|null=null,remakeTick=0,publicPractice=false,remakeView:BattleView|null=null;
-let remakeConfirm=false,remakeCancel=false,remakeMoveCooldown=0;
+let remakeConfirm=false,remakeCancel=false,remakeMenu=false,remakeMoveCooldown=0;
 const remakeCanvas=document.createElement('canvas');remakeCanvas.width=640;remakeCanvas.height=480;const remakeCtx=remakeCanvas.getContext('2d')!;
 let assets:AssetStore,renderer:Renderer,audio:AudioManager,battle:BattleSession|null=null;
 // Original-bytecode battles run in an iframe; `battle` stays the browser adaptation (practice and unsupported encounters).
@@ -37,7 +40,7 @@ const reducedMotion=()=>prefs.reducedEffects||matchMedia('(prefers-reduced-motio
 let theater=new TheaterState(reducedMotion()),theaterView:TheaterView|null=null;
 let scene:'theater'|'intro'|'room'|'menu'|'battle'|'native'|'remake'='theater',chapter=1,selection=0,frame=0,last=0,raf=0,busy=false,sceneKey='',keyCooldown=0,sessionToken=0,victoryRecorded=false;
 let remakeLoad:AbortController|null=null;
-const empty={x:0,y:0,confirm:false,cancel:false,restart:false,pause:false,slow:false,shoot:false};
+const empty={x:0,y:0,confirm:false,cancel:false,menu:false,restart:false,pause:false,slow:false,shoot:false};
 const menuRecords=()=>catalog.filter(r=>r.chapter===chapter);
 function updatePreferences(){document.body.classList.toggle('reduced',prefs.reducedEffects);element('mute').textContent=prefs.muted?'SOUND OFF':'SOUND ON';element('mute').setAttribute('aria-pressed',String(prefs.muted));element('effects').textContent=prefs.reducedEffects?'CRT OFF':'CRT ON';element('effects').setAttribute('aria-pressed',String(prefs.reducedEffects));savePrefs(storage,prefs);}
 function closeBattle(){battle?.dispose();battle=null;native?.dispose();native=null;nativeRecord=null;remake=null;element('outcome').hidden=true;element('stage').classList.remove('battle-over');audio?.stop();input.clear();clock.reset();victoryRecorded=false;}
@@ -46,12 +49,12 @@ function openTheater(){sessionToken++;closeBattle();theater=new TheaterState(red
 function showError(cause:unknown){loading.hidden=true;busy=false;element('error-text').textContent=cause instanceof Error?cause.message:String(cause);error.hidden=false;}
 function renderRemakeFrame(){if(!remake)return;remakeCtx.imageSmoothingEnabled=false;remakeCtx.fillStyle='#000';remakeCtx.fillRect(0,0,640,480);if(remake instanceof SourceBattle)remakeView?.background(remake);remake.rt.draw();if(remake instanceof SourceBattle)remakeView?.draw(remake);}
 async function launchRemake(record:EncounterRecord,loadout:Loadout){
- const encounter=sourceEncounter(record.id);if(!encounter)throw Error('This encounter is still in development. Your preparation is saved.');
+ const encounter=playableEncounter(record.id);if(!encounter)throw Error('This encounter is still in development. Your preparation is saved.');
  if(busy)return;busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* CONNECTING '+record.name.toUpperCase()+'...';const token=++sessionToken;
  const pattern=Number(element<HTMLSelectElement>('attack-select').value)||0;
  const controller=new AbortController();remakeLoad?.abort();remakeLoad=controller;
  try{remakeAssets??=await loadRemakeAssets();if(token!==sessionToken)return;await audio.prepareEffects(remakeAssets.sounds,controller.signal);if(token!==sessionToken)return;closeBattle();publicLoadout=structuredClone(loadout);
-  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern):new SourceBattle(remakeAssets.bank,equipment!.chapters[1],loadout,record.id);remake.rt.gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);
+  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern):new SourceBattle(remakeAssets.bank,equipment!.chapters[1],loadout,record.id,11,{development:devUnlock});remake.rt.gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);
   remakeView=new BattleView(remakeCtx,assets,remakeAssets.draw);remakeConfirm=false;remakeCancel=false;remakeMoveCooldown=0;
   remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.stopAllSounds=()=>audio.stop();renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(encounter.music);
  }catch(e){if(token===sessionToken)throw e;}finally{if(remakeLoad===controller)remakeLoad=null;if(token===sessionToken){busy=false;loading.hidden=true;input.clear();clock.reset();}}
@@ -77,7 +80,7 @@ function onNativeEvent(event:NativeEvent){
 }
 async function startBattle(practice=false){
  const record=menuRecords()[selection];if(!record||busy)return;
- if(publicMode){const encounter=sourceEncounter(record.id);publicPractice=practice&&!!encounter?.practice;const playable=!!encounter;if(prep)prep.open(record,{practiceOnly:publicPractice,available:playable,launchLabel:playable?publicPractice?'START PRACTICE':'START BATTLE':'IN DEVELOPMENT',notice:playable?publicPractice?'Single attack practice. Use START BATTLE from the encounter list for commands and continuous turns.':'Browser battle: commands, equipment stats and usable bag items. Visuals, sounds and special equipment effects are still being compared with the game.':'Browse equipment and save your loadout. This encounter is not playable in the public demo yet.'});else showError('Equipment could not load. Please retry.');return;}
+ if(publicMode){const encounter=playableEncounter(record.id);publicPractice=practice&&!!encounter?.practice;const playable=!!encounter;if(prep)prep.open(record,{practiceOnly:publicPractice,available:playable,launchLabel:playable?publicPractice?'START PRACTICE':'START BATTLE':'IN DEVELOPMENT',notice:playable?publicPractice?'Single attack practice. Use START BATTLE from the encounter list for commands and continuous turns.':'Browser battle: commands, equipment stats and usable bag items. Visuals, sounds and special equipment effects are still being compared with the game.':'Browse equipment and save your loadout. This encounter is not playable in the public demo yet.'});else showError('Equipment could not load. Please retry.');return;}
  // Full battles use the original game code; the adaptation remains for practice and encounters without a native launcher.
  if(!practice&&nativeIds.has(record.id)){
   if(prep&&equipment?.chapters[record.chapter])prep.open(record);
@@ -152,10 +155,12 @@ function step(){
   if(keys.pause){remake.paused=!remake.paused;audio.pause(remake.paused);sceneKey='';}
   if(keys.restart&&publicLoadout){void launchRemake(menuRecords()[selection],publicLoadout).catch(showError);return;}
   const held=remake.rt.input.held;held.clear();if(keys.x<0)held.add(KEY.left);if(keys.x>0)held.add(KEY.right);if(keys.y<0)held.add(KEY.up);if(keys.y>0)held.add(KEY.down);if(keys.slow)held.add(KEY.shift);
-  if(remake.paused){remakeConfirm=false;remakeCancel=false;}else{remakeConfirm||=keys.confirm;remakeCancel||=keys.cancel;}
+  if(remake.paused){remakeConfirm=false;remakeCancel=false;remakeMenu=false;}else{remakeConfirm||=keys.confirm;remakeCancel||=keys.cancel;remakeMenu||=keys.menu;}
   if(!remake.paused&&!remake.outcome&&++remakeTick%2===0){
    if(remake instanceof SourceBattle){if((keys.x||keys.y)&&remakeTick>=remakeMoveCooldown){remake.move(keys.x,keys.y);remakeMoveCooldown=remakeTick+10;}if(remakeCancel)remake.cancel();else if(remakeConfirm)remake.confirm();}
-   remakeConfirm=false;remakeCancel=false;remake.step();renderRemakeFrame();
+   // C reaches the game code as a key press on its next frame (button3_p), as the original reads it.
+   if(remakeMenu)remake.rt.input.pressed.add(KEY.c);
+   remakeConfirm=false;remakeCancel=false;remakeMenu=false;remake.step();renderRemakeFrame();
    if(remake.outcome){element('outcome-text').textContent=remake.outcome==='survived'?'* Pattern survived.':remake.outcome==='victory'?'* YOU WON!':'* The party fell.';element('outcome-again').textContent=remake instanceof SourceBattle?'BATTLE AGAIN':'PRACTICE AGAIN';element('outcome').hidden=false;audio.pause(true);if(remake.outcome==='victory'&&!prefs.completed.includes(menuRecords()[selection].id)){prefs.completed.push(menuRecords()[selection].id);savePrefs(storage,prefs);}}
   }
  }else if(scene==='battle'&&battle){

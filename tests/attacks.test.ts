@@ -23,7 +23,7 @@ test('each source encounter receives explicit attack family and source attributi
 
 test('every distinct attack remains finite for its entire defense turn',()=>{
  const seen=new Set<string>();
- const input={x:0,y:0,confirm:false,cancel:false,restart:false,pause:false,slow:false,shoot:true};
+ const input={x:0,y:0,confirm:false,cancel:false,menu:false,restart:false,pause:false,slow:false,shoot:true};
  for(const r of catalog){const d=getDefinition(r as EncounterRecord);
   for(const [i,a]of d.attacks.entries()){
    if(seen.has(a.id))continue;seen.add(a.id);

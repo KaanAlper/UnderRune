@@ -15,7 +15,8 @@ import {burstBolt,basicAttack} from '../deltarune/player-effects';
 import {C} from '../gm/graphics';
 import {sourceEncounter,developmentEncounter} from './encounters';
 import {CloverHost} from './clover';
-import type {SourceDialogue,SourceEnemyHost} from './enemy-host';
+import {KRoundBattleHost} from './kround';
+import type {PageFace,SourceDialogue,SourceEnemyEvents,SourceEnemyHost} from './enemy-host';
 const text=optionalSourceText;
 export const plain=(s:string)=>s.replace(/\^\d/g,'').replace(/\/[%%]?|%%/g,'').replace(/[&#]/g,'\n').replace(/\\[A-Za-z]\d/g,'').trim();
 const jtext=(line:number)=>plain(text('obj_joker_slash_Step_0_gml_'+line+'_0'));
@@ -34,6 +35,8 @@ export class SourceBattle{
  private pending:Action|null=null;private pages:string[]=[];private afterMessage:()=>void=()=>{};private endTiming=0;private commandSnapshots:{tp:number;actions:(Action|null)[]}[]=[];
  /** Encounters whose enemy runs its own original dialogue, ACT and enemy-turn events (Clover, K.Round). */
  private enemyHost?:SourceEnemyHost;
+ /** The speaker portrait for the current message page, when the enemy's dialogue sets one. */
+ messageFace:PageFace=null;
  constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id);if(!encounter)throw Error('This battle is not available yet.');validateLoadout(loadout,equipment);
   this.rt=new GmRuntime(bank,{seed});this.party=[...encounter.party];this.name=encounter.name;
@@ -41,19 +44,21 @@ export class SourceBattle{
   this.bag=[...loadout.items];this.actions=this.party.map(()=>null);
   const stats=(key:'attack'|'defense'|'magic',base:number[])=>[...this.party,...[1,2,3].filter(id=>!this.party.includes(id))].map(id=>{const s=loadout.characters[id];return base[id]+equipment.weapons.find(g=>g.id===s.weapon)![key]+s.armor.reduce((n,id)=>n+equipment.armors.find(g=>g.id===id)![key],0);});
   this.rt.globals={hp:[0,90,110,70],maxhp:[0,90,110,70],char:[...this.party,...(this.party.length===2?[0]:[])],battleat:stats('attack',[0,10,14,8]),battledf:stats('defense',[0,2,2,2]),battlemag:stats('magic',[0,0,1,7]),charaction:[0,0,0],charcantarget:[1,1,this.party.length===3?1:0],chardead:[0,0,0],charmove:[1,1,this.party.length===3?1:0],charspecial:[0,0,0],targeted:[0,0,0],tension:0,maxtension:250,inv:-1,invc:1,flag:new Array(1000).fill(0),monster:[1,0,0],mnfight:0,turntimer:0,chemg_god_mode:false};
-  this.heroes=this.party.map((id,i)=>{const def=battleHero([b.heroKris,b.heroSusie,b.heroRalsei][id-1],()=>this.applyFightHit(i));const h=this.rt.create(def,this.party.length===2?80:80+i*10,this.party.length===2?[100,180][i]:[100,150,210][i]);Object.assign(h,{char:id,myself:i,sprite:heroSprites[id-1][0],imageXscale:2,imageYscale:2,imageSpeed:0,depth:200-i*20,mywidth:heroSize[id-1][0],myheight:heroSize[id-1][1],pose:'idle',faceaction:0,siner:0,attacktimer:0,defendtimer:0,hurt:0,hurttimer:0,points:0});return h;});
+  this.heroes=this.party.map((id,i)=>{const def=battleHero([b.heroKris,b.heroSusie,b.heroRalsei][id-1],()=>this.applyFightHit(i));const at=encounter.heroes?.[i]??[this.party.length===2?80:80+i*10,this.party.length===2?[100,180][i]:[100,150,210][i]];const h=this.rt.create(def,at[0],at[1]);Object.assign(h,{char:id,myself:i,sprite:heroSprites[id-1][0],imageXscale:2,imageYscale:2,imageSpeed:0,depth:200-i*20,mywidth:heroSize[id-1][0],myheight:heroSize[id-1][1],pose:'idle',faceaction:0,siner:0,attacktimer:0,defendtimer:0,hurt:0,hurttimer:0,points:0});return h;});
   this.rt.globals.charinstance=[...this.heroes.map(h=>h.id),...(this.party.length===2?[0]:[])];const ev=this.rt.create(b.eventManager,0,0);ev.visible=false;
   this.control=this.rt.create(b.battleController,0,0);Object.assign(this.control,{timeron:0,reset:0,noreturn:0,onebuffer:0,twobuffer:0,lbuffer:0,rbuffer:0,grazenoise:0,damagenoise:0});this.control.visible=false;
-  if(id==='ch1-8'){
-   // Encounter 8 starts like ordinary battles: obj_battleback before the battle objects.
-   this.rt.create(b.battleBack,0,0);
-   this.enemyHost=new CloverHost(this.rt,this.control,{
-    onDialogue:writers=>{const writer=writers.find(w=>w.kind==='battle');if(writer)this.message=writer.pages[writer.page];else this.enemySpeech=writers.map(w=>w.pages[w.page]).join('\n');},
-    onActionComplete:()=>{this.mercy=this.enemyHost!.mercy;this.tired=this.enemyHost!.tired;this.resolveRemainingActions();},
-    onPhase:phase=>{if(phase==='speech')this.setPhase('enemyTalk');if(phase==='transition')this.setPhase('transition');if(phase==='attack')this.setPhase('enemy');},
-    onDefeat:()=>this.victory(),
-   });this.body=this.enemyHost.body;this.message=this.enemyHost.initialText;
-  }else{this.body=this.rt.create(id==='ch1-25'?jokerBody:lancerBoss,id==='ch1-25'?500:540,id==='ch1-25'?160:200);this.body.depth=15;this.message=id==='ch1-25'?jtext(158):plain(text('scr_monstersetup_slash_scr_monstersetup_gml_51_0'));}
+  const events:SourceEnemyEvents={
+   onDialogue:writers=>{const writer=writers.find(w=>w.kind==='battle');if(writer){this.message=writer.pages[writer.page];this.messageFace=writer.faces?.[writer.page]??null;}else{this.messageFace=null;this.enemySpeech=writers.map(w=>w.pages[w.page]).join('\n');}},
+   onActionComplete:()=>{this.mercy=this.enemyHost!.mercy;this.tired=this.enemyHost!.tired;this.resolveRemainingActions();},
+   onPhase:phase=>{if(phase==='speech')this.setPhase('enemyTalk');if(phase==='transition')this.setPhase('transition');if(phase==='attack')this.setPhase('enemy');},
+   onDefeat:()=>this.victory(),
+  };
+  // Encounters 8 and 12 start like ordinary battles, over obj_battleback; 27 is fought in the castle room.
+  if(id==='ch1-8'||id==='ch1-12')this.rt.create(b.battleBack,0,0);
+  if(id==='ch1-8')this.enemyHost=new CloverHost(this.rt,this.control,events);
+  if(id==='ch1-12'||id==='ch1-27')this.enemyHost=new KRoundBattleHost(this.rt,this.control,id,events);
+  if(this.enemyHost){this.body=this.enemyHost.body;this.message=this.enemyHost.initialText;}
+  else{this.body=this.rt.create(id==='ch1-25'?jokerBody:lancerBoss,id==='ch1-25'?500:540,id==='ch1-25'?160:200);this.body.depth=15;this.message=id==='ch1-25'?jtext(158):plain(text('scr_monstersetup_slash_scr_monstersetup_gml_51_0'));}
  }
  get tp(){return Math.round(this.rt.globals.tension/this.rt.globals.maxtension*100);}
  get autoSusie(){return this.id==='ch1-2';}
@@ -263,7 +268,12 @@ export class SourceBattle{
  step(){
   if(this.paused||this.outcome)return;this.frame++;this.phaseFrame++;const rt=this.rt,g=rt.globals;
   rt.step();
-  this.enemyHost?.afterStep();if(this.enemyHost){this.mercy=this.enemyHost.mercy;this.tired=this.enemyHost.tired;}
+  this.enemyHost?.afterStep();
+  if(this.enemyHost){
+   // The enemy's own events change its stats too (K.Round's milk heals and raises attack): read them back.
+   const g=this.rt.globals;this.mercy=this.enemyHost.mercy;this.tired=this.enemyHost.tired;
+   if(this.enemyHost.body.live){this.enemyHp=g.monsterhp[0];this.enemyAt=g.monsterat[0];this.enemyDf=g.monsterdf[0];}
+  }
   if(this.phase==='victory'){if(!rt.count(b.dmgWriter)&&!rt.count(basicAttack))this.outcome='victory';return;}
   if(rt.pendingRoom==='room_gameover'){this.outcome='defeat';this.setPhase('defeat');return;}
   if(this.phase==='intro'&&this.phaseFrame>=24)this.beginCommands();

@@ -2,7 +2,7 @@ import {expect,test} from 'vitest';
 import {knightStream} from '../src/bosses/knight/attacks';
 import {BattleSession} from '../src/game/battle';
 import {catalog,getDefinition} from '../src/bosses/registry';
-const idle={x:0,y:0,confirm:false,cancel:false,restart:false,pause:false,slow:false,shoot:false};
+const idle={x:0,y:0,confirm:false,cancel:false,menu:false,restart:false,pause:false,slow:false,shoot:false};
 test('decoded controller103 starts the crossed beams at source frame20 and warning offsets23',()=>{
  const definition=getDefinition(catalog.find(r=>r.id==='ch3-115')!);definition.attacks=[knightStream];definition.sequence=[0];
  const b=new BattleSession(definition,1,true);b.invulnerable=10000;

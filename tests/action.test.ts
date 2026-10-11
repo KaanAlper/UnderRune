@@ -1,7 +1,7 @@
 import {expect,test} from 'vitest';
 import {ActionSession} from '../src/game/action';
 import {catalog,getDefinition} from '../src/bosses/registry';
-const idle={x:0,y:0,confirm:false,cancel:false,restart:false,pause:false,slow:false,shoot:false};
+const idle={x:0,y:0,confirm:false,cancel:false,menu:false,restart:false,pause:false,slow:false,shoot:false};
 const make=(id:string)=>new ActionSession(getDefinition(catalog.find(r=>r.id===id)!),7);
 test('Mantle preserves source HP and four phase thresholds',()=>{
  const b=make('ch3-mantle');expect(b.totalBossHp).toBe(30);expect(b.phase).toBe('defense');

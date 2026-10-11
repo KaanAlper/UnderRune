@@ -3,7 +3,7 @@ import {BattleSession} from '../src/game/battle';
 import {getDefinition,catalog} from '../src/bosses/registry';
 import {loadPrefs,savePrefs} from '../src/game/storage';
 import type {InputFrame} from '../src/game/input';
-const input:InputFrame={x:0,y:0,confirm:false,cancel:false,restart:false,pause:false,slow:false,shoot:false};
+const input:InputFrame={x:0,y:0,confirm:false,cancel:false,menu:false,restart:false,pause:false,slow:false,shoot:false};
 const make=()=>new BattleSession(getDefinition(catalog.find(r=>r.name==='JEVIL')!),7);
 
 test('pointer commands cannot change a paused or disposed battle',()=>{

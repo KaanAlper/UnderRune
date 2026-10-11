@@ -29,7 +29,7 @@ it('runs original Clover controller then returns to both party commands without 
 const turnUntil=(b:SourceBattle,phase:string,limit=400)=>{for(let i=0;i<limit&&b.phase!==phase;i++){if(b.phase==='message')b.confirm();b.step();b.rt.draw();}};
 it('defeats Clover with FIGHT through her own defeat run and outcome flag 1',()=>{
  const b=create();advance(b,24);b.select(0);b.select(0);b.select(4);turnUntil(b,'timing');
- b.enemyHp=1;b.boltTick=b.bolts[0].frame;b.confirm();advance(b,12);
+ b.enemyHp=1;b.rt.globals.monsterhp[0]=1;b.boltTick=b.bolts[0].frame;b.confirm();advance(b,12);
  expect(b.rt.globals.flag[51]).toBe(1);expect(b.rt.globals.monster[0]).toBe(0);advance(b,120);expect(b.outcome).toBe('victory');
 });
 it('SPARE at full mercy plays the spared-sprite animation and counts a spare (flag 2)',()=>{

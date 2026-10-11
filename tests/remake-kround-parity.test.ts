@@ -6,7 +6,7 @@ import {checkersEnemy,checkersLeap} from '../src/remake/bosses/kround/attacks';
 
 // Maintainer-local oracle data never ships with the browser build. A skipped
 // local replay is no evidence for public encounter availability.
-const runs=[{name:'ch1-12-s11-god',starts:[174,494,814,1623]}];
+const runs=[{name:'ch1-12-s11-god',starts:[174,494,814,1623,1894,2214]},{name:'ch1-27-s11-god',starts:[173,493,805,1134,1421,1733,2037]}];
 for(const run of runs){
  const ready=fs.existsSync(`.tools/oracle/${run.name}.ndjson`)&&run.starts.every(f=>fs.existsSync(`.tools/oracle/${run.name}-f${f}.json`))&&fs.existsSync('extracted/chapter1_windows/sprites.json');
  describe.skipIf(!ready)(`K.Round attack-window native parity (${run.name})`,()=>{

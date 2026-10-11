@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {TheaterState,cubicBezier,STAGE_CENTER,STAGE_WIDTH} from '../src/game/theater';
 import type {InputFrame} from '../src/game/input';
-const none:InputFrame={x:0,y:0,confirm:false,cancel:false,restart:false,pause:false,slow:false,shoot:false};
+const none:InputFrame={x:0,y:0,confirm:false,cancel:false,menu:false,restart:false,pause:false,slow:false,shoot:false};
 const run=(s:TheaterState,frames:number,input:Partial<InputFrame>={})=>{let event=null;for(let i=0;i<frames;i++){const e=s.step({...none,...(i===0?input:{})});if(e)event=e;}return event;};
 describe('theater intro',()=>{
  it('uses the exact strong curves and stays within 0..1',()=>{
