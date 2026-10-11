@@ -3,7 +3,7 @@
 import {moveTowardsPoint,type GmObjectDef} from '../../gm/runtime';
 import {lengthdirX,lengthdirY,lt,le,ge,gt,eq} from '../../gm/math';
 import {regularBullet,afterimageGrow,heart,battleController,dmgWriter,damage} from '../../deltarune/battle';
-export const lancerBoss:GmObjectDef={name:'obj_lancerboss',index:244,sprite:'spr_lancerbike',events:{
+export const lancerBoss:GmObjectDef={name:'obj_lancerboss',index:244,depth:90,sprite:'spr_lancerbike',events:{
  create:s=>{Object.assign(s,{turns:0,con:0,compliment:0,imageSpeed:0,imageXscale:2,imageYscale:2,state:0,siner:0,hurttimer:0,hurtshake:0,shakex:0,dodgetimer:0,candodge:1});},
  draw:(s,rt)=>{
   // obj_lancerboss Draw: thirty-frame recoil, alternating shake, and fifteen-frame dodge.
@@ -12,7 +12,7 @@ export const lancerBoss:GmObjectDef={name:'obj_lancerboss',index:244,sprite:'spr
   if(s.state===0){s.siner++;rt.drawSprite('spr_lancerbike',s.siner/5,s.x,s.y,2,2,0,s.imageBlend,1);}
  },
 }};
-export const lancerBike:GmObjectDef={name:'obj_lancerbike',index:211,parent:regularBullet,sprite:'spr_lancerbike',events:{
+export const lancerBike:GmObjectDef={name:'obj_lancerbike',index:211,depth:-20,parent:regularBullet,sprite:'spr_lancerbike',events:{
  user5:(s,rt)=>{if(s.target===0&&le(rt.globals.hp[1],rt.globals.maxhp[1]/2))s.damage=Math.ceil(rt.globals.hp[1]/3);damage(s,rt);},
  create:(s,rt)=>{Object.assign(s,{grazed:0,grazepoints:10,timepoints:0,target:0,dont:1,inv:60,damage:20,spec:0,imageXscale:2,imageYscale:2,loop:0,lcon:0,flip:0,ltimer:0,btimer:0,endcon:0,racecon:0,topy:rt.view.y+120,bottomy:rt.view.y+250});if(le(rt.globals.hp[1],rt.globals.maxhp[1]/2))s.damage=10;if(le(rt.globals.hp[1],rt.globals.maxhp[1]/4))s.damage=5;},
  step:(s,rt)=>{

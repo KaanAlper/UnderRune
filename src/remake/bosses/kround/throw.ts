@@ -19,7 +19,7 @@ const throwHost=(rt:GmRuntime)=>{
 const text=(rt:GmRuntime,message:KRoundThrowMessage)=>throwHost(rt).text(message);
 const press=(rt:GmRuntime)=>rt.input.pressed.has(KEY.c)||rt.input.pressed.has(KEY.ctrl);
 
-export const throwTarget:GmObjectDef={name:'obj_throwtarget',index:263,sprite:'spr_checkers_crown',events:{
+export const throwTarget:GmObjectDef={name:'obj_throwtarget',index:263,depth:4,sprite:'spr_checkers_crown',events:{
  create:(s,rt)=>{s.imageXscale=2;s.imageYscale=2;s.imageSpeed=.2;s.good=1;s.offing=0;
   if(rt.count(throwTarget)===1){const body=rt.create(throwTarget,s.x,s.y);s.tt=body.id;body.depth=s.depth+1;body.offing=0;body.good=0;body.sprite='spr_checkers_idle_crownless';}s.con=0;
  },
@@ -31,7 +31,7 @@ export const throwTarget:GmObjectDef={name:'obj_throwtarget',index:263,sprite:'s
  },
 }};
 
-export const ralseiThrown:GmObjectDef={name:'obj_ralseithrown',index:264,sprite:'spr_ralsei_thrown',events:{
+export const ralseiThrown:GmObjectDef={name:'obj_ralseithrown',index:264,depth:1,sprite:'spr_ralsei_thrown',events:{
  create:(s,rt)=>{s.con=0;s.yy=rt.view.y;s.xx=rt.view.x;s.timer=0;s.collided=0;s.mypower=10;},
  step:(s,rt)=>{
   if(s.con===0||s.con===2)s.imageAngle=s.direction;

@@ -14,14 +14,14 @@ export const input={
 };
 
 // Scene objects other code checks for or reads (their own behaviour lives elsewhere or is visual only).
-export const mainchara:GmObjectDef={name:'obj_mainchara',index:30,sprite:'spr_krisd'};
+export const mainchara:GmObjectDef={name:'obj_mainchara',index:30,depth:-20,sprite:'spr_krisd'};
 export const eventManager:GmObjectDef={name:'obj_event_manager',index:0};
-export const heroParent:GmObjectDef={name:'obj_heroparent',index:212,sprite:'spr_krisb_idle'};
-export const heroKris:GmObjectDef={name:'obj_herokris',index:213,parent:heroParent,sprite:'spr_krisplace'};
-export const heroSusie:GmObjectDef={name:'obj_herosusie',index:214,parent:heroParent,sprite:'spr_krisplace'};
-export const heroRalsei:GmObjectDef={name:'obj_heroralsei',index:215,parent:heroParent,sprite:'spr_krisplace'};
-export const darkener:GmObjectDef={name:'obj_darkener',index:205};
-export const monsterParent:GmObjectDef={name:'obj_monsterparent',index:242};
+export const heroParent:GmObjectDef={name:'obj_heroparent',index:212,depth:100,sprite:'spr_krisb_idle'};
+export const heroKris:GmObjectDef={name:'obj_herokris',index:213,depth:100,parent:heroParent,sprite:'spr_krisplace'};
+export const heroSusie:GmObjectDef={name:'obj_herosusie',index:214,depth:100,parent:heroParent,sprite:'spr_krisplace'};
+export const heroRalsei:GmObjectDef={name:'obj_heroralsei',index:215,depth:100,parent:heroParent,sprite:'spr_krisplace'};
+export const darkener:GmObjectDef={name:'obj_darkener',index:205,depth:200};
+export const monsterParent:GmObjectDef={name:'obj_monsterparent',index:242,depth:90};
 export const bulletGenParent:GmObjectDef={name:'obj_bulletgenparent',index:198};
 /** At the end of the enemy turn the soul flies back into Kris and bursts. */
 export const heartBurst:GmObjectDef={name:'obj_heartburst',index:209,sprite:'spr_heartoutline',events:{
@@ -51,7 +51,7 @@ export const moveHeart:GmObjectDef={name:'obj_moveheart',index:219,sprite:'spr_d
 }};
 
 /** The music stream holder. Its Draw event moves it near the player with two random calls every frame. */
-export const astream:GmObjectDef={name:'obj_astream',index:134,sprite:'spr_heart',events:{
+export const astream:GmObjectDef={name:'obj_astream',index:134,depth:-200,sprite:'spr_heart',events:{
  draw:(s,rt)=>{const m=rt.first(mainchara);if(m){s.x=m.x+rt.random.random(20);s.y=m.y+rt.random.random(20);}},
 }};
 
@@ -127,7 +127,7 @@ export const dmgWriter:GmObjectDef={name:'obj_dmgwriter',index:312,events:{
 
 export const battleSolid:GmObjectDef={name:'obj_battlesolid',index:197};
 /** The battle box: grows in while spinning (leaving afterimages), shrinks away when told to. */
-export const growtangle:GmObjectDef={name:'obj_growtangle',index:311,parent:battleSolid,sprite:'spr_battlebg_0',events:{
+export const growtangle:GmObjectDef={name:'obj_growtangle',index:311,depth:5,parent:battleSolid,sprite:'spr_battlebg_0',events:{
  create:s=>{s.imageXscale=0;s.imageYscale=0;s.imageAlpha=0.3;s.timer=0;s.maxtimer=15;s.growcon=1;s.imageSpeed=0;s.imageBlend=mergeColor(C.green,C.lime,0.5);s.fullgrow=0;s.keep=0;s.megakeep=0;},
  step:(s,rt)=>{
   s.growth=0;
@@ -165,7 +165,7 @@ export const collideBullet:GmObjectDef={name:'obj_collidebullet',index:201,paren
  user5:(s,rt)=>{if(s.active!==1)return;if(s.target!==3)damage(s,rt);else damageAll(s,rt);rt.destroy(s);},
 }};
 /** The usual bullet: default damage values, removed once well outside the view. */
-export const regularBullet:GmObjectDef={name:'obj_regularbullet',index:203,parent:collideBullet,events:{
+export const regularBullet:GmObjectDef={name:'obj_regularbullet',index:203,depth:-10,parent:collideBullet,events:{
  create:(s,rt)=>{
   s.grazed=0;s.grazepoints=5;s.timepoints=5;s.target=0;s.dont=1;s.inv=60;s.damage=124;s.active=1;s.spec=0;s.imageAlpha=1;
   if(!rt.exists(heart))rt.destroy(s);
@@ -183,11 +183,59 @@ export const regularBullet:GmObjectDef={name:'obj_regularbullet',index:203,paren
 export const regularBulletPermanent:GmObjectDef={name:'obj_regularbullet_permanent',index:204,parent:regularBullet,events:{
  user5:(s,rt)=>{if(s.active!==1)return;if(s.target!==3)damage(s,rt);else damageAll(s,rt);},
 }};
+/** The usual battle backdrop: a black fade with two layers of the purple grid drifting in opposite directions. */
+export const battleBack:GmObjectDef={name:'obj_battleback',index:307,depth:10000,events:{
+ create:s=>{s.siner=0;s.siner2=0;s.imageAlpha=0;s.destroy=0;},
+ draw:(s,rt)=>{
+  s.xx=rt.view.x;s.yy=rt.view.y;s.siner+=0.5;s.siner2+=1;
+  const d=rt.drawState;d.alpha=s.imageAlpha;d.color=C.black;rt.drawRect(-10,-10,rt.room.width+10,rt.room.height+10);d.alpha=1;
+  if(s.destroy===0&&le(s.imageAlpha,1))s.imageAlpha=s.imageAlpha+0.1;
+  rt.drawSpriteTiled('bg_battleback1',round(-100+s.siner),round(-100+s.siner),1,1,s.imageBlend,s.imageAlpha/2);
+  rt.drawSpriteTiled('bg_battleback1',round(-200-s.siner2),round(-210-s.siner2),1,1,s.imageBlend,s.imageAlpha);
+  if(ge(s.siner,100))s.siner-=100;
+  if(ge(s.siner2,100))s.siner2-=100;
+  if(s.destroy===1){s.imageAlpha=s.imageAlpha-0.1;if(le(s.imageAlpha,0))rt.destroy(s);}
+ },
+}};
 /** A plain sprite holder (scr_marker). */
 export const marker:GmObjectDef={name:'obj_marker',index:86};
 export function darkMarker(rt:GmRuntime,x:number,y:number,sprite:string){
  const m=rt.create(marker,x,y);m.sprite=sprite;m.imageSpeed=0;m.imageXscale=2;m.imageYscale=2;return m;
 }
+/** A spared enemy: it flashes white, slides away as fading afterimages and sheds spare stars. All of it runs in Draw. */
+export const spareAnim:GmObjectDef={name:'obj_spareanim',index:306,events:{
+ create:(s,rt)=>{s.t=0;s.imageSpeed=0;s.starcount=0;s.afterimage=0;s.tone=0;s.neotone=0;s.star=[];rt.sound?.('snd_spare',1,true);},
+ draw:(s,rt)=>{
+  const spr:string=s.sprite??'',frame=s.imageIndex,xs=s.imageXscale,ys=s.imageYscale;
+  if(s.t>=6&&s.t<=26){
+   s.afterimage+=1;
+   rt.drawSpriteFog(spr,frame,s.x+s.afterimage*4,s.y,xs,ys,0,C.white,0.7-s.afterimage/25);
+   rt.drawSpriteFog(spr,frame,s.x+s.afterimage*8,s.y,xs,ys,0,C.white,0.4-s.afterimage/30);
+  }
+  if(s.t<6){
+   if(s.t<5)rt.drawSprite(s.sprite,frame,s.x,s.y,xs,ys,0,s.imageBlend,1-s.neotone/4);
+   s.maxwhite=Math.min(1,s.t/5);
+   rt.drawSpriteFog(spr,frame,s.x,s.y,xs,ys,0,C.white,s.maxwhite-s.tone/5);
+  }
+  if(s.t>=1&&s.t<=5)for(let i=0;i<2;i++){
+   // instance_create(x + random(sprite_width), y + random(sprite_height), ...): arguments run right to left, Y first.
+   const y=s.y+rt.random.random(rt.spriteHeight(s)),x=s.x+rt.random.random(rt.spriteWidth(s));
+   const st=rt.create(marker,x,y);s.star[s.starcount]=st.id;
+   st.imageXscale=2;st.imageYscale=2;st.sprite='spr_sparestar_anim';st.imageAlpha=2;st.imageSpeed=0.25;st.hspeed=-3;st.gravity=0.5;st.gravityDirection=0;
+   s.starcount+=1;
+  }
+  if(s.t>=5&&s.t<=30)for(let i=0;i<s.starcount;i++){
+   const st=rt.byId(s.star[i]);if(!st)continue;
+   st.imageAngle+=10;st.imageAlpha=st.imageAlpha-0.1;if(le(st.imageAlpha,0))rt.destroy(st);
+  }
+  if(s.t>=5&&s.t<10)s.tone+=1;
+  if(s.t>=9){
+   s.neotone+=1;
+   if(s.neotone>=30){for(let i=0;i<s.starcount;i++){const st=rt.byId(s.star[i]);if(st)rt.destroy(st);}rt.destroy(s);}
+  }
+  s.t+=1;
+ },
+}};
 /** scr_bullet_inherit: a spawned bullet takes its spawner's bullet values. */
 export function inheritBullet(from:GmInstance,to:GmInstance){
  to.damage=from.damage;to.grazepoints=from.grazepoints;to.timepoints=from.timepoints;to.inv=from.inv;to.target=from.target;to.grazed=0;to.grazetimer=0;
@@ -196,7 +244,7 @@ export function inheritBullet(from:GmInstance,to:GmInstance){
 export function tensionHeal(rt:GmRuntime,amount:number){const g=rt.globals;g.tension+=amount;if(gt(g.tension,g.maxtension))g.tension=g.maxtension;}
 
 /** The soul: moves 4 px per frame (2 while holding cancel), slides along the box walls, stays on screen. */
-export const heart:GmObjectDef={name:'obj_heart',index:313,sprite:'spr_dodgeheart',mask:'spr_dodgeheartmask',
+export const heart:GmObjectDef={name:'obj_heart',index:313,depth:1,sprite:'spr_dodgeheart',mask:'spr_dodgeheartmask',
  events:{
   create:(s,rt)=>{
    rt.globals.sp=4;s.wspeed=rt.globals.sp;s.imageSpeed=0;s.fly=0;s.darken=1;s.darkamt=0;s.dmgnoise=0;
@@ -264,7 +312,7 @@ function heartStep(s:GmInstance,rt:GmRuntime){
 }
 
 /** The graze box around the soul: bullets passing through it give TP and shorten the turn. */
-export const grazebox:GmObjectDef={name:'obj_grazebox',index:206,sprite:'spr_grazeappear',mask:'spr_grazemask',
+export const grazebox:GmObjectDef={name:'obj_grazebox',index:206,depth:2,sprite:'spr_grazeappear',mask:'spr_grazemask',
  events:{
   create:(s,rt)=>{const h=rt.first(heart);if(h){s.x=h.x+10;s.y=h.y+10;}s.grazetimer=0;},
   endStep:(s,rt)=>{const h=rt.first(heart);if(h){s.x=h.x+10;s.y=h.y+10;}else rt.destroy(s);},
@@ -290,7 +338,7 @@ export const grazebox:GmObjectDef={name:'obj_grazebox',index:206,sprite:'spr_gra
 };
 
 /** The battle controller. Only the enemy-turn timer is here so far; menus and turn flow come next. */
-export const battleController:GmObjectDef={name:'obj_battlecontroller',index:196,events:{
+export const battleController:GmObjectDef={name:'obj_battlecontroller',index:196,depth:5,events:{
  step:(s,rt)=>{
   const g=rt.globals;
   if(s.grazenoise===1){rt.sound?.('snd_graze');s.grazenoise=0;}

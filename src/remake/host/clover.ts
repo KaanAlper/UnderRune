@@ -1,7 +1,7 @@
 import type {GmInstance,GmRuntime} from '../gm/runtime';
 import {createCloverEnemy} from '../bosses/clover';
 import strings from '../bosses/clover/text.json';
-import {KEY,monsterParent} from '../deltarune/battle';
+import {KEY,monsterParent,spareAnim} from '../deltarune/battle';
 /** Only the encounter's source strings are bundled, never the full game language file. */
 export function cloverText(key:string){const s=(strings as Record<string,string>)[key];if(s===undefined)throw Error(`Missing Clover source text ${key}`);return s;}
 export const cloverPlain=(s:string)=>s.replace(/\^\d/g,'').replace(/\/%?|%%/g,'').replace(/[&#]/g,'\n').replace(/\\[A-Za-z]\d/g,'').trim();
@@ -45,15 +45,27 @@ export class CloverHost {
  receiveHit(hp:number,amount:number){
   if(!this.body.live)return;const g=this.rt.globals;g.monsterhp[0]=hp;
   if(amount>0){this.body.shakex=9;this.body.state=3;this.body.hurttimer=30;this.body.hurtamt=amount;}else this.body.hurtamt=0;
-  // scr_monsterdefeat: count rewards/outcome once; the enemy's following Draw runs scr_defeatrun.
-  if(hp<=0&&g.monster[0]===1){
-   g.monstergold[3]+=g.monstergold[0];g.monsterexp[3]+=g.monsterexp[0];g.monster[0]=0;
-   if(g.flag[51]===0)g.flag[51]=1;
-   const counters:Record<number,number>={1:40,2:41,3:42,5:43};if(counters[g.flag[51]]!==undefined)g.flag[counters[g.flag[51]]]++;
-   if(g.flag[51]===3)g.flag[50]=3;if(g.flag[51]===2)g.flag[50]=2;if(g.flag[51]===1)g.flag[50]=1;
-   this.rt.userEvent(this.body,11);
-  }
+  // The enemy's following Draw runs scr_defeatrun.
+  if(hp<=0&&g.monster[0]===1){this.monsterDefeat();this.rt.userEvent(this.body,11);}
  }
+ /** scr_monsterdefeat: rewards and the battle outcome flag (1 defeated, 2 spared, 3 pacified), counted once. */
+ private monsterDefeat(){
+  const g=this.rt.globals;if(g.monster[0]!==1)return;
+  g.monstergold[3]+=g.monstergold[0];g.monsterexp[3]+=g.monsterexp[0];g.monster[0]=0;
+  if(g.flag[51]===0)g.flag[51]=g.monsterhp[0]<=0?1:2;
+  const counters:Record<number,number>={1:40,2:41,3:42,5:43};if(counters[g.flag[51]]!==undefined)g.flag[counters[g.flag[51]]]++;
+  if(g.flag[51]===3)g.flag[50]=3;if(g.flag[51]===2)g.flag[50]=2;if(g.flag[51]===1)g.flag[50]=1;
+ }
+ /** SPARE at full mercy (outcome 2) or Pacify while TIRED (outcome 3): the inherited enemy event 10. */
+ spare(outcome:2|3){
+  if(!this.body.live||this.rt.globals.monster[0]!==1)return;
+  const g=this.rt.globals,s=this.body;g.flag[51]=outcome;
+  // scr_spareanim, then scr_monsterdefeat, then instance_destroy.
+  const a=this.rt.create(spareAnim,s.x,s.y);a.sprite=s.sparedsprite;a.imageIndex=0;a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;
+  this.monsterDefeat();this.rt.destroy(s);this.control.timeron=0;
+ }
+ /** scr_mercyadd: a SPARE that is not ready yet adds the enemy's spare points. */
+ addMercy(amount:number){const g=this.rt.globals;g.mercymod[0]=Math.max(0,g.mercymod[0]+amount);}
  get choices(){
   const g=this.rt.globals;
   return g.actname[0].map((name:string,value:number)=>{

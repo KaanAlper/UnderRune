@@ -46,6 +46,12 @@ export class CanvasGraphics implements GmGraphics{
   if(!fog){if(this.fogs.size>4000)this.fogs.clear();fog=document.createElement('canvas');fog.width=f.sw;fog.height=f.sh;const g=fog.getContext('2d')!;g.drawImage(this.assets.pages[f.page],f.sx,f.sy,f.sw,f.sh,0,0,f.sw,f.sh);g.globalCompositeOperation='source-in';g.fillStyle=css(color);g.fillRect(0,0,f.sw,f.sh);this.fogs.set(key,fog);}
   this.place(x,y,xscale,yscale,angle,alpha);this.ctx.drawImage(fog,0,0,f.sw,f.sh,-s.originX+f.tx,-s.originY+f.ty,f.tw||f.sw,f.th||f.sh);this.ctx.restore();
  }
+ spriteTiled(name:string,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number){
+  const s=this.assets.sprite(name);if(!s||alpha<=0)return;const f=frameAt(s,0);if(!f)return;
+  const w=s.width*xscale,h=s.height*yscale;if(w<=0||h<=0)return;
+  const vx=this.view.x,vy=this.view.y,startX=x-Math.ceil((x-vx)/w)*w,startY=y-Math.ceil((y-vy)/h)*h;
+  for(let ty=startY;ty<vy+480;ty+=h)for(let tx=startX;tx<vx+640;tx+=w){this.place(tx,ty,xscale,yscale,0,alpha);this.blit(f,0,0,blend);this.ctx.restore();}
+ }
  rect(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,outline:boolean){
   const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));
   const l=Math.min(x1,x2)-this.view.x,t=Math.min(y1,y2)-this.view.y,w=Math.abs(x2-x1)+1,h=Math.abs(y2-y1)+1;

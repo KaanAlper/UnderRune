@@ -43,6 +43,8 @@ export class SourceBattle{
   this.rt.globals.charinstance=[...this.heroes.map(h=>h.id),...(this.party.length===2?[0]:[])];const ev=this.rt.create(b.eventManager,0,0);ev.visible=false;
   this.control=this.rt.create(b.battleController,0,0);Object.assign(this.control,{timeron:0,reset:0,noreturn:0,onebuffer:0,twobuffer:0,lbuffer:0,rbuffer:0,grazenoise:0,damagenoise:0});this.control.visible=false;
   if(id==='ch1-8'){
+   // Encounter 8 starts like ordinary battles: obj_battleback before the battle objects.
+   this.rt.create(b.battleBack,0,0);
    this.clover=new CloverHost(this.rt,this.control,{
     onDialogue:writers=>{const writer=writers.find(w=>w.kind==='battle');if(writer)this.message=writer.pages[writer.page];else this.enemySpeech=writers.map(w=>w.pages[w.page]).join('\n');},
     onActionComplete:()=>{this.mercy=this.clover!.mercy;this.tired=this.clover!.tired;this.resolveRemainingActions();},
@@ -127,10 +129,15 @@ export class SourceBattle{
    if(a.kind==='item'){this.useItem(a.value!,a.target??0);pages.push(`* ${['','Kris','Susie','Ralsei'][this.party[i]]} used the ${this.equipment.items.find(x=>x.id===a.value)!.name}.`);}
    if(a.kind==='magic'){
     if(a.value===2){this.heal(a.target!,g.battlemag[i]*5);pages.push('* Ralsei cast HEAL PRAYER!');}
-    if(a.value===3){if(this.tired){this.victory();return;}pages.push('* But the enemy was not TIRED...');}
+    if(a.value===3){if(this.tired){this.clover?.spare(3);this.victory();return;}pages.push('* But the enemy was not TIRED...');}
     if(a.value===4){this.hitEnemy(Math.max(0,Math.ceil(g.battlemag[i]*5+g.battleat[i]*11-this.enemyDf*3)),i);pages.push('* Susie cast RUDE BUSTER!');}
    }
-   if(a.kind==='spare'){if(this.mercy>=(this.id==='ch1-25'?999:100)){this.victory();return;}pages.push(`* But ${this.name} wasn't ready to be SPARED.`);if(this.id==='ch1-2')this.mercy+=10;}
+   if(a.kind==='spare'){
+    if(this.mercy>=(this.id==='ch1-25'?999:100)){this.clover?.spare(2);this.victory();return;}
+    pages.push(`* But ${this.name} wasn't ready to be SPARED.`);
+    // scr_mercyadd with the enemy's spare points (Clover and Lancer: 10).
+    if(this.clover){this.clover.addMercy(g.sparepoint[0]);this.mercy=this.clover.mercy;}else if(this.id==='ch1-2')this.mercy+=10;
+   }
   }
   for(const a of this.actions.filter(a=>a?.kind==='item').sort((a,b)=>b!.bagIndex!-a!.bagIndex!))this.bag.splice(a!.bagIndex!,1);
   if(this.outcome||this.phase==='victory')return;this.say(pages,()=>this.beginTiming());

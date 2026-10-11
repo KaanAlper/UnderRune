@@ -28,8 +28,8 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  expect(failures).toEqual([]);expect(native).toEqual([]);
 });
 test('unavailable encounters still open equipment previews without launching a fake fight',async({page})=>{
- await menu(page);await page.getByRole('button',{name:'Battle Clover ch1-8',exact:true}).click();
- const prep=page.getByRole('dialog',{name:'Clover'});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
+ await menu(page);await page.getByRole('button',{name:'Battle K.Round ch1-12',exact:true}).click();
+ const prep=page.getByRole('dialog',{name:'K.Round'});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
  await prep.getByRole('button',{name:'Close preparation'}).click();await expect(page.locator('#practice')).toBeDisabled();
 });
 test('mobile preparation fits the viewport and retains touch controls',async({page})=>{
@@ -85,4 +85,16 @@ test('FIGHT shows source timing lanes, plays original samples and continues afte
  await page.waitForTimeout(700);await page.locator('#screen').screenshot({path:'test-results/public-hit.png'});
  await expect(page.locator('#status')).toContainText('JEVIL / enemyTalk',{timeout:8000});await expect(page.locator('#outcome')).toBeHidden();
  expect(sounds.some(s=>s.endsWith('/snd_laz_c.wav'))).toBe(true);expect(sounds.some(s=>s.endsWith('/snd_hurt1.wav'))).toBe(true);expect(failures).toEqual([]);
+});
+test('Clover launches with Kris and Ralsei, runs a Check turn and her own attack, and returns to commands',async({page})=>{
+ const failures:string[]=[];page.on('pageerror',e=>failures.push(e.message));
+ await menu(page);await page.getByRole('button',{name:'Battle Clover ch1-8',exact:true}).click();await page.getByRole('button',{name:'START BATTLE'}).click();
+ await expect(page.locator('#status')).toContainText('Clover / command');
+ await page.getByRole('button',{name:'ACT',exact:true}).click();await page.getByRole('button',{name:'Clover',exact:true}).click();
+ await expect(page.getByRole('button',{name:'TalkTrees',exact:true})).toBeVisible();await page.getByRole('button',{name:'Check',exact:true}).click();
+ await page.getByRole('button',{name:'DEFEND',exact:true}).click();
+ for(let i=0;i<20&&!(await page.locator('#status').textContent())?.includes('Clover / enemy /');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
+ await expect(page.locator('#status')).toContainText('Clover / enemy /');await page.locator('#screen').screenshot({path:'test-results/public-clover.png'});
+ await expect(page.locator('#status')).toContainText('Clover / command / TURN 2',{timeout:14000});await expect(page.locator('#outcome')).toBeHidden();
+ expect(failures).toEqual([]);
 });

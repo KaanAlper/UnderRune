@@ -15,7 +15,7 @@ export interface CloverHooks {
  monsterSetup:(s:GmInstance,rt:GmRuntime)=>void;
 }
 /** Native obj_clubsbullet has no Create/Step event: it only splits when it hits the arena. */
-export const clubsBullet:GmObjectDef={name:'obj_clubsbullet',index:235,parent:bulletParent,sprite:'spr_clubsbullet',collisions:[{target:battleSolid,run:(s,_other,rt)=>{
+export const clubsBullet:GmObjectDef={name:'obj_clubsbullet',index:235,depth:-20,parent:bulletParent,sprite:'spr_clubsbullet',collisions:[{target:battleSolid,run:(s,_other,rt)=>{
  for(const [sprite,offset,slow] of [['spr_clubsball_b',0,6],['spr_clubsball_c',-25,8],['spr_clubsball_a',25,8]] as const){
   const b=rt.create(regularBullet,s.x,s.y);s.bul=b.id;
   if(!b.live)continue;

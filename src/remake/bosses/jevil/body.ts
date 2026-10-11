@@ -4,7 +4,7 @@ import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {C} from '../../gm/graphics';
 import {battleController,heroParent} from '../../deltarune/battle';
 
-export const jokerBody:GmObjectDef={name:'obj_joker_body',index:271,sprite:'spr_joker_main',events:{
+export const jokerBody:GmObjectDef={name:'obj_joker_body',index:271,depth:15,sprite:'spr_joker_main',events:{
  create:s=>{
   s.siner=0;s.ji=0;s.maxchain=6;s.maxdist=0;s.size=2;s.floatsiner=0;s.floatsinerspeed=1;s.debug=0;s.sndcon=0;s.condition=0;s.timer=0;
   s.scythecon=0;s.spintimer=0;s.s_xscale=2;s.s_yscale=2;s.s_sprite='spr_joker_teleport';s.s_y=0;s.s_vspeed=0;s.xsiner=0;s.ysiner=0;s.rotsiner=0;

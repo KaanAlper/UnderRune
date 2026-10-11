@@ -98,7 +98,7 @@ export const carouselBullet:GmObjectDef={name:'obj_carouselbullet',index:275,par
 }};
 
 /** Jevil blinks in beside the box, throws a diamond (type 0) or a fan of five spades (type 1), and blinks out. */
-export const jokerTeleport:GmObjectDef={name:'obj_joker_teleport',index:276,parent:bulletParent,sprite:'spr_joker_teleport',events:{
+export const jokerTeleport:GmObjectDef={name:'obj_joker_teleport',index:276,depth:5,parent:bulletParent,sprite:'spr_joker_teleport',events:{
  create:(s,rt)=>{
   s.fire=0;s.special=0;s.con=0;s.imageXscale=0;s.imageSpeed=0;s.timer=0;s.imageYscale=2;s.type=0;s.damage=100;s.grazed=0;s.grazepoints=4;s.timepoints=2;
   s.inv=60;s.grazetimer=0;s.target=0;s.sndcon=0;
@@ -138,7 +138,7 @@ export const jokerTeleport:GmObjectDef={name:'obj_joker_teleport',index:276,pare
 }};
 
 /** A dark club that glides to a stop and fires three volleys of club balls at the soul. */
-export const clubsBulletDark:GmObjectDef={name:'obj_clubsbullet_dark',index:236,parent:bulletParent,sprite:'spr_clubsbullet_dark',events:{
+export const clubsBulletDark:GmObjectDef={name:'obj_clubsbullet_dark',index:236,depth:-10,parent:bulletParent,sprite:'spr_clubsbullet_dark',events:{
  create:s=>{s.difficulty=1;s.times=0;s.activetimer=0;s.grazed=0;s.grazepoints=1;s.timepoints=1;s.target=0;s.dont=1;s.inv=120;s.damage=124;s.active=0;s.dtimer=0;s.type=0;s.initangle=0;},
  step:(s,rt)=>{
   s.dtimer+=1;
@@ -164,7 +164,7 @@ export const clubsBulletDark:GmObjectDef={name:'obj_clubsbullet_dark',index:236,
 }};
 
 /** A diamond that rises (type 1) or homes vertically on the soul (type 0); its motion runs in the Draw event. */
-export const dbulletVert:GmObjectDef={name:'obj_dbullet_vert',index:238,parent:collideBullet,sprite:'spr_diamondbullet_vert',events:{
+export const dbulletVert:GmObjectDef={name:'obj_dbullet_vert',index:238,depth:-1,parent:collideBullet,sprite:'spr_diamondbullet_vert',events:{
  create:(s,rt)=>{
   if(s.y<rt.view.y+20)s.y=rt.view.y+20;
   if(s.y>rt.view.y+460)s.y=rt.view.y+460;
@@ -249,7 +249,7 @@ export const centerScythe:GmObjectDef={name:'obj_centerscythe',index:272,parent:
 }};
 
 /** A spinning scythe that falls, then bursts into a vertical laser. A hit takes 30% of everyone's HP. */
-export const laserScythe:GmObjectDef={name:'obj_laserscythe',index:273,parent:regularBulletPermanent,sprite:'spr_joker_scythebody',events:{
+export const laserScythe:GmObjectDef={name:'obj_laserscythe',index:273,depth:-5,parent:regularBulletPermanent,sprite:'spr_joker_scythebody',events:{
  create:(s,rt)=>{
   s.grazed=0;s.grazepoints=15;s.timepoints=0;s.target=0;s.inv=120;s.damage=124;s.active=1;s.imageXscale=2;s.imageYscale=2;
   s.imageAngle=rt.random.random(360);s.rotspeed=14;s.vspeed=5;s.mask='spr_joker_scythebody_mask';s.gravity=1;s.explode=0;s.explodetimer=0;

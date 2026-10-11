@@ -116,6 +116,10 @@ export class GmRuntime{
  drawSpriteFog(name:string,frame:number,x:number,y:number,xscale=1,yscale=1,angle=0,color=0xffffff,alpha=1){
   if(!this.gfx)return;if(!this.gfx.spriteFog)throw Error('Graphics backend does not support sprite fog');this.gfx.spriteFog(name,frame,x,y,xscale,yscale,angle,color,alpha);
  }
+ /** draw_background_tiled_ext (GameMaker 2 stores backgrounds as sprites). */
+ drawSpriteTiled(name:string,x:number,y:number,xscale=1,yscale=1,blend=0xffffff,alpha=1){
+  if(!this.gfx)return;if(!this.gfx.spriteTiled)throw Error('Graphics backend does not support tiled sprites');this.gfx.spriteTiled(name,x,y,xscale,yscale,blend,alpha);
+ }
  /** draw_self: the instance's sprite with its own frame, scale, angle, blend and alpha. */
  drawSelf(i:GmInstance){this.drawSprite(i.sprite,i.imageIndex,i.x,i.y,i.imageXscale,i.imageYscale,i.imageAngle,i.imageBlend,i.imageAlpha);}
  drawRect(x1:number,y1:number,x2:number,y2:number,outline=false){this.gfx?.rect(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,outline);}

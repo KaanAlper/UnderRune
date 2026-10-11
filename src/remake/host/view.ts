@@ -72,7 +72,8 @@ export class BattleView{
    c.fillStyle='#000';c.fillRect(270,75,185,120);c.fillStyle='#fff';c.fillRect(273,78,179,114);this.text(b.enemySpeech,283,86,'#000');
    this.text('* '+b.name+' prepares an attack.',30,375);this.text('[Z] CONTINUE',600,446,'#807b87',1,'right');
   }else{
-   const message=b.phase==='command'?b.message:b.phase==='message'?b.message:b.phase==='victory'?'* YOU WON!':b.phase==='defeat'?'* The party fell.':b.message;
+   // No writer exists while the enemy attacks, so the text box stays empty.
+   const message=b.phase==='enemy'||b.phase==='transition'?'':b.phase==='victory'?'* YOU WON!':b.phase==='defeat'?'* The party fell.':b.message;
    const lines=this.wrap(message,560);this.text(lines.slice(0,3).join('\n'),30,375);if(b.phase==='message')this.text('[Z] CONTINUE',600,446,'#807b87',1,'right');
   }
  }

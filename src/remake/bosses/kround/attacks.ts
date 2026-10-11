@@ -6,7 +6,7 @@ import {eq,ge,lt,pointDirection} from '../../gm/math';
 import {monsterParent,collideBullet,regularBullet,heart,growtangle,shake,afterimage,damage} from '../../deltarune/battle';
 import {checkersStep,requireKRoundHost} from './controller';
 
-export const checkersEnemy:GmObjectDef={name:'obj_checkers_enemy',index:261,parent:monsterParent,sprite:'spr_checkers_idle',events:{
+export const checkersEnemy:GmObjectDef={name:'obj_checkers_enemy',index:261,depth:90,parent:monsterParent,sprite:'spr_checkers_idle',events:{
  create:s=>{Object.assign(s,{bikeflip:0,becomeflash:0,turnt:0,turns:0,talktimer:0,talkmax:5,state:0,flash:0,siner:0,fsiner:0,talked:0,attacked:0,hurt:0,hurttimer:0,hurtshake:0,shakex:0,mywriter:343249823,acting:0,actcon:0,acttimer:0,mercymod:0,maxmercy:9999,warned:0,compliment:0,tired:0,attacks:0,dodgetimer:0,candodge:0,con:0,battlecancel:0,nexttry:0,mytarget:3,imageSpeed:0,imageXscale:2,imageYscale:2,checked:0,crown:0,attacktype:0,thrown:0,thissprite:'spr_checkers_idle',scon:0,secondtime:0,bowcounter:0,ralsei_lecture:0,milk_counter:0});},
  alarm4:s=>{s.actcon+=1;},
  step:checkersStep,
@@ -36,7 +36,7 @@ const stop=(s:GmInstance)=>{s.vspeed=0;s.gravity=0;s.hspeed=0;s.sprite='spr_chec
 const finish=(s:GmInstance,rt:GmRuntime)=>{rt.globals.turntimer=-1;for(const enemy of rt.all(checkersEnemy))enemy.visible=true;rt.destroy(s);};
 const fade=(rt:GmRuntime)=>{for(const b of rt.all(regularBullet)){b.active=0;b.imageAlpha-=.1;}};
 
-export const checkersLeap:GmObjectDef={name:'obj_checkers_leap',index:266,parent:collideBullet,sprite:'spr_checkers_idle',events:{
+export const checkersLeap:GmObjectDef={name:'obj_checkers_leap',index:266,depth:1,parent:collideBullet,sprite:'spr_checkers_idle',events:{
  create:s=>{Object.assign(s,{jumpcon:0,jumptimer:0,s_timer:0,imageXscale:2,imageYscale:2,leapmode:0,active:1,imageSpeed:0,imageIndex:0,damage:100,grazed:0,grazepoints:6,timepoints:2,inv:120,grazetimer:0,target:0,boss:0,amt:0});},
  // Native User Event 5 calls scr_damage and keeps the giant, even when target is 3.
  user5:(s,rt)=>{if(s.active===1)damage(s,rt);},

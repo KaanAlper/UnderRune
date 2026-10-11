@@ -25,7 +25,8 @@ async function sources(dir) {
   return files;
 }
 const text = (await Promise.all((await sources(path.join(root, 'src', 'remake'))).map(f => fs.readFile(f, 'utf8')))).join('\n');
-const names = new Set(text.match(/\bspr_[A-Za-z0-9_]+/g) ?? []);
+// GameMaker 2 stores backgrounds (bg_) as sprites too.
+const names = new Set(text.match(/\b(?:spr|bg)_[A-Za-z0-9_]+/g) ?? []);
 // Sprite fonts the code names through font_add_sprite_ext, and bitmap fonts by name.
 const spriteFonts = {damagefont: {sprite: 'spr_numbersfontbig', map: '0123456789', proportional: true, sep: 0}};
 for (const f of Object.values(spriteFonts)) names.add(f.sprite);
