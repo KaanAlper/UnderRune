@@ -14,6 +14,8 @@ import {loadoutIni,type EquipmentCatalog,type Loadout} from './game/loadout';
 import {assetUrl} from './game/url';
 import {loadRemakeAssets} from './remake/host/assets';
 import {createJevilPractice,JEVIL_PATTERNS,type JevilPractice} from './remake/host/practice';
+import {SourceBattle} from './remake/host/battle';
+import {BattleView} from './remake/host/view';
 import {CanvasGraphics} from './remake/host/canvas';
 import {KEY} from './remake/deltarune/battle';
 import type {EncounterRecord} from './game/types';
@@ -23,7 +25,8 @@ const canvas=element<HTMLCanvasElement>('screen'),ctx=canvas.getContext('2d')!;
 const overlay=element('interactions'),status=element('status'),loading=element('loading'),error=element('error');
 const input=new Input(),clock=new FixedClock(),storage=browserStore(),prefs=loadPrefs(storage);
 const publicMode=import.meta.env.MODE==='pages'||new URLSearchParams(location.search).has('demo');
-let remake:JevilPractice|null=null,remakeAssets:Awaited<ReturnType<typeof loadRemakeAssets>>|null=null,publicLoadout:Loadout|null=null,remakeTick=0;
+let remake:JevilPractice|SourceBattle|null=null,remakeAssets:Awaited<ReturnType<typeof loadRemakeAssets>>|null=null,publicLoadout:Loadout|null=null,remakeTick=0,publicPractice=false,remakeView:BattleView|null=null;
+let remakeConfirm=false,remakeCancel=false,remakeMoveCooldown=0;
 const remakeCanvas=document.createElement('canvas');remakeCanvas.width=640;remakeCanvas.height=480;const remakeCtx=remakeCanvas.getContext('2d')!;
 let assets:AssetStore,renderer:Renderer,audio:AudioManager,battle:BattleSession|null=null;
 // Original-bytecode battles run in an iframe; `battle` stays the browser adaptation (practice and unsupported encounters).
@@ -39,14 +42,15 @@ function closeBattle(){battle?.dispose();battle=null;native?.dispose();native=nu
 function goMenu(){sessionToken++;loading.hidden=true;busy=false;closeBattle();scene='menu';sceneKey='';selection=Math.min(selection,menuRecords().length-1);}
 function openTheater(){sessionToken++;closeBattle();theater=new TheaterState(reducedMotion());scene='theater';sceneKey='';input.clear();}
 function showError(cause:unknown){loading.hidden=true;busy=false;element('error-text').textContent=cause instanceof Error?cause.message:String(cause);error.hidden=false;}
-function renderRemakeFrame(){if(!remake)return;remakeCtx.imageSmoothingEnabled=false;remakeCtx.fillStyle='#000';remakeCtx.fillRect(0,0,640,480);remake.rt.draw();}
+function renderRemakeFrame(){if(!remake)return;remakeCtx.imageSmoothingEnabled=false;remakeCtx.fillStyle='#000';remakeCtx.fillRect(0,0,640,480);if(remake instanceof SourceBattle)remakeView?.background(remake);remake.rt.draw();if(remake instanceof SourceBattle)remakeView?.draw(remake);}
 async function launchRemake(record:EncounterRecord,loadout:Loadout){
- if(record.id!=='ch1-25')throw Error('This encounter is still in development. Your preparation is saved.');
- if(busy)return;busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* CONNECTING JEVIL PRACTICE...';const token=++sessionToken;
+ if(!['ch1-25','ch1-2'].includes(record.id))throw Error('This encounter is still in development. Your preparation is saved.');
+ if(busy)return;busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* CONNECTING '+record.name.toUpperCase()+'...';const token=++sessionToken;
  const pattern=Number(element<HTMLSelectElement>('attack-select').value)||0;
  try{remakeAssets??=await loadRemakeAssets();if(token!==sessionToken)return;closeBattle();publicLoadout=structuredClone(loadout);
-  remake=createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern);remake.rt.gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);
-  remake.rt.sound=name=>{if(name==='snd_hurt1')audio.effect('hurt');};renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play('joker');
+  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern):new SourceBattle(remakeAssets.bank,equipment!.chapters[1],loadout,record.id);remake.rt.gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);
+  remakeView=new BattleView(remakeCtx,assets,remakeAssets.draw);remakeConfirm=false;remakeCancel=false;remakeMoveCooldown=0;
+  remake.rt.sound=name=>audio.effect(name==='snd_hurt1'?'hurt':name==='snd_damage'?'fight':name);renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(record.id==='ch1-25'?'joker':'lancerfight');
  }finally{if(token===sessionToken){busy=false;loading.hidden=true;input.clear();clock.reset();}}
 }
 async function launchNative(record:EncounterRecord,ini:string){
@@ -70,7 +74,7 @@ function onNativeEvent(event:NativeEvent){
 }
 async function startBattle(practice=false){
  const record=menuRecords()[selection];if(!record||busy)return;
- if(publicMode){if(prep)prep.open(record,{practiceOnly:true,available:record.id==='ch1-25',launchLabel:record.id==='ch1-25'?'START PRACTICE':'IN DEVELOPMENT',notice:record.id==='ch1-25'?'Jevil attack practice. Armor DF applies. Weapon attacks, gear abilities, item use and the full battle are still in development.':'Browse equipment and save your loadout. This encounter is not playable in the public demo yet.'});else showError('Equipment could not load. Please retry.');return;}
+ if(publicMode){publicPractice=practice&&record.id==='ch1-25';const playable=['ch1-25','ch1-2'].includes(record.id);if(prep)prep.open(record,{practiceOnly:publicPractice,available:playable,launchLabel:playable?publicPractice?'START PRACTICE':'START BATTLE':'IN DEVELOPMENT',notice:playable?publicPractice?'Single attack practice. Use START BATTLE from the encounter list for commands and continuous turns.':'Browser battle: commands, equipment stats and usable bag items. Visuals, sounds and special equipment effects are still being compared with the game.':'Browse equipment and save your loadout. This encounter is not playable in the public demo yet.'});else showError('Equipment could not load. Please retry.');return;}
  // Full battles use the original game code; the adaptation remains for practice and encounters without a native launcher.
  if(!practice&&nativeIds.has(record.id)){
   if(prep&&equipment?.chapters[record.chapter])prep.open(record);
@@ -84,13 +88,20 @@ async function startBattle(practice=false){
 }
 function addHitbox(name:string,x:number,y:number,w:number,h:number,run:()=>void){const button=document.createElement('button');button.className='hitbox';button.setAttribute('aria-label',name);button.style.cssText=`left:${x/6.4}%;top:${y/4.8}%;width:${w/6.4}%;height:${h/4.8}%`;button.addEventListener('click',()=>{audio.unlock();run();sceneKey='';});overlay.append(button);}
 function updateControls(){
- const key=[scene,theater?.active,theater?.selected,chapter,selection,battle?.phase,battle?.actor,battle?.cursor,battle?.paused,native?.paused,remake?.paused,remake?.outcome,busy].join(':');
+ const sourceBattle=remake instanceof SourceBattle?remake:null;
+ const key=[scene,theater?.active,theater?.selected,chapter,selection,battle?.phase,battle?.actor,battle?.cursor,battle?.paused,native?.paused,remake?.paused,remake?.outcome,sourceBattle?.phase,sourceBattle?.actor,sourceBattle?.cursor,sourceBattle?.turn,busy].join(':');
  if(key===sceneKey)return;sceneKey=key;overlay.replaceChildren();element('menu-tools').hidden=scene!=='menu';element('pause').hidden=scene!=='battle'&&scene!=='native'&&scene!=='remake';element('back').hidden=scene==='theater';
  if(scene==='native'&&nativeRecord)status.textContent=`${nativeRecord.name} / ORIGINAL ENGINE${native?.paused?' / paused':''}`;
  element('controls-hint').textContent=scene==='native'?'ARROWS · Z / ENTER CONFIRM · X / SHIFT CANCEL · P PAUSE':'ARROWS / WASD · Z CONFIRM · X BACK · R RESTART · P PAUSE';
  element('adaptation').textContent=scene==='native'?'FAN PROJECT · ORIGINAL GAME CODE':'FAN PROJECT · BROWSER ADAPTATION';
  if(publicMode)element('adaptation').textContent='FAN PROJECT · PUBLIC DEMO';
- if(scene==='remake'&&remake){status.textContent=`JEVIL / ${remake.paused?'paused':remake.outcome??JEVIL_PATTERNS[remake.pattern].name} / PRACTICE`;element('controls-hint').textContent='ARROWS / WASD · X / SHIFT SLOW · R RESTART · P PAUSE';}
+ if(scene==='remake'&&remake){status.textContent=sourceBattle?`${sourceBattle.name} / ${sourceBattle.paused?'paused':sourceBattle.phase} / TURN ${sourceBattle.turn+1}`:`JEVIL / ${remake.paused?'paused':remake.outcome??JEVIL_PATTERNS[remake.pattern].name} / PRACTICE`;element('controls-hint').textContent='ARROWS / WASD · Z / ENTER CONFIRM · X BACK / SLOW · R RESTART · P PAUSE';
+  if(sourceBattle&&!sourceBattle.paused&&!sourceBattle.outcome){
+   if(sourceBattle.phase==='command'){const chunk=sourceBattle.party.length===3?sourceBattle.actor*212:106+sourceBattle.actor*220;sourceBattle.choices.forEach((choice,i)=>{if(!choice.disabled)addHitbox(choice.name,chunk+15+i*35,330,33,31,()=>sourceBattle.select(i));});}
+   else if(sourceBattle.choices.length){const start=Math.floor(sourceBattle.cursor/6)*6;sourceBattle.choices.slice(start,start+6).forEach((choice,i)=>{if(!choice.disabled)addHitbox(choice.name,25+(i%2)*290,371+Math.floor(i/2)*30,265,28,()=>sourceBattle.select(start+i));});addHitbox('Back to commands',550,454,80,22,()=>sourceBattle.cancel());if(sourceBattle.choices.length>6){addHitbox('Previous choices',25,454,90,22,()=>sourceBattle.cursor=Math.max(0,start-6));addHitbox('Next choices',130,454,90,22,()=>sourceBattle.cursor=start+6<sourceBattle.choices.length?start+6:0);}}
+   else if(['message','enemyTalk','timing'].includes(sourceBattle.phase))addHitbox(sourceBattle.phase==='timing'?'Strike now':'Continue',20,367,600,108,()=>sourceBattle.confirm());
+  }
+ }
  if(scene==='theater'){
   const t=theater,H=THEATER_HITS;status.textContent=t.active==='undertale'?'UNDERTALE / COMING SOON':t.active==='deltarune'?'DELTARUNE / SIGNAL':'THEATER';
   addHitbox('UNDERTALE remote',H.undertale.x,H.undertale.y,H.undertale.w,H.undertale.h,()=>t.press('undertale'));
@@ -106,7 +117,7 @@ function updateControls(){
   if(rows.length>8){addHitbox('Previous encounters',410,402,84,27,()=>{selection=start===0?Math.floor((rows.length-1)/8)*8:start-8;});addHitbox('Next encounters',510,402,94,27,()=>{selection=start+8>=rows.length?0:start+8;});}
   const select=element<HTMLSelectElement>('attack-select');select.replaceChildren();for(const [i,a]of (publicMode?JEVIL_PATTERNS:getDefinition(rows[selection]).attacks).entries()){const opt=document.createElement('option');opt.value=String(i);opt.textContent=a.name;select.append(opt);}
   select.disabled=publicMode&&rows[selection].id!=='ch1-25';element<HTMLButtonElement>('practice').disabled=select.disabled;
-  status.textContent=`CHAPTER ${chapter} / ${rows.length} ENCOUNTERS${publicMode?' / JEVIL PRACTICE AVAILABLE':''}`;
+  status.textContent=`CHAPTER ${chapter} / ${rows.length} ENCOUNTERS${publicMode?' / JEVIL + LANCER AVAILABLE':''}`;
  }
  if(scene==='battle'&&battle){
   const b=battle;status.textContent=`${b.definition.record.name} / ${b.paused?'paused':b.phase} / TURN ${b.turn+1}`;
@@ -138,7 +149,12 @@ function step(){
   if(keys.pause){remake.paused=!remake.paused;audio.pause(remake.paused);sceneKey='';}
   if(keys.restart&&publicLoadout){void launchRemake(menuRecords()[selection],publicLoadout).catch(showError);return;}
   const held=remake.rt.input.held;held.clear();if(keys.x<0)held.add(KEY.left);if(keys.x>0)held.add(KEY.right);if(keys.y<0)held.add(KEY.up);if(keys.y>0)held.add(KEY.down);if(keys.slow)held.add(KEY.shift);
-  if(!remake.paused&&!remake.outcome&&++remakeTick%2===0){remake.step();renderRemakeFrame();if(remake.outcome){element('outcome-text').textContent=remake.outcome==='survived'?'* Pattern survived.':'* The party fell.';element('outcome-again').textContent='PRACTICE AGAIN';element('outcome').hidden=false;audio.pause(true);}}
+  if(remake.paused){remakeConfirm=false;remakeCancel=false;}else{remakeConfirm||=keys.confirm;remakeCancel||=keys.cancel;}
+  if(!remake.paused&&!remake.outcome&&++remakeTick%2===0){
+   if(remake instanceof SourceBattle){if((keys.x||keys.y)&&remakeTick>=remakeMoveCooldown){remake.move(keys.x,keys.y);remakeMoveCooldown=remakeTick+10;}if(remakeCancel)remake.cancel();else if(remakeConfirm)remake.confirm();}
+   remakeConfirm=false;remakeCancel=false;remake.step();renderRemakeFrame();
+   if(remake.outcome){element('outcome-text').textContent=remake.outcome==='survived'?'* Pattern survived.':remake.outcome==='victory'?'* YOU WON!':'* The party fell.';element('outcome-again').textContent=remake instanceof SourceBattle?'BATTLE AGAIN':'PRACTICE AGAIN';element('outcome').hidden=false;audio.pause(true);if(remake.outcome==='victory'&&!prefs.completed.includes(menuRecords()[selection].id)){prefs.completed.push(menuRecords()[selection].id);savePrefs(storage,prefs);}}
+  }
  }else if(scene==='battle'&&battle){
   if(keys.cancel&&(battle.paused||battle.phase==='victory'||battle.phase==='defeat')){goMenu();return;}
   battle.step(keys);audio.pause(battle.paused);
@@ -150,9 +166,9 @@ function step(){
 function loop(time:number){
  const dt=last?(time-last)/1000:0;last=time;clock.advance(dt,step);
  if(renderer){if(scene==='theater'&&theaterView)theaterView.draw(ctx,theater);else if(scene==='intro')renderer.intro(frame);else if(scene==='room')renderer.room(chapter,catalog.length);else if(scene==='menu')renderer.menu(menuRecords(),selection,chapter,frame,prefs.completed);else if(scene==='remake'&&remake){
-  ctx.drawImage(remakeCanvas,0,0);assets.text(ctx,'JEVIL / ATTACK PRACTICE',320,12,1,'#b899ff','center');assets.text(ctx,JEVIL_PATTERNS[remake.pattern].name.toUpperCase(),320,306,1,'#c5bed2','center');
-  const g=remake.rt.globals;for(let i=0;i<3;i++){const x=25+i*205;assets.text(ctx,['KRIS','SUSIE','RALSEI'][i],x,359,1,['#69bcff','#f68bd6','#82e4a3'][i]);assets.text(ctx,`HP ${Math.max(0,g.hp[i+1])} / ${g.maxhp[i+1]}`,x,385,1);assets.text(ctx,`DF ${g.battledf[i]}`,x,410,1,'#a7a0b5');}
-  assets.text(ctx,`TP ${Math.floor(g.tension)}%`,320,442,1,'#ffb05e','center');if(remake.paused){ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,640,340);assets.text(ctx,'PAUSED',320,158,3,'#ffff00','center');}
+  ctx.drawImage(remakeCanvas,0,0);if(!(remake instanceof SourceBattle)){assets.text(ctx,'JEVIL / ATTACK PRACTICE',320,12,1,'#b899ff','center');assets.text(ctx,JEVIL_PATTERNS[remake.pattern].name.toUpperCase(),320,306,1,'#c5bed2','center');
+   const g=remake.rt.globals;for(let i=0;i<3;i++){const x=25+i*205;assets.text(ctx,['KRIS','SUSIE','RALSEI'][i],x,359,1,['#69bcff','#f68bd6','#82e4a3'][i]);assets.text(ctx,`HP ${Math.max(0,g.hp[i+1])} / ${g.maxhp[i+1]}`,x,385,1);assets.text(ctx,`DF ${g.battledf[i]}`,x,410,1,'#a7a0b5');}assets.text(ctx,`TP ${Math.floor(g.tension)}%`,320,442,1,'#ffb05e','center');
+  }if(remake.paused){ctx.fillStyle='rgba(0,0,0,.7)';ctx.fillRect(0,0,640,480);assets.text(ctx,'PAUSED',320,158,3,'#ffff00','center');}
  }else if(battle)renderer.battle(battle,prefs.reducedEffects);}
  raf=requestAnimationFrame(loop);
 }
@@ -168,7 +184,7 @@ element('pause').addEventListener('click',()=>{if(remake){remake.paused=!remake.
 element('mute').addEventListener('click',()=>{prefs.muted=!prefs.muted;audio?.setMuted(prefs.muted);native?.mute(prefs.muted);updatePreferences();});
 element('effects').addEventListener('click',()=>{prefs.reducedEffects=!prefs.reducedEffects;updatePreferences();});
 element('practice').addEventListener('click',()=>void startBattle(true));
-const dialog=element<HTMLDialogElement>('about');function about(){if(battle){battle.pause(true);audio.pause(true);}if(remake){remake.paused=true;audio.pause(true);}native?.pause(true);input.clear();element('source-summary').textContent=publicMode?'Public demo: theater, equipment preparation and Jevil attack practice. More encounters are in development.':`${catalog.length} encounters from 5 chapter packages. All game files load from this computer.`;element('difference-note').textContent=publicMode?'This demo includes source-based attack practice. Full battles, weapon attacks, gear abilities and item use are in development. It does not claim identical gameplay.':native?'This battle runs the original game code from your DELTARUNE install on the open-source Butterscotch engine; no attack was rewritten. Every encounter is checked to load and reach combat.':battle?.definition.differences.join(' ')??'Art and stats come from your local game files. Full battles run the original game code; practice mode uses browser adaptations of the attacks, which do not match the original exactly.';dialog.showModal();sceneKey='';}
+const dialog=element<HTMLDialogElement>('about');function about(){if(battle){battle.pause(true);audio.pause(true);}if(remake){remake.paused=true;audio.pause(true);}native?.pause(true);input.clear();element('source-summary').textContent=publicMode?'Public demo: theater, equipment preparation, Jevil and opening Lancer battles, plus separate Jevil attack practice. More encounters are in development.':`${catalog.length} encounters from 5 chapter packages. All game files load from this computer.`;element('difference-note').textContent=publicMode?'The public battles have shared commands and continuous turns. Attacks and numerical rules are ported from the game; complete visual, sound and equipment-ability parity is still being verified.':native?'This battle runs the original game code from your DELTARUNE install on the open-source Butterscotch engine; no attack was rewritten. Every encounter is checked to load and reach combat.':battle?.definition.differences.join(' ')??'Art and stats come from your local game files. Full battles run the original game code; practice mode uses browser adaptations of the attacks, which do not match the original exactly.';dialog.showModal();sceneKey='';}
 element('credits').addEventListener('click',about);element('adaptation').addEventListener('click',about);element('close-about').addEventListener('click',()=>dialog.close());
 for(const button of document.querySelectorAll<HTMLButtonElement>('[data-key]')){
  const key=button.dataset.key!;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);button.classList.add('down');if(scene==='native'&&native)native.key(key,true);else input.press(key);});
@@ -190,7 +206,7 @@ async function initialize(){
   // Optional local reference art for the device room; the drawn room is used when it is absent.
   if(!publicMode)await Promise.all(['bg','console','tvglow','vessel_d_0'].map(n=>assets.loadImage('/device-room/'+n+'.png').catch(()=>null)));
   theaterView=new TheaterView(assets);await Promise.all(theaterView.urls().map(u=>assets.loadImage(u).catch(()=>null)));
-  renderer=new Renderer(ctx,assets,publicMode);audio=new AudioManager(prefs.muted,assets.manifest.music);if(publicMode){document.querySelector('.brand .dim')!.textContent='/ DEMO';dialog.querySelector('p')!.textContent='DELTARUNE boss practice, with a theater intro and equipment preparation.';}updatePreferences();loading.hidden=true;updateControls();if(!raf)raf=requestAnimationFrame(loop);
+  renderer=new Renderer(ctx,assets,publicMode);audio=new AudioManager(prefs.muted,assets.manifest.music);if(publicMode){document.querySelector('.brand .dim')!.textContent='/ DEMO';dialog.querySelector('p')!.textContent='DELTARUNE browser boss battles, with a theater intro and equipment preparation.';}updatePreferences();loading.hidden=true;updateControls();if(!raf)raf=requestAnimationFrame(loop);
  }catch(e){showError(e);}
 }
 void initialize();

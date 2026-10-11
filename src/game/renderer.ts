@@ -25,7 +25,7 @@ export class Renderer{
   c.fillStyle='#000';c.fillRect(157,42,306,281);this.text('DEVICE_MENU',310,50,2,'#fff','center');
   this.text('CHOOSE A SIGNAL',310,89,1,'#9a95a3','center');
   for(let i=1;i<=5;i++){const y=116+(i-1)*32;if(chapter===i){pixelHeart(c,184,y+10,'#ffff00',1);c.fillStyle='#191608';c.fillRect(197,y-1,244,27);}this.text('DEVICE_CHAPTER_'+i,207,y,1,chapter===i?'#ffff00':'#cac4cc');}
-  this.text(this.publicDemo?'JEVIL PRACTICE AVAILABLE':`${count} SOURCE ENCOUNTERS`,310,283,1,'#726b75','center');
+  this.text(this.publicDemo?'JEVIL + LANCER AVAILABLE':`${count} SOURCE ENCOUNTERS`,310,283,1,'#726b75','center');
   if(bg){
    const glow=this.assets.images.get('/device-room/tvglow.png');if(glow){c.globalAlpha=.23;c.drawImage(glow,0,317,640,160);c.globalAlpha=1;}
    const console=this.assets.images.get('/device-room/console.png');if(console)c.drawImage(console,221,342,198,90);
@@ -51,7 +51,7 @@ export class Renderer{
    }
    this.text(record.kind==='secret'?'SECRET ENCOUNTER':record.kind==='main'?'MAIN ENCOUNTER':'BOSS ENCOUNTER',503,310,1,'#c0a4ff','center');
    this.text('HP '+record.enemies.reduce((n,e)=>n+e.hp,0),503,339,1,'#a8a2b0','center');
-   this.text(this.publicDemo?(record.id==='ch1-25'?'ATTACK PRACTICE':'IN DEVELOPMENT'):'BROWSER ADAPTATION',503,365,1,'#a69876','center');
+   this.text(this.publicDemo?(['ch1-25','ch1-2'].includes(record.id)?'BATTLE AVAILABLE':'IN DEVELOPMENT'):'BROWSER ADAPTATION',503,365,1,'#a69876','center');
   }
   this.text(`${selected+1}/${records.length}   UP/DOWN SELECT`,40,410,1,'#807b87');
   if(records.length>8){this.text('< PREV',415,410,1,'#c3bccb');this.text('NEXT >',515,410,1,'#c3bccb');}

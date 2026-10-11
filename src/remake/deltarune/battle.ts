@@ -43,6 +43,12 @@ export const returnHeart:GmObjectDef={name:'obj_returnheart',index:220,sprite:'s
  },
  alarm0:(s,rt)=>{s.x=s.distx;s.y=s.disty;rt.create(heartBurst,s.x,s.y);rt.destroy(s);},
 }};
+/** The soul leaves Kris and flies to the arena in eight original game frames. */
+export const moveHeart:GmObjectDef={name:'obj_moveheart',index:219,sprite:'spr_dodgeheart',events:{
+ create:(s,rt)=>{s.burst=0;s.shift=1;s.imageAlpha=0;s.flytime=8;s.distx=rt.view.x+310;s.disty=rt.view.y+160;s.dist=pointDistance(s.x,s.y,s.distx,s.disty);moveTowardsPoint(s,s.distx,s.disty,s.dist/s.flytime);s.alarm[0]=s.flytime;s.imageSpeed=0;rt.create(heartBurst,s.x,s.y);},
+ step:s=>{s.imageAlpha+=.334;},
+ alarm0:(s,rt)=>{s.x=s.distx;s.y=s.disty;rt.create(heart,s.x,s.y).depth=1;rt.destroy(s);},
+}};
 
 /** The music stream holder. Its Draw event moves it near the player with two random calls every frame. */
 export const astream:GmObjectDef={name:'obj_astream',index:134,sprite:'spr_heart',events:{
@@ -51,6 +57,10 @@ export const astream:GmObjectDef={name:'obj_astream',index:134,sprite:'spr_heart
 
 export const afterimage:GmObjectDef={name:'obj_afterimage',index:192,events:{
  step:(s,rt)=>{s.imageAlpha=s.imageAlpha-0.04;if(lt(s.imageAlpha,0))rt.destroy(s);},
+}};
+export const afterimageGrow:GmObjectDef={name:'obj_afterimage_grow',index:193,events:{
+ create:s=>{s.xrate=.2;s.yrate=.2;s.fade=.1;},
+ step:(s,rt)=>{s.imageAlpha-=s.fade;s.imageXscale+=s.xrate;s.imageYscale+=s.yrate;if(lt(s.imageAlpha,0))rt.destroy(s);},
 }};
 
 /** Camera shake: offsets the view, alternating sides, shrinking by a pixel per swing. */
