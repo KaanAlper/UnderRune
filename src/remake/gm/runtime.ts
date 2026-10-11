@@ -3,11 +3,16 @@
 // per-object dispatch for Step/Alarm events and the same motion math.
 import {f32,clamp6} from './math';
 import {GmRandom} from './random';
+import {instancesMeet} from './collision';
+import type {SpriteBank} from './sprites';
 
 export type GmEvent='create'|'destroy'|'beginStep'|'step'|'endStep'|'draw'|`alarm${number}`|`user${number}`|'animationEnd';
 export type GmHandler=(self:GmInstance,rt:GmRuntime)=>void;
-export type SpriteInfo={frames:number;speedMultiplier?:number};
-export interface GmObjectDef{name:string;index:number;parent?:GmObjectDef;sprite?:string;visible?:boolean;depth?:number;events?:Partial<Record<GmEvent,GmHandler>>}
+export type GmCollision={target:GmObjectDef;run:(self:GmInstance,other:GmInstance,rt:GmRuntime)=>void};
+export interface GmObjectDef{
+ name:string;index:number;parent?:GmObjectDef;sprite?:string;mask?:string;visible?:boolean;depth?:number;
+ events?:Partial<Record<GmEvent,GmHandler>>;collisions?:GmCollision[];
+}
 
 export class GmInstance{
  // Built-in fields stored the way the reference runtime stores them (32-bit floats).
@@ -15,13 +20,14 @@ export class GmInstance{
  private _speed=0;private _direction=0;private _hspeed=0;private _vspeed=0;
  private _friction=0;private _gravity=0;private _gravityDirection=270;
  private _imageIndex=0;private _imageSpeed=1;imageAngle=0;private _imageXscale=1;private _imageYscale=1;private _imageAlpha=1;imageBlend=0xffffff;
- sprite:string|null;depth:number;visible:boolean;live=true;destroyed=false;
+ sprite:string|null;mask:string|null;depth:number;visible:boolean;live=true;destroyed=false;
  alarm:number[]=new Array(12).fill(-1);
  /** Object variables set by code (GML instance variables). */
- [name:string]:unknown;
- constructor(readonly id:number,readonly object:GmObjectDef,x:number,y:number){
+ [name:string]:any;
+ constructor(readonly id:number,public object:GmObjectDef,x:number,y:number){
   this._x=f32(x);this._y=f32(y);this.xstart=this._x;this.ystart=this._y;this.xprevious=this._x;this.yprevious=this._y;
-  this.sprite=inheritedSprite(object);this.depth=object.depth??0;this.visible=object.visible??true;
+  // Objects do not inherit their parent's sprite or mask.
+  this.sprite=object.sprite??null;this.mask=object.mask??null;this.depth=object.depth??0;this.visible=object.visible??true;
  }
  get x(){return this._x;}set x(v:number){this._x=f32(v);}
  get y(){return this._y;}set y(v:number){this._y=f32(v);}
@@ -71,16 +77,32 @@ export class GmInstance{
   if(this._hspeed!==0||this._vspeed!==0){this._x=f32(this._x+this._hspeed);this._y=f32(this._y+this._vspeed);}
  }
 }
-const inheritedSprite=(o:GmObjectDef|undefined):string|null=>o?o.sprite??inheritedSprite(o.parent):null;
 /** The handler an object runs for an event: its own, else its nearest parent's (resolved event table). */
 export function resolveEvent(o:GmObjectDef|undefined,event:GmEvent):GmHandler|undefined{for(let c=o;c;c=c.parent){const h=c.events?.[event];if(h)return h;}return undefined;}
 export function isA(o:GmObjectDef,ancestor:GmObjectDef){for(let c:GmObjectDef|undefined=o;c;c=c.parent)if(c===ancestor)return true;return false;}
+/** Own collision events plus inherited ones for other targets, by target index (runner.c flattenCollisionEvents). */
+const flatCache=new WeakMap<GmObjectDef,GmCollision[]>();
+function flatCollisions(o:GmObjectDef):GmCollision[]{
+ let list=flatCache.get(o);if(list)return list;list=[];
+ for(let c:GmObjectDef|undefined=o;c;c=c.parent)for(const e of c.collisions??[])if(!list.some(x=>x.target===e.target))list.push(e);
+ list.sort((a,b)=>a.target.index-b.target.index);flatCache.set(o,list);return list;
+}
+
+export interface GmInput{held:Set<number>;pressed:Set<number>;released:Set<number>}
 
 export class GmRuntime{
  instances:GmInstance[]=[];frame=0;nextId:number;random:GmRandom;
  view={x:0,y:0,width:640,height:480};
- globals:Record<string,unknown>={};
- constructor(readonly sprites:(name:string)=>SpriteInfo|undefined,options:{seed?:number;rng?:readonly number[];firstId?:number}={}){
+ globals:Record<string,any>={};
+ input:GmInput={held:new Set(),pressed:new Set(),released:new Set()};
+ /** Called for each drawn instance after its Draw event, or instead of drawing its sprite when it has none. */
+ renderer?:(inst:GmInstance,rt:GmRuntime)=>void;
+ /** Sound hooks; the game logic never waits on them. */
+ sound?:(name:string)=>void;
+ stopAllSounds?:()=>void;
+ /** Set by room_goto; the host decides what the room change means (game over, battle end). */
+ pendingRoom:string|null=null;
+ constructor(readonly bank:SpriteBank,options:{seed?:number;rng?:readonly number[];firstId?:number}={}){
   this.random=options.rng?GmRandom.restore(options.rng):new GmRandom(options.seed??0);this.nextId=options.firstId??100000;
  }
  create(object:GmObjectDef,x:number,y:number,id=this.nextId++):GmInstance{
@@ -97,26 +119,64 @@ export class GmRuntime{
  all(object:GmObjectDef){return this.instances.filter(i=>i.live&&isA(i.object,object));}
  exists(object:GmObjectDef){return this.instances.some(i=>i.live&&isA(i.object,object));}
  first(object:GmObjectDef){return this.instances.find(i=>i.live&&isA(i.object,object));}
+ count(object:GmObjectDef){return this.all(object).length;}
+ /** An instance by id (GML instance ids stored in variables), if it is still active. */
+ byId(id:number){return this.instances.find(i=>i.id===id&&i.live);}
+ /** sprite_width / sprite_height: the sprite's size times the instance's scale. */
+ spriteWidth(i:GmInstance){const s=i.sprite?this.bank.get(i.sprite):undefined;return s?s.width*i.imageXscale:0;}
+ spriteHeight(i:GmInstance){const s=i.sprite?this.bank.get(i.sprite):undefined;return s?s.height*i.imageYscale:0;}
  userEvent(inst:GmInstance,n:number){resolveEvent(inst.object,`user${n}`)?.(inst,this);}
+ /** place_meeting: would `inst` at (x, y) touch any instance of `target`? */
+ placeMeeting(inst:GmInstance,x:number,y:number,target:GmObjectDef){
+  const sx=inst.x,sy=inst.y;inst.x=x;inst.y=y;
+  let found=false;
+  for(const o of this.instances)if(o.live&&o!==inst&&isA(o.object,target)&&instancesMeet(this.bank,inst,o)){found=true;break;}
+  inst.x=sx;inst.y=sy;return found;
+ }
  // Step and Alarm events run grouped by object index (then creation order); the others in creation order.
  private dispatch(event:GmEvent,perObject:boolean){
   let list=this.instances.filter(i=>i.live&&resolveEvent(i.object,event));
   if(perObject)list=list.map((i,n)=>({i,n})).sort((a,b)=>a.i.object.index-b.i.object.index||a.n-b.n).map(e=>e.i);
   for(const inst of list)if(inst.live)resolveEvent(inst.object,event)!(inst,this);
  }
- /** One game frame, in runner.c Runner_step order. Collisions are supplied by the battle layer. */
- step(collisions?:(rt:GmRuntime)=>void){
-  this.frame++;
-  for(const i of this.instances)if(i.live){i.xprevious=i.x;i.yprevious=i.y;}
+ private animate(){
   for(const i of [...this.instances]){
    if(!i.live)continue;
-   const info=i.sprite?this.sprites(i.sprite):undefined;
-   if(!info){i.imageIndex=i.imageIndex+i.imageSpeed;continue;}
-   i.imageIndex=i.imageIndex+i.imageSpeed*(info.speedMultiplier??1);
+   const s=i.sprite?this.bank.get(i.sprite):undefined;
+   if(!s){i.imageIndex=i.imageIndex+i.imageSpeed;continue;}
+   if(!s.special)i.imageIndex=i.imageIndex+i.imageSpeed;
+   else if(s.playbackType===1)i.imageIndex=i.imageIndex+f32(i.imageSpeed*s.playbackSpeed);
+   else i.imageIndex=i.imageIndex+(1/this.bank.roomSpeed)*s.playbackSpeed*i.imageSpeed;
    let wrapped=false;
-   if(i.imageIndex>=info.frames){i.imageIndex=i.imageIndex-info.frames;wrapped=true;}else if(i.imageIndex<0){i.imageIndex=i.imageIndex+info.frames;wrapped=true;}
+   if(i.imageIndex>=s.frames){i.imageIndex=i.imageIndex-s.frames;wrapped=true;}else if(i.imageIndex<0){i.imageIndex=i.imageIndex+s.frames;wrapped=true;}
    if(wrapped)resolveEvent(i.object,'animationEnd')?.(i,this);
   }
+ }
+ /** runner.c dispatchCollisionEvents: objects by first target then index; each pair fires its most specific event. */
+ private collide(){
+  const objects=[...new Set(this.instances.filter(i=>i.live).map(i=>i.object))].filter(o=>flatCollisions(o).length)
+   .sort((a,b)=>flatCollisions(a)[0].target.index-flatCollisions(b)[0].target.index||a.index-b.index);
+  for(const obj of objects){
+   const flat=flatCollisions(obj);
+   for(const self of this.instances.filter(i=>i.object===obj)){
+    if(!self.live)continue;
+    for(const evt of flat){
+     const others=this.instances.filter(i=>isA(i.object,evt.target)).sort((a,b)=>a.object.index-b.object.index||a.id-b.id);
+     for(const other of others){
+      if(!other.live||other===self)continue;
+      if(mostSpecific(flat,other.object)!==evt.target)continue;
+      if(!instancesMeet(this.bank,self,other))continue;
+      evt.run(self,other,this);
+     }
+    }
+   }
+  }
+ }
+ /** One game frame of logic, in runner.c Runner_step order. */
+ step(){
+  this.frame++;
+  for(const i of this.instances)if(i.live){i.xprevious=i.x;i.yprevious=i.y;}
+  this.animate();
   this.dispatch('beginStep',true);
   for(let a=0;a<12;a++){
    const key=`alarm${a}` as GmEvent;
@@ -125,8 +185,19 @@ export class GmRuntime{
   }
   this.dispatch('step',true);
   for(const i of [...this.instances])if(i.live)i.move();
-  collisions?.(this);
+  this.collide();
   this.dispatch('endStep',true);
   this.instances=this.instances.filter(i=>!i.destroyed);
+  this.input.pressed.clear();this.input.released.clear();
  }
+ /** Draw events by depth (deepest first), then instance id. Draw code may use the random generator. */
+ draw(){
+  const list=this.instances.map((i,n)=>({i,n})).filter(e=>e.i.live&&e.i.visible).sort((a,b)=>b.i.depth-a.i.depth||a.i.id-b.i.id).map(e=>e.i);
+  for(const inst of list){if(!inst.live)continue;const h=resolveEvent(inst.object,'draw');if(h)h(inst,this);else this.renderer?.(inst,this);}
+  this.instances=this.instances.filter(i=>!i.destroyed);
+ }
+}
+function mostSpecific(flat:GmCollision[],partner:GmObjectDef){
+ for(let c:GmObjectDef|undefined=partner;c;c=c.parent)if(flat.some(e=>e.target===c))return c;
+ return undefined;
 }
