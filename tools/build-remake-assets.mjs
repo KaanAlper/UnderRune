@@ -86,9 +86,14 @@ for(const sound of parseSounds(data,soundNames)){
  const sample=embeddedAudio(banks.get(sound.group),sound.audio),format=sample.toString('ascii',0,4),extension=format==='RIFF'?'wav':format==='OggS'?'ogg':null;if(!extension)throw Error('Unsupported embedded audio: '+sound.name);
  const file=`sounds/${sound.name}.${extension}`;await fs.writeFile(path.join(out,file),sample);sounds[sound.name]={file,volume:sound.volume,pitch:sound.pitch};
 }
+// Dialogue lines named in src/remake/host/text-keys.json, from the same language file the game loads.
+const textKeys = JSON.parse(await fs.readFile(path.join(root, 'src', 'remake', 'host', 'text-keys.json'), 'utf8'))[`chapter${chapter}`] ?? [];
+const lang = JSON.parse((await fs.readFile(path.join(gameChapter, 'lang', 'lang_en.json'), 'utf8')).replace(/^﻿/, ''));
+const gameText = {};
+for (const key of textKeys) { if (typeof lang[key] !== 'string') throw Error('Game text not found: ' + key); gameText[key] = lang[key]; }
 await fs.writeFile(path.join(out, 'bundle.json'), JSON.stringify({
   chapter, atLeast2022_1: collision.atLeast2022_1, optionsInfo: collision.optionsInfo,
-  pages: pages.map((_, i) => `atlas${i}.png`), sprites, fonts, sounds,
+  pages: pages.map((_, i) => `atlas${i}.png`), sprites, fonts, sounds, text: gameText,
 }));
 console.log(`chapter ${chapter}: ${sprites.length} sprites, ${pieces.length} frames on ${pages.length} atlas pages, ${Object.keys(fonts).length} fonts` + (missing.length ? `; not found: ${missing.join(' ')}` : ''));
-console.log(`${Object.keys(sounds).length} original sound effects extracted from their source audio banks`);
+console.log(`${Object.keys(sounds).length} original sound effects extracted from their source audio banks, ${textKeys.length} dialogue lines`);

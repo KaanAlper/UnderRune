@@ -1,4 +1,7 @@
-import {it,expect} from 'vitest';
+import {it as test,expect} from 'vitest';
+import {hasSourceText} from '../src/remake/host/text';
+// Clover's lines come from the locally built bundle (tests/setup-source-text.ts); without it these tests are skipped.
+const it=test.skipIf(!hasSourceText());
 import {spriteBank} from '../src/remake/gm/sprites';
 import {SourceBattle} from '../src/remake/host/battle';
 import {defaultLoadout,type EquipmentSource} from '../src/game/loadout';

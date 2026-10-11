@@ -1,9 +1,9 @@
 import type {GmInstance,GmRuntime} from '../gm/runtime';
 import {createCloverEnemy} from '../bosses/clover';
-import strings from '../bosses/clover/text.json';
+import {sourceText} from './text';
 import {KEY,monsterParent,spareAnim} from '../deltarune/battle';
-/** Only the encounter's source strings are bundled, never the full game language file. */
-export function cloverText(key:string){const s=(strings as Record<string,string>)[key];if(s===undefined)throw Error(`Missing Clover source text ${key}`);return s;}
+/** Clover's lines come from the site bundle (see text.ts); only the lines in text-keys.json are bundled. */
+export const cloverText=sourceText;
 export const cloverPlain=(s:string)=>s.replace(/\^\d/g,'').replace(/\/%?|%%/g,'').replace(/[&#]/g,'\n').replace(/\\[A-Za-z]\d/g,'').trim();
 export interface CloverDialogue {id:number;kind:'battle'|'speech';rawPages:string[];pages:string[];page:number;x:number;y:number;face:number;typer:number;fc:number;fe:number;}
 export type CloverEnemyPhase='idle'|'speech'|'transition'|'attack'|'return';
