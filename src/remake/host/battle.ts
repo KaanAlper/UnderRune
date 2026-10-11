@@ -14,7 +14,8 @@ import {battleHero,heroSprites,heroSize} from './heroes';
 import {burstBolt,basicAttack} from '../deltarune/player-effects';
 import {C} from '../gm/graphics';
 import {sourceEncounter,developmentEncounter} from './encounters';
-import {CloverHost,type CloverDialogue} from './clover';
+import {CloverHost} from './clover';
+import type {SourceDialogue,SourceEnemyHost} from './enemy-host';
 const text=optionalSourceText;
 export const plain=(s:string)=>s.replace(/\^\d/g,'').replace(/\/[%%]?|%%/g,'').replace(/[&#]/g,'\n').replace(/\\[A-Za-z]\d/g,'').trim();
 const jtext=(line:number)=>plain(text('obj_joker_slash_Step_0_gml_'+line+'_0'));
@@ -31,7 +32,8 @@ export class SourceBattle{
  jturn=0;hypnosiscounter=0;chaosdance=0;pfactor=1;pirouette=-1;compliment=0;warned=false;
  pressBuffer=[0,0,0];timingFade=0;private autoStruck=false;private enemyHits=0;
  private pending:Action|null=null;private pages:string[]=[];private afterMessage:()=>void=()=>{};private endTiming=0;private commandSnapshots:{tp:number;actions:(Action|null)[]}[]=[];
- private clover?:CloverHost;
+ /** Encounters whose enemy runs its own original dialogue, ACT and enemy-turn events (Clover, K.Round). */
+ private enemyHost?:SourceEnemyHost;
  constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id);if(!encounter)throw Error('This battle is not available yet.');validateLoadout(loadout,equipment);
   this.rt=new GmRuntime(bank,{seed});this.party=[...encounter.party];this.name=encounter.name;
@@ -45,21 +47,21 @@ export class SourceBattle{
   if(id==='ch1-8'){
    // Encounter 8 starts like ordinary battles: obj_battleback before the battle objects.
    this.rt.create(b.battleBack,0,0);
-   this.clover=new CloverHost(this.rt,this.control,{
+   this.enemyHost=new CloverHost(this.rt,this.control,{
     onDialogue:writers=>{const writer=writers.find(w=>w.kind==='battle');if(writer)this.message=writer.pages[writer.page];else this.enemySpeech=writers.map(w=>w.pages[w.page]).join('\n');},
-    onActionComplete:()=>{this.mercy=this.clover!.mercy;this.tired=this.clover!.tired;this.resolveRemainingActions();},
+    onActionComplete:()=>{this.mercy=this.enemyHost!.mercy;this.tired=this.enemyHost!.tired;this.resolveRemainingActions();},
     onPhase:phase=>{if(phase==='speech')this.setPhase('enemyTalk');if(phase==='transition')this.setPhase('transition');if(phase==='attack')this.setPhase('enemy');},
     onDefeat:()=>this.victory(),
-   });this.body=this.clover.body;this.message=this.clover.initialText;
+   });this.body=this.enemyHost.body;this.message=this.enemyHost.initialText;
   }else{this.body=this.rt.create(id==='ch1-25'?jokerBody:lancerBoss,id==='ch1-25'?500:540,id==='ch1-25'?160:200);this.body.depth=15;this.message=id==='ch1-25'?jtext(158):plain(text('scr_monstersetup_slash_scr_monstersetup_gml_51_0'));}
  }
  get tp(){return Math.round(this.rt.globals.tension/this.rt.globals.maxtension*100);}
  get autoSusie(){return this.id==='ch1-2';}
- get sourceDialogue():readonly CloverDialogue[]{return this.clover?.dialogue??[];}
+ get sourceDialogue():readonly SourceDialogue[]{return this.enemyHost?.dialogue??[];}
  get choices():Choice[]{
   if(this.phase==='command')return [{name:'FIGHT'},{name:this.party[this.actor]===1?'ACT':'MAGIC'},{name:'ITEM',disabled:this.usableItems().length===0},{name:'SPARE'},{name:'DEFEND'}];
   if(this.phase==='enemyTarget')return [{name:this.name,detail:`HP ${Math.max(0,this.enemyHp)} / ${this.enemyMaxHp}${this.tired?' · TIRED':''}`}];
-  if(this.phase==='act')return this.clover?this.clover.choices.map(c=>({...c,detail:c.participants.length>1?'Kris + Ralsei':undefined})):this.id==='ch1-25'?[{name:'Check',value:0},{name:'Pirouette',value:1,cost:50,detail:'Random chaos',disabled:this.rt.globals.tension<50},{name:'Hypnosis',value:2,cost:125,detail:'Induce TIRED · whole party',disabled:this.rt.globals.tension<125||this.party.some(id=>this.rt.globals.hp[id]<=0)}]:[{name:'Check',value:0},{name:'Warning',value:1},{name:'Compliment',value:2}];
+  if(this.phase==='act')return this.enemyHost?this.enemyHost.choices.map(c=>({...c,detail:c.participants.length>1?c.participants.map(slot=>['','Kris','Susie','Ralsei'][this.party[slot]]).join(' + '):undefined})):this.id==='ch1-25'?[{name:'Check',value:0},{name:'Pirouette',value:1,cost:50,detail:'Random chaos',disabled:this.rt.globals.tension<50},{name:'Hypnosis',value:2,cost:125,detail:'Induce TIRED · whole party',disabled:this.rt.globals.tension<125||this.party.some(id=>this.rt.globals.hp[id]<=0)}]:[{name:'Check',value:0},{name:'Warning',value:1},{name:'Compliment',value:2}];
   if(this.phase==='magic')return this.party[this.actor]===2?[{name:'Rude Buster',value:4,cost:this.loadout.characters[2].weapon===7?100:125,disabled:this.rt.globals.tension<(this.loadout.characters[2].weapon===7?100:125),detail:'Deals rude damage'}]:[{name:'Pacify',value:3,cost:40,disabled:this.rt.globals.tension<40,detail:'Spare a tired enemy'},{name:'Heal Prayer',value:2,cost:80,disabled:this.rt.globals.tension<80,detail:'Heal one ally'}];
   if(this.phase==='item')return this.usableItems().map(i=>({name:this.equipment.items.find(x=>x.id===this.bag[i])!.name,value:i,detail:this.equipment.items.find(x=>x.id===this.bag[i])!.description}));
   if(this.phase==='allyTarget')return this.party.map((id,i)=>({name:['','Kris','Susie','Ralsei'][id],value:i,detail:`HP ${this.rt.globals.hp[id]} / ${this.rt.globals.maxhp[id]}`}));
@@ -68,7 +70,7 @@ export class SourceBattle{
  private usableItems(){return this.bag.map((_,i)=>i).filter(i=>!this.actions.some(a=>a?.kind==='item'&&a.bagIndex===i)&&this.equipment.items.some(x=>x.id===this.bag[i]&&x.usable));}
  private setPhase(p:BattlePhase){this.phase=p;this.phaseFrame=0;this.cursor=0;}
  private beginCommands(){
-  this.clover?.returnToCommands();if(this.clover)this.message=this.clover.message;
+  this.enemyHost?.returnToCommands();if(this.enemyHost)this.message=this.enemyHost.message;
   this.rt.globals.mnfight=0;this.control.timeron=0;this.control.reset=0;this.actions=this.party.map(()=>null);this.commandSnapshots=[];
   if(this.autoSusie&&this.rt.globals.hp[2]>0)this.actions[1]={kind:'fight'};
   this.actor=this.party.findIndex((id,i)=>this.rt.globals.hp[id]>0&&!this.actions[i]);if(this.actor<0){this.resolveTurn();return;}
@@ -89,7 +91,7 @@ export class SourceBattle{
   if(this.phase==='item'){this.pending={kind:'item',value:this.bag[choice.value!],bagIndex:choice.value};const item=this.equipment.items.find(i=>i.id===this.pending!.value)!;if(item.target===2)this.commit({...this.pending,target:0});else this.setPhase('allyTarget');return;}
   if(this.phase==='allyTarget'&&this.pending)this.commit({...this.pending,target:index});
  }
- confirm(){if(this.paused||this.outcome)return;if(this.choices.length){this.select(this.cursor);return;}if(this.clover&&(this.clover.dialogue.length||this.phase==='enemyTalk')){this.clover.confirm();return;}if(this.phase==='message'){if(this.pages.length)this.message=this.pages.shift()!;else this.afterMessage();}else if(this.phase==='enemyTalk'){this.beginTransition();}else if(this.phase==='timing')this.strike();}
+ confirm(){if(this.paused||this.outcome)return;if(this.choices.length){this.select(this.cursor);return;}if(this.enemyHost&&(this.enemyHost.dialogue.length||this.phase==='enemyTalk')){this.enemyHost.confirm();return;}if(this.phase==='message'){if(this.pages.length)this.message=this.pages.shift()!;else this.afterMessage();}else if(this.phase==='enemyTalk'){this.beginTransition();}else if(this.phase==='timing')this.strike();}
  cancel(){
   if(this.paused||this.outcome)return;
   if(this.phase==='allyTarget'){this.setPhase(this.pending?.kind==='item'?'item':'magic');return;}
@@ -110,7 +112,7 @@ export class SourceBattle{
   this.actions[this.actor]=action;
   this.heroes[this.actor].faceaction=action.kind==='fight'?1:action.kind==='defend'?4:action.kind==='item'?3:action.kind==='magic'?2:action.kind==='act'?6:0;
   if(action.kind==='act'&&action.value===2&&this.id==='ch1-25')for(let i=1;i<this.party.length;i++)this.actions[i]={kind:'assist'};
-  if(action.kind==='act'&&this.clover)for(const slot of this.clover.choices[action.value!].participants)if(slot!==this.actor){this.actions[slot]={kind:'assist'};this.heroes[slot].faceaction=6;}
+  if(action.kind==='act'&&this.enemyHost)for(const slot of this.enemyHost.choices[action.value!].participants)if(slot!==this.actor){this.actions[slot]={kind:'assist'};this.heroes[slot].faceaction=6;}
   const next=this.party.findIndex((id,i)=>i>this.actor&&g.hp[id]>0&&!this.actions[i]);this.pending=null;
   if(next<0)this.resolveTurn();else{this.actor=next;this.setPhase('command');}
  }
@@ -118,7 +120,7 @@ export class SourceBattle{
  private resolveTurn(){
   const g=this.rt.globals,pages:string[]=[];
   g.charaction=[0,0,0];for(let i=0;i<this.party.length;i++)if(this.actions[i]?.kind==='defend')g.charaction[i]=10;
-  if(this.clover){const act=this.actions.find(a=>a?.kind==='act');if(act){this.setPhase('message');this.message='';this.clover.beginAct(act.value!);return;}this.resolveRemainingActions();return;}
+  if(this.enemyHost){const act=this.actions.find(a=>a?.kind==='act');if(act){this.setPhase('message');this.message='';this.enemyHost.beginAct(act.value!);return;}this.resolveRemainingActions();return;}
   for(let i=0;i<this.party.length;i++){const a=this.actions[i];if(a?.kind==='act')pages.push(...this.act(a.value!));}
   this.resolveRemainingActions(pages);
  }
@@ -129,14 +131,14 @@ export class SourceBattle{
    if(a.kind==='item'){this.useItem(a.value!,a.target??0);pages.push(`* ${['','Kris','Susie','Ralsei'][this.party[i]]} used the ${this.equipment.items.find(x=>x.id===a.value)!.name}.`);}
    if(a.kind==='magic'){
     if(a.value===2){this.heal(a.target!,g.battlemag[i]*5);pages.push('* Ralsei cast HEAL PRAYER!');}
-    if(a.value===3){if(this.tired){this.clover?.spare(3);this.victory();return;}pages.push('* But the enemy was not TIRED...');}
+    if(a.value===3){if(this.tired){this.enemyHost?.spare(3);this.victory();return;}pages.push('* But the enemy was not TIRED...');}
     if(a.value===4){this.hitEnemy(Math.max(0,Math.ceil(g.battlemag[i]*5+g.battleat[i]*11-this.enemyDf*3)),i);pages.push('* Susie cast RUDE BUSTER!');}
    }
    if(a.kind==='spare'){
-    if(this.mercy>=(this.id==='ch1-25'?999:100)){this.clover?.spare(2);this.victory();return;}
+    if(this.mercy>=(this.id==='ch1-25'?999:100)){this.enemyHost?.spare(2);this.victory();return;}
     pages.push(`* But ${this.name} wasn't ready to be SPARED.`);
     // scr_mercyadd with the enemy's spare points (Clover and Lancer: 10).
-    if(this.clover){this.clover.addMercy(g.sparepoint[0]);this.mercy=this.clover.mercy;}else if(this.id==='ch1-2')this.mercy+=10;
+    if(this.enemyHost){this.enemyHost.addMercy(this.enemyHost.sparePoints);this.mercy=this.enemyHost.mercy;}else if(this.id==='ch1-2')this.mercy+=10;
    }
   }
   for(const a of this.actions.filter(a=>a?.kind==='item').sort((a,b)=>b!.bagIndex!-a!.bagIndex!))this.bag.splice(a!.bagIndex!,1);
@@ -177,8 +179,8 @@ export class SourceBattle{
   if(fight&&amount>0){const a=this.rt.create(basicAttack,x+this.rt.random.random(6),y+this.rt.random.random(6));if(this.party[actor]===2){a.sprite='spr_attack_mash2';a.imageSpeed=.5;a.maxindex=4;this.rt.sound?.('snd_impact');this.rt.create(b.shake,0,0);}if(this.party[actor]===3){a.sprite='spr_attack_slap1';a.imageSpeed=.5;a.maxindex=4;}if(points===150){a.imageXscale=2.5;a.imageYscale=2.5;}}
   if(this.id==='ch1-25'&&amount>0){this.body.condition=1;this.body.siner=0;this.body.maxdist=Math.max(30,this.body.maxdist+20+amount/5);this.body.floatsinerspeed=1+(1-this.enemyHp/this.enemyMaxHp);const laugh=this.rt.random.choose('snd_joker_laugh0','snd_joker_ha1','snd_joker_ha0');this.rt.sound?.(laugh);}
   if(this.id==='ch1-2'){if(amount>0){this.body.state=3;this.body.shakex=9;this.body.hurttimer=30;}else if(this.body.hurttimer<=15){this.body.state=4;this.body.dodgetimer=0;}}
-  if(this.clover){this.clover.receiveHit(this.enemyHp,amount);this.tired=this.clover.tired;}
-  if(!fight&&amount>0)this.rt.sound?.('snd_damage');if(this.enemyHp<=0&&!this.clover)this.victory();
+  if(this.enemyHost){this.enemyHost.receiveHit(this.enemyHp,amount);this.tired=this.enemyHost.tired;}
+  if(!fight&&amount>0)this.rt.sound?.('snd_damage');if(this.enemyHp<=0&&!this.enemyHost)this.victory();
  }
  private heal(target:number,amount:number){
   const g=this.rt.globals,id=this.party[target],wasDown=g.hp[id]<=0;if(g.hp[id]<=g.maxhp[id])g.hp[id]=Math.min(g.maxhp[id],g.hp[id]+amount);
@@ -214,7 +216,7 @@ export class SourceBattle{
  private beginEnemy(){
   if(this.outcome)return;const g=this.rt.globals;g.targeted=[0,0,0];
   for(const h of this.heroes){h.pose='idle';h.faceaction=this.actions[h.myself]?.kind==='defend'?4:0;}
-  if(this.clover){this.clover.syncEnemyStats(this.enemyHp,this.enemyAt,this.enemyDf);this.clover.beginEnemyTurn();return;}
+  if(this.enemyHost){this.enemyHost.syncEnemyStats(this.enemyHp,this.enemyAt,this.enemyDf);this.enemyHost.beginEnemyTurn();return;}
   if(this.id==='ch1-25'){
    if(this.pirouette!==2)g.invc=1;
    const ratio=this.enemyHp/this.enemyMaxHp,h=this.hypnosiscounter;
@@ -261,12 +263,12 @@ export class SourceBattle{
  step(){
   if(this.paused||this.outcome)return;this.frame++;this.phaseFrame++;const rt=this.rt,g=rt.globals;
   rt.step();
-  this.clover?.afterStep();if(this.clover){this.mercy=this.clover.mercy;this.tired=this.clover.tired;}
+  this.enemyHost?.afterStep();if(this.enemyHost){this.mercy=this.enemyHost.mercy;this.tired=this.enemyHost.tired;}
   if(this.phase==='victory'){if(!rt.count(b.dmgWriter)&&!rt.count(basicAttack))this.outcome='victory';return;}
   if(rt.pendingRoom==='room_gameover'){this.outcome='defeat';this.setPhase('defeat');return;}
   if(this.phase==='intro'&&this.phaseFrame>=24)this.beginCommands();
-  else if(!this.clover&&this.phase==='enemyTalk'&&this.phaseFrame>=90)this.beginTransition();
-  else if(!this.clover&&this.phase==='transition'&&this.phaseFrame>=12)this.startEnemyAttack();
+  else if(!this.enemyHost&&this.phase==='enemyTalk'&&this.phaseFrame>=90)this.beginTransition();
+  else if(!this.enemyHost&&this.phase==='transition'&&this.phaseFrame>=12)this.startEnemyAttack();
   else if(this.phase==='timing'){
    this.boltTick++;
    for(const bolt of this.bolts)if(bolt.alive&&bolt.frame-this.boltTick<-5){bolt.alive=false;bolt.points=0;this.startSwing(bolt.actor,0);}

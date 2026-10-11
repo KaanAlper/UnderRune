@@ -1,14 +1,15 @@
 import type {GmInstance,GmRuntime} from '../gm/runtime';
 import {createCloverEnemy} from '../bosses/clover';
 import {sourceText} from './text';
+import type {SourceDialogue,SourceEnemyEvents,SourceEnemyHost,SourceEnemyPhase} from './enemy-host';
 import {KEY,monsterParent,spareAnim} from '../deltarune/battle';
 /** Clover's lines come from the site bundle (see text.ts); only the lines in text-keys.json are bundled. */
 export const cloverText=sourceText;
 export const cloverPlain=(s:string)=>s.replace(/\^\d/g,'').replace(/\/%?|%%/g,'').replace(/[&#]/g,'\n').replace(/\\[A-Za-z]\d/g,'').trim();
-export interface CloverDialogue {id:number;kind:'battle'|'speech';rawPages:string[];pages:string[];page:number;x:number;y:number;face:number;typer:number;fc:number;fe:number;}
-export type CloverEnemyPhase='idle'|'speech'|'transition'|'attack'|'return';
-export interface CloverHostEvents {onDialogue?:(writers:readonly CloverDialogue[])=>void;onActionComplete?:()=>void;onPhase?:(phase:CloverEnemyPhase)=>void;onDefeat?:(s:GmInstance)=>void;}
-export class CloverHost {
+export type CloverDialogue=SourceDialogue;
+export type CloverEnemyPhase=SourceEnemyPhase;
+export type CloverHostEvents=SourceEnemyEvents;
+export class CloverHost implements SourceEnemyHost {
  readonly body:GmInstance;private writers:CloverDialogue[]=[];phase:CloverEnemyPhase='idle';private writerId=1;
  /** The root owns rt.step()/draw(), shared party healing, item effects and command timing. */
  constructor(readonly rt:GmRuntime,readonly control:GmInstance,readonly events:CloverHostEvents={}){
@@ -37,6 +38,7 @@ export class CloverHost {
  get hp(){return this.rt.globals.monsterhp[0] as number;}
  get mercy(){return this.rt.globals.mercymod[0] as number;}
  get tired(){return this.rt.globals.monsterstatus[0]===1;}
+ get sparePoints(){return this.rt.globals.sparepoint[0] as number;}
  get message(){return cloverPlain(this.rt.globals.battlemsg[0]);}
  get initialText(){return cloverPlain(cloverText('scr_encountersetup_slash_scr_encountersetup_gml_139_0'));}
  /** The shared damage formula and equipment effects own these values; Clover reads its native global slots. */
