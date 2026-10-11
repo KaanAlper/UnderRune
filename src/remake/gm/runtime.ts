@@ -128,6 +128,10 @@ export class GmRuntime{
  drawText(x:number,y:number,text:string,xscale=1,yscale=1,angle=0){
   const d=this.drawState;this.gfx?.text(x,y,text,{font:d.font,color:d.color,alpha:d.alpha,halign:d.halign,valign:d.valign,xscale,yscale,angle});
  }
+ /** draw_text_color with the top colour at the top and the bottom colour at the bottom of the glyphs. */
+ drawTextColor(x:number,y:number,text:string,top:number,bottom:number,alpha:number){
+  const d=this.drawState;this.gfx?.text(x,y,text,{font:d.font,color:top,colorBottom:bottom,alpha,halign:d.halign,valign:d.valign,xscale:1,yscale:1,angle:0});
+ }
  /** Sound hooks; the game logic never waits on them. */
  sound?:(name:string,pitch?:number,restart?:boolean)=>void;
  stopAllSounds?:()=>void;
@@ -208,6 +212,7 @@ export class GmRuntime{
  }
  /** One game frame of logic, in runner.c Runner_step order. */
  step(){
+  this.dropConsumed();
   this.frame++;
   for(const i of this.instances)if(i.live){i.xprevious=i.x;i.yprevious=i.y;}
   this.animate();
@@ -222,13 +227,18 @@ export class GmRuntime{
   this.collide();
   this.dispatch('endStep',true);
   this.instances=this.instances.filter(i=>!i.destroyed);
-  this.input.pressed.clear();this.input.released.clear();
+  // Presses and releases stay visible to this frame's Draw (the writer reads button1_p there), then go.
+  this.consumed={pressed:new Set(this.input.pressed),released:new Set(this.input.released)};
  }
  /** Draw events by depth (deepest first), then instance id. Draw code may use the random generator. */
+ /** Presses a step has seen: cleared after the following draw, or at the next step if no draw ran. */
+ private consumed={pressed:new Set<number>(),released:new Set<number>()};
+ private dropConsumed(){for(const k of this.consumed.pressed)this.input.pressed.delete(k);for(const k of this.consumed.released)this.input.released.delete(k);this.consumed.pressed.clear();this.consumed.released.clear();}
  draw(){
   const list=this.instances.map((i,n)=>({i,n})).filter(e=>e.i.live&&e.i.visible).sort((a,b)=>b.i.depth-a.i.depth||a.i.id-b.i.id).map(e=>e.i);
   for(const inst of list){if(!inst.live)continue;const h=resolveEvent(inst.object,'draw');if(h)h(inst,this);else this.drawSelf(inst);}
   this.instances=this.instances.filter(i=>!i.destroyed);
+  this.dropConsumed();
  }
 }
 function mostSpecific(flat:GmCollision[],partner:GmObjectDef){

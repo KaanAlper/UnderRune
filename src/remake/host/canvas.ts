@@ -18,12 +18,14 @@ export class CanvasGraphics implements GmGraphics{
  private tints=new Map<string,HTMLCanvasElement>();
  private fogs=new Map<string,HTMLCanvasElement>();
  constructor(readonly ctx:CanvasRenderingContext2D,readonly assets:DrawAssets,readonly view:{x:number;y:number}){}
- private tinted(f:FrameRef,blend:number){
-  const key=`${f.page}:${f.sx},${f.sy}:${blend}`;let c=this.tints.get(key);if(c)return c;
+ private tinted(f:FrameRef,blend:number,bottom=blend){
+  const key=`${f.page}:${f.sx},${f.sy}:${blend}:${bottom}`;let c=this.tints.get(key);if(c)return c;
   if(this.tints.size>4000)this.tints.clear();
   c=document.createElement('canvas');c.width=f.sw;c.height=f.sh;const g=c.getContext('2d')!;
   g.drawImage(this.assets.pages[f.page],f.sx,f.sy,f.sw,f.sh,0,0,f.sw,f.sh);
-  g.globalCompositeOperation='multiply';g.fillStyle=css(blend);g.fillRect(0,0,f.sw,f.sh);
+  let fill:string|CanvasGradient=css(blend);
+  if(bottom!==blend){const gr=g.createLinearGradient(0,0,0,f.sh);gr.addColorStop(0,css(blend));gr.addColorStop(1,css(bottom));fill=gr;}
+  g.globalCompositeOperation='multiply';g.fillStyle=fill;g.fillRect(0,0,f.sw,f.sh);
   g.globalCompositeOperation='destination-in';g.drawImage(this.assets.pages[f.page],f.sx,f.sy,f.sw,f.sh,0,0,f.sw,f.sh);
   this.tints.set(key,c);return c;
  }
@@ -31,10 +33,10 @@ export class CanvasGraphics implements GmGraphics{
   const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));
   c.translate(x-this.view.x,y-this.view.y);if(angle)c.rotate(-angle*Math.PI/180);c.scale(xscale,yscale);
  }
- private blit(f:FrameRef,dx:number,dy:number,blend:number){
+ private blit(f:FrameRef,dx:number,dy:number,blend:number,bottom=blend){
   const tw=f.tw||f.sw,th=f.th||f.sh;
-  if(blend===0xffffff)this.ctx.drawImage(this.assets.pages[f.page],f.sx,f.sy,f.sw,f.sh,dx+f.tx,dy+f.ty,tw,th);
-  else this.ctx.drawImage(this.tinted(f,blend),0,0,f.sw,f.sh,dx+f.tx,dy+f.ty,tw,th);
+  if(blend===0xffffff&&bottom===blend)this.ctx.drawImage(this.assets.pages[f.page],f.sx,f.sy,f.sw,f.sh,dx+f.tx,dy+f.ty,tw,th);
+  else this.ctx.drawImage(this.tinted(f,blend,bottom),0,0,f.sw,f.sh,dx+f.tx,dy+f.ty,tw,th);
  }
  sprite(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,blend:number,alpha:number){
   const s=this.assets.sprite(name);if(!s||alpha<=0)return;const f=frameAt(s,frame);if(!f)return;
@@ -76,20 +78,20 @@ export class CanvasGraphics implements GmGraphics{
   let cy=style.valign===1?-lines.length*lineHeight/2:style.valign===2?-lines.length*lineHeight:0;
   for(const line of lines){
    let cx=style.halign===1?-width(line)/2:style.halign===2?-width(line):0;
-   for(const g of glyphs(line)){if(g){g.draw(cx,cy,style.color);cx+=g.advance;}}
+   for(const g of glyphs(line)){if(g){g.draw(cx,cy,style.color,style.colorBottom??style.color);cx+=g.advance;}}
    cy+=lineHeight;
   }
   this.ctx.restore();
  }
- private glyph(font:FontData,code:number):{advance:number;draw:(x:number,y:number,color:number)=>void}|null{
+ private glyph(font:FontData,code:number):{advance:number;draw:(x:number,y:number,color:number,bottom:number)=>void}|null{
   if(font.kind==='bitmap'){
    const g=font.glyphs[code];if(!g)return null;
    const f:FrameRef={page:font.page,sx:font.sx+g.x,sy:font.sy+g.y,sw:g.w,sh:g.h,tx:0,ty:0,tw:g.w,th:g.h};
-   return {advance:g.shift,draw:(x,y,color)=>this.blit(f,x+g.offset,y,color)};
+   return {advance:g.shift,draw:(x,y,color,bottom)=>this.blit(f,x+g.offset,y,color,bottom)};
   }
   const k=font.map.indexOf(String.fromCharCode(code));const s=this.assets.sprite(font.sprite);if(k<0||!s)return null;
   const f=s.frames[k];if(!f)return null;
   const advance=(font.proportional?(f.tw||f.sw)+f.tx:s.width)+font.sep;
-  return {advance,draw:(x,y,color)=>this.blit(f,font.proportional?x-f.tx:x,y,color)};
+  return {advance,draw:(x,y,color,bottom)=>this.blit(f,font.proportional?x-f.tx:x,y,color,bottom)};
  }
 }

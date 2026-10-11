@@ -1,6 +1,7 @@
 // What the remake draws, in room coordinates; the host turns it into canvas calls (subtracting the view).
 export type HAlign=0|1|2;
-export interface TextStyle{font:string;color:number;alpha:number;halign:HAlign;valign:HAlign;xscale:number;yscale:number;angle:number}
+/** colorBottom: draw_text_color's vertical gradient (top colour, bottom colour). */
+export interface TextStyle{font:string;color:number;alpha:number;halign:HAlign;valign:HAlign;xscale:number;yscale:number;angle:number;colorBottom?:number}
 export interface GmGraphics{
  sprite(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,blend:number,alpha:number):void;
  spriteFog?(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,color:number,alpha:number):void;
