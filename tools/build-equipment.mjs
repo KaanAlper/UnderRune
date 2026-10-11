@@ -12,7 +12,8 @@ const game=process.env.DELTARUNE_DIR??'C:/Program Files (x86)/Steam/steamapps/co
 const catalog={version:1,chapters:{}};
 for(let chapter=1;chapter<=5;chapter++){
  const packageId=`chapter${chapter}_windows`,base=path.join(root,'extracted',packageId);let lang={};
- for(const name of ['lang_en.json','lang_en_ch1.json'])try{Object.assign(lang,JSON.parse((await fs.readFile(path.join(game,packageId,'lang',name),'utf8')).replace(/^\uFEFF/,'')));}catch(error){if(error.code!=='ENOENT')throw error;}
+ // Same file the game loads (scr_84_lang_load: "lang_" + global.lang + ".json"); stray patch files are ignored.
+ for(const name of ['lang_en.json'])try{Object.assign(lang,JSON.parse((await fs.readFile(path.join(game,packageId,'lang',name),'utf8')).replace(/^\uFEFF/,'')));}catch(error){if(error.code!=='ENOENT')throw error;}
  const index=JSON.parse(await fs.readFile(path.join(base,'index.json'),'utf8'));
  const environment={global:{chapter,plot:0,flag:Array(3000).fill(0)}};
  for(const [i,object]of index.objects.entries())environment[object.name]=i;

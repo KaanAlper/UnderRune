@@ -25,7 +25,7 @@
     },
     "browserBuild": {
       "patch": "runtime/patches/browser-compat.patch",
-      "patchSha256": "fff375ab4b08e9a5f7bed31e2f29e5bb85247b1ae9bfd6a99ffe0b0e488c9620",
+      "patchSha256": "8fa0337810c2a9e54e4db0da3bdd41910569ab339c197e3e8c473a9364db0bb0",
       "status": "compatibility-probe-only",
       "spatialAudioVerified": true,
       "textureRepeatVerified": true,

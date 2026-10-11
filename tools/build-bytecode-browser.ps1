@@ -37,8 +37,9 @@ $sdkVersion = $lock.bytecodeRuntime.diagnosticBuild.emscriptenVersion
 $sdkTags = Get-Content -LiteralPath (Join-Path $sdkPath 'emscripten-releases-tags.json') -Raw | ConvertFrom-Json
 if ($sdkTags.releases.PSObject.Properties[$sdkVersion].Value -ne $lock.bytecodeRuntime.diagnosticBuild.emscriptenReleaseHash) { throw 'Unexpected Emscripten release.' }
 $portableValue = if ($Portable) { 'ON' } else { 'OFF' }
-$configure = 'call "{0}\emsdk_env.bat" >nul 2>&1 && emcmake cmake -S "{1}" -B "{2}" -G Ninja -DPLATFORM=web -DBACKEND=web -DCMAKE_BUILD_TYPE=Release -DENABLE_VM_STUB_LOGS=ON -DENABLE_VM_EXCEPTIONS_LOGS=ON -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DBROWSER_PORTABLE={3} -DBUTTERSCOTCH_COMMIT_HASH={4} && cmake --build "{2}" --parallel 2' -f $sdkPath, $sourcePath, $buildPath, $portableValue, $revision
-& cmd /d /c $configure
+# MSYS/Git Bash variables make emsdk_env.bat print POSIX exports that cmd ignores; clear them for this child only.
+$configure = 'set "MSYSTEM=" && set "SHELL=" && call "{0}\emsdk_env.bat" >nul 2>&1 && emcmake cmake -S "{1}" -B "{2}" -G Ninja -DPLATFORM=web -DBACKEND=web -DCMAKE_BUILD_TYPE=Release -DENABLE_VM_STUB_LOGS=ON -DENABLE_VM_EXCEPTIONS_LOGS=ON -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DBROWSER_PORTABLE={3} -DBUTTERSCOTCH_COMMIT_HASH={4} && cmake --build "{2}" --parallel 2' -f $sdkPath, $sourcePath, $buildPath, $portableValue, $revision
+& cmd.exe /d /c $configure
 if ($LASTEXITCODE -ne 0) { throw 'Browser runtime build failed.' }
 $artifacts = @('butterscotch.mjs', 'butterscotch.wasm') | ForEach-Object {
     $artifactPath = Join-Path $buildPath $_

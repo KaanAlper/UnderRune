@@ -1,6 +1,6 @@
 // Opens every catalogued encounter in the native (original bytecode) player and
 // records whether it loads, keeps running and reaches combat, plus engine diagnostics.
-// Requires `node tools/native-server.mjs` on 127.0.0.1:5185.
+// Requires the app dev server (npm run dev) on 127.0.0.1:5173.
 // Usage: node tools/native-census.mjs [--only=ch1-25,ch2-61] [--force]
 import {chromium} from '@playwright/test';
 import fs from 'node:fs/promises';
@@ -13,12 +13,14 @@ const out = path.join(root, '.tools', 'native-census');
 const args = process.argv.slice(2);
 const only = args.find(a => a.startsWith('--only='))?.slice(7).split(',');
 const force = args.includes('--force');
-const base = process.env.NATIVE_URL ?? 'http://127.0.0.1:5185/native/';
+// The app's Vite server serves /native/ (npm run dev); NATIVE_URL can point at tools/native-server.mjs instead.
+const base = process.env.NATIVE_URL ?? 'http://127.0.0.1:5173/native/';
 const catalog = JSON.parse(await fs.readFile(path.join(root, 'src/bosses/catalog.json'), 'utf8'));
-const ids = catalog.map(r => r.id).filter(id => !id.includes('mantle') && !id.includes('susiezilla')).filter(id => !only || only.includes(id));
+const ids = catalog.map(r => r.id).filter(id => !only || only.includes(id));
 await fs.mkdir(out, {recursive: true});
 const summaryPath = path.join(out, 'summary.json');
-const summary = force ? {} : JSON.parse(await fs.readFile(summaryPath, 'utf8').catch(() => '{}'));
+// --force re-runs the selected encounters but keeps the others' results.
+const summary = JSON.parse(await fs.readFile(summaryPath, 'utf8').catch(() => '{}'));
 
 const browser = await chromium.launch({headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe', args: ['--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required']});
 const tap = async (page, key, ms = 90) => { await page.keyboard.down(key); await page.waitForTimeout(ms); await page.keyboard.up(key); };

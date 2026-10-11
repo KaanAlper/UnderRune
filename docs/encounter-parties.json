@@ -1,0 +1,707 @@
+{
+ "ch1-2": {
+  "name": "Lancer",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dark1",
+  "evidence": [
+   "trigger gml_Object_obj_darkcastle_event_Step_0:563 in room_castle_front",
+   "inherited room_dark1: gml_Object_obj_darkwakeevent_Create_0:4 scr_losechar()"
+  ]
+ },
+ "ch1-8": {
+  "name": "Clover",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dark1",
+  "evidence": [
+   "trigger gml_Object_obj_scarelancerevent_Step_0:281 in room_field3",
+   "inherited room_dark1: gml_Object_obj_darkwakeevent_Create_0:4 scr_losechar()"
+  ]
+ },
+ "ch1-12": {
+  "name": "K.Round",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dark1",
+  "evidence": [
+   "trigger gml_Object_obj_checker_animtest_Step_0:356 in room_field_checkersboss",
+   "inherited room_dark1: gml_Object_obj_darkwakeevent_Create_0:4 scr_losechar()"
+  ]
+ },
+ "ch1-15": {
+  "name": "Clover & Hathy",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ },
+ "ch1-20": {
+  "name": "Lancer",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dark1",
+  "evidence": [
+   "trigger gml_Object_obj_lancerbattle2_event_Step_0:31 in room_cc_prisonlancer",
+   "inherited room_dark1: gml_Object_obj_darkwakeevent_Create_0:4 scr_losechar()"
+  ]
+ },
+ "ch1-25": {
+  "name": "JEVIL",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dark1",
+  "evidence": [
+   "trigger gml_Object_obj_jokerbattleevent_Step_0:302 in room_cc_joker",
+   "inherited room_dark1: gml_Object_obj_darkwakeevent_Create_0:4 scr_losechar()"
+  ]
+ },
+ "ch1-27": {
+  "name": "K.Round",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dark1",
+  "evidence": [
+   "trigger gml_Object_obj_rurus_checker_event_Step_0:211 in room_cc_6f",
+   "inherited room_dark1: gml_Object_obj_darkwakeevent_Create_0:4 scr_losechar()"
+  ]
+ },
+ "ch1-31": {
+  "name": "Susie & Lancer",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dark1",
+  "evidence": [
+   "trigger gml_Object_obj_susieandlancer_event_Step_0:135 in room_forest_fightsusie",
+   "inherited room_dark1: gml_Object_obj_darkwakeevent_Create_0:4 scr_losechar()"
+  ]
+ },
+ "ch1-40": {
+  "name": "King",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dark1",
+  "evidence": [
+   "trigger gml_Object_obj_kingcutscene_Step_0:905 in room_cc_kingbattle",
+   "inherited room_dark1: gml_Object_obj_darkwakeevent_Create_0:4 scr_losechar()"
+  ]
+ },
+ "ch2-57": {
+  "name": "Tasque & Tasque Manager",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "inherited from room_dw_mansion_entrance",
+  "evidence": [
+   "trigger gml_Object_obj_npc_tasquemanager_Step_0:24 in room_dw_mansion_tasquePaintings",
+   "inherited room_dw_mansion_entrance: gml_Object_obj_ch2_room_mansion_entrance_Create_0:9 scr_losechar()",
+   "inherited room_dw_mansion_entrance: gml_Object_obj_ch2_room_mansion_entrance_Create_0:10 scr_getchar(2)",
+   "inherited room_dw_mansion_entrance: gml_Object_obj_ch2_room_mansion_entrance_Create_0:11 scr_getchar(3)"
+  ]
+ },
+ "ch2-58": {
+  "name": "Berdly",
+  "party": null,
+  "source": "undetermined",
+  "evidence": [
+   "trigger gml_Object_obj_berdly_encounter_setup_Other_11:4",
+   "trigger gml_Object_obj_berdly_encounter_setup_Step_0:8"
+  ]
+ },
+ "ch2-59": {
+  "name": "Queen",
+  "party": [
+   1,
+   3,
+   0
+  ],
+  "members": [
+   "Kris",
+   "Ralsei"
+  ],
+  "source": "inherited from room_dw_mansion_acid_tunnel_loop_rouxls",
+  "evidence": [
+   "trigger gml_Object_obj_ch2_scene25_Step_0:294 in room_dw_mansion_east_4f_d",
+   "inherited room_dw_mansion_acid_tunnel_loop_rouxls: gml_Object_obj_ch2_scene21_loop_Create_0:18 scr_losechar()",
+   "inherited room_dw_mansion_acid_tunnel_loop_rouxls: gml_Object_obj_ch2_scene21_loop_Create_0:23 scr_getchar(3)"
+  ]
+ },
+ "ch2-60": {
+  "name": "Spamton",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dw_city_traffic_4",
+  "evidence": [
+   "trigger gml_Object_obj_ch2_city05_Step_0:328 in room_dw_city_spamton_alley",
+   "inherited room_dw_city_traffic_4: gml_Object_obj_ch2_city_car_a_Create_0:71 scr_losechar()",
+   "inherited room_dw_city_traffic_4: gml_Object_obj_ch2_city_car_a_Create_0:76 scr_getchar(4)",
+   "inherited room_dw_city_traffic_4: gml_Object_obj_ch2_city_car_b_Create_0:33 scr_losechar()"
+  ]
+ },
+ "ch2-61": {
+  "name": "Spamton NEO",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_mansion_b_east: gml_Object_obj_ch2_sceneex2_Create_0:41 scr_losechar()",
+   "gml_Object_obj_ch2_sceneex2_Step_0:85 scr_getchar(2)",
+   "gml_Object_obj_ch2_sceneex2_Step_0:86 scr_getchar(3)",
+   "trigger gml_Object_obj_ch2_sceneex2_Step_0:524 in room_dw_mansion_b_east",
+   "trigger gml_Object_obj_fountainkris_ch2_sideb_Step_0:241 in room_dw_mansion_fountain"
+  ]
+ },
+ "ch2-62": {
+  "name": "Sweet & K_K & Cap'n",
+  "party": [
+   1,
+   2,
+   0
+  ],
+  "members": [
+   "Kris",
+   "Susie"
+  ],
+  "source": "inherited from room_dw_cyber_intro_1",
+  "evidence": [
+   "trigger gml_Object_obj_ch2_cyber01_Step_0:360 in room_dw_cyber_music_final",
+   "inherited room_dw_cyber_intro_1: gml_Object_obj_ch2_room_cyber_intro_1_Create_0:4 scr_losechar()",
+   "inherited room_dw_cyber_intro_1: gml_Object_obj_ch2_room_cyber_intro_1_Create_0:9 scr_getchar(2)"
+  ]
+ },
+ "ch2-63": {
+  "name": "Rouxls",
+  "party": [
+   1,
+   3,
+   0
+  ],
+  "members": [
+   "Kris",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_mansion_acid_tunnel_loop_rouxls: gml_Object_obj_ch2_scene21_loop_Create_0:18 scr_losechar()",
+   "room_dw_mansion_acid_tunnel_loop_rouxls: gml_Object_obj_ch2_scene21_loop_Create_0:23 scr_getchar(3)",
+   "trigger gml_Object_obj_ch2_scene21_loop_Step_0:469 in room_dw_mansion_acid_tunnel_loop_rouxls"
+  ]
+ },
+ "ch2-65": {
+  "name": "Werewerewire",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ },
+ "ch2-71": {
+  "name": "Clover",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ },
+ "ch2-81": {
+  "name": "Werewerewire",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ },
+ "ch2-82": {
+  "name": "Berdly",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dw_city_hacker",
+  "evidence": [
+   "trigger gml_Object_obj_ch2_city_berdly_Step_0:331 in room_dw_city_berdly",
+   "inherited room_dw_city_hacker: gml_Object_obj_ch2_city01_Create_0:13 scr_losechar()"
+  ]
+ },
+ "ch2-83": {
+  "name": "Mauswheel",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "inherited from room_dw_mansion_b_east_a",
+  "evidence": [
+   "trigger gml_Object_obj_ch2_room_mansion_kitchen_Step_0:162 in room_dw_mansion_kitchen",
+   "inherited room_dw_mansion_b_east_a: gml_Object_obj_ch2_sceneex2a_Create_0:11 scr_losechar()",
+   "inherited room_dw_mansion_b_east_a: gml_Object_obj_ch2_sceneex2a_Create_0:16 scr_getchar(2)",
+   "inherited room_dw_mansion_b_east_a: gml_Object_obj_ch2_sceneex2a_Create_0:17 scr_getchar(3)"
+  ]
+ },
+ "ch2-84": {
+  "name": "GIGA Queen",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "gml_Object_obj_ch2_scene26_Step_0:804 global.char[1] = 0",
+   "gml_Object_obj_ch2_scene26_Step_0:805 global.char[2] = 0",
+   "trigger gml_Object_obj_ch2_scene26_Step_0:809 in room_dw_mansion_top"
+  ]
+ },
+ "ch2-89": {
+  "name": "Tasque Manager",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ },
+ "ch2-94": {
+  "name": "Werewerewire",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ },
+ "ch3-113": {
+  "name": "Lanino & Elnina",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_board_1: gml_Object_obj_board_controller_Create_0:4 scr_getchar(0)",
+   "room_board_1: gml_Object_obj_ch3_gameshow_Create_0:5 scr_losechar()",
+   "room_board_1: gml_Object_obj_ch3_gameshow_Create_0:6 scr_getchar(2)",
+   "room_board_1: gml_Object_obj_ch3_gameshow_Create_0:7 scr_getchar(3)",
+   "trigger gml_Object_obj_board_event_ninfight_Step_0:145 in room_board_1"
+  ]
+ },
+ "ch3-114": {
+  "name": "Rouxls",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "inherited from room_dw_teevie_maze",
+  "evidence": [
+   "trigger gml_Object_obj_room_teevie_chef_Step_0:628 in room_dw_teevie_chef",
+   "inherited room_dw_teevie_maze: gml_Object_obj_dw_teevie_maze_Create_0:3 scr_setparty(1, 1, 0)"
+  ]
+ },
+ "ch3-115": {
+  "name": "Roaring Knight",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "inherited from room_dw_backstage",
+  "evidence": [
+   "trigger gml_Object_obj_ch3_PTB02_Step_0:460 in room_dw_snow_zone",
+   "inherited room_dw_backstage: gml_Object_obj_ch3_GSD02_Create_0:59 scr_setparty(1, 1, 0)"
+  ]
+ },
+ "ch3-121": {
+  "name": "Tenna",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "inherited from room_dw_couch_overworld_intro_left",
+  "evidence": [
+   "trigger gml_Object_obj_ch3_BTB06_Alarm_1:7 in room_dw_snow_zone_battle",
+   "inherited room_dw_couch_overworld_intro_left: gml_Object_obj_ch3_couch_overworld_controller_Create_0:29 scr_losechar()",
+   "trigger gml_Object_obj_ch3_BTB06_Step_0:224 in room_dw_snow_zone_battle"
+  ]
+ },
+ "ch3-133": {
+  "name": "Tenna",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSA02_Create_0:18 scr_setparty(1, 1, 0)",
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSA06_Create_0:5 scr_setparty(1, 1, 0)",
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSB03_Create_0:6 scr_setparty(1, 1, 0)",
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSC07_Create_0:5 scr_setparty(1, 1, 0)",
+   "trigger gml_Object_obj_ch3_GSD01_Create_0:49 in room_ch3_gameshowroom"
+  ]
+ },
+ "ch3-134": {
+  "name": "Shadowguy & Tenna",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSA02_Create_0:18 scr_setparty(1, 1, 0)",
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSA06_Create_0:5 scr_setparty(1, 1, 0)",
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSB03_Create_0:6 scr_setparty(1, 1, 0)",
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSC07_Create_0:5 scr_setparty(1, 1, 0)",
+   "trigger gml_Object_obj_ch3_GSD01_Step_0:855 in room_ch3_gameshowroom"
+  ]
+ },
+ "ch3-135": {
+  "name": "Zapper & Tenna",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSA02_Create_0:18 scr_setparty(1, 1, 0)",
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSA06_Create_0:5 scr_setparty(1, 1, 0)",
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSB03_Create_0:6 scr_setparty(1, 1, 0)",
+   "room_ch3_gameshowroom: gml_Object_obj_ch3_GSC07_Create_0:5 scr_setparty(1, 1, 0)",
+   "trigger gml_Object_obj_ch3_GSD01_Step_0:859 in room_ch3_gameshowroom"
+  ]
+ },
+ "ch3-141": {
+  "name": "Lanino & Elnina",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ },
+ "ch4-160": {
+  "name": "Hammer of Justice",
+  "party": [
+   2,
+   0,
+   0
+  ],
+  "members": [
+   "Susie"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_church_arena: gml_Object_obj_dw_church_arena_Create_0:70 scr_setparty(1, 1, 0)",
+   "gml_Object_obj_dw_church_arena_Step_0:437 global.char[0] = 2",
+   "gml_Object_obj_dw_church_arena_Step_0:438 global.char[1] = 0",
+   "gml_Object_obj_dw_church_arena_Step_0:439 global.char[2] = 0",
+   "trigger gml_Object_obj_dw_church_arena_Step_0:468 in room_dw_church_arena"
+  ]
+ },
+ "ch4-174": {
+  "name": "Jackenstein",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_church_jackenstein: gml_Object_obj_ch4_DCA08C_Create_0:3 scr_setparty(1, 1, 0)",
+   "trigger gml_Object_obj_ch4_DCA08D_Step_0:261 in room_dw_church_jackenstein"
+  ]
+ },
+ "ch4-175": {
+  "name": "Titan",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_churchc_titanclimb2_post: gml_Object_obj_dw_churchc_titanclimb2_post_Create_0:13 scr_setparty(1, 1, 0)",
+   "trigger gml_Object_obj_dw_churchc_titanclimb2_post_Step_0:557 in room_dw_churchc_titanclimb2_post"
+  ]
+ },
+ "ch4-177": {
+  "name": "Titan Spawn",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_churchc_titanclimb1_post: gml_Object_obj_dw_churchc_titanclimb1_post_Create_0:17 scr_setparty(1, 1, 0)",
+   "trigger gml_Object_obj_dw_churchc_titanclimb1_post_Step_0:534 in room_dw_churchc_titanclimb1_post"
+  ]
+ },
+ "ch4-178": {
+  "name": "Lanino & Elnina",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ },
+ "ch4-183": {
+  "name": "HolywaterCooler",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_church_holywatercooler: gml_Object_obj_dw_church_holywatercooler_Create_0:5 scr_setparty(1, 1)",
+   "trigger gml_Object_obj_dw_church_holywatercooler_Step_0:241 in room_dw_church_holywatercooler"
+  ]
+ },
+ "ch5-206": {
+  "name": "Netskie",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "inherited from room_dw_cliff_seth_miniboss",
+  "evidence": [
+   "trigger gml_Object_obj_treasure_fox_Step_0:184 in room_dw_cliff_netskieclimb",
+   "inherited room_dw_cliff_seth_miniboss: gml_Object_obj_dw_cliff_seth_miniboss_Create_0:2 scr_setparty(1, 1)"
+  ]
+ },
+ "ch5-207": {
+  "name": "Terakota",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ },
+ "ch5-220": {
+  "name": "Aqua",
+  "party": [
+   1,
+   0,
+   0
+  ],
+  "members": [
+   "Kris"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "gml_Object_obj_dw_garden_aqua_Step_0:556 scr_setparty(0)",
+   "trigger gml_Object_obj_dw_garden_aqua_Step_0:571 in room_dw_garden_aqua"
+  ]
+ },
+ "ch5-221": {
+  "name": "Orange & Green",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_fcastle_green_orange_battle: gml_Object_obj_ch5_DWCR03_Create_0:9 scr_setparty(1, 1)",
+   "trigger gml_Object_obj_ch5_DWCR03_Step_0:1038 in room_dw_fcastle_green_orange_battle"
+  ]
+ },
+ "ch5-222": {
+  "name": "Blue & Yellow",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_fcastle_yellowjail: gml_Object_obj_dw_fcastle_yellowjail_Create_0:5 scr_setparty(1, 1)",
+   "trigger gml_Object_obj_ch5_DWCL03_Step_0:517 in room_dw_fcastle_yellowjail"
+  ]
+ },
+ "ch5-223": {
+  "name": "Seth & Aqua",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_cliff_sethaqua_battle: gml_Object_obj_dw_cliff_sethaqua_battle_Create_0:5 scr_setparty(1, 1)",
+   "trigger gml_Object_obj_dw_cliff_sethaqua_battle_Step_0:316 in room_dw_cliff_sethaqua_battle"
+  ]
+ },
+ "ch5-224": {
+  "name": "Pink",
+  "party": [
+   1,
+   2,
+   3
+  ],
+  "members": [
+   "Kris",
+   "Susie",
+   "Ralsei"
+  ],
+  "source": "battle room or trigger",
+  "evidence": [
+   "room_dw_pink_encounter: gml_Object_obj_dw_pink_encounter_Create_0:18 scr_setparty(true, true)",
+   "trigger gml_Object_obj_dw_pink_encounter_Step_0:591 in room_dw_pink_encounter"
+  ]
+ },
+ "ch5-225": {
+  "name": "Flowery",
+  "party": null,
+  "source": "undetermined",
+  "evidence": [
+   "trigger gml_Object_obj_ch5_DW29_Step_0:677"
+  ]
+ },
+ "ch5-229": {
+  "name": "Netskie",
+  "party": null,
+  "source": "undetermined",
+  "evidence": []
+ }
+}

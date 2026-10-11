@@ -11,4 +11,8 @@ describe('native battle bridge',()=>{
   expect(isNativeEvent({source:'underrune-native',type:'eval'})).toBe(false);
   expect(isNativeEvent(null)).toBe(false);
  });
+ it('accepts battle outcomes reported by the launcher watcher',()=>{
+  expect(isNativeEvent({source:'underrune-native',type:'outcome',outcome:'victory'})).toBe(true);
+  expect(isNativeEvent({source:'underrune-native',type:'outcome',outcome:'draw'})).toBe(false);
+ });
 });

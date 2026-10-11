@@ -4,7 +4,10 @@ const send=(type,data={})=>parent.postMessage({source:'underrune-native',type,..
 const release=()=>{if(runner)for(const key of held)runner._onKeyUp(key);held.clear();};
 // Engine diagnostics stay in the console; the overlay is only shown with ?debug.
 if(new URL(location.href).searchParams.has('debug'))issues.hidden=false;
-const report=text=>{console.log(text);if(/Unknown function|Stubbed function|exception|fatal/i.test(text)&&!/Configured exception handler/.test(text)){const entry=document.createElement('div');entry.textContent=text;issues.append(entry);while(issues.children.length>12)issues.firstElementChild.remove();send('diagnostic',{message:text});}};
+const report=text=>{console.log(text);
+ // Printed by the launcher's battle watcher (tools/utmt/build-native-launcher.csx) when the battle controller disappears.
+ const outcome=/UNDERRUNE_OUTCOME (victory|defeat)/.exec(text);if(outcome){send('outcome',{outcome:outcome[1]});return;}
+ if(/Unknown function|Stubbed function|exception|fatal/i.test(text)&&!/Configured exception handler/.test(text)){const entry=document.createElement('div');entry.textContent=text;issues.append(entry);while(issues.children.length>12)issues.firstElementChild.remove();send('diagnostic',{message:text});}};
 // Mute: every engine audio path ends at the AudioContext destination; route it through one master gain
 // so muting never touches the game's own volume settings.
 let muted=false;const masters=new Map(),connectNode=AudioNode.prototype.connect;
@@ -31,7 +34,7 @@ async function start(id,ini){
   state.textContent='* '+profile.name+' / ÖZGÜN OYUN MOTORU YÜKLENİYOR…';
   const {default:createRunner}=await import('/native/'+(supportsJspi?'browser':'portable')+'-engine/butterscotch.mjs');
   runner=await createRunner({canvas,print:report,printErr:report});mkdir('/saves');const packageName='chapter'+profile.chapter+'_windows';mkdir('/game/'+packageName);
-  runner.FS.writeFile('/saves/UnderRune.ini',ini+`[battle]\nencounter=${profile.encounter}\nspecial=${profile.special}\nmusic=${profile.music}\n[party]\n1=${profile.party[1]}\n2=${profile.party[2]}\n`);
+  runner.FS.writeFile('/saves/UnderRune.ini',ini+`[battle]\nencounter=${profile.encounter}\nspecial=${profile.special}\nmusic=${profile.music}\nroom=${profile.room??''}\n[party]\n0=${profile.party[0]}\n1=${profile.party[1]}\n2=${profile.party[2]}\n`);
   let index=0,done=0;const names=profile.files;
   await Promise.all(Array.from({length:4},async()=>{while(index<names.length){const name=names[index++];if(!/^[\w./-]+$/.test(name)||name.includes('..'))throw Error('Geçersiz kaynak yolu');const target='/game/'+packageName+'/'+name;mkdir(target.slice(0,target.lastIndexOf('/')));runner.FS.writeFile(target,await fetchBytes(name==='data.win'?'/native/package/'+profile.chapter:'/native/game/'+packageName+'/'+name));done++;state.textContent='* '+profile.name+' / DOSYALAR '+done+' / '+names.length;}}));
   mkdir('/game/'+packageName+'/mus');for(const file of profile.musicFiles){const bytes=await fetchBytes('/native/game/mus/'+file);runner.FS.writeFile('/game/'+packageName+'/mus/'+file,bytes);}

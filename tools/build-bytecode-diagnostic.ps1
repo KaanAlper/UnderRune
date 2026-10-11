@@ -22,8 +22,8 @@ if (!(Test-Path -LiteralPath (Join-Path $sdkPath 'upstream/emscripten/emcmake.py
     throw "Install the project-local SDK first: .tools/emsdk/emsdk install $sdkVersion and activate $sdkVersion."
 }
 # Environment changes are confined to this child shell; no permanent activation.
-$configure = 'call "{0}\emsdk_env.bat" >nul 2>&1 && emcmake cmake -S "{1}" -B "{2}" -G Ninja -DPLATFORM=web -DBACKEND=web -DCMAKE_BUILD_TYPE=Release -DENABLE_VM_STUB_LOGS=ON -DENABLE_VM_EXCEPTIONS_LOGS=ON -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DBUTTERSCOTCH_COMMIT_HASH={3} && cmake --build "{2}" --parallel 2' -f $sdkPath, $sourcePath, $buildPath, $revision
-& cmd /d /c $configure
+$configure = 'set "MSYSTEM=" && set "SHELL=" && call "{0}\emsdk_env.bat" >nul 2>&1 && emcmake cmake -S "{1}" -B "{2}" -G Ninja -DPLATFORM=web -DBACKEND=web -DCMAKE_BUILD_TYPE=Release -DENABLE_VM_STUB_LOGS=ON -DENABLE_VM_EXCEPTIONS_LOGS=ON -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON -DBUTTERSCOTCH_COMMIT_HASH={3} && cmake --build "{2}" --parallel 2' -f $sdkPath, $sourcePath, $buildPath, $revision
+& cmd.exe /d /c $configure
 if ($LASTEXITCODE -ne 0) { throw 'Diagnostic runtime build failed.' }
 $artifacts = @('butterscotch.mjs', 'butterscotch.wasm') | ForEach-Object {
     $artifactPath = Join-Path $buildPath $_

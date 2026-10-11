@@ -28,7 +28,10 @@
     "bytecode:browser": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-bytecode-browser.ps1",
     "bytecode:portable": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-bytecode-browser.ps1 -Portable",
     "test:bytecode": "node tools/test-bytecode-browser.mjs",
-    "test:bytecode-audio": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-bytecode-audio.ps1"
+    "test:bytecode-audio": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/test-bytecode-audio.ps1",
+    "derive:parties": "node tools/derive-parties.mjs",
+    "launchers:build": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/build-native-launchers.ps1",
+    "audit:native": "node tools/native-census.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

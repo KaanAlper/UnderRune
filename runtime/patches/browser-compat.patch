@@ -136,10 +136,99 @@ index 0000000..a89a04c
 +}
 +#endif
 diff --git a/src/gl/gl_renderer.c b/src/gl/gl_renderer.c
-index b19aece..897ed02 100644
+index b19aece..8f953c5 100644
 --- a/src/gl/gl_renderer.c
 +++ b/src/gl/gl_renderer.c
-@@ -1072,8 +1072,7 @@ bool GLRenderer_ensureTextureLoaded(GLRenderer* gl, uint32_t pageId) {
+@@ -208,14 +208,78 @@ char *fixShaderForVita(const char *src) {
+ }
+ #endif
+ 
++#ifdef __EMSCRIPTEN__
++// WebGL2 still applies the GLSL ES 1.00 Appendix A loop limits to version-less (1.00) shaders, so
++// GameMaker shaders with non-constant loop bounds (palette swappers, blurs) fail to compile.
++// On a WebGL2 context they are compiled as GLSL ES 3.00 with the equivalent keywords instead.
++static bool gTranslateGles100 = false;
++
++static bool isShaderIdentChar(char c) {
++    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
++}
++
++static const char* gles300Word(const char* word, bool fragment) {
++    if (strcmp(word, "attribute") == 0) return fragment ? word : "in";
++    if (strcmp(word, "varying") == 0) return fragment ? "in" : "out";
++    if (strcmp(word, "gl_FragColor") == 0) return fragment ? "ur_FragColor" : word;
++    if (strcmp(word, "texture2D") == 0 || strcmp(word, "textureCube") == 0) return "texture";
++    if (strcmp(word, "texture2DLod") == 0 || strcmp(word, "textureCubeLod") == 0) return "textureLod";
++    if (strcmp(word, "texture2DProj") == 0) return "textureProj";
++    // Names that became built-ins or keywords in 3.00 must not shadow them.
++    if (strcmp(word, "texture") == 0) return "ur_texture";
++    if (strcmp(word, "sample") == 0) return "ur_sample";
++    return word;
++}
++
++static char* translateGles100To300(const char* source, GLenum type) {
++    bool fragment = type == GL_FRAGMENT_SHADER;
++    size_t length = strlen(source);
++    size_t capacity = length * 2 + 128;
++    size_t used = 0;
++    char* out = (char*) safeMalloc(capacity);
++    #define UR_APPEND(text, count) do { \
++        size_t count_ = (count); \
++        if (used + count_ + 1 > capacity) { capacity = (used + count_ + 1) * 2; out = (char*) safeRealloc(out, capacity); } \
++        memcpy(out + used, (text), count_); used += count_; \
++    } while (0)
++    const char* header = fragment ? "#version 300 es\nprecision mediump float;\nout vec4 ur_FragColor;\n" : "#version 300 es\n";
++    UR_APPEND(header, strlen(header));
++    size_t i = 0;
++    while (i < length) {
++        char c = source[i];
++        bool startsWord = ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') && (i == 0 || !isShaderIdentChar(source[i - 1]));
++        if (!startsWord) { UR_APPEND(&source[i], 1); i++; continue; }
++        size_t start = i;
++        while (i < length && isShaderIdentChar(source[i])) i++;
++        char word[64];
++        size_t wordLength = i - start;
++        if (wordLength >= sizeof(word)) { UR_APPEND(&source[start], wordLength); continue; }
++        memcpy(word, &source[start], wordLength);
++        word[wordLength] = '\0';
++        const char* replacement = gles300Word(word, fragment);
++        UR_APPEND(replacement, strlen(replacement));
++    }
++    out[used] = '\0';
++    #undef UR_APPEND
++    return out;
++}
++#endif
++
+ static GLuint compileShader(GLenum type, const char* source, bool* ok) {
+     #ifdef PLATFORM_VITA
+     const char* actualSource = fixShaderForVita(source);
++    #elif defined(__EMSCRIPTEN__)
++    // The renderer's own shaders already declare #version 300 es; only version-less game shaders are translated.
++    char* translatedSource = (gTranslateGles100 && strstr(source, "#version") == nullptr) ? translateGles100To300(source, type) : nullptr;
++    const char* actualSource = translatedSource != nullptr ? translatedSource : source;
+     #else
+     const char* actualSource = source;
+     #endif
+     GLuint shader = glCreateShader(type);
+     glShaderSource(shader, 1, &actualSource, nullptr);
++    #if defined(__EMSCRIPTEN__) && !defined(PLATFORM_VITA)
++    free(translatedSource);
++    #endif
+     glCompileShader(shader);
+ 
+     GLint success;
+@@ -580,6 +644,9 @@ static void glInit(Renderer* renderer, DataWin* dataWin) {
+     }
+     modernGl->isGL3 = (ver.major >= 3);
+     modernGl->isGLES = ver.isGLES;
++#ifdef __EMSCRIPTEN__
++    gTranslateGles100 = modernGl->isGL3 && modernGl->isGLES;
++#endif
+ 
+     GLCommon_init(renderer);
+ 
+@@ -1072,8 +1139,7 @@ bool GLRenderer_ensureTextureLoaded(GLRenderer* gl, uint32_t pageId) {
  
      free(pixels);
  
@@ -149,7 +238,7 @@ index b19aece..897ed02 100644
  
      GLCommon_applyTexFilter(gl->base.texFilter);
      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
-@@ -2359,8 +2358,7 @@ static int32_t glCreateSurface(Renderer* renderer, int32_t width, int32_t height
+@@ -2359,8 +2425,7 @@ static int32_t glCreateSurface(Renderer* renderer, int32_t width, int32_t height
      glGenTextures(1, &gl->surfaceTexture[surfaceIndex]);
      glBindTexture(GL_TEXTURE_2D, gl->surfaceTexture[surfaceIndex]);
      glTexImage2D(GL_TEXTURE_2D, 0, GLCommon_surfaceInternalFormat(gl), width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
@@ -159,7 +248,7 @@ index b19aece..897ed02 100644
  
      GLCommon_applyTexFilter(renderer->texFilter);
      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
-@@ -2900,6 +2898,29 @@ static void glGpuSetTexFilter(Renderer* renderer, bool enable) {
+@@ -2900,6 +2965,29 @@ static void glGpuSetTexFilter(Renderer* renderer, bool enable) {
      GLCommon_setTexFilter(renderer, enable);
  }
  
@@ -189,7 +278,7 @@ index b19aece..897ed02 100644
  static bool glGpuGetBlendEnable(Renderer* renderer) {
      GLRenderer* gl = (GLRenderer*) renderer;
      return gl->blendEnable;
-@@ -3289,6 +3310,7 @@ Renderer* GLRenderer_create(void) {
+@@ -3289,6 +3377,7 @@ Renderer* GLRenderer_create(void) {
      glVtable.gpuSetBlendModeExt = glGpuSetBlendModeExt;
      glVtable.gpuSetBlendEnable = glGpuSetBlendEnable;
      glVtable.gpuSetTexFilter = glGpuSetTexFilter;

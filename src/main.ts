@@ -23,7 +23,7 @@ let scene:'intro'|'room'|'menu'|'battle'|'native'='intro',chapter=1,selection=0,
 const empty={x:0,y:0,confirm:false,cancel:false,restart:false,pause:false,slow:false,shoot:false};
 const menuRecords=()=>catalog.filter(r=>r.chapter===chapter);
 function updatePreferences(){document.body.classList.toggle('reduced',prefs.reducedEffects);element('mute').textContent=prefs.muted?'SOUND OFF':'SOUND ON';element('mute').setAttribute('aria-pressed',String(prefs.muted));element('effects').textContent=prefs.reducedEffects?'CRT OFF':'CRT ON';element('effects').setAttribute('aria-pressed',String(prefs.reducedEffects));savePrefs(storage,prefs);}
-function closeBattle(){battle?.dispose();battle=null;native?.dispose();native=null;nativeRecord=null;audio?.stop();input.clear();clock.reset();victoryRecorded=false;}
+function closeBattle(){battle?.dispose();battle=null;native?.dispose();native=null;nativeRecord=null;element('outcome').hidden=true;audio?.stop();input.clear();clock.reset();victoryRecorded=false;}
 function goMenu(){sessionToken++;loading.hidden=true;busy=false;closeBattle();scene='menu';sceneKey='';selection=Math.min(selection,menuRecords().length-1);}
 function showError(cause:unknown){loading.hidden=true;busy=false;element('error-text').textContent=cause instanceof Error?cause.message:String(cause);error.hidden=false;}
 async function launchNative(record:EncounterRecord,ini:string){
@@ -37,6 +37,12 @@ async function launchNative(record:EncounterRecord,ini:string){
 function onNativeEvent(event:NativeEvent){
  if(event.type==='diagnostic'){console.debug('[native]',event.message);return;}
  if(event.type==='paused')sceneKey='';
+ if(event.type==='outcome'&&scene==='native'&&nativeRecord){
+  const record=nativeRecord,won=event.outcome==='victory';
+  if(won&&!prefs.completed.includes(record.id)){prefs.completed.push(record.id);savePrefs(storage,prefs);}
+  // Let the original victory text or game-over screen play before offering the way back.
+  setTimeout(()=>{if(nativeRecord!==record)return;element('outcome-text').textContent=won?`* ${record.name} yenildi.`:'* Parti düştü.';element('outcome').hidden=false;},won?1500:3000);
+ }
  if(scene==='native'&&(event.type==='ended'||event.type==='failed'))showError(event.type==='ended'?'* Özgün savaş motoru durdu. RETRY ile yeniden hazırlan, DEVICE_MENU ile menüye dön.':event.message??'Özgün savaş durdu.');
 }
 async function startBattle(practice=false){
@@ -124,6 +130,8 @@ for(const button of document.querySelectorAll<HTMLButtonElement>('[data-key]')){
  const key=button.dataset.key!;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);button.classList.add('down');if(scene==='native'&&native)native.key(key,true);else input.press(key);});
  const release=()=>{button.classList.remove('down');native?.key(key,false);input.release(key);};button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
 }
+element('outcome-menu').addEventListener('click',goMenu);
+element('outcome-again').addEventListener('click',()=>{element('outcome').hidden=true;void startBattle(false);});
 element('retry').addEventListener('click',()=>{error.hidden=true;if(renderer)void startBattle(false);else void initialize();});
 async function initialize(){
  loading.hidden=false;error.hidden=true;try{

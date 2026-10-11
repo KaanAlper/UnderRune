@@ -1,11 +1,13 @@
 // Host side of the original-bytecode battle player served under /native/ (tools/native-player.mjs).
-export type NativeEvent={type:'ready'|'running'|'failed'|'ended'|'paused'|'diagnostic';id?:string;message?:string;result?:number;value?:boolean};
+export type NativeEvent={type:'ready'|'running'|'failed'|'ended'|'paused'|'diagnostic'|'outcome';id?:string;message?:string;result?:number;value?:boolean;outcome?:'victory'|'defeat'};
 const KEY_CODES:Record<string,number>={ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40,a:37,w:38,d:39,s:40,z:90,x:88,c:67,Enter:13,' ':32,Shift:16};
 // Keys the original game reads; browser shortcuts stay with the page.
 export function nativeKeyCode(key:string):number|undefined{return KEY_CODES[key.length===1?key.toLowerCase():key];}
 export function isNativeEvent(data:unknown):data is NativeEvent{
- const d=data as {source?:unknown;type?:unknown}|null;
- return !!d&&d.source==='underrune-native'&&typeof d.type==='string'&&['ready','running','failed','ended','paused','diagnostic'].includes(d.type);
+ const d=data as {source?:unknown;type?:unknown;outcome?:unknown}|null;
+ if(!d||d.source!=='underrune-native'||typeof d.type!=='string')return false;
+ if(d.type==='outcome')return d.outcome==='victory'||d.outcome==='defeat';
+ return ['ready','running','failed','ended','paused','diagnostic'].includes(d.type);
 }
 export async function fetchNativeProfiles(url='/native/profiles'):Promise<Set<string>>{
  try{const response=await fetch(url);if(!response.ok)return new Set();const ids=await response.json();return new Set(Array.isArray(ids)?ids.filter((id):id is string=>typeof id==='string'):[]);}catch{return new Set();}

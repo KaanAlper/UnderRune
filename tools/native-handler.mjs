@@ -7,10 +7,14 @@ import {fileURLToPath} from 'node:url';
 export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const defaultGameDir = () => path.resolve(process.env.DELTARUNE_DIR ?? 'C:/Program Files (x86)/Steam/steamapps/common/DELTARUNE');
 // Encounters the native launcher cannot start yet; the app keeps their browser adaptation.
-export const NATIVE_UNSUPPORTED = new Set(['ch3-mantle', 'ch3-susiezilla']);
+export const NATIVE_UNSUPPORTED = new Set([]);
+// Chapter 3 action encounters run in their own original rooms instead of scr_battle (see build-native-launcher.csx).
+const ACTION_ROOMS = {'ch3-mantle': {room: 'shadowmantle', code: /shadow_?mantle|board_controller/i}, 'ch3-susiezilla': {room: 'susiezilla', code: /susiezilla/i}};
 
 export async function nativeProfiles(root = projectRoot) {
   const catalog = JSON.parse(await fs.readFile(path.join(root, 'src/bosses/catalog.json'), 'utf8'));
+  // Source party per encounter (src/bosses/parties.json, evidence in docs/encounter-parties.json).
+  const parties = JSON.parse(await fs.readFile(path.join(root, 'src/bosses/parties.json'), 'utf8'));
   const profiles = {};
   for (let chapter = 1; chapter <= 5; chapter++) {
     const calls = JSON.parse(await fs.readFile(path.join(root, `extracted/chapter${chapter}_windows/battle-calls.json`), 'utf8'));
@@ -18,13 +22,13 @@ export async function nativeProfiles(root = projectRoot) {
       const call = calls.find(c => new RegExp(`scr_battle\\(${record.encounter},`).test(c.call));
       const special = Number(call?.call.match(/scr_battle\(\d+,\s*(\d+)/)?.[1] ?? 0);
       const music = [...(call?.context ?? '').matchAll(/snd_init\("([^"]+\.ogg)"\)/g)].at(-1)?.[1] ?? 'battle.ogg';
-      profiles[record.id] = {id: record.id, name: record.name, chapter, encounter: record.encounter, special, music, party: [1, 2, 3], sourceCall: call?.file ?? null, fullParity: false};
+      const party = parties[record.id]?.party;
+      if (!Array.isArray(party) || party.length !== 3 || !party[0]) throw Error('No source party for ' + record.id);
+      const action = ACTION_ROOMS[record.id];
+      profiles[record.id] = {id: record.id, name: record.name, chapter, encounter: Math.max(record.encounter, 0), special, music, party, ...(action ? {room: action.room} : {}), sourceCall: call?.file ?? null, fullParity: false};
     }
   }
   profiles['ch1-25'] = {...profiles['ch1-25'], special: 3, music: 'joker.ogg', sourceCall: 'gml_Object_obj_con24_Step_0.gml', originalRoom: 'room_cc_joker'};
-  if (profiles['ch2-84']) profiles['ch2-84'].party = [1, 0, 0];
-  // Source Berdly ride encounter uses Kris and Noelle rather than the mansion party.
-  if (profiles['ch2-58']) profiles['ch2-58'].party = [1, 4, 0];
   return {catalog, profiles};
 }
 
@@ -48,7 +52,18 @@ export function createNativeHandler({root = projectRoot, game = defaultGameDir()
     const {catalog, profiles} = await nativeProfiles(root);
     const fileLists = Object.fromEntries(await Promise.all([1, 2, 3, 4, 5].map(async c => [c, await listFiles(path.join(game, `chapter${c}_windows`))])));
     const musicFiles = new Set(await fs.readdir(path.join(game, 'mus')));
-    return {catalog, profiles, fileLists, musicFiles};
+    // Every track a chapter ever assigns as battle music (scr_battle tables, intro objects, parent enemies).
+    // They are few (8-25 MB per chapter), so each battle gets all of them and never misses its theme.
+    const battleMusic = Object.fromEntries(await Promise.all([1, 2, 3, 4, 5].map(async c => {
+      const dir = path.join(root, `extracted/chapter${c}_windows/code`), found = new Set();
+      for (const file of await fs.readdir(dir)) {
+        const gml = await fs.readFile(path.join(dir, file), 'utf8');
+        if (!gml.includes('batmusic')) continue;
+        for (const m of gml.matchAll(/batmusic(?:\[0\])?\s*=\s*(?:snd_init\()?"([^"/]+\.ogg)"/g)) found.add(m[1]);
+      }
+      return [c, found];
+    })));
+    return {catalog, profiles, fileLists, musicFiles, battleMusic};
   })().catch(error => { setup = undefined; throw error; });
   return async (req, res, next) => {
     const url = new URL(req.url, 'http://127.0.0.1');
@@ -57,16 +72,17 @@ export function createNativeHandler({root = projectRoot, game = defaultGameDir()
     try {
       if (url.pathname === '/native/' || url.pathname === '/native') return send(playerHtml, 'text/html; charset=utf-8');
       if (url.pathname === '/native/player.mjs') return send(await fs.readFile(path.join(root, 'tools/native-player.mjs')), types['.mjs']);
-      const {catalog, profiles, fileLists, musicFiles} = await prepare();
+      const {catalog, profiles, fileLists, musicFiles, battleMusic} = await prepare();
       if (url.pathname === '/native/profiles') return send(JSON.stringify(Object.keys(profiles)), types['.json']);
       if (url.pathname === '/native/config') {
         const profile = profiles[url.searchParams.get('id')];
         if (!profile) return send('Bu karşılaşmanın native başlatıcısı yok.', 'text/plain; charset=utf-8', 404);
-        const music = new Set([profile.music, 'AUDIO_DRONE.ogg']);
+        const music = new Set([profile.music, 'AUDIO_DRONE.ogg', ...battleMusic[profile.chapter]]);
         const dir = path.join(root, `extracted/chapter${profile.chapter}_windows/code`), record = catalog.find(r => r.id === profile.id);
         const objects = record.enemies.map(e => e.object);
         if (profile.originalRoom) objects.push('obj_con24');
-        for (const file of await fs.readdir(dir)) if (objects.some(o => file.startsWith('gml_Object_' + o + '_'))) {
+        const actionCode = ACTION_ROOMS[profile.id]?.code;
+        for (const file of await fs.readdir(dir)) if (objects.some(o => file.startsWith('gml_Object_' + o + '_')) || (actionCode && actionCode.test(file))) {
           const gml = await fs.readFile(path.join(dir, file), 'utf8');
           for (const match of gml.matchAll(/"([^"/]+\.ogg)"/g)) music.add(match[1]);
         }

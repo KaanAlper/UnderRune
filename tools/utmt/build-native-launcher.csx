@@ -16,7 +16,8 @@ ini_open(""UnderRune.ini"");
 global.ur_encounter = ini_read_real(""battle"", ""encounter"", 25);
 global.ur_special = ini_read_real(""battle"", ""special"", 0);
 global.ur_music = ini_read_string(""battle"", ""music"", ""battle.ogg"");
-global.char[0] = 1;
+global.ur_room = ini_read_string(""battle"", ""room"", """");
+global.char[0] = ini_read_real(""party"", ""0"", 1);
 global.char[1] = ini_read_real(""party"", ""1"", 2);
 global.char[2] = ini_read_real(""party"", ""2"", 3);
 for (var hero = 1; hero <= HERO_MAX; hero += 1) {
@@ -28,9 +29,16 @@ for (var slot = 0; slot < 12; slot += 1) global.item[slot] = ini_read_real(""ite
 ini_close();
 global.charauto[2] = 0;
 global.tempflag[4] = 1;
+global.ur_watch = 0;
+call_later(15, 1, function() {
+if (global.ur_watch == 0 && instance_exists(obj_battlecontroller)) global.ur_watch = 1;
+else if (global.ur_watch == 1 && !instance_exists(obj_battlecontroller)) { global.ur_watch = 2; show_debug_message(""UNDERRUNE_OUTCOME "" + ((room == room_gameover) ? ""defeat"" : ""victory"")); }
+}, true);
 JEvil_BRANCH
 room_goto(room_battletest);
-".Replace("HERO_MAX",chapter==1?"3":"4").Replace("JEvil_BRANCH",chapter==1?"if (global.ur_encounter == 25) { room_goto(room_cc_joker); exit; }":"");
+".Replace("HERO_MAX",chapter==1?"3":"4").Replace("JEvil_BRANCH",chapter==1?"if (global.ur_encounter == 25) { room_goto(room_cc_joker); exit; }":
+ // Chapter 3 action encounters are not scr_battle fights: they run in their own original rooms.
+ chapter==3?"if (global.ur_room == \"shadowmantle\") { room_goto(room_shadowmantle); exit; }\nif (global.ur_room == \"susiezilla\") { room_goto(room_susiezilla); exit; }":"");
 var room=Data.Rooms.First(r=>r.Name.Content=="room_battletest");
 // Remove only debug-selection/automatic-trigger instances in the copied test arena.
 // Preserve every original object and script definition, including those removed here.
