@@ -35,6 +35,7 @@ let native:NativeBattle|null=null,nativeRecord:EncounterRecord|null=null,nativeI
 const reducedMotion=()=>prefs.reducedEffects||matchMedia('(prefers-reduced-motion: reduce)').matches;
 let theater=new TheaterState(reducedMotion()),theaterView:TheaterView|null=null;
 let scene:'theater'|'intro'|'room'|'menu'|'battle'|'native'|'remake'='theater',chapter=1,selection=0,frame=0,last=0,raf=0,busy=false,sceneKey='',keyCooldown=0,sessionToken=0,victoryRecorded=false;
+let remakeLoad:AbortController|null=null;
 const empty={x:0,y:0,confirm:false,cancel:false,restart:false,pause:false,slow:false,shoot:false};
 const menuRecords=()=>catalog.filter(r=>r.chapter===chapter);
 function updatePreferences(){document.body.classList.toggle('reduced',prefs.reducedEffects);element('mute').textContent=prefs.muted?'SOUND OFF':'SOUND ON';element('mute').setAttribute('aria-pressed',String(prefs.muted));element('effects').textContent=prefs.reducedEffects?'CRT OFF':'CRT ON';element('effects').setAttribute('aria-pressed',String(prefs.reducedEffects));savePrefs(storage,prefs);}
@@ -47,11 +48,12 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
  if(!['ch1-25','ch1-2'].includes(record.id))throw Error('This encounter is still in development. Your preparation is saved.');
  if(busy)return;busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* CONNECTING '+record.name.toUpperCase()+'...';const token=++sessionToken;
  const pattern=Number(element<HTMLSelectElement>('attack-select').value)||0;
- try{remakeAssets??=await loadRemakeAssets();if(token!==sessionToken)return;closeBattle();publicLoadout=structuredClone(loadout);
+ const controller=new AbortController();remakeLoad?.abort();remakeLoad=controller;
+ try{remakeAssets??=await loadRemakeAssets();if(token!==sessionToken)return;await audio.prepareEffects(remakeAssets.sounds,controller.signal);if(token!==sessionToken)return;closeBattle();publicLoadout=structuredClone(loadout);
   remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern):new SourceBattle(remakeAssets.bank,equipment!.chapters[1],loadout,record.id);remake.rt.gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);
   remakeView=new BattleView(remakeCtx,assets,remakeAssets.draw);remakeConfirm=false;remakeCancel=false;remakeMoveCooldown=0;
-  remake.rt.sound=name=>audio.effect(name==='snd_hurt1'?'hurt':name==='snd_damage'?'fight':name);renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(record.id==='ch1-25'?'joker':'lancerfight');
- }finally{if(token===sessionToken){busy=false;loading.hidden=true;input.clear();clock.reset();}}
+  remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.stopAllSounds=()=>audio.stop();renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(record.id==='ch1-25'?'joker':'lancerfight');
+ }catch(e){if(token===sessionToken)throw e;}finally{if(remakeLoad===controller)remakeLoad=null;if(token===sessionToken){busy=false;loading.hidden=true;input.clear();clock.reset();}}
 }
 async function launchNative(record:EncounterRecord,ini:string){
  if(busy)throw Error('Another battle is loading.');busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* '+record.name.toUpperCase()+' / LOADING ORIGINAL ENGINE...';const token=++sessionToken;

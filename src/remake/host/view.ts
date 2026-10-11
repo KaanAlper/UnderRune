@@ -4,6 +4,7 @@ import {SourceBattle} from './battle';
 import {lengthdirX,lengthdirY} from '../gm/math';
 import {pixelHeart} from '../../game/renderer';
 import {C} from '../gm/graphics';
+import {mergeColor,afterimage} from '../deltarune/battle';
 // scr_charbox positions, original command/head/name/HP sprites and attackpress lanes.
 const heads=['spr_headkris','spr_headsusie','spr_headralsei'];
 const names=['spr_bnamekris','spr_bnamesusie','spr_bnameralsei'];
@@ -12,6 +13,7 @@ const colors=['#00ffff','#ff00ff','#00ff00'];
 export class BattleView{
  private rot=0;private rotSpeed=0;private bgx=0;private bgAlpha=0;private black=0;
  private bgTint:HTMLCanvasElement|null=null;
+ private trailTick=-1;
  constructor(readonly ctx:CanvasRenderingContext2D,readonly assets:AssetStore,readonly drawAssets:DrawAssets){}
  private text(s:string,x:number,y:number,color='#fff',scale=1,align:'left'|'center'|'right'='left'){this.assets.text(this.ctx,s,x,y,scale,color,align);}
  background(b:SourceBattle){
@@ -47,12 +49,19 @@ export class BattleView{
    c.fillStyle='#800000';c.fillRect(chunk+128,y+19,75,8);c.fillStyle=color;c.fillRect(chunk+128,y+19,Math.max(0,Math.ceil(hp/max*75)),8);
   }
   if(b.phase==='timing'){
-   for(let i=0;i<b.party.length;i++)if(b.bolts.some(x=>x.actor===i)){
-    const y=370+38*i;c.strokeStyle=colors[b.party[i]-1];c.lineWidth=2;c.strokeRect(157,y+1,122,34);
-    sprite('spr_pressfront',b.party[i]-1,80,y);sprite('spr_pressfront_b',0,80,y);sprite('spr_pressspot',b.party[i]-1,160,y);
-    for(const bolt of b.bolts.filter(x=>x.actor===i&&x.alive))sprite('spr_attackspot',0,160+(bolt.frame-b.boltTick)*8,y,Math.min(1,1+(bolt.frame-b.boltTick)/3));
+   for(let i=0;i<3;i++){
+    const y=365+38*i;rt.drawState.color=0x800000;if(i>0)rt.drawRect(2,y,302,y+2);
+    if(!b.bolts.some(x=>x.actor===i))continue;
+    rt.drawState.color=mergeColor([0xff0000,C.purple,C.green][b.party[i]-1],C.white,b.pressBuffer[i]/5);
+    rt.drawRect(80,y,202,y+36,true);rt.drawRect(81,y+1,201,y+35,true);
+    sprite('spr_pressfront',b.party[i]-1,2,y);sprite('spr_pressfront_b',0,2,y);sprite('spr_pressspot',b.party[i]-1,82,y);
+    for(const bolt of b.bolts.filter(x=>x.actor===i&&x.alive)){const gap=bolt.frame-b.boltTick,x=82+gap*8;sprite('spr_attackspot',0,x,y,Math.min(1,1+gap/3));if(gap>=0&&b.boltTick%2===0&&this.trailTick!==b.boltTick){const trail=rt.create(afterimage,x+rt.view.x,y+rt.view.y);trail.sprite='spr_attackspot';trail.imageAlpha=.4;}}
    }
-   this.text('Z / ENTER',600,444,'#807b87',1,'right');
+   this.trailTick=b.boltTick;b.pressBuffer=b.pressBuffer.map(n=>Math.max(0,n-1));
+   // These sprites live in the GM scene, but the HUD's black fill is above the scene.
+   // Draw their sprite once more above the lanes without running their Step/Draw events again.
+   for(const effect of rt.instances)if(effect.live&&(effect.object.name==='obj_burstbolt'||effect.object===afterimage&&effect.sprite==='spr_attackspot'))rt.drawSelf(effect);
+   if(b.timingFade>0){c.save();c.globalAlpha=Math.min(1,b.timingFade);c.fillStyle='#000';c.fillRect(1,364,640,116);c.restore();}
   }else if(menu&&b.phase!=='command'){
    const choices=b.choices,start=Math.floor(b.cursor/6)*6;
    for(let i=start;i<Math.min(choices.length,start+6);i++){const row=i-start,col=row%2,x=30+col*290,y=375+Math.floor(row/2)*30;const item=choices[i];if(i===b.cursor)pixelHeart(c,x-15,y+11,'#ff243c',1);this.text(item.name,x,y,item.disabled?'#777':i===b.cursor?'#ff0':'#fff');}

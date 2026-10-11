@@ -1,8 +1,9 @@
 import {spriteBank,type RawSpriteFile,type SpriteBank} from '../gm/sprites';
 import type {DrawAssets,FontData,FrameRef} from './canvas';
 import {assetUrl} from '../../game/url';
-type Bundle=Omit<RawSpriteFile,'sprites'>&{pages:string[];sprites:(RawSpriteFile['sprites'][number]&{frameRects:(FrameRef|null)[]})[];fonts:Record<string,FontData|{kind:'bitmap';image:string;size:number;glyphs:Record<number,any>}>};
-export async function loadRemakeAssets():Promise<{bank:SpriteBank;draw:DrawAssets}>{
+import type {SourceSound} from '../../game/audio';
+type Bundle=Omit<RawSpriteFile,'sprites'>&{pages:string[];sprites:(RawSpriteFile['sprites'][number]&{frameRects:(FrameRef|null)[]})[];fonts:Record<string,FontData|{kind:'bitmap';image:string;size:number;glyphs:Record<number,any>}>;sounds?:Record<string,{file:string;volume:number;pitch:number}>};
+export async function loadRemakeAssets():Promise<{bank:SpriteBank;draw:DrawAssets;sounds:Record<string,SourceSound>} >{
  const base=assetUrl('/generated/remake/ch1/');
  const response=await fetch(base+'bundle.json');if(!response.ok)throw Error('Practice assets could not load. Please retry.');
  const bundle=await response.json() as Bundle;
@@ -13,7 +14,7 @@ export async function loadRemakeAssets():Promise<{bank:SpriteBank;draw:DrawAsset
   else fonts.set(name,font as FontData);
  }
  const sprites=new Map(bundle.sprites.map(s=>[s.name,{...s,frames:s.frameRects}]));
- return {bank:spriteBank(bundle),draw:{pages,sprite:name=>sprites.get(name),font:name=>fonts.get(name)}};
+ return {bank:spriteBank(bundle),draw:{pages,sprite:name=>sprites.get(name),font:name=>fonts.get(name)},sounds:Object.fromEntries(Object.entries(bundle.sounds??{}).map(([name,s])=>[name,{url:base+s.file,volume:s.volume,pitch:s.pitch}]))};
 }
 function loadImage(url:string):Promise<HTMLImageElement>{
  return new Promise((resolve,reject)=>{const image=new Image(),timer=setTimeout(()=>{image.src='';reject(Error('Asset load timed out. Please retry.'));},15000);image.onload=()=>{clearTimeout(timer);resolve(image);};image.onerror=()=>{clearTimeout(timer);reject(Error('Practice image could not load. Please retry.'));};image.src=url;});

@@ -6,6 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 import {fileURLToPath} from 'node:url';
+import {parseSounds,embeddedAudio} from './sound-assets.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const chapter = Number(process.argv[2] ?? 1);
@@ -74,8 +75,19 @@ for (const name of fontNames) {
   fonts[name] = {kind: 'bitmap', image: file, size: font.size, glyphs: Object.fromEntries(font.glyphs.map(g => [g.charCode, {x: g.x, y: g.y, w: g.w, h: g.h, shift: g.shift, offset: g.offset}]))};
 }
 const missing = [...names].filter(n => !sprites.some(s => s.name === n));
+const gameRoot=process.env.DELTARUNE_DIR??'C:/Program Files (x86)/Steam/steamapps/common/DELTARUNE';
+const gameChapter=path.join(gameRoot,`chapter${chapter}_windows`),data=await fs.readFile(path.join(gameChapter,'data.win'));
+const soundNames=new Set(text.match(/\bsnd_[A-Za-z0-9_]+/g)??[]),sounds={},banks=new Map([[0,data]]);
+await fs.mkdir(path.join(out,'sounds'),{recursive:true});
+for(const sound of parseSounds(data,soundNames)){
+ if(!/^snd_[A-Za-z0-9_]+$/.test(sound.name)||sound.group<0||sound.volume<0||!Number.isFinite(sound.pitch))throw Error('Invalid sound metadata');
+ if(!banks.has(sound.group))banks.set(sound.group,await fs.readFile(path.join(gameChapter,`audiogroup${sound.group}.dat`)));
+ const sample=embeddedAudio(banks.get(sound.group),sound.audio),format=sample.toString('ascii',0,4),extension=format==='RIFF'?'wav':format==='OggS'?'ogg':null;if(!extension)throw Error('Unsupported embedded audio: '+sound.name);
+ const file=`sounds/${sound.name}.${extension}`;await fs.writeFile(path.join(out,file),sample);sounds[sound.name]={file,volume:sound.volume,pitch:sound.pitch};
+}
 await fs.writeFile(path.join(out, 'bundle.json'), JSON.stringify({
   chapter, atLeast2022_1: collision.atLeast2022_1, optionsInfo: collision.optionsInfo,
-  pages: pages.map((_, i) => `atlas${i}.png`), sprites, fonts,
+  pages: pages.map((_, i) => `atlas${i}.png`), sprites, fonts, sounds,
 }));
 console.log(`chapter ${chapter}: ${sprites.length} sprites, ${pieces.length} frames on ${pages.length} atlas pages, ${Object.keys(fonts).length} fonts` + (missing.length ? `; not found: ${missing.join(' ')}` : ''));
+console.log(`${Object.keys(sounds).length} original sound effects extracted from their source audio banks`);

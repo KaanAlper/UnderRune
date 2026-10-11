@@ -10,6 +10,9 @@ import {jokerBody} from '../bosses/jevil/body';
 import {lancerBoss,lancerBike} from '../bosses/lancer/bike';
 import {JEVIL_PATTERNS} from './practice';
 import strings from './text.json';
+import {battleHero,heroSprites,heroSize} from './heroes';
+import {burstBolt,basicAttack} from '../deltarune/player-effects';
+import {C} from '../gm/graphics';
 const text=(key:string)=>(strings as Record<string,string>)[key]??'';
 export const plain=(s:string)=>s.replace(/\^\d/g,'').replace(/\/[%%]?|%%/g,'').replace(/[&#]/g,'\n').replace(/\\[A-Za-z]\d/g,'').trim();
 const jtext=(line:number)=>plain(text('obj_joker_slash_Step_0_gml_'+line+'_0'));
@@ -18,13 +21,13 @@ export type BattlePhase='intro'|'command'|'enemyTarget'|'act'|'magic'|'item'|'al
 export type Choice={name:string;detail?:string;cost?:number;disabled?:boolean;value?:number};
 type Action={kind:'fight'|'act'|'magic'|'item'|'spare'|'defend'|'assist';value?:number;target?:number;bagIndex?:number};
 export type Bolt={actor:number;frame:number;alive:boolean;points:number};
-const heroSprites=[['spr_krisb_idle','spr_krisb_attackready','spr_krisb_attack','spr_krisb_hurt','spr_krisb_defend','spr_krisb_defeat'],['spr_susieb_idle','spr_susieb_attackready','spr_susieb_attack','spr_susieb_hurt','spr_susieb_defend','spr_susieb_defeat'],['spr_ralseib_idle','spr_ralseib_attackready','spr_ralseib_attack','spr_ralsei_shock','spr_ralseib_defend','spr_ralseib_defeat']];
 export class SourceBattle{
  readonly rt:GmRuntime;readonly party:number[];readonly name:string;readonly heroes:GmInstance[];readonly control:GmInstance;readonly body:GmInstance;
  phase:BattlePhase='intro';actor=0;cursor=0;turn=0;paused=false;outcome:'victory'|'defeat'|null=null;frame=0;phaseFrame=0;
  enemyHp:number;readonly enemyMaxHp:number;enemyAt:number;enemyDf:number;mercy=0;tired=false;
  bag:number[];actions:(Action|null)[];bolts:Bolt[]=[];boltTick=0;message='';enemySpeech='';pattern=0;
  jturn=0;hypnosiscounter=0;chaosdance=0;pfactor=1;pirouette=-1;compliment=0;warned=false;
+ pressBuffer=[0,0,0];timingFade=0;private autoStruck=false;private enemyHits=0;
  private pending:Action|null=null;private pages:string[]=[];private afterMessage:()=>void=()=>{};private endTiming=0;private commandSnapshots:{tp:number;actions:(Action|null)[]}[]=[];
  constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11){
   if(!['ch1-25','ch1-2'].includes(id))throw Error('This battle is not available yet.');validateLoadout(loadout,equipment);
@@ -33,7 +36,7 @@ export class SourceBattle{
   this.bag=[...loadout.items];this.actions=this.party.map(()=>null);
   const stats=(key:'attack'|'defense'|'magic',base:number[])=>[1,2,3].map(id=>{const s=loadout.characters[id];return base[id]+equipment.weapons.find(g=>g.id===s.weapon)![key]+s.armor.reduce((n,id)=>n+equipment.armors.find(g=>g.id===id)![key],0);});
   this.rt.globals={hp:[0,90,110,70],maxhp:[0,90,110,70],char:[...this.party,...(this.party.length===2?[0]:[])],battleat:stats('attack',[0,10,14,8]),battledf:stats('defense',[0,2,2,2]),battlemag:stats('magic',[0,0,1,7]),charaction:[0,0,0],charcantarget:[1,1,this.party.length===3?1:0],chardead:[0,0,0],charmove:[1,1,this.party.length===3?1:0],charspecial:[0,0,0],targeted:[0,0,0],tension:0,maxtension:250,inv:-1,invc:1,flag:new Array(1000).fill(0),monster:[1,0,0],mnfight:0,turntimer:0,chemg_god_mode:false};
-  this.heroes=this.party.map((id,i)=>{const h=this.rt.create([b.heroKris,b.heroSusie,b.heroRalsei][id-1],this.party.length===2?80:80+i*10,this.party.length===2?[100,180][i]:[100,150,210][i]);h.sprite=heroSprites[id-1][0];h.imageXscale=2;h.imageYscale=2;h.imageSpeed=.2;h.depth=200-i*20;h.myheight=this.rt.spriteHeight(h);return h;});
+  this.heroes=this.party.map((id,i)=>{const def=battleHero([b.heroKris,b.heroSusie,b.heroRalsei][id-1],()=>this.applyFightHit(i));const h=this.rt.create(def,this.party.length===2?80:80+i*10,this.party.length===2?[100,180][i]:[100,150,210][i]);Object.assign(h,{char:id,myself:i,sprite:heroSprites[id-1][0],imageXscale:2,imageYscale:2,imageSpeed:0,depth:200-i*20,mywidth:heroSize[id-1][0],myheight:heroSize[id-1][1],pose:'idle',faceaction:0,siner:0,attacktimer:0,defendtimer:0,hurt:0,hurttimer:0,points:0});return h;});
   this.rt.globals.charinstance=[...this.heroes.map(h=>h.id),...(this.party.length===2?[0]:[])];const ev=this.rt.create(b.eventManager,0,0);ev.visible=false;
   this.control=this.rt.create(b.battleController,0,0);Object.assign(this.control,{timeron:0,reset:0,noreturn:0,onebuffer:0,twobuffer:0,lbuffer:0,rbuffer:0,grazenoise:0,damagenoise:0});this.control.visible=false;
   this.body=this.rt.create(id==='ch1-25'?jokerBody:lancerBoss,id==='ch1-25'?500:540,id==='ch1-25'?160:200);this.body.depth=15;
@@ -56,7 +59,7 @@ export class SourceBattle{
   this.rt.globals.mnfight=0;this.control.timeron=0;this.control.reset=0;this.actions=this.party.map(()=>null);this.commandSnapshots=[];
   if(this.autoSusie&&this.rt.globals.hp[2]>0)this.actions[1]={kind:'fight'};
   this.actor=this.party.findIndex((id,i)=>this.rt.globals.hp[id]>0&&!this.actions[i]);if(this.actor<0){this.resolveTurn();return;}
-  for(let i=0;i<this.heroes.length;i++){const h=this.heroes[i];h.visible=true;h.imageAlpha=1;h.sprite=heroSprites[this.party[i]-1][this.rt.globals.hp[this.party[i]]<=0?5:0];h.imageIndex=0;h.imageSpeed=.2;}
+  for(let i=0;i<this.heroes.length;i++){const h=this.heroes[i];h.visible=true;h.imageAlpha=1;h.pose='idle';h.faceaction=0;h.attacktimer=0;h.sprite=heroSprites[this.party[i]-1][this.rt.globals.hp[this.party[i]]<=0?5:0];h.imageIndex=0;}
   this.body.condition=0;this.body.visible=true;this.setPhase('command');
  }
  select(index:number){
@@ -79,7 +82,7 @@ export class SourceBattle{
   if(this.phase==='allyTarget'){this.setPhase(this.pending?.kind==='item'?'item':'magic');return;}
   if(this.phase==='act'){this.pending={kind:'act'};this.setPhase('enemyTarget');return;}
   if(['enemyTarget','magic','item'].includes(this.phase)){this.pending=null;this.setPhase('command');return;}
-  if(this.phase==='command'&&this.commandSnapshots.length){const snapshot=this.commandSnapshots.pop()!;this.rt.globals.tension=snapshot.tp;this.actions=snapshot.actions;this.actor=this.actions.findIndex((a,i)=>!a&&this.rt.globals.hp[this.party[i]]>0);this.cursor=0;}
+  if(this.phase==='command'&&this.commandSnapshots.length){const snapshot=this.commandSnapshots.pop()!;this.rt.globals.tension=snapshot.tp;this.actions=snapshot.actions;for(let i=0;i<this.heroes.length;i++){const kind=this.actions[i]?.kind;this.heroes[i].faceaction=kind==='fight'?1:kind==='defend'?4:kind==='item'?3:kind==='magic'?2:kind==='act'?6:0;}this.actor=this.actions.findIndex((a,i)=>!a&&this.rt.globals.hp[this.party[i]]>0);this.cursor=0;}
  }
  move(x:number,y:number){
   const n=this.choices.length;if(!n)return;
@@ -92,6 +95,7 @@ export class SourceBattle{
   const cost=action.kind==='act'&&this.id==='ch1-25'?action.value===1?50:action.value===2?125:0:action.kind==='magic'?action.value===2?80:action.value===3?40:this.loadout.characters[2].weapon===7?100:125:0;
   if(cost>g.tension)return;g.tension-=cost;if(action.kind==='defend')g.tension=Math.min(250,g.tension+40);
   this.actions[this.actor]=action;
+  this.heroes[this.actor].faceaction=action.kind==='fight'?1:action.kind==='defend'?4:action.kind==='item'?3:action.kind==='magic'?2:action.kind==='act'?6:0;
   if(action.kind==='act'&&action.value===2&&this.id==='ch1-25')for(let i=1;i<this.party.length;i++)this.actions[i]={kind:'assist'};
   const next=this.party.findIndex((id,i)=>i>this.actor&&g.hp[id]>0&&!this.actions[i]);this.pending=null;
   if(next<0)this.resolveTurn();else{this.actor=next;this.setPhase('command');}
@@ -112,31 +116,44 @@ export class SourceBattle{
    if(a.kind==='spare'){if(this.mercy>=(this.id==='ch1-25'?999:100)){this.victory();return;}pages.push(`* But ${this.name} wasn't ready to be SPARED.`);if(this.id==='ch1-2')this.mercy+=10;}
   }
   for(const a of this.actions.filter(a=>a?.kind==='item').sort((a,b)=>b!.bagIndex!-a!.bagIndex!))this.bag.splice(a!.bagIndex!,1);
-  if(this.outcome)return;this.say(pages,()=>this.beginTiming());
+  if(this.outcome||this.phase==='victory')return;this.say(pages,()=>this.beginTiming());
  }
  private beginTiming(){
   const fighters=this.actions.map((a,i)=>a?.kind==='fight'&&!(this.autoSusie&&i===1)?i:-1).filter(i=>i>=0);
-  this.bolts=[];this.boltTick=0;this.endTiming=0;let offset=0,last=-1;const order=[...fighters];
+  this.bolts=[];this.boltTick=0;this.endTiming=0;this.timingFade=0;this.autoStruck=false;this.enemyHits=0;this.pressBuffer=[0,0,0];let offset=0,last=-1;const order=[...fighters];
+  // Create consumes this unused legacy ordering before generating the one-button bolts.
+  let legacy=this.rt.random.choose(0,1,2);if(!fighters.includes(1)&&!fighters.includes(2))legacy=0;
+  this.rt.random.choose(...([0,1,2].filter(i=>i!==legacy)));if(fighters.includes(1)&&!fighters.includes(2))this.rt.random.choose(0,1);
   // attackpress's selection order and gaps, including the initial -1 frame offset.
   const used=new Set<number>();for(let i=0;i<fighters.length;i++){let actor=this.rt.random.choose(0,1,2);while(!fighters.includes(actor)||used.has(actor))actor=this.rt.random.choose(0,1,2);order[i]=actor;used.add(actor);}
   for(let i=0;i<order.length;i++){offset+=last;this.bolts.push({actor:order[i],frame:30+offset,alive:true,points:0});last=i<order.length-1&&last!==0&&order[i]!==order[i+1]?this.rt.random.choose(0,12,18):this.rt.random.choose(12,18);}
-  if(this.autoSusie&&this.actions[1]?.kind==='fight')this.hitEnemy(this.warned?0:Math.max(0,round(this.rt.globals.battleat[1]*160/20-this.enemyDf*3)),1,160);
-  if(this.outcome)return;if(!this.bolts.length){this.beginEnemy();return;}
-  for(const i of fighters){this.heroes[i].sprite=heroSprites[this.party[i]-1][1];this.heroes[i].imageIndex=0;}
+  if(!this.bolts.length&&!this.autoSusie){this.beginEnemy();return;}
+  for(const i of fighters){this.heroes[i].faceaction=1;this.heroes[i].imageIndex=0;}
   this.setPhase('timing');
  }
  private strike(){
-  // scr_boltcheck_onebutton: nearest qualifying bolt, plus one tied bolt, immediate hero attack.
+  // scr_boltcheck_onebutton: nearest qualifying bolt plus one tied bolt.
+  this.pressBuffer=[5,5,5];
   const candidates=this.bolts.filter(b=>b.alive&&b.frame-this.boltTick<15&&b.frame-this.boltTick>-5).sort((a,b)=>a.frame-b.frame);if(!candidates.length)return;
   const first=candidates[0],gap=first.frame-this.boltTick,p=Math.abs(gap),points=p===0?150:p===1?120:p===2?110:100-p*2;
-  for(const bolt of candidates.filter(b=>b.frame===first.frame).slice(0,2)){bolt.alive=false;bolt.points=points;this.hitEnemy(Math.max(0,round(this.rt.globals.battleat[bolt.actor]*points/20-this.enemyDf*3)),bolt.actor,points);}
+  for(const bolt of candidates.filter(b=>b.frame===first.frame).slice(0,2)){bolt.alive=false;bolt.points=points;const burst=this.rt.create(burstBolt,82+gap*8,365+38*bolt.actor);if(p===0){burst.imageBlend=C.yellow;burst.mag=.2;}else if(p>=3)burst.imageBlend=b.mergeColor([C.aqua,0xff00ff,C.lime][bolt.actor],C.white,.5);this.startSwing(bolt.actor,points);}
  }
- private hitEnemy(amount:number,actor:number,points=0){
+ private startSwing(actor:number,points:number){
+  const h=this.heroes[actor];h.pose='attack';h.points=points;h.attacktimer=0;h.alarm[1]=10;
+  this.rt.sound?.('snd_laz_c',h.char===2?.9:h.char===3?1.15:1,true);
+  if(points===150){this.rt.sound?.('snd_criticalswing',1,true);for(let i=0;i<3;i++){const a=this.rt.create(b.afterimage,h.x+h.mywidth+this.rt.random.random(50),h.y+30+this.rt.random.random(30));Object.assign(a,{sprite:'spr_lightfairy',imageSpeed:.25,depth:-20,imageXscale:2,imageYscale:2,hspeed:2+this.rt.random.random(4),friction:-.25});}}
+ }
+ private applyFightHit(actor:number){
+  if(this.outcome||this.enemyHp<=0)return;const points=this.heroes[actor].points,amount=Math.max(0,round(this.rt.globals.battleat[actor]*points/20-this.enemyDf*3));this.heroes[actor].faceaction=0;this.hitEnemy(amount,actor,points,true);
+ }
+ private hitEnemy(amount:number,actor:number,points=0,fight=false){
   this.enemyHp=Math.max(0,this.enemyHp-amount);const g=this.rt.globals;if(amount>0)g.tension=Math.min(250,g.tension+round(points/(this.id==='ch1-25'?15:10)));
-  const h=this.heroes[actor];h.sprite=heroSprites[this.party[actor]-1][2];h.imageIndex=0;h.attackUntil=this.frame+18;
-  const w=this.rt.create(b.dmgWriter,this.body.x+20,this.body.y+20);w.damage=amount;w.type=actor;w.delay=8;
-  if(this.id==='ch1-25'&&amount>0){this.body.condition=1;this.body.maxdist=amount;}
-  this.rt.sound?.('snd_damage');if(this.enemyHp<=0)this.victory();
+  const x=this.body.x+(this.id==='ch1-25'?20:0),y=this.body.y+(this.id==='ch1-25'?20:0);
+  const w=this.rt.create(b.dmgWriter,x,y+20-this.enemyHits++*20);w.damage=amount;w.type=this.party[actor]-1;w.delay=fight&&amount>0?8:2;
+  if(fight&&amount>0){const a=this.rt.create(basicAttack,x+this.rt.random.random(6),y+this.rt.random.random(6));if(this.party[actor]===2){a.sprite='spr_attack_mash2';a.imageSpeed=.5;a.maxindex=4;this.rt.sound?.('snd_impact');this.rt.create(b.shake,0,0);}if(this.party[actor]===3){a.sprite='spr_attack_slap1';a.imageSpeed=.5;a.maxindex=4;}if(points===150){a.imageXscale=2.5;a.imageYscale=2.5;}}
+  if(this.id==='ch1-25'&&amount>0){this.body.condition=1;this.body.siner=0;this.body.maxdist=Math.max(30,this.body.maxdist+20+amount/5);this.body.floatsinerspeed=1+(1-this.enemyHp/this.enemyMaxHp);const laugh=this.rt.random.choose('snd_joker_laugh0','snd_joker_ha1','snd_joker_ha0');this.rt.sound?.(laugh);}
+  if(this.id==='ch1-2'){if(amount>0){this.body.state=3;this.body.shakex=9;this.body.hurttimer=30;}else if(this.body.hurttimer<=15){this.body.state=4;this.body.dodgetimer=0;}}
+  if(!fight&&amount>0)this.rt.sound?.('snd_damage');if(this.enemyHp<=0)this.victory();
  }
  private heal(target:number,amount:number){
   const g=this.rt.globals,id=this.party[target],wasDown=g.hp[id]<=0;if(g.hp[id]<=g.maxhp[id])g.hp[id]=Math.min(g.maxhp[id],g.hp[id]+amount);
@@ -171,6 +188,7 @@ export class SourceBattle{
  }
  private beginEnemy(){
   if(this.outcome)return;const g=this.rt.globals;g.targeted=[0,0,0];
+  for(const h of this.heroes){h.pose='idle';h.faceaction=this.actions[h.myself]?.kind==='defend'?4:0;}
   if(this.id==='ch1-25'){
    if(this.pirouette!==2)g.invc=1;
    const ratio=this.enemyHp/this.enemyMaxHp,h=this.hypnosiscounter;
@@ -213,17 +231,23 @@ export class SourceBattle{
   this.body.condition=0;this.body.visible=true;for(const h of this.heroes)h.imageAlpha=1;
   this.setPhase('return');
  }
- private victory(){this.outcome='victory';this.setPhase('victory');this.message='* YOU WON!';this.body.visible=false;this.control.timeron=0;}
+ private victory(){this.setPhase('victory');this.message='* YOU WON!';this.body.visible=false;this.control.timeron=0;}
  step(){
   if(this.paused||this.outcome)return;this.frame++;this.phaseFrame++;const rt=this.rt,g=rt.globals;
-  rt.step();for(let i=0;i<this.heroes.length;i++){const h=this.heroes[i];if(g.hp[this.party[i]]<=0)h.sprite=heroSprites[this.party[i]-1][5];else if(h.hurt===1){h.sprite=heroSprites[this.party[i]-1][3];h.hurt=0;h.attackUntil=this.frame+12;}else if(h.attackUntil&&h.attackUntil<=this.frame){h.sprite=heroSprites[this.party[i]-1][this.actions[i]?.kind==='defend'?4:0];h.attackUntil=0;}}
+  rt.step();
+  if(this.phase==='victory'){if(!rt.count(b.dmgWriter)&&!rt.count(basicAttack))this.outcome='victory';return;}
   if(rt.pendingRoom==='room_gameover'){this.outcome='defeat';this.setPhase('defeat');return;}
   if(this.phase==='intro'&&this.phaseFrame>=24)this.beginCommands();
   else if(this.phase==='enemyTalk'&&this.phaseFrame>=90)this.beginTransition();
   else if(this.phase==='transition'&&this.phaseFrame>=12)this.startEnemyAttack();
   else if(this.phase==='timing'){
-   for(const bolt of this.bolts)if(bolt.alive&&bolt.frame-this.boltTick<-5){bolt.alive=false;bolt.points=0;this.hitEnemy(0,bolt.actor);}
-   this.boltTick++;if(this.bolts.every(b=>!b.alive)&&++this.endTiming>=50)this.beginEnemy();
+   this.boltTick++;
+   for(const bolt of this.bolts)if(bolt.alive&&bolt.frame-this.boltTick<-5){bolt.alive=false;bolt.points=0;this.startSwing(bolt.actor,0);}
+   if(this.bolts.every(b=>!b.alive)){
+    this.endTiming++;
+    if(this.autoSusie&&this.actions[1]?.kind==='fight'&&!this.autoStruck&&this.endTiming>15){this.autoStruck=true;this.endTiming-=25;this.startSwing(1,this.warned?0:160);}
+    if(this.endTiming>50){this.timingFade+=.08;if(this.timingFade>1)this.beginEnemy();}
+   }
   }else if(this.phase==='enemy'&&this.control.reset===1)this.finishEnemy();
   else if(this.phase==='return'&&this.phaseFrame>=15){
    this.turn++;for(let i=0;i<this.party.length;i++)if(g.hp[this.party[i]]<=0)this.heal(i,Math.ceil(g.maxhp[this.party[i]]/8));

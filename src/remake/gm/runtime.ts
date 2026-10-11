@@ -120,7 +120,7 @@ export class GmRuntime{
   const d=this.drawState;this.gfx?.text(x,y,text,{font:d.font,color:d.color,alpha:d.alpha,halign:d.halign,valign:d.valign,xscale,yscale,angle});
  }
  /** Sound hooks; the game logic never waits on them. */
- sound?:(name:string)=>void;
+ sound?:(name:string,pitch?:number,restart?:boolean)=>void;
  stopAllSounds?:()=>void;
  /** Set by room_goto; the host decides what the room change means (game over, battle end). */
  pendingRoom:string|null=null;

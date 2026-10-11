@@ -67,3 +67,15 @@ test('single-pattern Jevil practice remains a separate explicit launch',async({p
  await menu(page);await page.getByRole('button',{name:'Battle JEVIL ch1-25',exact:true}).click();await page.getByRole('button',{name:'Close preparation'}).click();
  await page.getByRole('button',{name:'Practice selected boss'}).click();await page.getByRole('button',{name:'START PRACTICE'}).click();await expect(page.locator('#status')).toContainText('PRACTICE');
 });
+
+test('FIGHT shows source timing lanes, plays original samples and continues after swings',async({page})=>{
+ await page.addInitScript(()=>{(window as any).__sampleStarts=0;const create=AudioContext.prototype.createBufferSource;AudioContext.prototype.createBufferSource=function(){const voice=create.call(this),start=voice.start.bind(voice);voice.start=(...args:Parameters<AudioBufferSourceNode['start']>)=>{(window as any).__sampleStarts++;start(...args);};return voice;};});
+ const failures:string[]=[],sounds:string[]=[];page.on('pageerror',e=>failures.push(e.message));page.on('request',r=>{if(r.url().includes('/remake/ch1/sounds/'))sounds.push(r.url());});
+ await menu(page);await page.getByRole('button',{name:'Battle JEVIL ch1-25',exact:true}).click();await page.getByRole('button',{name:'START BATTLE',exact:true}).click();
+ for(let i=0;i<3;i++){await page.getByRole('button',{name:'FIGHT',exact:true}).click();await page.getByRole('button',{name:'JEVIL',exact:true}).click();}
+ await expect(page.locator('#status')).toContainText('JEVIL / timing');await page.waitForTimeout(650);await page.locator('#screen').screenshot({path:'test-results/public-timing.png'});
+ await page.keyboard.press('z');await expect.poll(()=>page.evaluate(()=>(window as any).__sampleStarts)).toBeGreaterThan(0);
+ await page.waitForTimeout(700);await page.locator('#screen').screenshot({path:'test-results/public-hit.png'});
+ await expect(page.locator('#status')).toContainText('JEVIL / enemyTalk',{timeout:8000});await expect(page.locator('#outcome')).toBeHidden();
+ expect(sounds.some(s=>s.endsWith('/snd_laz_c.wav'))).toBe(true);expect(sounds.some(s=>s.endsWith('/snd_hurt1.wav'))).toBe(true);expect(failures).toEqual([]);
+});
