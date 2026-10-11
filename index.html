@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>UnderRune</title>
-<meta name="description" content="DELTARUNE boss battles in the browser, running the original game code from your own install. A fan project.">
+<meta name="description" content="A DELTARUNE fan project with a theater intro, party preparation and playable Jevil attack practice.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
@@ -35,6 +35,7 @@ p{max-width:38em;margin:0 0 1rem}
 .tv::after{content:"";position:absolute;right:1.6rem;bottom:.8rem;width:2.8rem;height:1rem;background:radial-gradient(circle at 25% 50%,#8d8899 0 .3rem,transparent .32rem),radial-gradient(circle at 75% 50%,#8d8899 0 .3rem,transparent .32rem)}
 .tv video,.tv img{display:block;width:100%;aspect-ratio:4/3;background:#000;border:.35rem solid #15131a;image-rendering:pixelated}
 .cta{display:inline-block;font-family:'Pixelify Sans',monospace;font-size:1.2rem;color:var(--black);background:var(--select);padding:.65rem 1.3rem;text-decoration:none;border:2px solid var(--black);box-shadow:4px 4px 0 var(--black)}
+.actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:1.1rem}.cta.play{background:#16823f;color:#fff;font-weight:700;font-size:clamp(2rem,6vw,3rem);line-height:1;padding:.8rem 1.8rem;border:4px solid #fff;box-shadow:6px 6px 0 #082913;letter-spacing:.08em}.play span{font-size:.6em}.play-note{font-size:.9rem;margin:0;color:#ddd5e7}.cta.play:hover{background:#116632;box-shadow:7px 7px 0 #082913}
 .cta:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--black)}
 
 section{padding:4.5rem 0;border-top:1px solid var(--line)}
@@ -60,54 +61,50 @@ footer p{max-width:none}
 <header class="stage">
  <div class="wrap">
   <h1>UnderRune</h1>
-  <p class="lede">DELTARUNE boss battles in your browser, running the game's own code from your own copy. Every attack is the original, not a remake.</p>
+  <p class="lede">Step into the theater, choose your signal, and prepare your party. Try Jevil’s attack patterns in the browser. More battles are in development.</p>
   <div class="tv"><video id="hero" src="clips/theater.mp4" poster="clips/theater.jpg" muted loop playsinline preload="metadata" aria-label="The theater intro: pressing a remote turns the TV on and sweeps that side's colors across the stage"></video></div>
-  <a class="cta" href="https://github.com/KaanAlper/UnderRune">View the source on GitHub</a>
+  <div class="actions"><a class="cta play" href="play/">PLAY <span aria-hidden="true">▶</span></a><a class="cta" href="https://github.com/KaanAlper/UnderRune">View the source on GitHub</a></div>
+  <p class="play-note">Free browser demo · Keyboard &amp; touch controls · No installation</p>
  </div>
 </header>
 <main>
  <section>
   <div class="wrap">
-   <h2>The real fights</h2>
-   <p>All 49 boss encounters from chapters 1 to 5 load and reach combat with their original attacks, music and dialogue. These clips are recorded from the app.</p>
+   <h2>Development previews</h2>
+   <p>Clips from the local development build. These previews show work on different encounters; they are not a list of battles available in the public demo. PLAY currently includes Jevil attack practice.</p>
    <div class="battles">
     <figure><video src="clips/ch1-25.mp4" poster="clips/ch1-25.jpg" controls muted playsinline preload="none"></video><figcaption><b>JEVIL</b><span>Chapter 1, secret boss</span></figcaption></figure>
     <figure><video src="clips/ch2-61.mp4" poster="clips/ch2-61.jpg" controls muted playsinline preload="none"></video><figcaption><b>Spamton NEO</b><span>Chapter 2, secret boss</span></figcaption></figure>
     <figure><video src="clips/ch3-115.mp4" poster="clips/ch3-115.jpg" controls muted playsinline preload="none"></video><figcaption><b>Roaring Knight</b><span>Chapter 3, secret boss</span></figcaption></figure>
     <figure><video src="clips/ch4-160.mp4" poster="clips/ch4-160.jpg" controls muted playsinline preload="none"></video><figcaption><b>Hammer of Justice</b><span>Chapter 4, Susie alone</span></figcaption></figure>
     <figure><video src="clips/ch4-175.mp4" poster="clips/ch4-175.jpg" controls muted playsinline preload="none"></video><figcaption><b>Titan</b><span>Chapter 4, main boss</span></figcaption></figure>
-    <figure><video src="clips/ch5-224.mp4" poster="clips/ch5-224.jpg" controls muted playsinline preload="none"></video><figcaption><b>Pink</b><span>Chapter 5, main boss</span></figcaption></figure>
+    <figure><video src="clips/ch5-224.mp4" poster="clips/ch5-224.jpg" controls muted playsinline preload="none"></video><figcaption><b>Pink</b><span>Development encounter</span></figcaption></figure>
    </div>
   </div>
  </section>
  <section>
   <div class="wrap">
-   <h2>How it works</h2>
+   <h2>Choose your signal. Prepare your party.</h2>
    <div class="steps">
-    <div><h3>The game's own code</h3><p>The open-source <a href="https://github.com/ButterscotchRunner/Butterscotch">Butterscotch</a> GameMaker runner, compiled to WebAssembly, runs the bytecode in your installed <code>data.win</code>. A small patch adds positional audio and compiles the game's shaders for WebGL2.</p></div>
-    <div><h3>Straight into the fight</h3><p>A launcher copy of each chapter changes only the startup step, then starts the chosen encounter through the game's own <code>scr_battle</code>. Each party is taken from the game code: Susie fights Hammer of Justice alone, as in the game.</p></div>
-    <div><h3>Your gear, their rules</h3><p>Before a fight you equip weapons and armor and pack the 12-slot bag. Names, stats and who can wear what come from the game data, and the battle uses exactly that loadout.</p></div>
+    <div><h3>The theater</h3><p>Red curtains and warm lights for UNDERTALE; blue curtains and green lights for DELTARUNE. Pick a remote and watch its theme fill the stage. DELTARUNE opens the device menu. UNDERTALE is coming soon.</p></div>
+    <div><h3>Your party, your loadout</h3><p>Choose a character, equip a weapon and two armor pieces, and pack a 12-slot bag. Search equipment and compare stats. Your selections stay saved on your device.</p></div>
+    <div><h3>Jevil practice</h3><p>Try 16 attack patterns with movement, slowing, grazing and contact damage. Armor defense applies in practice. Full battles, weapon attacks, gear abilities and item use are still in development.</p></div>
    </div>
   </div>
  </section>
  <section>
   <div class="wrap">
-   <h2>Run it yourself</h2>
-   <p class="note">You need your own copy of DELTARUNE installed through Steam. Nothing from the game is in the repository; everything is read from your installation on your computer.</p>
-<pre><code>git clone https://github.com/KaanAlper/UnderRune
-cd UnderRune
-npm install
-npm run prepare:game
-npm run setup:native
-npm run dev</code></pre>
-   <p>Then open <code>http://127.0.0.1:5173</code>. Requirements, controls and the test suite are in the <a href="https://github.com/KaanAlper/UnderRune#readme">README</a>.</p>
+   <h2>Pick up the controller</h2>
+   <p>Press PLAY above to enter the theater. Select DELTARUNE’s remote, connect through the TV, open Chapter 1, and choose JEVIL. Pick an attack pattern and prepare your party before starting practice.</p>
+   <p>Move with arrow keys or WASD. Hold X or Shift to move slowly. P pauses; R restarts practice. Touch controls are available on phones. Other encounters have equipment previews while their browser battles are being built.</p>
+   <p>Want to work on the project? Find the source, local setup instructions and tests in the <a href="https://github.com/KaanAlper/UnderRune#readme">GitHub repository</a>.</p>
   </div>
  </section>
 </main>
 <footer>
  <div class="wrap">
   <p>UnderRune is a fan project and a computer engineering graduation project. Not affiliated with Toby Fox. UNDERTALE and DELTARUNE &copy; Toby Fox. Gameplay clips recorded from a legally owned copy.</p>
-  <p>Code under <a href="https://github.com/KaanAlper/UnderRune/blob/main/LICENSE">AGPL-3.0</a>. Runtime: <a href="https://github.com/ButterscotchRunner/Butterscotch">Butterscotch</a> (AGPL-3.0). Data extraction: <a href="https://github.com/UnderminersTeam/UndertaleModTool">UndertaleModTool</a>. Interface reference: <a href="https://shadowcrystal.dev/">shadowcrystal.dev</a>.</p>
+  <p>Code under <a href="https://github.com/KaanAlper/UnderRune/blob/main/LICENSE">AGPL-3.0</a>. Data extraction: <a href="https://github.com/UnderminersTeam/UndertaleModTool">UndertaleModTool</a>. Interface reference: <a href="https://shadowcrystal.dev/">shadowcrystal.dev</a>.</p>
  </div>
 </footer>
 <script>
