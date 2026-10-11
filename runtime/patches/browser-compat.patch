@@ -135,6 +135,41 @@ index 0000000..a89a04c
 +    ma_engine_listener_set_world_up(engine, 0, ux, uy, uz);
 +}
 +#endif
+diff --git a/src/cli/args.c b/src/cli/args.c
+index 607cad2..533f6d7 100644
+--- a/src/cli/args.c
++++ b/src/cli/args.c
+@@ -65,6 +65,8 @@ static void printUsage(const char *argv0) {
+         "    --dump-frame <frame>                   - Dump the runner state at the specified frame\n"
+         "    --dump-frame-json <frame>              - Dump the runner state in json at the specified frame\n"
+         "    --dump-frame-json-file <file>          - Specify an output file for runner state dumps\n"
++        "    --trace-file <file>                    - Append one compact JSON state line per frame\n"
++        "    --trace-globals <a,b,c>                - Global variables included in each trace line\n"
+         "    --speed <speed>                        - Set a normal speed multiplier\n"
+         "    --fast-forward-speed <speed>           - Set a fast-forward speed multiplier\n"
+         "    --seed <seed>                          - Seed for the random number generator\n"
+@@ -162,6 +164,8 @@ void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) {
+ #endif
+         {"lazy-audio", no_argument, nullptr, 'K'},
+         {"load-type", required_argument, nullptr, 999},
++        {"trace-file", required_argument, nullptr, 1010},
++        {"trace-globals", required_argument, nullptr, 1011},
+         {"disable-log-colours", no_argument, nullptr, 1003},
+         {"disable-log-colors", no_argument, nullptr, 1003},
+ #ifdef ENABLE_VM_OPCODE_PROFILER
+@@ -364,6 +368,12 @@ void parseCommandLineArgs(CommandLineArgs* args, int argc, char* argv[]) {
+             case 'J':
+                 args->dumpJsonFilePattern = optarg;
+                 break;
++            case 1010:
++                args->traceFilePath = optarg;
++                break;
++            case 1011:
++                args->traceGlobals = optarg;
++                break;
+             case 'M': {
+                 char* endPtr;
+                 double speed = strtod(optarg, &endPtr);
 diff --git a/src/gl/gl_renderer.c b/src/gl/gl_renderer.c
 index b19aece..8f953c5 100644
 --- a/src/gl/gl_renderer.c
@@ -286,6 +321,44 @@ index b19aece..8f953c5 100644
      glVtable.gpuSetAlphaTestEnable = glGpuSetAlphaTestEnable;
      glVtable.gpuGetAlphaTestEnable = glGpuGetAlphaTestEnable;
      glVtable.gpuSetAlphaTestRef = glGpuSetAlphaTestRef;
+diff --git a/src/loop.c b/src/loop.c
+index 2059c2a..edd3fdc 100644
+--- a/src/loop.c
++++ b/src/loop.c
+@@ -1281,6 +1281,19 @@ int loop(CommandLineArgs args, const char *argv0) {
+                 free(json);
+             }
+ 
++            // UnderRune parity trace: one compact state line per stepped frame.
++            if (args.traceFilePath != nullptr) {
++                static FILE* traceFile = nullptr;
++                if (traceFile == nullptr) traceFile = fopen(args.traceFilePath, "wb");
++                if (traceFile != nullptr) {
++                    char* line = Runner_traceFrameJson(runner, args.traceGlobals);
++                    fputs(line, traceFile);
++                    fputc('\n', traceFile);
++                    fflush(traceFile);
++                    free(line);
++                }
++            }
++
+             // Query actual framebuffer size
+             int32_t fbWidth, fbHeight;
+             platformGetWindowSize(&fbWidth, &fbHeight);
+diff --git a/src/platformdefs.h b/src/platformdefs.h
+index 5341d4b..f133901 100644
+--- a/src/platformdefs.h
++++ b/src/platformdefs.h
+@@ -81,6 +81,9 @@ typedef struct {
+     FrameSetEntry* dumpFrames;
+     FrameSetEntry* dumpJsonFrames;
+     const char* dumpJsonFilePattern;
++    // UnderRune parity trace: one compact JSON line per frame (instances, RNG state, chosen globals).
++    const char* traceFilePath;
++    const char* traceGlobals;
+ #ifdef ENABLE_VM_TRACING
+     StringBooleanEntry* varReadsToBeTraced;
+     StringBooleanEntry* varWritesToBeTraced;
 diff --git a/src/renderer.h b/src/renderer.h
 index 2dbc8b3..2c9de15 100644
 --- a/src/renderer.h
@@ -306,6 +379,90 @@ index 2dbc8b3..2c9de15 100644
      BlendFactors blendFactors;
      int32_t cameraCurrent;
  };
+diff --git a/src/runner.c b/src/runner.c
+index c2c2ee0..02bc5bc 100644
+--- a/src/runner.c
++++ b/src/runner.c
+@@ -4878,6 +4878,66 @@ static void writeRValueJson(JsonWriter* w, RValue val) {
+     }
+ }
+ 
++// UnderRune parity trace: {"f":frame,"room":name,"rng":[index,s0..s15],"g":{name:value},"o":[[id,object,x,y,imageIndex,sprite,visible],...]}
++char* Runner_traceFrameJson(Runner* runner, const char* globalsCsv) {
++    DataWin* dataWin = runner->dataWin;
++    JsonWriter w = JsonWriter_create();
++    JsonWriter_beginObject(&w);
++    JsonWriter_propertyInt(&w, "f", runner->frameCount);
++    JsonWriter_propertyString(&w, "room", runner->currentRoom != nullptr ? runner->currentRoom->name : "");
++
++    JsonWriter_key(&w, "rng");
++    JsonWriter_beginArray(&w);
++    JsonWriter_int(&w, runner->random.index);
++    repeat(16, i) JsonWriter_int(&w, runner->random.state[i]);
++    JsonWriter_endArray(&w);
++
++    JsonWriter_key(&w, "g");
++    JsonWriter_beginObject(&w);
++    Instance* globals = runner->vmContext != nullptr ? (Instance*) runner->vmContext->globalScopeInstance : nullptr;
++    if (globalsCsv != nullptr && globals != nullptr) {
++        const char* cursor = globalsCsv;
++        while (*cursor != '\0') {
++            const char* end = cursor;
++            while (*end != '\0' && *end != ',') end++;
++            size_t length = (size_t) (end - cursor);
++            repeat(dataWin->vari.variableCount, varIdx) {
++                Variable* var = &dataWin->vari.variables[varIdx];
++                if (var->instanceType != INSTANCE_GLOBAL || strlen(var->name) != length || strncmp(var->name, cursor, length) != 0) continue;
++                RValue* slot = IntRValueHashMap_findSlot(&globals->selfVars, var->varID);
++                JsonWriter_key(&w, var->name);
++                if (slot != nullptr) writeRValueJson(&w, *slot); else JsonWriter_null(&w);
++                break;
++            }
++            cursor = *end == ',' ? end + 1 : end;
++        }
++    }
++    JsonWriter_endObject(&w);
++
++    JsonWriter_key(&w, "o");
++    JsonWriter_beginArray(&w);
++    repeat((int32_t) arrlen(runner->instances), i) {
++        Instance* inst = runner->instances[i];
++        if (!inst->active) continue;
++        const char* objName = (inst->objectIndex >= 0 && dataWin->objt.count > (uint32_t) inst->objectIndex) ? dataWin->objt.objects[inst->objectIndex].name : "";
++        const char* spriteName = (inst->spriteIndex >= 0 && dataWin->sprt.count > (uint32_t) inst->spriteIndex) ? dataWin->sprt.sprites[inst->spriteIndex].name : "";
++        JsonWriter_beginArray(&w);
++        JsonWriter_int(&w, inst->instanceId);
++        JsonWriter_string(&w, objName);
++        JsonWriter_double(&w, inst->x);
++        JsonWriter_double(&w, inst->y);
++        JsonWriter_double(&w, inst->imageIndex);
++        JsonWriter_string(&w, spriteName);
++        JsonWriter_bool(&w, inst->visible);
++        JsonWriter_endArray(&w);
++    }
++    JsonWriter_endArray(&w);
++    JsonWriter_endObject(&w);
++    char* out = JsonWriter_copyOutput(&w);
++    JsonWriter_free(&w);
++    return out;
++}
++
+ char* Runner_dumpStateJson(Runner* runner) {
+     DataWin* dataWin = runner->dataWin;
+     int32_t instanceCount = (int32_t) arrlen(runner->instances);
+diff --git a/src/runner.h b/src/runner.h
+index 8877ffe..6eb9b09 100644
+--- a/src/runner.h
++++ b/src/runner.h
+@@ -994,6 +994,8 @@ int32_t Runner_surfaceGetTarget(Runner* runner);
+ 
+ void Runner_dumpState(Runner* runner);
+ char* Runner_dumpStateJson(Runner* runner);
++// UnderRune parity trace line (no trailing newline); globalsCsv may be null.
++char* Runner_traceFrameJson(Runner* runner, const char* globalsCsv);
+ void Runner_free(Runner* runner);
+ RuntimeLayer* Runner_findRuntimeLayerByName(Runner* runner, char* name);
+ RuntimeLayer* Runner_findRuntimeLayerById(Runner* runner, int32_t id);
 diff --git a/src/vm_builtins.c b/src/vm_builtins.c
 index 3d33803..c7bc703 100644
 --- a/src/vm_builtins.c

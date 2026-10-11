@@ -34,7 +34,18 @@ function setPaused(value){
 }
 const fetchBytes=async url=>{const res=await fetch(url);if(!res.ok)throw Error('Could not load game file: '+url);return new Uint8Array(await res.arrayBuffer());};
 function mkdir(folder){const pieces=folder.split('/').filter(Boolean);let current='';for(const p of pieces){current+='/'+p;try{runner.FS.mkdir(current);}catch(error){if(error.errno!==20)try{runner.FS.stat(current);}catch{throw error;}}}}
-async function start(id,ini){
+// Parity recording (tools/oracle-record.mjs): with ?oracle=1 the host may add a key-press script, a frame
+// limit and the per-frame trace; the engine's file system is exposed so the trace can be read back.
+const oracleMode=new URL(location.href).searchParams.has('oracle');
+function oracleArgs(oracle){
+ if(!oracleMode||!oracle)return [];
+ const args=[];
+ if(typeof oracle.inputs==='string'){runner.FS.writeFile('/saves/inputs.json',oracle.inputs);args.push('--playback-inputs','/saves/inputs.json');}
+ if(Number.isInteger(oracle.frames)&&oracle.frames>0)args.push('--exit-at-frame',String(oracle.frames));
+ if(typeof oracle.globals==='string'&&/^[\w,]*$/.test(oracle.globals))args.push('--trace-file','/saves/trace.ndjson','--trace-globals',oracle.globals);
+ window.__runner=runner;return args;
+}
+async function start(id,ini,oracle){
  if(started)return;started=true;
  try{
   const response=await fetch('/native/config?id='+encodeURIComponent(id));if(!response.ok)throw Error('This encounter has no original-engine launcher yet.');const profile=await response.json();
@@ -49,7 +60,7 @@ async function start(id,ini){
   mkdir('/game/'+packageName+'/mus');for(const file of profile.musicFiles){const bytes=await fetchBytes('/native/game/mus/'+file);runner.FS.writeFile('/game/'+packageName+'/mus/'+file,bytes);}
   // The original game seeds randomly; ?seed= keeps a run reproducible for tests.
   const seed=new URL(location.href).searchParams.get('seed')??String(Math.floor(Math.random()*2147483647));
-  const args=['/game/'+packageName+'/data.win','--save-folder','/saves','--disable-log-colours','--seed',/^\d+$/.test(seed)?seed:'20261011'];
+  const args=['/game/'+packageName+'/data.win','--save-folder','/saves','--disable-log-colours','--seed',/^\d+$/.test(seed)?seed:'20261011',...oracleArgs(oracle)];
   const argv=runner._malloc(args.length*4),pointers=args.map(arg=>runner.stringToNewUTF8(arg));pointers.forEach((pointer,i)=>runner.setValue(argv+i*4,pointer,'i32'));
   active=true;state.hidden=true;canvas.focus();send('running',{id});
   try{const result=await runner.ccall('startRunner','number',['number','number'],[args.length,argv],{async:true});if(active){state.textContent='Battle engine stopped: '+result;state.hidden=false;send('ended',{result});}}
@@ -58,7 +69,7 @@ async function start(id,ini){
 }
 window.addEventListener('message',event=>{
  if(event.origin!==location.origin||event.source!==parent||event.data?.source!=='underrune-host')return;
- const data=event.data;if(data.type==='start')void start(data.id,data.ini);
+ const data=event.data;if(data.type==='start')void start(data.id,data.ini,data.oracle);
  if(data.type==='key'&&active&&!paused){if(data.down)keyDown(data.key);else keyUp(data.key);}
  if(data.type==='stop'){active=false;release();runner?._requestRunnerExit();}
  if(data.type==='pause')setPaused(!!data.value);
