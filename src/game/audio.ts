@@ -44,10 +44,6 @@ export class AudioManager{
  }
  private releaseVoice(voice:AudioBufferSourceNode){const s=this.voices.get(voice);if(!s)return;voice.disconnect();s.gain.disconnect();this.voices.delete(voice);}
  private stopEffects(){for(const voice of this.voices.keys()){voice.stop();this.releaseVoice(voice);}}
- effect(name:string){
-  if(this.muted||!this.audible||!this.context||this.disposed)return;
-  const ctx=this.context,o=ctx.createOscillator(),g=ctx.createGain();o.type='square';o.frequency.value=name==='hurt'?85:name==='fight'?140:name==='shot'?660:name==='block'?880:320;g.gain.setValueAtTime(.025,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.06);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.07);
- }
  stop(){for(const controller of this.loads)controller.abort();this.loops.clear();this.stopEffects();if(this.track){this.track.pause();this.track.removeAttribute('src');this.track.load();this.track=null;}}
  dispose(){this.stop();this.disposed=true;if(this.context)void this.context.close().catch(()=>{});}
 }

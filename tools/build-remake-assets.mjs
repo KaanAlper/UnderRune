@@ -24,7 +24,14 @@ async function sources(dir) {
   }
   return files;
 }
-const text = (await Promise.all((await sources(path.join(root, 'src', 'remake'))).map(f => fs.readFile(f, 'utf8')))).join('\n');
+// Enemy ports belong to a source chapter. New Chapter 2 primitives must not pull their sprites into Chapter 1.
+const bossChapters={lancer:1,clover:1,kround:1,jevil:1,king:1,'spamton-neo':2};
+const remakeRoot=path.join(root,'src','remake');
+const chapterSources=(await sources(remakeRoot)).filter(file=>{
+ const parts=path.relative(remakeRoot,file).split(path.sep);
+ return parts[0]!=='bosses'||bossChapters[parts[1]]===undefined||bossChapters[parts[1]]===chapter;
+});
+const text = (await Promise.all(chapterSources.map(f => fs.readFile(f, 'utf8')))).join('\n');
 // GameMaker 2 stores backgrounds (bg_) as sprites too.
 const names = new Set(text.match(/\b(?:spr|bg)_[A-Za-z0-9_]+/g) ?? []);
 // Sprite fonts the code names through font_add_sprite_ext, and bitmap fonts by name.

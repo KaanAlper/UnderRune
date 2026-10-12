@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 
 export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const defaultGameDir = () => path.resolve(process.env.DELTARUNE_DIR ?? 'C:/Program Files (x86)/Steam/steamapps/common/DELTARUNE');
-// Encounters the native launcher cannot start yet; the app keeps their browser adaptation.
+// Encounters the native launcher cannot start yet; available source ports remain the browser fallback.
 export const NATIVE_UNSUPPORTED = new Set([]);
 // Chapter 3 action encounters run in their own original rooms instead of scr_battle (see build-native-launcher.csx).
 const ACTION_ROOMS = {'ch3-mantle': {room: 'shadowmantle', code: /shadow_?mantle|board_controller/i}, 'ch3-susiezilla': {room: 'susiezilla', code: /susiezilla|ch3_GSC05/i}};

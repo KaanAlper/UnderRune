@@ -18,7 +18,8 @@ for(const sprite of Object.values(manifest.sprites))for(const frame of sprite.fr
 try{await fs.access(path.join(root,'public',manifest.font.url));}catch{missing.push('font');}
 console.log(`${catalog.length} encounter records; ${Object.keys(manifest.sprites).length} sprite animations; ${manifest.music.length} tracks`);
 console.log(`Assets and source hash failures: ${missing.length}`);
-console.log('Full original-game fidelity verified: 0 encounters. Registry/attack playability is checked by npm test.');
-console.log('Includes Shadow Mantle and Susiezilla action adaptations. Room reachability and Chapter 5 source-only records remain unaudited.');
+console.log('Catalog coverage is asset/source inventory, not battle playability. Available battles are declared in src/remake/host/encounters.ts.');
+console.log('Full encounter parity is not established by this asset audit. Source components are checked by the remake/parity test suites.');
 if(missing.length)console.error(missing.join('\n'));
+if(process.argv.includes('--strict'))console.error('Strict complete-fidelity gate remains unmet; an asset audit cannot establish full encounter parity.');
 if(missing.length||process.argv.includes('--strict'))process.exitCode=1;

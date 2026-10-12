@@ -50,7 +50,11 @@ for(const {id,run,start,enemies} of RUNS){
    const objects=[b.mainchara,b.astream,b.eventManager,b.battleBack,battleControllerFull,...HERO_DEFS,tensionBar,writer,face,battleBalloon,b.darkener,b.heart,b.grazebox,b.growtangle,
     b.afterimage,b.afterimageGrow,b.regularBullet,b.moveHeart,b.returnHeart,b.heartBurst,b.dmgWriter,b.shake,b.marker,attackPress,spellPhase,burstBolt,basicAttack,
     healAnim,pacifySpell,oflash,rudeBusterAnim,rudeBusterBolt,b.spareAnim,defeatAnim,...enemies,...defs];
-   const {rt,skipped,skippedIds}=restoreScene(loadSprites(1),dump,trace.get(start)!,objects);
+   // Jevil's intro leaves moving room markers behind. They belong to obj_jokerbattleevent,
+   // outside the battle engine, and dumps do not retain their built-in motion. The battle
+   // starts with no battle-owned markers; markers created by its attacks are still compared.
+   const restoredObjects=id==='ch1-25'?objects.filter(o=>o!==b.marker):objects;
+   const {rt,skipped,skippedIds}=restoreScene(loadSprites(1),dump,trace.get(start)!,restoredObjects);
    // The snapshot keeps sprite variables (idlesprite, hurtsprite...) as the game's sprite numbers; the remake uses names.
    for(const i of rt.instances)for(const k of Object.keys(i))if(/sprite$/.test(k)&&k!=='sprite'&&typeof i[k]==='number'&&SPRITE_NAMES[i[k]])i[k]=SPRITE_NAMES[i[k]];
    installEngineHosts(rt,id);

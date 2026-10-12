@@ -23,7 +23,11 @@ describe.skipIf(!ready)(`parity: recorded Jevil attacks ${run}`,()=>{
  const bank=ready?loadSprites(1):undefined;const lastFrame=Math.max(...god.keys());
  for(const start of starts){
   const dump=JSON.parse(fs.readFileSync(`.tools/oracle/${run}-f${start}.json`,'utf8'));
-  const type=dump.instances.find((i:any)=>i.objectName==='obj_dbulletcontroller')?.selfVariables.type;
+  // Whole-battle snapshots share this recording directory; only snapshots containing
+  // the enemy attack controller belong to this attack-only suite.
+  const controller=dump.instances.find((i:any)=>i.objectName==='obj_dbulletcontroller');
+  if(!controller)continue;
+  const type=controller.selfVariables.type;
   it(`attack type ${type} from frame ${start}`,()=>{
    let end=start+1;while(end<lastFrame&&god.get(end)?.o.some(o=>o[1]==='obj_dbulletcontroller'))end++;
    // Room markers (left by the intro event) stay out of the restore; markers the attack creates are compared.

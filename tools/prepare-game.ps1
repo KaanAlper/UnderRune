@@ -9,6 +9,4 @@ if($LASTEXITCODE -ne 0){throw 'Inventory failed'}
 & (Join-Path $PSScriptRoot 'extract-undertale.ps1')
 node (Join-Path $PSScriptRoot 'build-assets.mjs')
 if($LASTEXITCODE -ne 0){throw 'Asset build failed'}
-node (Join-Path $PSScriptRoot 'build-source-ports.mjs')
-if($LASTEXITCODE -ne 0){throw 'Source constants build failed'}
 & (Join-Path $PSScriptRoot 'setup-runtime.ps1')

@@ -16,6 +16,7 @@
     "coverage:bosses": "node tools/check-coverage.mjs",
     "assets": "node tools/build-assets.mjs",
     "prepare:game": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/prepare-game.ps1",
+    "prepare:source": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/setup-source.ps1",
     "test:e2e": "playwright test",
     "audit:source": "node tools/audit-source.mjs",
     "audit:gml": "node tools/audit-gml.mjs",

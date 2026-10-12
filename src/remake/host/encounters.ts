@@ -7,15 +7,14 @@ export interface SourceEncounter{
 const playable:readonly SourceEncounter[]=[
  {id:'ch1-2',chapter:1,name:'Lancer',party:[1,2],hp:540,attack:5,defense:1,music:'lancerfight',practice:false},
  {id:'ch1-8',chapter:1,name:'Clover',party:[1,3],hp:270,attack:6,defense:1,music:'battle',practice:false},
+ {id:'ch1-12',chapter:1,name:'K.Round',party:[1,2,3],hp:1300,attack:7.5,defense:3,music:'checkers',practice:false,heroes:[[80,50],[80,130],[80,210]]},
  {id:'ch1-25',chapter:1,name:'JEVIL',party:[1,2,3],hp:3500,attack:10,defense:5,music:'joker',practice:true},
+ {id:'ch1-27',chapter:1,name:'K.Round',party:[1,2,3],hp:1300,attack:8,defense:3,music:'checkers',practice:false,heroes:[[80,65],[80,130],[80,210]]},
 ];
 export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);
 /** Explicit local verification entry points. Public launches always use sourceEncounter. */
-/** Ported but not yet verified end to end: reachable only through SourceBattle's development option and tests. */
-const development:readonly SourceEncounter[]=[
- {id:'ch1-12',chapter:1,name:'K.Round',party:[1,2,3],hp:1300,attack:7.5,defense:3,music:'checkers',practice:false,heroes:[[80,50],[80,130],[80,210]]},
- {id:'ch1-27',chapter:1,name:'K.Round',party:[1,2,3],hp:1300,attack:8,defense:3,music:'checkers',practice:false,heroes:[[80,65],[80,130],[80,210]]},
-];
+/** Reserved for EngineBattle fixtures that still need end-to-end verification before public launch. */
+const development:readonly SourceEncounter[]=[];
 export const developmentEncounter=(id:string)=>sourceEncounter(id)??development.find(p=>p.id===id);
 export const availableEncounters=(chapter:number)=>playable.filter(p=>p.chapter===chapter);
-export function availabilityLabel(chapter:number){const rows=availableEncounters(chapter);return rows.length?rows.map(p=>p.name.toUpperCase()).join(' + ')+' AVAILABLE':'NO PLAYABLE BATTLES YET';}
+export function availabilityLabel(chapter:number){const rows=availableEncounters(chapter);return rows.length?[...new Set(rows.map(p=>p.name.toUpperCase()))].join(' + ')+' AVAILABLE':'NO PLAYABLE BATTLES YET';}

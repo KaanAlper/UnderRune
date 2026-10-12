@@ -4,7 +4,7 @@
 // spell phase are their own objects (party.ts); each enemy is its boss module's object.
 import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
-import {round} from '../gm/math';
+import {round,le} from '../gm/math';
 import {KEY,battleController as controllerBase,bulletGenParent,bulletParent,darkener,dmgWriter,heart,heroParent,mergeColor,monsterParent,returnHeart,tensionHeal} from './battle';
 import {battleText,face,faceParent,writer} from './writer';
 import {optionalSourceText as lang} from '../host/text';
@@ -420,7 +420,7 @@ function step(s:GmInstance,rt:GmRuntime){
  s.onebuffer-=1;s.twobuffer-=1;s.lbuffer-=1;s.rbuffer-=1;
  if(g.mnfight===2&&s.timeron===1){
   g.turntimer-=1;
-  if(g.turntimer<=0&&s.reset===0){
+  if(le(g.turntimer,0)&&s.reset===0){
    destroyAll(rt,bulletParent);destroyAll(rt,bulletGenParent);
    for(const d of rt.all(darkener))d.darken=0;
    for(const h of rt.all(heart)){rt.create(returnHeart,h.x,h.y);rt.destroy(h);}

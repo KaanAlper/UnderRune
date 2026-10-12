@@ -21,7 +21,7 @@ export class GmInstance{
  private _speed=0;private _direction=0;private _hspeed=0;private _vspeed=0;
  private _friction=0;private _gravity=0;private _gravityDirection=270;
  private _imageIndex=0;private _imageSpeed=1;imageAngle=0;private _imageXscale=1;private _imageYscale=1;private _imageAlpha=1;imageBlend=0xffffff;
- mask:string|null;visible:boolean;live=true;destroyed=false;
+ mask:string|null;visible:boolean;live=true;
  private _sprite:string|null=null;
  /** The runtime's frame counts, for sprite_index's rule below. */
  frameCount?:(sprite:string)=>number|undefined;
@@ -118,6 +118,8 @@ export interface GmInput{held:Set<number>;pressed:Set<number>;released:Set<numbe
 
 export class GmRuntime{
  instances:GmInstance[]=[];frame=0;nextId:number;random:GmRandom;
+ /** Engine lifetime must not share a name with GML variables such as NEO wireheart's `destroyed`. */
+ private destroyedInstances=new WeakSet<GmInstance>();
  private frameCount:(name:string)=>number|undefined;
  view={x:0,y:0,width:640,height:480};
  room={width:640,height:480};
@@ -171,7 +173,7 @@ export class GmRuntime{
   const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;Object.assign(inst,vars);
   this.instances.push(inst);this.instances.sort((a,b)=>a.id-b.id);return inst;
  }
- destroy(inst:GmInstance){if(inst.destroyed)return;inst.destroyed=true;resolveEvent(inst.object,'destroy')?.(inst,this);inst.live=false;}
+ destroy(inst:GmInstance){if(this.destroyedInstances.has(inst))return;this.destroyedInstances.add(inst);resolveEvent(inst.object,'destroy')?.(inst,this);inst.live=false;}
  /** `with (object)`: every active instance of the object or its children, in creation order. */
  all(object:GmObjectDef){return this.instances.filter(i=>i.live&&isA(i.object,object));}
  exists(object:GmObjectDef){return this.instances.some(i=>i.live&&isA(i.object,object));}
@@ -245,7 +247,7 @@ export class GmRuntime{
   for(const i of [...this.instances])if(i.live)i.move();
   this.collide();
   this.dispatch('endStep',true);
-  this.instances=this.instances.filter(i=>!i.destroyed);
+  this.instances=this.instances.filter(i=>!this.destroyedInstances.has(i));
   // Presses and releases stay visible to this frame's Draw (the writer reads button1_p there), then go.
   this.consumed={pressed:new Set(this.input.pressed),released:new Set(this.input.released)};
  }
@@ -256,7 +258,7 @@ export class GmRuntime{
  draw(){
   const list=this.instances.map((i,n)=>({i,n})).filter(e=>e.i.live&&e.i.visible).sort((a,b)=>b.i.depth-a.i.depth||b.i.layerEntry-a.i.layerEntry).map(e=>e.i);
   for(const inst of list){if(!inst.live)continue;const h=resolveEvent(inst.object,'draw');if(h)h(inst,this);else this.drawSelf(inst);}
-  this.instances=this.instances.filter(i=>!i.destroyed);
+  this.instances=this.instances.filter(i=>!this.destroyedInstances.has(i));
   this.dropConsumed();
  }
 }
