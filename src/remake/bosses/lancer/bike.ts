@@ -2,8 +2,8 @@
 // This object is for encounter 2; Susie-and-Lancer scene choreography is handled separately.
 import {moveTowardsPoint,type GmObjectDef} from '../../gm/runtime';
 import {lengthdirX,lengthdirY,lt,le,ge,gt,eq} from '../../gm/math';
-import {regularBullet,afterimageGrow,heart,battleController,dmgWriter,damage} from '../../deltarune/battle';
-export const lancerBoss:GmObjectDef={name:'obj_lancerboss',index:244,depth:90,sprite:'spr_lancerbike',events:{
+import {regularBullet,afterimageGrow,heart,battleController,dmgWriter,damage,monsterParent} from '../../deltarune/battle';
+export const lancerBoss:GmObjectDef={name:'obj_lancerboss',index:244,depth:90,parent:monsterParent,sprite:'spr_lancerbike',events:{
  create:s=>{Object.assign(s,{turns:0,con:0,compliment:0,imageSpeed:0,imageXscale:2,imageYscale:2,state:0,siner:0,hurttimer:0,hurtshake:0,shakex:0,dodgetimer:0,candodge:1});},
  draw:(s,rt)=>{
   // obj_lancerboss Draw: thirty-frame recoil, alternating shake, and fifteen-frame dodge.

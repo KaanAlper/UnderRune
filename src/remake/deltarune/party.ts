@@ -383,7 +383,8 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
  },
  user1:(s,rt)=>{
   const g=rt.globals;if(monsterPop(rt)<=0)return;
-  for(let i=0;i<3;i++)if(s.target===i){const h=rt.byId(g.charinstance[i]);if(h){h.points=s.points[i];h.state=1;h.attacktimer=0;}}
+  // This loop shares the instance's i with the Draw loop that called it (see below).
+  for(s.i=0;s.i<3;s.i++)if(s.target===s.i){const h=rt.byId(g.charinstance[s.i]);if(h){h.points=s.points[s.i];h.state=1;h.attacktimer=0;}}
  },
  draw:(s,rt)=>{
   const g=rt.globals,d=rt.drawState;
@@ -415,7 +416,9 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
    else if(s.imagetimer===0&&s.boltalive[i]===1){const img=rt.create(afterimage,bx,s.y+38*off);img.sprite='spr_attackspot';img.imageAlpha=0.4;}
    if(s.boltalive[i]===1){rt.drawSprite('spr_attackspot',0,bx,s.y+38*off,1,1,0,C.white,alpha);s.boltcount[s.boltchar[i]]+=1;}
   }
-  for(let i=0;i<3;i++)if(s.boltcount[i]===0&&s.havechar[i]===1&&s.attacked[i]===0){s.attacked[i]=1;s.target=i;rt.userEvent(s,1);}
+  // Event 1 runs its own loop on the same variable i, which ends the loop here: when two bolts are done in the same
+  // frame, the second hero starts attacking one frame later.
+  for(s.i=0;s.i<3;s.i++){const i=s.i;if(s.boltcount[i]===0&&s.havechar[i]===1&&s.attacked[i]===0){s.attacked[i]=1;s.target=i;rt.userEvent(s,1);}}
   if(monsterPop(rt)>0){if(button1_p(rt))boltCheck(s,rt);}
   else{s.fakefade=1;if(s.posttimer<s.timermax-35)s.posttimer=s.timermax-34;}
   s.imagetimer+=1;s.boltx+=1;s.pressbuffer[0]-=1;s.pressbuffer[1]-=1;s.pressbuffer[2]-=1;

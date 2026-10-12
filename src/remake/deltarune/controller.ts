@@ -27,6 +27,14 @@ export const findController=(rt:GmRuntime)=>rt.first(controllerBase);
 
 /** scr_monsterpop: how many enemies are still in the battle. */
 export const monsterPop=(rt:GmRuntime)=>{const m=rt.globals.monster;return m[0]+m[1]+m[2];};
+/** scr_randomtarget, run by an enemy: a random party member who can still be targeted (3 = everyone). */
+export function randomTarget(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals;s.abletotarget=1;
+ if(g.charcantarget[0]===0&&g.charcantarget[1]===0&&g.charcantarget[2]===0)s.abletotarget=0;
+ s.mytarget=rt.random.choose(0,1,2);
+ if(s.abletotarget===1){while(g.charcantarget[s.mytarget]===0)s.mytarget=rt.random.choose(0,1,2);}else s.mytarget=3;
+ g.targeted[s.mytarget]=1;
+}
 /** scr_mercyadd. */
 export function mercyAdd(rt:GmRuntime,enemy:number,amount:number){const g=rt.globals;g.mercymod[enemy]+=amount;if(g.mercymod[enemy]<0)g.mercymod[enemy]=0;}
 /** scr_charcan: can this party slot still choose a command? */

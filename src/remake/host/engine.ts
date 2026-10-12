@@ -13,12 +13,14 @@ import {createCloverEnemy} from '../bosses/clover';
 import {checkersEnemy,checkerTransform,type KRoundHost,type KRoundThrowHost,type KRoundThrowMessage} from '../bosses/kround';
 import {checkersHealAnim,flashCheckers} from '../bosses/kround/effects';
 import {cloverDefeat} from './clover';
+import {lancerEnemy} from '../bosses/lancer/enemy';
 import {destroyWriters} from './enemy-host';
 import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
 
 /** The encounters whose enemies run on the engine, with their scr_encountersetup number and room. */
 const ENGINE:Record<string,{n:number;room:string;backdrop:boolean}>={
+ 'ch1-2':{n:2,room:'room_field_start',backdrop:true},
  'ch1-8':{n:8,room:'room_forest_area3',backdrop:true},
  'ch1-12':{n:12,room:'room_field_checkersboss',backdrop:true},
  'ch1-27':{n:27,room:'room_cc_6f',backdrop:false},
@@ -32,43 +34,26 @@ const THROW_TEXT:Record<Exclude<KRoundThrowMessage,'power-instructions'>,string>
  'miss':'obj_ralseithrown_slash_Step_0_gml_23_0',
 };
 
-export class EngineBattle{
- readonly rt:GmRuntime;readonly name:string;readonly party:readonly number[];
- paused=false;outcome:'victory'|'defeat'|null=null;turn=0;
- constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean}={}){
-  const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
-  if(!encounter||!setup)throw Error('This battle is not available yet.');
-  validateLoadout(loadout,equipment);
-  this.rt=new GmRuntime(bank,{seed});this.name=encounter.name;this.party=encounter.party;
-  const rt=this.rt,gear=(list:typeof equipment.weapons,id:number)=>list.find(g=>g.id===id);
-  const equipped:Record<number,EquippedStats>={};
-  for(const c of [1,2,3]){
-   const slot=loadout.characters[c],w=gear(equipment.weapons,slot.weapon),a1=gear(equipment.armors,slot.armor[0]),a2=gear(equipment.armors,slot.armor[1]);
-   equipped[c]={weapon:slot.weapon,itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
-  }
-  const char=[...encounter.party,0,0,0].slice(0,3);
-  partyGlobals(rt,{char,hp:BASE.hp,maxhp:BASE.hp,at:BASE.at,df:BASE.df,mag:BASE.mag,equipped,items:loadout.items,auto:id==='ch1-2'?[2]:[]});
-  const enemies:Record<string,GmObjectDef>={};
-  if(id==='ch1-8')enemies.obj_clubsenemy=this.clover();
-  if(id==='ch1-12'||id==='ch1-27'){this.kround(setup.room);enemies.obj_checkers_enemy=checkersEnemy;}
-  encounterSetup(rt,setup.n,enemies);
-  if(setup.backdrop)rt.create(b.battleBack,0,0);
-  rt.create(battleControllerFull,0,0);
- }
- private clover(){
-  const rt=this.rt;
-  return createCloverEnemy({
-   text:sourceText,writerExists:()=>rt.exists(writer),dismissWriters:()=>destroyWriters(rt),
-   enemySpeech:(_rt,x,y,kind)=>{enemyBalloon(rt,x,y,kind);},
-   battleText:(_rt,useDefault)=>{if(useDefault)battleTextDefault(rt);else battleText(rt);},
-   attackPhase:()=>attackPhase(rt),
-   // scr_defeatrun: the enemy runs off as its hurt sprite.
-   defeat:s=>{const a=rt.create(cloverDefeat,s.x,s.y);a.sprite=s.hurtsprite;a.imageIndex=0;a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;rt.destroy(s);},
-   monsterSetup:s=>monsterSetup(s,rt),
-  });
- }
- private kround(room:string){
-  const rt=this.rt;
+/** Clover on the engine: her events call the game's writers, attack phase and monster setup. */
+const cloverEnemy=createCloverEnemy({
+ text:sourceText,writerExists:rt=>rt.exists(writer),dismissWriters:rt=>destroyWriters(rt),
+ enemySpeech:(rt,x,y,kind)=>{enemyBalloon(rt,x,y,kind);},
+ battleText:(rt,useDefault)=>{if(useDefault)battleTextDefault(rt);else battleText(rt);},
+ attackPhase:rt=>attackPhase(rt),
+ // scr_defeatrun: the enemy runs off as its hurt sprite.
+ defeat:(s,rt)=>{const a=rt.create(cloverDefeat,s.x,s.y);a.sprite=s.hurtsprite;a.imageIndex=0;a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;rt.destroy(s);},
+ monsterSetup:(s,rt)=>monsterSetup(s,rt),
+});
+/** The enemy objects an encounter's setup creates. */
+export function engineEnemies(id:string):Record<string,GmObjectDef>{
+ if(!ENGINE[id])throw Error(`${id} does not run on the engine`);
+ if(id==='ch1-2')return {obj_lancerboss:lancerEnemy};
+ if(id==='ch1-8')return {obj_clubsenemy:cloverEnemy};
+ return {obj_checkers_enemy:checkersEnemy};
+}
+/** Callbacks some enemies read from globals (K.Round's), installed on the battle's runtime. */
+export function installEngineHosts(rt:GmRuntime,id:string){if(id==='ch1-12'||id==='ch1-27')kroundHosts(rt,ENGINE[id].room);}
+function kroundHosts(rt:GmRuntime,room:string){
   const host:KRoundHost={
    lang:sourceText,writerExists:()=>rt.exists(writer),clearWriters:()=>destroyWriters(rt),
    battleText:useDefault=>{if(useDefault)battleTextDefault(rt);else battleText(rt);},
@@ -88,6 +73,27 @@ export class EngineBattle{
    clearWriters:()=>destroyWriters(rt),
   };
   rt.globals.kroundHost=host;rt.globals.kroundThrowHost=throwHost;
+}
+export class EngineBattle{
+ readonly rt:GmRuntime;readonly name:string;readonly party:readonly number[];
+ paused=false;outcome:'victory'|'defeat'|null=null;turn=0;
+ constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean}={}){
+  const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
+  if(!encounter||!setup)throw Error('This battle is not available yet.');
+  validateLoadout(loadout,equipment);
+  this.rt=new GmRuntime(bank,{seed});this.name=encounter.name;this.party=encounter.party;
+  const rt=this.rt,gear=(list:typeof equipment.weapons,id:number)=>list.find(g=>g.id===id);
+  const equipped:Record<number,EquippedStats>={};
+  for(const c of [1,2,3]){
+   const slot=loadout.characters[c],w=gear(equipment.weapons,slot.weapon),a1=gear(equipment.armors,slot.armor[0]),a2=gear(equipment.armors,slot.armor[1]);
+   // Weapon 0 is "Game default": scr_gamestart's Wood Blade, Mane Ax and Red Scarf (ids 1, 2, 3; no stats).
+   equipped[c]={weapon:slot.weapon||c,itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
+  }
+  const char=[...encounter.party,0,0,0].slice(0,3);
+  partyGlobals(rt,{char,hp:BASE.hp,maxhp:BASE.hp,at:BASE.at,df:BASE.df,mag:BASE.mag,equipped,items:loadout.items,auto:id==='ch1-2'?[2]:[]});
+  installEngineHosts(rt,id);encounterSetup(rt,setup.n,engineEnemies(id));
+  if(setup.backdrop)rt.create(b.battleBack,0,0);
+  rt.create(battleControllerFull,0,0);
  }
  get enemy():GmInstance|undefined{return this.rt.byId(this.rt.globals.monsterinstance[0]);}
  /** A short label for the status line: whose turn it is. */

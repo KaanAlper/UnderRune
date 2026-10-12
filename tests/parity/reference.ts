@@ -64,7 +64,8 @@ export function compareFrame(rt:GmRuntime,line:TraceLine,tracked:Set<string>,glo
  const rng=rt.random.snapshot();
  if(rng.some((v,k)=>v!==line.rng[k]))return {frame:line.f,what:`random state differs (index ${rng[0]} vs ${line.rng[0]})`};
  for(const g of globals){
-  const a=JSON.stringify(rt.globals[g]),b=JSON.stringify(line.g[g]);
+  // An unset global is null in the recording.
+  const a=JSON.stringify(rt.globals[g]??null),b=JSON.stringify(line.g[g]??null);
   if(a!==b&&!(typeof line.g[g]==='number'&&Math.abs(rt.globals[g]-line.g[g])<1e-9))return {frame:line.f,what:`global.${g} ${a} vs ${b}`};
  }
  return undefined;
@@ -76,7 +77,10 @@ export function runParity(rt:GmRuntime,trace:Map<number,TraceLine>,start:number,
  let frame=start;
  for(;frame<end;frame++){
   rt.draw();if(replay)replayInput(rt,replay,frame);rt.step();
+  if(process.env.PARITY_DEBUG){const watch=process.env.PARITY_DEBUG.split(','),m=rt.instances.filter(i=>i.live&&watch.includes(i.object.name));console.log(frame+1,'mnfight',rt.globals.mnfight,'myfight',rt.globals.myfight,'pressed',[...rt.input.pressed].join(),m.map(i=>i.object.name+':'+JSON.stringify(Object.fromEntries((process.env.PARITY_VARS??'').split(',').filter(k=>k in i).map(k=>[k,i[k]])))).join(' '));}
   const line=trace.get(frame+1);if(!line)return {matched:frame-start,mismatch:{frame:frame+1,what:'Missing reference frame '+(frame+1)}};
+  // scr_endcombat: the game hands over to obj_endbattle (the walk back to the room); the remake ends the battle there.
+  if(rt.pendingRoom==='battle_end')return line.o.some(o=>o[1]==='obj_endbattle')?{matched:frame+1-start,mismatch:undefined,room:rt.pendingRoom}:{matched:frame-start,mismatch:{frame:frame+1,what:'the battle ended early'}};
   const bad=compareFrame(rt,line,tracked,globals,skippedIds);
   if(bad)return {matched:frame-start,mismatch:bad};
   if(rt.pendingRoom)return {matched:frame+1-start,mismatch:undefined,room:rt.pendingRoom};

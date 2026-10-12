@@ -71,3 +71,22 @@ describe.skipIf(!hasSourceText())('the battle engine (K.Round)',()=>{
   expect(b.turn).toBe(1);expect(b.outcome).toBeNull();
  });
 });
+
+describe.skipIf(!hasSourceText())('the battle engine (Lancer)',()=>{
+ it('Susie attacks on her own; after the fourth bike attack Lancer says goodbye and the battle is won',()=>{
+  const b=create('ch1-2');frame(b,2);const g=b.rt.globals;
+  expect(g.char).toEqual([1,2,0]);expect(g.charauto[2]).toBe(1);
+  for(let turn=0;turn<4;turn++){
+   until(b,()=>g.myfight===0&&g.mnfight===0,3000);
+   for(let i=0;i<4;i++)press(b,KEY.right);press(b,KEY.z);
+   expect(g.charaction[0]).toBe(10);
+   until(b,()=>g.mnfight===1,400);
+   until(b,()=>g.mnfight===2,400);
+   if(turn<3)until(b,()=>g.mnfight===0,3000);
+  }
+  // His last words wait for Z, page by page.
+  for(let i=0;i<4000&&!b.outcome;i++){if(b.rt.all(writer).some(w=>w.halt!==0))b.rt.input.pressed.add(KEY.z);frame(b);}
+  // Lancer marks his own outcome (4) each time he talks; scr_monsterdefeat keeps it.
+  expect(b.outcome).toBe('victory');expect(g.flag[51]).toBe(4);
+ });
+});
