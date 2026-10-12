@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {loadSprites,restoreScene,runParity,type Dump,type TraceLine,type Replay} from './parity/reference';
 import * as b from '../src/remake/deltarune/battle';
 import {battleControllerFull,tensionBar} from '../src/remake/deltarune/controller';
-import {HERO_DEFS,attackPress,spellPhase,healAnim,pacifySpell,oflash,rudeBusterAnim,rudeBusterBolt} from '../src/remake/deltarune/party';
+import {HERO_DEFS,attackPress,spellPhase,healAnim,pacifySpell,oflash,rudeBusterAnim,rudeBusterBolt,defeatAnim} from '../src/remake/deltarune/party';
 import {writer,face,battleBalloon} from '../src/remake/deltarune/writer';
 import {burstBolt,basicAttack} from '../src/remake/deltarune/player-effects';
 import * as clover from '../src/remake/bosses/clover';
@@ -13,9 +13,13 @@ import * as kroundThrow from '../src/remake/bosses/kround/throw';
 import * as kroundTransform from '../src/remake/bosses/kround/transform';
 import * as kroundController from '../src/remake/bosses/kround/controller';
 import * as lancerBike from '../src/remake/bosses/lancer/bike';
+import * as jevilBody from '../src/remake/bosses/jevil/body';
+import * as jevilController from '../src/remake/bosses/jevil/controller';
+import * as jevilBullets from '../src/remake/bosses/jevil/bullets';
+import * as jevilSpadering from '../src/remake/bosses/jevil/spadering';
+import * as jevilEnemy from '../src/remake/bosses/jevil/enemy';
 import type {GmObjectDef} from '../src/remake/gm/runtime';
 import {engineEnemies,installEngineHosts} from '../src/remake/host/engine';
-import {cloverDefeat} from '../src/remake/host/clover';
 import {hasSourceText} from '../src/remake/host/text';
 
 // Whole battles on the engine against the original game, frame by frame: from the frame the battle controller
@@ -33,6 +37,8 @@ const RUNS:{id:string;run:string;start:number;enemies:GmObjectDef[]}[]=[
  {id:'ch1-8',run:'ch1-8-s11-god',start:40,enemies:defsOf(clover)},
  {id:'ch1-12',run:'ch1-12-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundEffects,kroundThrow,kroundTransform,kroundController)},
  {id:'ch1-27',run:'ch1-27-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundEffects,kroundThrow,kroundTransform,kroundController)},
+ // Jevil's room plays an intro first: the battle controller appears at frame 119.
+ {id:'ch1-25',run:'ch1-25-s11-god',start:135,enemies:defsOf(jevilBody,jevilController,jevilBullets,jevilSpadering,jevilEnemy)},
 ];
 for(const {id,run,start,enemies} of RUNS){
  const base='.tools/oracle/'+run,ready=hasSourceText()&&fs.existsSync(`${base}-f${start}.json`)&&fs.existsSync(base+'.ndjson')&&fs.existsSync('extracted/chapter1_windows/sprites.json');
@@ -43,7 +49,7 @@ for(const {id,run,start,enemies} of RUNS){
    const defs=Object.values(engineEnemies(id));
    const objects=[b.mainchara,b.astream,b.eventManager,b.battleBack,battleControllerFull,...HERO_DEFS,tensionBar,writer,face,battleBalloon,b.darkener,b.heart,b.grazebox,b.growtangle,
     b.afterimage,b.afterimageGrow,b.regularBullet,b.moveHeart,b.returnHeart,b.heartBurst,b.dmgWriter,b.shake,b.marker,attackPress,spellPhase,burstBolt,basicAttack,
-    healAnim,pacifySpell,oflash,rudeBusterAnim,rudeBusterBolt,b.spareAnim,cloverDefeat as any,...enemies,...defs];
+    healAnim,pacifySpell,oflash,rudeBusterAnim,rudeBusterBolt,b.spareAnim,defeatAnim,...enemies,...defs];
    const {rt,skipped,skippedIds}=restoreScene(loadSprites(1),dump,trace.get(start)!,objects);
    // The snapshot keeps sprite variables (idlesprite, hurtsprite...) as the game's sprite numbers; the remake uses names.
    for(const i of rt.instances)for(const k of Object.keys(i))if(/sprite$/.test(k)&&k!=='sprite'&&typeof i[k]==='number'&&SPRITE_NAMES[i[k]])i[k]=SPRITE_NAMES[i[k]];

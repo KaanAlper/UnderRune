@@ -8,14 +8,13 @@ import * as b from '../deltarune/battle';
 import {battleControllerFull} from '../deltarune/controller';
 import {attackPhase} from '../deltarune/controller';
 import {encounterSetup,monsterSetup,partyGlobals,type EquippedStats} from '../deltarune/encounter';
-import {battleText,battleTextDefault,enemyBalloon,writer} from '../deltarune/writer';
+import {battleText,battleTextDefault,destroyWriters,enemyBalloon,writer} from '../deltarune/writer';
+import {defeatRun} from '../deltarune/party';
 import {createCloverEnemy} from '../bosses/clover';
 import {checkersEnemy,checkerTransform,type KRoundHost,type KRoundThrowHost,type KRoundThrowMessage} from '../bosses/kround';
 import {checkersHealAnim,flashCheckers} from '../bosses/kround/effects';
-import {cloverDefeat} from './clover';
 import {lancerEnemy} from '../bosses/lancer/enemy';
 import {jokerBackground,jokerEnemy} from '../bosses/jevil/enemy';
-import {destroyWriters} from './enemy-host';
 import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
 
@@ -24,7 +23,7 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean}>={
  'ch1-2':{n:2,room:'room_field_start',backdrop:true},
  'ch1-8':{n:8,room:'room_forest_area3',backdrop:true},
  'ch1-12':{n:12,room:'room_field_checkersboss',backdrop:true},
- // ch1-25 (Jevil): jokerEnemy is written but not yet verified against a recording; Jevil still runs on SourceBattle.
+ 'ch1-25':{n:25,room:'room_cc_joker',backdrop:false},
  'ch1-27':{n:27,room:'room_cc_6f',backdrop:false},
 };
 export const runsOnEngine=(id:string)=>id in ENGINE;
@@ -43,7 +42,7 @@ const cloverEnemy=createCloverEnemy({
  battleText:(rt,useDefault)=>{if(useDefault)battleTextDefault(rt);else battleText(rt);},
  attackPhase:rt=>attackPhase(rt),
  // scr_defeatrun: the enemy runs off as its hurt sprite.
- defeat:(s,rt)=>{const a=rt.create(cloverDefeat,s.x,s.y);a.sprite=s.hurtsprite;a.imageIndex=0;a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;rt.destroy(s);},
+ defeat:(s,rt)=>{defeatRun(s,rt);},
  monsterSetup:(s,rt)=>monsterSetup(s,rt),
 });
 /** The enemy objects an encounter's setup creates. */

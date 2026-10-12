@@ -90,3 +90,16 @@ describe.skipIf(!hasSourceText())('the battle engine (Lancer)',()=>{
   expect(b.outcome).toBe('victory');expect(g.flag[51]).toBe(4);
  });
 });
+
+describe.skipIf(!hasSourceText())('the battle engine (Jevil)',()=>{
+ it('three DEFENDs, Jevil talks, attacks with his first pattern, and the menus come back',()=>{
+  const b=create('ch1-25');frame(b,2);const g=b.rt.globals;
+  expect(b.rt.count(heroParent)).toBe(3);expect(g.monstername[0]).toBeTruthy();
+  for(let slot=0;slot<3;slot++){for(let i=0;i<4;i++)press(b,KEY.right);press(b,KEY.z);}
+  until(b,()=>g.mnfight===1,400);
+  until(b,()=>g.mnfight===2,400);
+  until(b,()=>b.rt.instances.some(i=>i.live&&i.object.name==='obj_dbulletcontroller'),60);
+  until(b,()=>g.myfight===0&&g.mnfight===0,3000);
+  expect(b.turn).toBe(1);expect(b.outcome).toBeNull();
+ });
+});

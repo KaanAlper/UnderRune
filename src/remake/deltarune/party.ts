@@ -597,4 +597,16 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
   s.a+=1;s.t+=1;
  },
 }};
+/** obj_defeatanim (scr_defeatrun): a beaten enemy sweats, then runs off in a trail of copies. */
+export const defeatAnim:GmObjectDef={name:'obj_defeatanim',index:300,events:{
+ create:(s,rt)=>{Object.assign(s,{t:0,g:0,imageSpeed:0,starcount:0,redup:0,bsize:6});rt.sound?.('snd_defeatrun');},
+ step:s=>{s.g++;if(s.g>=15)s.t++;},
+ draw:(s,rt)=>{
+  if(s.t===0)rt.drawSelf(s);s.sweat=s.g<=5||(s.g>=9&&s.g<=13)?1:0;
+  if(s.sweat===1)rt.drawSprite('spr_defeatsweat',0,s.x-6,s.y-6);
+  if(s.t>=1){for(let i=0;i<=80;i++){s.i=i;s.alph=.4;rt.drawSprite(s.sprite,s.imageIndex,s.x+4*i,s.y,s.imageXscale,s.imageYscale,0,s.imageBlend,s.alph-s.t/8+i/200);}if(s.t>=15)rt.destroy(s);}
+ },
+}};
+/** scr_defeatrun, run by the enemy. */
+export function defeatRun(s:GmInstance,rt:GmRuntime){const a=rt.create(defeatAnim,s.x,s.y);a.sprite=s.hurtsprite;a.imageIndex=0;a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;rt.destroy(s);return a;}
 void itemShift;void writer;

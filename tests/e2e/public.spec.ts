@@ -1,5 +1,9 @@
 import {test,expect,type Page} from '@playwright/test';
 const url=process.env.UNDERRUNE_PUBLIC_URL??'http://127.0.0.1:5173/?demo=1';
+/** One key press, then time for the game (30 frames a second) to read it; the menus ignore a second press within two frames. */
+async function key(page:Page,k:string,wait=180){await page.keyboard.press(k);await page.waitForTimeout(wait);}
+/** DEFEND: from FIGHT, left wraps to the last button. */
+async function defend(page:Page){await key(page,'ArrowLeft');await key(page,'z');}
 async function menu(page:Page){
  await page.goto(url);await page.getByRole('button',{name:'DELTARUNE remote'}).click();
  await page.getByRole('button',{name:'Connect DELTARUNE'}).click();await page.getByRole('button',{name:'Connect device'}).click();
@@ -13,12 +17,12 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  await prep.getByRole('button',{name:'+ Add item',exact:true}).click();await prep.locator('.prep-entry').filter({hasText:'Dark Candy'}).click();
  await expect(prep.locator('.prep-bag')).toContainText('Dark Candy');await prep.screenshot({path:'test-results/public-preparation.png'});
  await prep.getByRole('button',{name:'START BATTLE'}).click();await expect(prep).toBeHidden();await expect(page.locator('#status')).toContainText('JEVIL / command');
- await expect(page.getByRole('button',{name:'FIGHT',exact:true})).toBeVisible();await page.locator('#screen').screenshot({path:'test-results/public-battle.png'});
- for(let i=0;i<3;i++)await page.getByRole('button',{name:'DEFEND',exact:true}).click();await expect(page.locator('#status')).toContainText('enemyTalk');
- await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.locator('#status')).toContainText('JEVIL / enemy /');
+ await page.waitForTimeout(600);await page.locator('#screen').screenshot({path:'test-results/public-battle.png'});
+ for(let i=0;i<3;i++)await defend(page);await expect(page.locator('#status')).toContainText('enemy talk');
+ await page.waitForTimeout(700);await key(page,'z');await expect(page.locator('#status')).toContainText('JEVIL / enemy attack');
  await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('paused');
  await page.locator('#pause').click();await expect(page.locator('#status')).not.toContainText('paused');
- await expect(page.locator('#status')).toContainText('JEVIL / command / TURN 2',{timeout:14000});await expect(page.locator('#outcome')).toBeHidden();
+ await expect(page.locator('#status')).toContainText('JEVIL / command / TURN 2',{timeout:16000});await expect(page.locator('#outcome')).toBeHidden();
  await page.keyboard.press('ArrowRight');await page.keyboard.press('r');await expect(page.locator('#outcome')).toBeHidden();
  await page.waitForTimeout(600);await page.locator('#screen').screenshot({path:'test-results/public-practice.png'});
  await page.getByRole('button',{name:'Device menu',exact:true}).click();await page.getByRole('button',{name:'Battle JEVIL ch1-25',exact:true}).click();
@@ -58,17 +62,17 @@ test('chapter previews load and paused music stays paused after movement and mut
 });
 test('Lancer launches after preparation and returns to commands after his bike race',async({page})=>{
  await menu(page);await page.getByRole('button',{name:'Battle Lancer ch1-2',exact:true}).click();await page.getByRole('button',{name:'START BATTLE'}).click();
- await expect(page.locator('#status')).toContainText('Lancer / command');await page.getByRole('button',{name:'DEFEND',exact:true}).click();
- await expect(page.locator('#status')).toContainText('enemyTalk');await page.getByRole('button',{name:'Continue',exact:true}).click();
- await expect(page.locator('#status')).toContainText('Lancer / enemy /');await expect(page.locator('#status')).toContainText('Lancer / command / TURN 2',{timeout:12000});
+ await expect(page.locator('#status')).toContainText('Lancer / command');await page.waitForTimeout(600);await defend(page);
+ await expect(page.locator('#status')).toContainText('enemy talk',{timeout:8000});await page.waitForTimeout(700);await key(page,'z');
+ await expect(page.locator('#status')).toContainText('Lancer / enemy attack');await expect(page.locator('#status')).toContainText('Lancer / command / TURN 2',{timeout:16000});
  await expect(page.locator('#outcome')).toBeHidden();
 });
 test('Lancer FIGHT includes the delayed automatic Susie swing and keeps game frames evenly paced',async({page})=>{
  await page.addInitScript(()=>{(window as any).__pitches=[];(window as any).__frameTimes=[];const make=AudioContext.prototype.createBufferSource;AudioContext.prototype.createBufferSource=function(){const voice=make.call(this),start=voice.start.bind(voice);voice.start=(...args:Parameters<AudioBufferSourceNode['start']>)=>{(window as any).__pitches.push(voice.playbackRate.value);start(...args);};return voice;};const fill=CanvasRenderingContext2D.prototype.fillRect;CanvasRenderingContext2D.prototype.fillRect=function(x,y,w,h){if(!this.canvas.id&&this.canvas.width===640&&this.canvas.height===480&&x===0&&y===0&&w===640&&h===480)(window as any).__frameTimes.push(performance.now());return fill.call(this,x,y,w,h);};});
  await menu(page);await page.getByRole('button',{name:'Battle Lancer ch1-2',exact:true}).click();await page.getByRole('button',{name:'START BATTLE'}).click();await expect(page.locator('#status')).toContainText('Lancer / command');
- await page.getByRole('button',{name:'FIGHT',exact:true}).click();await page.getByRole('button',{name:'Lancer',exact:true}).click();await expect(page.locator('#status')).toContainText('timing');await page.waitForTimeout(650);await page.keyboard.press('z');
+ await page.waitForTimeout(600);await key(page,'z');await key(page,'z');await expect(page.locator('#status')).toContainText('attack');await page.waitForTimeout(650);await page.keyboard.press('z');
  await expect.poll(()=>page.evaluate(()=>(window as any).__pitches.some((p:number)=>Math.abs(p-.9)<.001))).toBe(true);await page.waitForTimeout(350);await page.locator('#screen').screenshot({path:'test-results/lancer-auto-susie.png'});console.log('Source sound pitches:',await page.evaluate(()=>(window as any).__pitches));
- await expect(page.locator('#status')).toContainText('enemyTalk');const times=await page.evaluate(()=>(window as any).__frameTimes as number[]);const gaps=times.slice(1).map((t,i)=>t-times[i]).filter(n=>n>0).sort((a,b)=>a-b);expect(gaps.length).toBeGreaterThan(50);const median=gaps[Math.floor(gaps.length*.5)],p95=gaps[Math.floor(gaps.length*.95)];console.log('Game frame gaps (ms):',{median,p95});expect(median).toBeGreaterThan(25);expect(median).toBeLessThan(42);expect(p95).toBeLessThan(70);
+ await expect(page.locator('#status')).toContainText('enemy talk',{timeout:8000});const times=await page.evaluate(()=>(window as any).__frameTimes as number[]);const gaps=times.slice(1).map((t,i)=>t-times[i]).filter(n=>n>0).sort((a,b)=>a-b);expect(gaps.length).toBeGreaterThan(50);const median=gaps[Math.floor(gaps.length*.5)],p95=gaps[Math.floor(gaps.length*.95)];console.log('Game frame gaps (ms):',{median,p95});expect(median).toBeGreaterThan(25);expect(median).toBeLessThan(42);expect(p95).toBeLessThan(70);
 });
 test('single-pattern Jevil practice remains a separate explicit launch',async({page})=>{
  await menu(page);await page.getByRole('button',{name:'Battle JEVIL ch1-25',exact:true}).click();await page.getByRole('button',{name:'Close preparation'}).click();
@@ -79,22 +83,21 @@ test('FIGHT shows source timing lanes, plays original samples and continues afte
  await page.addInitScript(()=>{(window as any).__sampleStarts=0;const create=AudioContext.prototype.createBufferSource;AudioContext.prototype.createBufferSource=function(){const voice=create.call(this),start=voice.start.bind(voice);voice.start=(...args:Parameters<AudioBufferSourceNode['start']>)=>{(window as any).__sampleStarts++;start(...args);};return voice;};});
  const failures:string[]=[],sounds:string[]=[];page.on('pageerror',e=>failures.push(e.message));page.on('request',r=>{if(r.url().includes('/remake/ch1/sounds/'))sounds.push(r.url());});
  await menu(page);await page.getByRole('button',{name:'Battle JEVIL ch1-25',exact:true}).click();await page.getByRole('button',{name:'START BATTLE',exact:true}).click();
- for(let i=0;i<3;i++){await page.getByRole('button',{name:'FIGHT',exact:true}).click();await page.getByRole('button',{name:'JEVIL',exact:true}).click();}
- await expect(page.locator('#status')).toContainText('JEVIL / timing');await page.waitForTimeout(650);await page.locator('#screen').screenshot({path:'test-results/public-timing.png'});
+ await page.waitForTimeout(600);for(let i=0;i<3;i++){await key(page,'z');await key(page,'z');}
+ await expect(page.locator('#status')).toContainText('JEVIL / attack');await page.waitForTimeout(650);await page.locator('#screen').screenshot({path:'test-results/public-timing.png'});
  await page.keyboard.press('z');await expect.poll(()=>page.evaluate(()=>(window as any).__sampleStarts)).toBeGreaterThan(0);
  await page.waitForTimeout(700);await page.locator('#screen').screenshot({path:'test-results/public-hit.png'});
- await expect(page.locator('#status')).toContainText('JEVIL / enemyTalk',{timeout:8000});await expect(page.locator('#outcome')).toBeHidden();
+ await expect(page.locator('#status')).toContainText('JEVIL / enemy talk',{timeout:8000});await expect(page.locator('#outcome')).toBeHidden();
  expect(sounds.some(s=>s.endsWith('/snd_laz_c.wav'))).toBe(true);expect(sounds.some(s=>s.endsWith('/snd_hurt1.wav'))).toBe(true);expect(failures).toEqual([]);
 });
 test('Clover launches with Kris and Ralsei, runs a Check turn and her own attack, and returns to commands',async({page})=>{
  const failures:string[]=[];page.on('pageerror',e=>failures.push(e.message));
  await menu(page);await page.getByRole('button',{name:'Battle Clover ch1-8',exact:true}).click();await page.getByRole('button',{name:'START BATTLE'}).click();
  await expect(page.locator('#status')).toContainText('Clover / command');
- await page.getByRole('button',{name:'ACT',exact:true}).click();await page.getByRole('button',{name:'Clover',exact:true}).click();
- await expect(page.getByRole('button',{name:'TalkTrees',exact:true})).toBeVisible();await page.getByRole('button',{name:'Check',exact:true}).click();
- await page.getByRole('button',{name:'DEFEND',exact:true}).click();
- for(let i=0;i<20&&!(await page.locator('#status').textContent())?.includes('Clover / enemy /');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
- await expect(page.locator('#status')).toContainText('Clover / enemy /');await page.locator('#screen').screenshot({path:'test-results/public-clover.png'});
- await expect(page.locator('#status')).toContainText('Clover / command / TURN 2',{timeout:14000});await expect(page.locator('#outcome')).toBeHidden();
+ // ACT, Clover, Check; then Ralsei DEFENDs. Z then moves the Check text and Clover's speech along.
+ await page.waitForTimeout(600);await key(page,'ArrowRight');await key(page,'z');await key(page,'z');await key(page,'z');await defend(page);
+ for(let i=0;i<40&&!(await page.locator('#status').textContent())?.includes('Clover / enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
+ await expect(page.locator('#status')).toContainText('Clover / enemy attack');await page.locator('#screen').screenshot({path:'test-results/public-clover.png'});
+ await expect(page.locator('#status')).toContainText('Clover / command / TURN 2',{timeout:16000});await expect(page.locator('#outcome')).toBeHidden();
  expect(failures).toEqual([]);
 });

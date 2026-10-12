@@ -238,6 +238,8 @@ export function enemyBalloon(rt:GmRuntime,x:number,y:number,kind:number):GmInsta
  const b=BALLOONS[kind];if(b===null)return rt.create(writer,x,y);
  const bl=rt.create(battleBalloon,x,y);if(b){bl.sprite=b[0];bl.imageIndex=b[1];bl.imageSpeed=0;}return bl;
 }
+/** with (obj_writer) instance_destroy(). */
+export function destroyWriters(rt:GmRuntime){for(const w of rt.all(writer))rt.destroy(w);}
 /** scr_battletext: the battle box writer at (30, 376) with its portrait at (26, 380). */
 export function battleText(rt:GmRuntime):GmInstance{
  const w=rt.create(writer,rt.view.x+30,rt.view.y+376);rt.create(face,rt.view.x+26,rt.view.y+380);

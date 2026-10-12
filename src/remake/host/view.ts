@@ -1,23 +1,12 @@
-import type {AssetStore} from '../../game/assets';
+// Jevil's room background (obj_jokerbg_triangle_real Draw/Other_10): the tinted carousel strip and the spinning
+// triangles behind the battle. Everything else in a battle is drawn by the game objects themselves.
 import type {DrawAssets} from './canvas';
-import {SourceBattle} from './battle';
 import {lengthdirX,lengthdirY} from '../gm/math';
-import {pixelHeart} from '../../game/renderer';
-import {C} from '../gm/graphics';
-import {mergeColor,afterimage} from '../deltarune/battle';
-// scr_charbox positions, original command/head/name/HP sprites and attackpress lanes.
-const heads=['spr_headkris','spr_headsusie','spr_headralsei'];
-const names=['spr_bnamekris','spr_bnamesusie','spr_bnameralsei'];
-const icons=['spr_btfight','spr_btact','spr_btitem','spr_btspare','spr_btdefend'];
-const colors=['#00ffff','#ff00ff','#00ff00'];
 export class BattleView{
  private rot=0;private rotSpeed=0;private bgx=0;private bgAlpha=0;private black=0;
  private bgTint:HTMLCanvasElement|null=null;
- private trailTick=-1;
- constructor(readonly ctx:CanvasRenderingContext2D,readonly assets:AssetStore,readonly drawAssets:DrawAssets){}
- private text(s:string,x:number,y:number,color='#fff',scale=1,align:'left'|'center'|'right'='left'){this.assets.text(this.ctx,s,x,y,scale,color,align);}
- background(b:SourceBattle){
-  if(b.id!=='ch1-25')return;
+ constructor(readonly ctx:CanvasRenderingContext2D,readonly drawAssets:DrawAssets){}
+ background(){
   // obj_jokerbg_triangle_real Draw/Other_10, cropped to the battle view by the HUD.
   this.bgAlpha=Math.min(1,this.bgAlpha+.02);const c=this.ctx,s=this.drawAssets.sprite('spr_carouselbg'),f=s?.frames[0];
   if(f){
@@ -34,34 +23,4 @@ export class BattleView{
   for(let i=0;i<8;i++){const p=tri(i);polygon(320,-80,320+p.x1,p.y1-80,320+p.x2,p.y2-80);}
   this.rotSpeed=Math.min(1,this.rotSpeed+.1);this.bgx=(this.bgx+1)%640;this.rot+=2.5*this.rotSpeed;
  }
- draw(b:SourceBattle){
-  const c=this.ctx,g=b.rt.globals,rt=b.rt;const menu=['command','enemyTarget','act','magic','item','allyTarget'].includes(b.phase);
-  const sprite=(name:string,frame:number,x:number,y:number,alpha=1)=>rt.drawSprite(name,frame,x+rt.view.x,y+rt.view.y,1,1,0,C.white,alpha);
-  // The bottom panel, menus and TP bar are drawn by the battle controller and tension bar (deltarune/hud.ts).
-  if(b.phase==='timing'){
-   for(let i=0;i<3;i++){
-    const y=365+38*i;rt.drawState.color=0x800000;if(i>0)rt.drawRect(2,y,302,y+2);
-    if(!b.bolts.some(x=>x.actor===i))continue;
-    rt.drawState.color=mergeColor([0xff0000,C.purple,C.green][b.party[i]-1],C.white,b.pressBuffer[i]/5);
-    rt.drawRect(80,y,202,y+36,true);rt.drawRect(81,y+1,201,y+35,true);
-    sprite('spr_pressfront',b.party[i]-1,2,y);sprite('spr_pressfront_b',0,2,y);sprite('spr_pressspot',b.party[i]-1,82,y);
-    for(const bolt of b.bolts.filter(x=>x.actor===i&&x.alive)){const gap=bolt.frame-b.boltTick,x=82+gap*8;sprite('spr_attackspot',0,x,y,Math.min(1,1+gap/3));if(gap>=0&&b.boltTick%2===0&&this.trailTick!==b.boltTick){const trail=rt.create(afterimage,x+rt.view.x,y+rt.view.y);trail.sprite='spr_attackspot';trail.imageAlpha=.4;}}
-   }
-   this.trailTick=b.boltTick;b.pressBuffer=b.pressBuffer.map(n=>Math.max(0,n-1));
-   // These sprites live in the GM scene, but the HUD's black fill is above the scene.
-   // Draw their sprite once more above the lanes without running their Step/Draw events again.
-   for(const effect of rt.instances)if(effect.live&&(effect.object.name==='obj_burstbolt'||effect.object===afterimage&&effect.sprite==='spr_attackspot'))rt.drawSelf(effect);
-   if(b.timingFade>0){c.save();c.globalAlpha=Math.min(1,b.timingFade);c.fillStyle='#000';c.fillRect(1,364,640,116);c.restore();}
-  }else if(b.nativeText){
-   // The enemy's writers and balloons draw themselves.
-  }else if(b.phase==='enemyTalk'){
-   c.fillStyle='#000';c.fillRect(270,75,185,120);c.fillStyle='#fff';c.fillRect(273,78,179,114);this.text(b.enemySpeech,283,86,'#000');
-   this.text('* '+b.name+' prepares an attack.',30,375);this.text('[Z] CONTINUE',600,446,'#807b87',1,'right');
-  }else{
-   // No writer exists while the enemy attacks, so the text box stays empty.
-   const message=b.phase==='enemy'||b.phase==='transition'?'':b.phase==='victory'?'* YOU WON!':b.phase==='defeat'?'* The party fell.':b.message;
-   const lines=this.wrap(message,560);this.text(lines.slice(0,3).join('\n'),30,375);if(b.phase==='message')this.text('[Z] CONTINUE',600,446,'#807b87',1,'right');
-  }
- }
- private wrap(s:string,width:number){const lines:string[]=[];for(const paragraph of s.split('\n')){let line='';for(const word of paragraph.split(' ')){const next=line?line+' '+word:word;if(this.assets.textWidth(next,1)>width&&line){lines.push(line);line=word;}else line=next;}lines.push(line);}return lines;}
 }
