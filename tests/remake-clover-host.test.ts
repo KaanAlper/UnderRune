@@ -5,6 +5,7 @@ import {battleController,heroKris,heroRalsei,heart,growtangle,moveHeart} from '.
 import {cloverBulletController} from '../src/remake/bosses/clover';
 import {CloverHost,cloverDefeat,cloverPlain} from '../src/remake/host/clover';
 import {hasSourceText,sourceText} from '../src/remake/host/text';
+import {writer} from '../src/remake/deltarune/writer';
 // Clover's lines come from the locally built bundle (tests/setup-source-text.ts); without it these tests are skipped.
 const GREW_CLOSE='scr_encountersetup_slash_scr_encountersetup_gml_139_0';
 const bank=spriteBank({atLeast2022_1:false,optionsInfo:0,sprites:[]});
@@ -13,9 +14,12 @@ function scene(){
  const kris=rt.create(heroKris,80,100),ralsei=rt.create(heroRalsei,80,180);Object.assign(kris,{myheight:40});Object.assign(ralsei,{myheight:40});rt.globals.charinstance=[kris.id,ralsei.id,0];
  const control=rt.create(battleController,0,0);Object.assign(control,{timeron:0,reset:0,noreturn:0,onebuffer:0,twobuffer:0,lbuffer:0,rbuffer:0,grazenoise:0,damagenoise:0});
  const phases:string[]=[],actions:number[]=[];const host=new CloverHost(rt,control,{onPhase:p=>phases.push(p),onActionComplete:()=>actions.push(rt.frame)});
- const tick=(n=1)=>{for(let i=0;i<n;i++){rt.step();host.afterStep();}};
- const finishAct=()=>{for(let n=0;n<15&&rt.globals.myfight===3;n++){host.confirm();tick();}};
- return {rt,host,control,phases,actions,tick,finishAct};
+ // Writers type in their alarms and read Z in their Draw, so a frame is Step then Draw.
+ const tick=(n=1)=>{for(let i=0;i<n;i++){rt.step();host.afterStep();rt.draw();}};
+ /** Wait until the shown page is fully typed, then press Z; the enemy sees a closed writer on the next frame's Step. */
+ const next=()=>{for(let n=0;n<400&&rt.exists(writer)&&!rt.all(writer).every(w=>w.halt!==0);n++)tick();host.confirm();tick(2);};
+ const finishAct=()=>{for(let n=0;n<15&&rt.globals.myfight===3;n++)next();};
+ return {rt,host,control,phases,actions,tick,next,finishAct};
 }
 describe.skipIf(!hasSourceText())('standalone native Clover host adapter',()=>{
  it('sets encounter 8/type 16 facts and consumes the unused source setup choice',()=>{
@@ -29,19 +33,19 @@ describe.skipIf(!hasSourceText())('standalone native Clover host adapter',()=>{
   const {rt,host}=scene();rt.globals.hp[3]=0;expect(host.choices.map(c=>c.disabled)).toEqual([false,true,true,true,false,false]);expect(()=>host.beginAct(2)).toThrow(/unavailable/i);
  });
  it('waits for the native Check writer to disappear before dispatching action completion',()=>{
-  const {rt,host,tick,actions}=scene();host.beginAct(0);tick();expect(host.dialogue[0].pages[0]).toContain('CLOVER - AT 8 DF 2');expect(actions).toEqual([]);
+  const {rt,host,tick,next,actions}=scene();host.beginAct(0);tick();expect(host.dialogue[0].pages[0]).toContain('CLOVER - AT 8 DF 2');expect(actions).toEqual([]);
   expect([host.dialogue[0].typer,host.dialogue[0].fc]).toEqual([4,0]);tick(5);expect(actions).toEqual([]);
-  host.confirm();tick();expect(actions).toHaveLength(1);expect(rt.globals.myfight).toBe(1);expect(host.body.argue).toBe(0);
+  next();expect(actions).toHaveLength(1);expect(rt.globals.myfight).toBe(1);expect(host.body.argue).toBe(0);
  });
  it('stages TalkBoys as Ralsei, three mouths, then result before applying action completion',()=>{
-  const {rt,host,tick,actions}=scene();host.beginAct(2);tick();expect(host.dialogue[0].pages[0]).toContain('What kind of "Boys"');expect([host.dialogue[0].typer,host.dialogue[0].fc]).toEqual([45,2]);
+  const {rt,host,tick,next,actions}=scene();host.beginAct(2);tick();expect(host.dialogue[0].pages[0]).toContain('What kind of "Boys"');expect([host.dialogue[0].typer,host.dialogue[0].fc]).toEqual([45,2]);
   expect(rt.globals.acting).toEqual([1,1,0]);expect(rt.globals.charaction).toEqual([9,9,0]);expect(rt.globals.mercymod[0]).toBe(0);
-  host.confirm();tick();expect(host.dialogue.map(w=>w.face)).toEqual([4,5,6]);expect(host.dialogue.map(w=>[w.x,w.y])).toEqual([[290,110],[275,190],[525,110]]);expect(rt.globals.mercymod[0]).toBe(40);expect(actions).toEqual([]);
-  host.confirm();tick();expect(host.dialogue).toHaveLength(1);expect(host.dialogue[0].pages[0]).toContain('enjoyed talking');host.confirm();tick();expect(actions).toHaveLength(1);
+  next();expect(host.dialogue.map(w=>w.face)).toEqual([4,5,6]);expect(host.dialogue.map(w=>[w.x,w.y])).toEqual([[290,110],[275,190],[525,110]]);expect(rt.globals.mercymod[0]).toBe(40);expect(actions).toEqual([]);
+  next();expect(host.dialogue).toHaveLength(1);expect(host.dialogue[0].pages[0]).toContain('enjoyed talking');next();expect(actions).toHaveLength(1);
  });
  it('keeps Animals two pages and preserves one-shot topic mercy across turns',()=>{
-  const {rt,host,tick,finishAct}=scene();host.beginAct(4);tick();expect(host.dialogue[0].pages).toEqual([290,291].map(line=>cloverPlain(sourceText(`obj_clubsenemy_slash_Step_0_gml_${line}_0`))));
-  host.confirm();tick();expect(host.dialogue[0].page).toBe(1);expect(rt.globals.myfight).toBe(3);host.confirm();tick();expect(host.body.argue).toBe(1);
+  const {rt,host,tick,next,finishAct}=scene();host.beginAct(4);tick();expect(host.dialogue[0].pages).toEqual([290,291].map(line=>cloverPlain(sourceText(`obj_clubsenemy_slash_Step_0_gml_${line}_0`))));
+  next();expect(host.dialogue[0].page).toBe(1);expect(rt.globals.myfight).toBe(3);next();expect(host.body.argue).toBe(1);
   for(const topic of [2,3,5,5]){host.returnToCommands();host.beginAct(topic);tick();finishAct();}
   expect(rt.globals.mercymod[0]).toBe(120);expect(rt.globals.monsterstatus[0]).toBe(1);expect(host.body.argue).toBe(5);expect(host.body.acted).toEqual([0,0,1,1,0,1]);
  });

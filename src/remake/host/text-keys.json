@@ -1,5 +1,6 @@
 {
  "chapter1": [
+  "obj_battlecontroller_slash_Step_0_gml_40_0",
   "obj_checkers_enemy_slash_Step_0_gml_119_0",
   "obj_checkers_enemy_slash_Step_0_gml_129_0",
   "obj_checkers_enemy_slash_Step_0_gml_226_0",
@@ -240,6 +241,12 @@
   "scr_monstersetup_slash_scr_monstersetup_gml_609_0",
   "scr_monstersetup_slash_scr_monstersetup_gml_611_0",
   "scr_ralface_slash_scr_ralface_gml_1_0",
+  "scr_spellinfo_slash_scr_spellinfo_gml_32_0",
+  "scr_spellinfo_slash_scr_spellinfo_gml_33_0",
+  "scr_spellinfo_slash_scr_spellinfo_gml_43_0",
+  "scr_spellinfo_slash_scr_spellinfo_gml_44_0",
+  "scr_spellinfo_slash_scr_spellinfo_gml_53_0",
+  "scr_spellinfo_slash_scr_spellinfo_gml_54_0",
   "scr_susface_slash_scr_susface_gml_1_0"
  ]
 }

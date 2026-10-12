@@ -16,6 +16,8 @@ import {C} from '../gm/graphics';
 import {sourceEncounter,developmentEncounter} from './encounters';
 import {CloverHost} from './clover';
 import {KRoundBattleHost} from './kround';
+import {drawBattleHud,tensionBar,type HudChoice,type HudMenuKind,type HudState} from '../deltarune/hud';
+import {optionalSourceText as langText} from './text';
 import type {PageFace,SourceDialogue,SourceEnemyEvents,SourceEnemyHost} from './enemy-host';
 const text=optionalSourceText;
 export const plain=(s:string)=>s.replace(/\^\d/g,'').replace(/\/[%%]?|%%/g,'').replace(/[&#]/g,'\n').replace(/\\[A-Za-z]\d/g,'').trim();
@@ -46,7 +48,9 @@ export class SourceBattle{
   this.rt.globals={hp:[0,90,110,70],maxhp:[0,90,110,70],char:[...this.party,...(this.party.length===2?[0]:[])],battleat:stats('attack',[0,10,14,8]),battledf:stats('defense',[0,2,2,2]),battlemag:stats('magic',[0,0,1,7]),charaction:[0,0,0],charcantarget:[1,1,this.party.length===3?1:0],chardead:[0,0,0],charmove:[1,1,this.party.length===3?1:0],charspecial:[0,0,0],targeted:[0,0,0],tension:0,maxtension:250,inv:-1,invc:1,flag:new Array(1000).fill(0),monster:[1,0,0],mnfight:0,turntimer:0,chemg_god_mode:false};
   this.heroes=this.party.map((id,i)=>{const def=battleHero([b.heroKris,b.heroSusie,b.heroRalsei][id-1],()=>this.applyFightHit(i));const at=encounter.heroes?.[i]??[this.party.length===2?80:80+i*10,this.party.length===2?[100,180][i]:[100,150,210][i]];const h=this.rt.create(def,at[0],at[1]);Object.assign(h,{char:id,myself:i,sprite:heroSprites[id-1][0],imageXscale:2,imageYscale:2,imageSpeed:0,depth:200-i*20,mywidth:heroSize[id-1][0],myheight:heroSize[id-1][1],pose:'idle',faceaction:0,siner:0,attacktimer:0,defendtimer:0,hurt:0,hurttimer:0,points:0});return h;});
   this.rt.globals.charinstance=[...this.heroes.map(h=>h.id),...(this.party.length===2?[0]:[])];const ev=this.rt.create(b.eventManager,0,0);ev.visible=false;
-  this.control=this.rt.create(b.battleController,0,0);Object.assign(this.control,{timeron:0,reset:0,noreturn:0,onebuffer:0,twobuffer:0,lbuffer:0,rbuffer:0,grazenoise:0,damagenoise:0});this.control.visible=false;
+  this.control=this.rt.create(b.battleController,0,0);Object.assign(this.control,{timeron:0,reset:0,noreturn:0,onebuffer:0,twobuffer:0,lbuffer:0,rbuffer:0,grazenoise:0,damagenoise:0});
+  // The controller draws the bottom panel and menus at its depth (5); its Create makes the TP bar.
+  this.control.hudDraw=()=>drawBattleHud(this.control,this.rt,this.hudState);this.rt.create(tensionBar,0,0);
   const events:SourceEnemyEvents={
    onDialogue:writers=>{const writer=writers.find(w=>w.kind==='battle');if(writer){this.message=writer.pages[writer.page];this.messageFace=writer.faces?.[writer.page]??null;}else{this.messageFace=null;this.enemySpeech=writers.map(w=>w.pages[w.page]).join('\n');}},
    onActionComplete:()=>{this.mercy=this.enemyHost!.mercy;this.tired=this.enemyHost!.tired;this.resolveRemainingActions();},
@@ -63,6 +67,8 @@ export class SourceBattle{
  get tp(){return Math.round(this.rt.globals.tension/this.rt.globals.maxtension*100);}
  get autoSusie(){return this.id==='ch1-2';}
  get sourceDialogue():readonly SourceDialogue[]{return this.enemyHost?.dialogue??[];}
+ /** True when the game's own writers draw this battle's text (the view then draws none). */
+ get nativeText(){return !!this.enemyHost;}
  get choices():Choice[]{
   if(this.phase==='command')return [{name:'FIGHT'},{name:this.party[this.actor]===1?'ACT':'MAGIC'},{name:'ITEM',disabled:this.usableItems().length===0},{name:'SPARE'},{name:'DEFEND'}];
   if(this.phase==='enemyTarget')return [{name:this.name,detail:`HP ${Math.max(0,this.enemyHp)} / ${this.enemyMaxHp}${this.tired?' · TIRED':''}`}];
@@ -71,6 +77,42 @@ export class SourceBattle{
   if(this.phase==='item')return this.usableItems().map(i=>({name:this.equipment.items.find(x=>x.id===this.bag[i])!.name,value:i,detail:this.equipment.items.find(x=>x.id===this.bag[i])!.description}));
   if(this.phase==='allyTarget')return this.party.map((id,i)=>({name:['','Kris','Susie','Ralsei'][id],value:i,detail:`HP ${this.rt.globals.hp[id]} / ${this.rt.globals.maxhp[id]}`}));
   return [];
+ }
+ /** What the HUD draws this frame: open menu, cursor, choices with partner heads, descriptions and costs. */
+ get hudState():HudState{
+  const kinds:Record<string,HudMenuKind>={command:'command',enemyTarget:'enemyTarget',act:'act',magic:'spell',item:'item',allyTarget:'allyTarget'};
+  const menu=kinds[this.phase]??'none',g=this.rt.globals;
+  const heads=(slots:number[]|undefined)=>(slots??[]).slice(1).map(slot=>this.party[slot]===2?'susie':'ralsei') as ('susie'|'ralsei')[];
+  const choices:HudChoice[]=this.choices.map(c=>{
+   const ch:HudChoice={name:c.name,disabled:c.disabled,cost:c.cost};
+   if(menu==='act'){
+    const parts=(c as {participants?:number[]}).participants;ch.partners=parts?heads(parts):this.id==='ch1-25'&&c.value===2?['susie','ralsei']:[];
+    ch.partnerDown=(parts??[]).slice(1).some(slot=>g.hp[this.party[slot]]<=0);
+    const desc=g.actdesc?.[0]?.[c.value??0]??(this.id==='ch1-25'?langText(['','scr_monstersetup_slash_scr_monstersetup_gml_580_0','scr_monstersetup_slash_scr_monstersetup_gml_586_0'][c.value??0]??''):'');
+    if(desc&&desc.trim())ch.desc=desc;
+   }
+   if(menu==='spell'){
+    const keys:Record<number,[number,number]>={2:[32,33],3:[43,44],4:[53,54]},k=keys[c.value??0];
+    if(k){ch.name=langText(`scr_spellinfo_slash_scr_spellinfo_gml_${k[0]}_0`)||c.name;ch.desc=langText(`scr_spellinfo_slash_scr_spellinfo_gml_${k[1]}_0`);}
+    ch.glow=c.value===3&&this.tired&&!c.disabled;
+   }
+   if(menu==='item')ch.desc=c.detail;
+   return ch;
+  });
+  const enemyName=(g.monstername?.[0]??'').trim()||this.name;
+  return {
+   party:this.party,charturn:menu==='none'?-1:this.actor,choosing:menu!=='none',menu,cursor:this.cursor,choices,
+   enemies:this.body.live||this.enemyHp>0?[{name:enemyName,hp:Math.max(0,this.enemyHp),maxhp:this.enemyMaxHp,tired:this.tired,spareable:this.mercy>=(this.id==='ch1-25'?999:100),instance:this.body}]:[],
+   faceaction:slot=>this.heroes[slot]?.faceaction??0,heroInstance:slot=>this.heroes[slot],
+  };
+ }
+ /** global.tensionselect: the TP the hovered ACT or spell would use (the TP bar previews it). */
+ private updateTensionSelect(){const g=this.rt.globals;g.tensionselect=this.phase==='act'||this.phase==='magic'?this.choices[this.cursor]?.cost??0:0;}
+ /** What the enemy's writers show now, for the text the view and tests read. */
+ private syncDialogue(){
+  const writers=this.enemyHost!.dialogue,battle=writers.find(w=>w.kind==='battle');
+  if(battle){this.message=battle.pages[battle.page];this.messageFace=battle.faces?.[battle.page]??null;}
+  else{this.messageFace=null;this.enemySpeech=writers.map(w=>w.pages[w.page]).join('\n');}
  }
  private usableItems(){return this.bag.map((_,i)=>i).filter(i=>!this.actions.some(a=>a?.kind==='item'&&a.bagIndex===i)&&this.equipment.items.some(x=>x.id===this.bag[i]&&x.usable));}
  private setPhase(p:BattlePhase){this.phase=p;this.phaseFrame=0;this.cursor=0;}
@@ -266,9 +308,10 @@ export class SourceBattle{
  }
  private victory(){this.setPhase('victory');this.message='* YOU WON!';this.body.visible=false;this.control.timeron=0;}
  step(){
-  if(this.paused||this.outcome)return;this.frame++;this.phaseFrame++;const rt=this.rt,g=rt.globals;
+  if(this.paused||this.outcome)return;this.frame++;this.phaseFrame++;const rt=this.rt,g=rt.globals;this.updateTensionSelect();
   rt.step();
   this.enemyHost?.afterStep();
+  if(this.enemyHost)this.syncDialogue();
   if(this.enemyHost){
    // The enemy's own events change its stats too (K.Round's milk heals and raises attack): read them back.
    const g=this.rt.globals;this.mercy=this.enemyHost.mercy;this.tired=this.enemyHost.tired;

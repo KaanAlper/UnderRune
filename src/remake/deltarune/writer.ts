@@ -223,6 +223,8 @@ export const battleBalloon:GmObjectDef={name:'obj_battleblcon',index:309,sprite:
 }};
 const BALLOONS:Record<number,[string,number]|null>={0:null,1:['spr_battleblcon',0],2:['spr_battleblcon_v',0],3:['spr_battleblcon_long',0],
  4:['spr_battleblcon_clubs',0],5:['spr_battleblcon_clubs',1],6:['spr_battleblcon_clubs',2],7:['spr_battleblcon_long_r',2],8:['spr_battleblcon_long_tall',0]};
+/** The scr_enemyblcon kind a balloon was made with, from its sprite and frame. */
+export function balloonKind(sprite:string,frame:number){const k=Object.entries(BALLOONS).find(([,b])=>b&&b[0]===sprite&&b[1]===frame);return k?Number(k[0]):-1;}
 /** scr_enemyblcon(x, y, kind): kind 0 is a bare writer, the others a balloon of that shape. */
 export function enemyBalloon(rt:GmRuntime,x:number,y:number,kind:number):GmInstance{
  const b=BALLOONS[kind];if(b===null)return rt.create(writer,x,y);

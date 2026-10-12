@@ -68,6 +68,11 @@ export class CanvasGraphics implements GmGraphics{
   if(outline){c.strokeStyle=css(color);c.stroke();}else{c.fillStyle=css(color);c.fill();}
   c.restore();
  }
+ /** string_width: the widest line in the font, in pixels. */
+ textWidth(fontName:string,text:string){
+  const font=this.assets.font(fontName);if(!font)return 0;
+  return Math.max(0,...text.split('\n').map(line=>[...line].reduce((n,ch)=>n+(this.glyph(font,ch.charCodeAt(0))?.advance??0),0)));
+ }
  text(x:number,y:number,text:string,style:TextStyle){
   const font=this.assets.font(style.font);if(!font||style.alpha<=0)return;
   const lines=text.split('\n');

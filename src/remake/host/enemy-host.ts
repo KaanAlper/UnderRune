@@ -1,6 +1,7 @@
 // What the shared battle host needs from an encounter whose enemy runs its own original events (dialogue, ACTs,
 // enemy turn): Clover and K.Round implement this; Jevil and Lancer still use the host's built-in flow.
-import type {GmInstance} from '../gm/runtime';
+import type {GmInstance,GmRuntime} from '../gm/runtime';
+import {balloonKind,battleBalloon,face,writer} from '../deltarune/writer';
 
 /** The speaker portrait a writer page shows (\F R/S... with emotion \E n); null for none. */
 export type PageFace={hero:'ralsei'|'susie'|string;emotion:number}|null;
@@ -71,3 +72,22 @@ export function actChoices(g:Record<string,any>,enemy:number):SourceActChoice[]{
  });
  return out;
 }
+/** The writers on screen, as pages of plain text: the battle box writer and any enemy speech balloons. */
+export function runtimeDialogue(rt:GmRuntime):SourceDialogue[]{
+ return rt.all(writer).map(w=>{
+  const raw:string[]=[];
+  for(let i=0;i<(w.nstring?.length??0);i++){const m=w.nstring[i];if(typeof m!=='string'||!m.trim())break;raw.push(m);const e=m.trimEnd();if(e.endsWith('/%')||e.endsWith('%%')||!e.endsWith('/')&&!e.endsWith('%'))break;}
+  const pages:string[]=[],faces:PageFace[]=[];let current:PageFace=null;
+  // The writer's msgno also counts portrait-only pages; the shown page is the last text page reached.
+  let page=0;
+  raw.forEach((r,i)=>{const p=parsePage(r);if(p.face!==undefined)current=p.face;if(p.text){if(i<=(w.msgno??0))page=pages.length;pages.push(p.text);faces.push(current);}});
+  const kind=w.dialoguer===1?'battle':'speech';
+  // A balloon writer reports the scr_enemyblcon shape it sits in (Clover's heads use 4, 5 and 6).
+  const bl=rt.all(battleBalloon).find(b=>b.mywriter===w.id);
+  return {id:w.id,kind,rawPages:raw,pages:pages.length?pages:[''],faces,page,x:bl?bl.x:w.x,y:bl?bl.y:w.y,face:bl?balloonKind(bl.sprite??'',bl.imageIndex):rt.globals.fc??0,typer:rt.globals.typer,fc:rt.globals.fc??0,fe:rt.globals.fe??0};
+ });
+}
+/** with (obj_writer) instance_destroy(): balloons go on their next step; portraits stay until the turn ends. */
+export function destroyWriters(rt:GmRuntime){for(const w of rt.all(writer))rt.destroy(w);}
+/** scr_endturn's clean-up: every writer, balloon and portrait. */
+export function clearAllText(rt:GmRuntime){for(const o of [...rt.all(writer),...rt.all(face),...rt.all(battleBalloon)])rt.destroy(o);}

@@ -53,7 +53,7 @@ describe('shared source battle flow',()=>{
 
 describe('source hit timing and damage feedback',()=>{
  const fight=()=>{const b=create();advance(b,30);for(let i=0;i<3;i++){b.select(0);b.confirm();}return b;};
- const capture=(b:SourceBattle)=>{const sprites:{name:string;frame:number;x:number;y:number;xs:number}[]=[];b.rt.gfx={sprite:(name,frame,x,y,xs)=>sprites.push({name,frame,x,y,xs}),rect:()=>{},circle:()=>{},text:()=>{}};return sprites;};
+ const capture=(b:SourceBattle)=>{const sprites:{name:string;frame:number;x:number;y:number;xs:number}[]=[];b.rt.gfx={sprite:(name,frame,x,y,xs)=>sprites.push({name,frame,x,y,xs}),rect:()=>{},circle:()=>{},line:()=>{},text:()=>{}};return sprites;};
  it('places the timing target at the original x=82, y=365 lane origin',()=>{
   const b=fight(),sprites=capture(b),c={fillRect:()=>{},strokeRect:()=>{}} as unknown as CanvasRenderingContext2D;
   const assets={text:()=>{},textWidth:()=>0} as unknown as AssetStore,draw={sprite:()=>undefined} as unknown as DrawAssets;

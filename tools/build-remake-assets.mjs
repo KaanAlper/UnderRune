@@ -28,7 +28,8 @@ const text = (await Promise.all((await sources(path.join(root, 'src', 'remake'))
 // GameMaker 2 stores backgrounds (bg_) as sprites too.
 const names = new Set(text.match(/\b(?:spr|bg)_[A-Za-z0-9_]+/g) ?? []);
 // Sprite fonts the code names through font_add_sprite_ext, and bitmap fonts by name.
-const spriteFonts = {damagefont: {sprite: 'spr_numbersfontbig', map: '0123456789', proportional: true, sep: 0}};
+// Sprite fonts made with font_add_sprite_ext: damage numbers, and global.hpfont (its map is the digits plus - and +).
+const spriteFonts = {damagefont: {sprite: 'spr_numbersfontbig', map: '0123456789', proportional: true, sep: 0}, hpfont: {sprite: 'spr_numbersfontsmall', map: '0123456789-+', proportional: false, sep: 2}};
 for (const f of Object.values(spriteFonts)) names.add(f.sprite);
 const fontNames = new Set(text.match(/\bfnt_[A-Za-z0-9_]+/g) ?? []);
 

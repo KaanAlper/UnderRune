@@ -21,6 +21,7 @@ const devUnlock=import.meta.env.DEV&&new URLSearchParams(location.search).has('d
 const playableEncounter=(id:string)=>devUnlock?developmentEncounter(id):sourceEncounter(id);
 import {BattleView} from './remake/host/view';
 import {CanvasGraphics} from './remake/host/canvas';
+import {setHudMeasure} from './remake/deltarune/hud';
 import {KEY} from './remake/deltarune/battle';
 import type {EncounterRecord} from './game/types';
 import {TheaterState,TheaterView,THEATER_HITS} from './game/theater';
@@ -54,7 +55,7 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
  const pattern=Number(element<HTMLSelectElement>('attack-select').value)||0;
  const controller=new AbortController();remakeLoad?.abort();remakeLoad=controller;
  try{remakeAssets??=await loadRemakeAssets();if(token!==sessionToken)return;await audio.prepareEffects(remakeAssets.sounds,controller.signal);if(token!==sessionToken)return;closeBattle();publicLoadout=structuredClone(loadout);
-  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern):new SourceBattle(remakeAssets.bank,equipment!.chapters[1],loadout,record.id,11,{development:devUnlock});remake.rt.gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);
+  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern):new SourceBattle(remakeAssets.bank,equipment!.chapters[1],loadout,record.id,11,{development:devUnlock});{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}
   remakeView=new BattleView(remakeCtx,assets,remakeAssets.draw);remakeConfirm=false;remakeCancel=false;remakeMoveCooldown=0;
   remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.stopAllSounds=()=>audio.stop();renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(encounter.music);
  }catch(e){if(token===sessionToken)throw e;}finally{if(remakeLoad===controller)remakeLoad=null;if(token===sessionToken){busy=false;loading.hidden=true;input.clear();clock.reset();}}

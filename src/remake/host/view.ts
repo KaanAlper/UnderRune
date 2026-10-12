@@ -37,17 +37,7 @@ export class BattleView{
  draw(b:SourceBattle){
   const c=this.ctx,g=b.rt.globals,rt=b.rt;const menu=['command','enemyTarget','act','magic','item','allyTarget'].includes(b.phase);
   const sprite=(name:string,frame:number,x:number,y:number,alpha=1)=>rt.drawSprite(name,frame,x+rt.view.x,y+rt.view.y,1,1,0,C.white,alpha);
-  // TP is out of 250 internally; the original bar shows percent.
-  sprite('spr_tplogo',0,8,70);sprite('spr_tensionbar',1,38,40);c.fillStyle='#ff9900';c.fillRect(41,Math.round(40+195*(1-b.tp/100)),21,Math.round(195*b.tp/100));this.text(b.tp>=100?'MAX':String(b.tp),8,110,b.tp>=100?'#ff0':'#fff');if(b.tp<100)this.text('%',13,135);
-  c.fillStyle='#000';c.fillRect(0,328,640,152);c.fillStyle='#403347';c.fillRect(0,326,640,2);c.fillRect(0,362,640,2);
-  for(let i=0;i<b.party.length;i++){
-   const id=b.party[i],chunk=b.party.length===3?i*212:106+i*220,active=menu&&b.actor===i,color=colors[id-1],y=active?296:328;
-   for(let k=0;k<5;k++)sprite(k===1&&id!==1?'spr_bttech':icons[k],b.phase==='command'&&active&&b.cursor===k?1:0,chunk+15+k*35,333,b.autoSusie&&i===1?.35:1);
-   c.fillStyle=active?color:'#403347';c.fillRect(chunk,y-2,212,36);c.fillStyle='#000';c.fillRect(chunk+2,y,208,33);
-   sprite(heads[id-1],0,chunk+13,y+8);sprite(names[id-1],0,chunk+51,y+11);sprite('spr_hpname',0,chunk+109,y+19);sprite('spr_hpslash',0,chunk+159,y+4);
-   const hp=g.hp[id],max=g.maxhp[id];this.text(String(hp),chunk+160,y+6,hp<=0?'#f00':hp/max<=.25?'#ff0':'#fff',1,'right');this.text(String(max),chunk+205,y+6,'#fff',1,'right');
-   c.fillStyle='#800000';c.fillRect(chunk+128,y+19,75,8);c.fillStyle=color;c.fillRect(chunk+128,y+19,Math.max(0,Math.ceil(hp/max*75)),8);
-  }
+  // The bottom panel, menus and TP bar are drawn by the battle controller and tension bar (deltarune/hud.ts).
   if(b.phase==='timing'){
    for(let i=0;i<3;i++){
     const y=365+38*i;rt.drawState.color=0x800000;if(i>0)rt.drawRect(2,y,302,y+2);
@@ -62,12 +52,8 @@ export class BattleView{
    // Draw their sprite once more above the lanes without running their Step/Draw events again.
    for(const effect of rt.instances)if(effect.live&&(effect.object.name==='obj_burstbolt'||effect.object===afterimage&&effect.sprite==='spr_attackspot'))rt.drawSelf(effect);
    if(b.timingFade>0){c.save();c.globalAlpha=Math.min(1,b.timingFade);c.fillStyle='#000';c.fillRect(1,364,640,116);c.restore();}
-  }else if(menu&&b.phase!=='command'){
-   const choices=b.choices,start=Math.floor(b.cursor/6)*6;
-   for(let i=start;i<Math.min(choices.length,start+6);i++){const row=i-start,col=row%2,x=30+col*290,y=375+Math.floor(row/2)*30;const item=choices[i];if(i===b.cursor)pixelHeart(c,x-15,y+11,'#ff243c',1);this.text(item.name,x,y,item.disabled?'#777':i===b.cursor?'#ff0':'#fff');}
-   const selected=choices[b.cursor];if(selected?.cost)this.text(`${Math.round(selected.cost/250*100)}% TP`,600,450,'#ff9900',1,'right');
-   this.text('[X] BACK',620,460,'#807b87',1,'right');if(choices.length>6){this.text('< PREV',30,460,'#807b87');this.text('NEXT >',135,460,'#807b87');}
-   if(b.phase==='enemyTarget'){c.fillStyle='#800000';c.fillRect(510,380,80,15);c.fillStyle='#0f0';c.fillRect(510,380,b.enemyHp/b.enemyMaxHp*80,15);if(b.tired)this.text('TIRED',510,409,'#00ffff');}
+  }else if(b.nativeText){
+   // The enemy's writers and balloons draw themselves.
   }else if(b.phase==='enemyTalk'){
    c.fillStyle='#000';c.fillRect(270,75,185,120);c.fillStyle='#fff';c.fillRect(273,78,179,114);this.text(b.enemySpeech,283,86,'#000');
    this.text('* '+b.name+' prepares an attack.',30,375);this.text('[Z] CONTINUE',600,446,'#807b87',1,'right');

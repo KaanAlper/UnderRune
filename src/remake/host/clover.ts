@@ -1,7 +1,8 @@
 import type {GmInstance,GmRuntime} from '../gm/runtime';
 import {createCloverEnemy} from '../bosses/clover';
 import {sourceText} from './text';
-import type {SourceDialogue,SourceEnemyEvents,SourceEnemyHost,SourceEnemyPhase} from './enemy-host';
+import {destroyWriters,runtimeDialogue,type SourceDialogue,type SourceEnemyEvents,type SourceEnemyHost,type SourceEnemyPhase} from './enemy-host';
+import {battleText,enemyBalloon,writer} from '../deltarune/writer';
 import {KEY,monsterParent,spareAnim} from '../deltarune/battle';
 /** Clover's lines come from the site bundle (see text.ts); only the lines in text-keys.json are bundled. */
 export const cloverText=sourceText;
@@ -10,21 +11,16 @@ export type CloverDialogue=SourceDialogue;
 export type CloverEnemyPhase=SourceEnemyPhase;
 export type CloverHostEvents=SourceEnemyEvents;
 export class CloverHost implements SourceEnemyHost {
- readonly body:GmInstance;private writers:CloverDialogue[]=[];phase:CloverEnemyPhase='idle';private writerId=1;
+ readonly body:GmInstance;phase:CloverEnemyPhase='idle';
  /** The root owns rt.step()/draw(), shared party healing, item effects and command timing. */
  constructor(readonly rt:GmRuntime,readonly control:GmInstance,readonly events:CloverHostEvents={}){
   this.installGlobals();
   const def=createCloverEnemy({
-   text:cloverText,writerExists:()=>this.writers.length>0,
-   enemySpeech:(_rt,x,y,face)=>this.openWriter('speech',[rt.globals.msg[0]],x,y,face),
-   battleText:(_rt,useDefault)=>{
-    if(useDefault){rt.globals.fc=0;rt.globals.typer=4;}
-    const pages:string[]=[];
-    // A / marker advances to the next captured nstring; /% ends the writer.
-    for(let i=0;i<100;i++){const raw=rt.globals.msg[i];if(typeof raw!=='string'||!raw.trim())break;pages.push(raw);if(raw.includes('/%')||!raw.includes('/'))break;}
-    this.openWriter('battle',pages,rt.view.x+30,rt.view.y+376,0);
-   },
-   dismissWriters:()=>this.clearWriters(),attackPhase:()=>this.completeAction(),
+   // The game's own writers: scr_enemyblcon balloons for the heads, scr_battletext for the battle box.
+   text:cloverText,writerExists:()=>rt.exists(writer),
+   enemySpeech:(_rt,x,y,kind)=>{enemyBalloon(rt,x,y,kind);},
+   battleText:(_rt,useDefault)=>{if(useDefault){rt.globals.fc=0;rt.globals.typer=4;}battleText(rt);},
+   dismissWriters:()=>destroyWriters(rt),attackPhase:()=>this.completeAction(),
    monsterSetup:s=>this.setupMonster(s),
    defeat:(s,runtime)=>{
     const a=runtime.create(cloverDefeat,s.x,s.y);a.sprite=s.hurtsprite;a.imageIndex=0;a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;
@@ -34,7 +30,7 @@ export class CloverHost implements SourceEnemyHost {
   this.body=rt.create(def,rt.view.x+400,rt.view.y+120);this.body.myself=0;rt.globals.monsterinstance[0]=this.body.id;
   rt.userEvent(this.body,12);
  }
- get dialogue():readonly CloverDialogue[]{return this.writers;}
+ get dialogue():readonly CloverDialogue[]{return runtimeDialogue(this.rt);}
  get hp(){return this.rt.globals.monsterhp[0] as number;}
  get mercy(){return this.rt.globals.mercymod[0] as number;}
  get tired(){return this.rt.globals.monsterstatus[0]===1;}
@@ -85,25 +81,17 @@ export class CloverHost implements SourceEnemyHost {
  }
  /** Call during action resolution; subsequent native Step events produce the actual dialogue stages. */
  beginAct(value:number){
-  if(this.writers.length)throw Error('Clover dialogue is still active');
+  if(this.rt.exists(writer))throw Error('Clover dialogue is still active');
   this.reserveAct(value);this.body.actcon=0;this.rt.globals.myfight=3;this.rt.globals.mnfight=0;
  }
  /** UI marks this captured writer gone, matching the source instance_exists gate on the next Step. */
- completeDialogue(id:number){
-  const index=this.writers.findIndex(w=>w.id===id);if(index<0)return;
-  this.writers.splice(index,1);this.publishDialogue();
- }
- /** ACT: advance one page or all simultaneous mouths. Enemy speech: source blconskip owns its minimum delay. */
- confirm(){
-  if(this.phase==='speech'&&this.rt.globals.mnfight===1){this.rt.input.pressed.add(KEY.z);return;}
-  const battle=this.writers.find(w=>w.kind==='battle');
-  if(battle){if(battle.page+1<battle.pages.length){battle.page++;this.publishDialogue();}else this.completeDialogue(battle.id);}
-  else{for(const w of [...this.writers])this.completeDialogue(w.id);}
- }
+ completeDialogue(id:number){const w=this.rt.byId(id);if(w)this.rt.destroy(w);}
+ /** Z for this frame: the writers (and the enemy's speech skip) read it as the game does. */
+ confirm(){this.rt.input.pressed.add(KEY.z);}
  /** Called after the shared player attack/magic/item phases have finished. No target or pattern roll here. */
  beginEnemyTurn(){
   if(!this.body.live||this.rt.globals.monster[0]===0)throw Error('Clover has already left the battle');
-  this.clearWriters();const g=this.rt.globals;g.targeted=[0,0,0];g.charturn=3;g.mnfight=1;g.myfight=-1;
+  destroyWriters(this.rt);const g=this.rt.globals;g.targeted=[0,0,0];g.charturn=3;g.mnfight=1;g.myfight=-1;
   this.control.timeron=1;this.control.reset=0;this.control.noreturn=0;this.setPhase('speech');
  }
  /** Call once immediately after the shared runtime Step; this observes, rather than replaces, native scheduling. */
@@ -114,18 +102,12 @@ export class CloverHost implements SourceEnemyHost {
  }
  /** Call after shared return-heart/arena cleanup and downed-party healing, before reopening commands. */
  returnToCommands(){
-  this.clearWriters();const g=this.rt.globals;g.mnfight=0;g.myfight=0;g.bmenuno=0;g.charturn=0;this.control.timeron=0;
+  destroyWriters(this.rt);const g=this.rt.globals;g.mnfight=0;g.myfight=0;g.bmenuno=0;g.charturn=0;this.control.timeron=0;
   for(const m of this.rt.all(monsterParent)){m.attacked=0;m.talked=0;m.acting=0;}
   for(let i=0;i<3;i++){g.acting[i]=0;g.temptension[i]=g.tension;g.charspecial[i]=0;g.targeted[i]=0;g.charaction[i]=0;g.faceaction[i]=0;}
   this.setPhase('idle');
  }
  private setPhase(phase:CloverEnemyPhase){if(this.phase!==phase){this.phase=phase;this.events.onPhase?.(phase);}}
- private publishDialogue(){this.events.onDialogue?.(this.writers.map(w=>({...w,pages:[...w.pages],rawPages:[...w.rawPages]})));}
- private clearWriters(){this.writers=[];this.publishDialogue();}
- private openWriter(kind:CloverDialogue['kind'],rawPages:string[],x:number,y:number,face:number){
-  const g=this.rt.globals;
-  this.writers.push({id:this.writerId++,kind,rawPages:[...rawPages],pages:rawPages.map(cloverPlain),page:0,x,y,face,typer:g.typer,fc:g.fc,fe:g.fe});this.publishDialogue();
- }
  private completeAction(){
   const g=this.rt.globals;
   if(g.monster[0]===0){this.control.techwon=1;this.events.onDefeat?.(this.body);return;}
