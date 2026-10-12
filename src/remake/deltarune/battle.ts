@@ -20,7 +20,20 @@ export const heroParent:GmObjectDef={name:'obj_heroparent',index:212,depth:100,s
 export const heroKris:GmObjectDef={name:'obj_herokris',index:213,depth:100,parent:heroParent,sprite:'spr_krisplace'};
 export const heroSusie:GmObjectDef={name:'obj_herosusie',index:214,depth:100,parent:heroParent,sprite:'spr_krisplace'};
 export const heroRalsei:GmObjectDef={name:'obj_heroralsei',index:215,depth:100,parent:heroParent,sprite:'spr_krisplace'};
-export const darkener:GmObjectDef={name:'obj_darkener',index:205,depth:200};
+/** The enemy turn's darkness: it fades the screen and the heroes in; with darken = 0 it closes the box and fades out. */
+export const darkener:GmObjectDef={name:'obj_darkener',index:205,depth:200,events:{
+ create:(s,rt)=>{if(rt.count(darkener)>1){rt.destroy(s);return;}s.darken=1;s.darkamt=0;},
+ draw:(s,rt)=>{
+  if(s.darken===1){for(const h of rt.all(heroParent))h.darkify=1;if(s.darkamt<15)s.darkamt+=1;}
+  if(s.darken===0){
+   for(const b of rt.all(growtangle))b.growcon=3;
+   for(const h of rt.all(heroParent))h.darkify=0;
+   if(s.darkamt>0)s.darkamt-=1;
+   if(s.darkamt<=0)rt.destroy(s);
+  }
+  const d=rt.drawState;d.alpha=s.darkamt/20;d.color=C.black;rt.drawRect(rt.view.x-40,rt.view.y-40,rt.view.x+680,rt.view.y+520);d.alpha=1;
+ },
+}};
 export const monsterParent:GmObjectDef={name:'obj_monsterparent',index:242,depth:90};
 export const bulletGenParent:GmObjectDef={name:'obj_bulletgenparent',index:198};
 /** At the end of the enemy turn the soul flies back into Kris and bursts. */

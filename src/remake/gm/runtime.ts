@@ -21,7 +21,14 @@ export class GmInstance{
  private _speed=0;private _direction=0;private _hspeed=0;private _vspeed=0;
  private _friction=0;private _gravity=0;private _gravityDirection=270;
  private _imageIndex=0;private _imageSpeed=1;imageAngle=0;private _imageXscale=1;private _imageYscale=1;private _imageAlpha=1;imageBlend=0xffffff;
- sprite:string|null;mask:string|null;depth:number;visible:boolean;live=true;destroyed=false;
+ sprite:string|null;mask:string|null;visible:boolean;live=true;destroyed=false;
+ private _depth=0;
+ /** When the instance last entered its depth: the runner puts an instance at the front of its depth layer on creation
+  * and on every depth change, so among equal depths the most recent arrival draws first (underneath). */
+ layerEntry=0;
+ static layerEntries=0;
+ get depth(){return this._depth;}
+ set depth(v:number){this._depth=v;this.layerEntry=++GmInstance.layerEntries;}
  alarm:number[]=new Array(12).fill(-1);
  /** Object variables set by code (GML instance variables). */
  [name:string]:any;
@@ -230,12 +237,12 @@ export class GmRuntime{
   // Presses and releases stay visible to this frame's Draw (the writer reads button1_p there), then go.
   this.consumed={pressed:new Set(this.input.pressed),released:new Set(this.input.released)};
  }
- /** Draw events by depth (deepest first), then instance id. Draw code may use the random generator. */
  /** Presses a step has seen: cleared after the following draw, or at the next step if no draw ran. */
  private consumed={pressed:new Set<number>(),released:new Set<number>()};
  private dropConsumed(){for(const k of this.consumed.pressed)this.input.pressed.delete(k);for(const k of this.consumed.released)this.input.released.delete(k);this.consumed.pressed.clear();this.consumed.released.clear();}
+ /** Draw events by depth (deepest first); equal depths most recent arrival first. Draw code may use the random generator. */
  draw(){
-  const list=this.instances.map((i,n)=>({i,n})).filter(e=>e.i.live&&e.i.visible).sort((a,b)=>b.i.depth-a.i.depth||a.i.id-b.i.id).map(e=>e.i);
+  const list=this.instances.map((i,n)=>({i,n})).filter(e=>e.i.live&&e.i.visible).sort((a,b)=>b.i.depth-a.i.depth||b.i.layerEntry-a.i.layerEntry).map(e=>e.i);
   for(const inst of list){if(!inst.live)continue;const h=resolveEvent(inst.object,'draw');if(h)h(inst,this);else this.drawSelf(inst);}
   this.instances=this.instances.filter(i=>!i.destroyed);
   this.dropConsumed();
