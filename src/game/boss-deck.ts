@@ -44,8 +44,9 @@ export class BossDeck{
     const name=document.createElement('strong');name.className='card-name';name.textContent=record.name;
     const type=document.createElement('span');type.className='card-type';type.textContent=record.kind==='secret'?'Secret encounter':record.kind==='main'?'Boss encounter':`Encounter ${record.encounter}`;
     const state=document.createElement('span');state.className='card-state';
+    const stamp=document.createElement('span');stamp.className='card-development-stamp';stamp.textContent='IN DEVELOPMENT';stamp.setAttribute('aria-hidden','true');stamp.hidden=true;
     const bottom=corner.cloneNode(true) as HTMLElement;bottom.classList.add('card-corner-bottom');
-    card.append(corner,art,type,name,state,bottom);card.addEventListener('click',()=>{if(index===this.selected)this.launch();else this.choose(index);});stack.append(card);this.cards.push(card);
+    card.append(corner,art,type,name,state,bottom,stamp);card.addEventListener('click',()=>{if(index===this.selected)this.launch();else this.choose(index);});stack.append(card);this.cards.push(card);
    });
    const controls=document.createElement('div');controls.className='deck-controls';
    const prev=document.createElement('button');prev.textContent='←';prev.setAttribute('aria-label','Previous encounters');prev.addEventListener('click',()=>this.move(-1));
@@ -65,7 +66,9 @@ export class BossDeck{
    card.style.transform=`translateX(${offset<0?-57:offset*54}%) translateY(${Math.abs(offset)*3}%) rotate(${offset<0?-8:offset*6}deg) scale(${active?1:.92-Math.abs(offset)*.045})`;
    card.style.opacity=visible?String(active?1:offset<0?.18:Math.max(.08,.55-offset*.14)):'0';
    card.style.zIndex=String(active?10:6-Math.abs(offset));card.style.visibility=visible?'visible':'hidden';card.tabIndex=active?0:-1;card.setAttribute('aria-current',active?'true':'false');
-   const state=card.querySelector('.card-state')!;state.textContent=completed.includes(records[index].id)?'Cleared':available(records[index].id)?'Ready to play':'Coming next';card.classList.toggle('card-ready',available(records[index].id));
+   const ready=available(records[index].id),state=card.querySelector('.card-state')!;
+   state.textContent=completed.includes(records[index].id)?'Cleared':ready?'Ready to play':'In development';card.classList.toggle('card-ready',ready);card.classList.toggle('card-development',!ready);
+   (card.querySelector('.card-development-stamp') as HTMLElement).hidden=ready;
   });
   if(cardHadFocus)this.cards[selected].focus({preventScroll:true});
  }

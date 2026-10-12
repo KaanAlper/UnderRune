@@ -10,3 +10,6 @@
 @media(max-width:650px){#stage:has(.boss-deck){aspect-ratio:.95}.deck-heading h1{font-size:5.6cqw}.deck-heading>span{font-size:2.8cqw}.deck-stack{left:20%;width:42%}.deck-footer{right:5%;width:31%}.deck-footer select{font-size:2.8cqw;min-height:34px}.deck-footer label{font-size:2.4cqw}.deck-prepare{font-size:2.8cqw;min-height:40px}.card-name{font-size:4cqw}.card-type,.card-state{font-size:2.3cqw}.deck-controls{font-size:2.8cqw;gap:12px}.deck-controls button{min-width:44px;min-height:44px;font-size:5cqw}}
 .deck-stack{height:53%}.deck-prepare{position:absolute;right:7%;bottom:5%;width:27%;margin:0;min-height:40px}
 @media(max-width:650px){.deck-prepare{right:5%;width:36%;min-height:44px}}
+.card-development:before{content:'';position:absolute;inset:0;z-index:1;background:#07060e9c;pointer-events:none}
+.card-development .card-type,.card-development .card-name,.card-development .card-state{position:relative;z-index:2}
+.card-development-stamp{position:absolute;left:50%;top:55%;z-index:3;width:84%;box-sizing:border-box;transform:translate(-50%,-50%) rotate(-14deg);padding:7px 3px;border:4px double #fa5663;background:#290810ed;color:#ff6874;font-size:clamp(8px,2cqw,18px);font-weight:700;line-height:1.3;letter-spacing:.025em;text-align:center;white-space:nowrap;pointer-events:none;box-shadow:0 3px 8px #0008}
