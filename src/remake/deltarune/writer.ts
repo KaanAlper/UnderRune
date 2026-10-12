@@ -7,22 +7,25 @@ import {C} from '../gm/graphics';
 import {KEY} from './battle';
 
 /** scr_textsetup values per global.typer (English, Chapter 1): font, colour, speed, voice, spacing, effect. */
-type Typer={font:string;color:number;rate:number;sound:string|null;hspace:number;vspace:number;special:number};
+type Typer={font:string;color:number;rate:number;sound:string|null;hspace:number;vspace:number;special:number;yoff?:number};
 const main=(sound:string|null,rate=1,special=0):Typer=>({font:'fnt_main',color:C.white,rate,sound,hspace:8,vspace:18,special});
 const big=(sound:string|null,vspace:number,rate=1):Typer=>({font:'fnt_mainbig',color:C.white,rate,sound,hspace:16,vspace,special:1});
 const dotum=(sound:string,rate=1):Typer=>({font:'fnt_dotumche',color:C.black,rate,sound,hspace:9,vspace:20,special:0});
 export const TYPERS:Record<number,Typer>={
- 1:main('snd_text'),2:main(null,2),3:main('snd_text',2,1),4:big('snd_text',28),5:main('snd_text'),6:big('snd_text',36),
+ 0:main('snd_text'),1:main('snd_text'),2:main(null,2),3:main('snd_text',2,1),4:big('snd_text',28),5:main('snd_text'),6:big('snd_text',36),
  7:main('snd_txttor'),8:main('snd_txttor',2),10:main('snd_txtsus'),11:main('snd_txtsus'),12:main('snd_txtnoe'),13:main('snd_txtber'),
- 14:{...main('snd_txtsans'),font:'fnt_comicsans'},15:main('snd_text'),
- 30:big('snd_txtsus',36),31:big('snd_txtral',36),32:big('snd_txtlan',36),45:big('snd_txtral',28),46:big('snd_txtlan',28),47:big('snd_txtsus',28),
+ 14:{...main('snd_txtsans'),font:'fnt_comicsans'},15:main('snd_text'),16:main('snd_txtund'),17:main('snd_txtund'),18:main('snd_txtasg'),19:main('snd_text'),
+ 20:main('snd_txtal'),21:main('snd_txtal'),22:{...main('snd_txtal'),font:'fnt_tinynoelle',hspace:6,yoff:7},23:{...main('snd_txtnoe'),font:'fnt_tinynoelle',hspace:6,yoff:7},
+ 30:big('snd_txtsus',36),31:big('snd_txtral',36),32:big('snd_txtlan',36),33:big('snd_dadtxt',36),35:big('snd_txtjok',36),36:big(null,36),
+ 37:{...big('snd_txtsus',36,3),hspace:18},40:main(null,2),41:main(null,3),42:big(null,36,2),
+ 45:big('snd_txtral',28),46:big('snd_txtlan',28),47:big('snd_txtsus',28),48:big('snd_dadtxt',28),
  50:dotum('snd_text'),51:big('snd_text',36,10),52:big('snd_text',36,4),53:dotum('snd_txtsus'),54:dotum('snd_txtsus',2),55:main('snd_txtrud'),
  60:main(null,8),666:{...main(null,4,2),hspace:12,vspace:20},667:{...main(null,2,2),hspace:12,vspace:20},999:main('snd_txtecho',4,3),
 };
 /** scr_texttype: apply the current global.typer (unknown typers keep the writer's settings). */
 export function textType(s:GmInstance,rt:GmRuntime){
  s.textscale=1;const t=TYPERS[rt.globals.typer];if(!t)return;
- s.myfont=t.font;s.mycolor=t.color;s.writingx=s.x;s.writingy=s.y;s.charline=33;s.shake=0;s.rate=t.rate;s.textsound=t.sound;
+ s.myfont=t.font;s.mycolor=t.color;s.writingx=s.x;s.writingy=s.y+(t.yoff??0);s.charline=33;s.shake=0;s.rate=t.rate;s.textsound=t.sound;
  s.hspace=t.hspace;s.vspace=t.vspace;s.special=t.special;s.colorchange=1;s.xcolor=t.color;
 }
 const at=(str:string,n:number)=>n>=1&&n<=str.length?str[n-1]:'';
@@ -145,7 +148,11 @@ function drawWriter(s:GmInstance,rt:GmRuntime){
    if(n1==='E'){const e='0123456789ABCDE'.indexOf(n2);if(e>=0)g.fe=e;}
    if(n1==='F'){const f=FACE_CODES[n2];if(f!==undefined)g.fc=f;}
    // \* draws a controller button icon; no Chapter 1 battle line uses it.
-   if(n1==='T'){const t=SPEAKER_TYPERS[n2];if(t!==undefined){g.typer=t(g);textType(s,rt);d.font=s.myfont;}}
+   if(n1==='T'){
+    const t=SPEAKER_TYPERS[n2];if(t!==undefined){g.typer=t(g);textType(s,rt);d.font=s.myfont;}
+    // A voice change in the battle box also returns the line to the left edge (or past the portrait).
+    if(s.dialoguer===1){if(g.fc===0){s.charline=s.originalcharline;wx=s.x;}else s.wxskip=1;}
+   }
    if(n1==='s'){if(n2==='0')s.skippable=0;if(n2==='1')s.skippable=1;}
    if(n1==='c'){s.colorchange=1;const c=({R:C.red,B:0xff0000,Y:C.yellow,G:C.lime,W:C.white,X:C.black} as Record<string,number>)[n2];s.xcolor=n2==='0'?s.mycolor:c??s.xcolor;}
    if(n1==='M'&&/\d/.test(n2))g.flag[20]=Number(n2);
@@ -188,7 +195,8 @@ function destroyWriter(s:GmInstance,rt:GmRuntime){
 const SPEAKER_TYPERS:Record<string,(g:Record<string,any>)=>number>={
  '0':g=>g.darkzone===1?(g.fighting===1?4:6):5,'1':()=>2,B:()=>13,
  S:g=>g.darkzone===1?(g.fighting===1?47:30):10,R:g=>g.flag?.[30]===1?6:g.fighting===1?45:31,L:g=>g.fighting===1?46:32,
- X:()=>40,r:()=>55,T:()=>7,J:()=>35,
+ X:()=>40,r:()=>55,T:()=>7,J:()=>35,A:()=>18,a:()=>20,N:()=>12,n:()=>23,
+ K:g=>g.fighting===1?48:(g.plot??0)<235?36:33,
 };
 
 /** Susie's portrait has one sprite per emotion (the two frames are her mouth). */

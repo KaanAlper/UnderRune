@@ -21,7 +21,17 @@ export class GmInstance{
  private _speed=0;private _direction=0;private _hspeed=0;private _vspeed=0;
  private _friction=0;private _gravity=0;private _gravityDirection=270;
  private _imageIndex=0;private _imageSpeed=1;imageAngle=0;private _imageXscale=1;private _imageYscale=1;private _imageAlpha=1;imageBlend=0xffffff;
- sprite:string|null;mask:string|null;visible:boolean;live=true;destroyed=false;
+ mask:string|null;visible:boolean;live=true;destroyed=false;
+ private _sprite:string|null=null;
+ /** The runtime's frame counts, for sprite_index's rule below. */
+ frameCount?:(sprite:string)=>number|undefined;
+ get sprite(){return this._sprite;}
+ /** Setting sprite_index to another sprite resets image_index to 0 when it is past the new sprite's last frame. */
+ set sprite(v:string|null){
+  if(v===this._sprite)return;this._sprite=v;
+  const n=v&&this.frameCount?this.frameCount(v):undefined;
+  if(n&&n>0&&Math.trunc(this.imageIndex)>=n)this.imageIndex=0;
+ }
  private _depth=0;
  /** When the instance last entered its depth: the runner puts an instance at the front of its depth layer on creation
   * and on every depth change, so among equal depths the most recent arrival draws first (underneath). */
@@ -108,6 +118,7 @@ export interface GmInput{held:Set<number>;pressed:Set<number>;released:Set<numbe
 
 export class GmRuntime{
  instances:GmInstance[]=[];frame=0;nextId:number;random:GmRandom;
+ private frameCount:(name:string)=>number|undefined;
  view={x:0,y:0,width:640,height:480};
  room={width:640,height:480};
  globals:Record<string,any>={};
@@ -149,14 +160,15 @@ export class GmRuntime{
  pendingRoom:string|null=null;
  constructor(readonly bank:SpriteBank,options:{seed?:number;rng?:readonly number[];firstId?:number}={}){
   this.random=options.rng?GmRandom.restore(options.rng):new GmRandom(options.seed??0);this.nextId=options.firstId??100000;
+  this.frameCount=name=>this.bank.get(name)?.frames;
  }
  create(object:GmObjectDef,x:number,y:number,id=this.nextId++):GmInstance{
-  const inst=new GmInstance(id,object,x,y);this.instances.push(inst);
+  const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;this.instances.push(inst);
   resolveEvent(object,'create')?.(inst,this);return inst;
  }
  /** Recreate an instance from a reference snapshot without running its Create event (ids keep creation order). */
  restore(object:GmObjectDef,id:number,x:number,y:number,vars:Record<string,unknown>={}):GmInstance{
-  const inst=new GmInstance(id,object,x,y);Object.assign(inst,vars);
+  const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;Object.assign(inst,vars);
   this.instances.push(inst);this.instances.sort((a,b)=>a.id-b.id);return inst;
  }
  destroy(inst:GmInstance){if(inst.destroyed)return;inst.destroyed=true;resolveEvent(inst.object,'destroy')?.(inst,this);inst.live=false;}
