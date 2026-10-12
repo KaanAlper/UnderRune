@@ -14,6 +14,7 @@ import {checkersEnemy,checkerTransform,type KRoundHost,type KRoundThrowHost,type
 import {checkersHealAnim,flashCheckers} from '../bosses/kround/effects';
 import {cloverDefeat} from './clover';
 import {lancerEnemy} from '../bosses/lancer/enemy';
+import {jokerBackground,jokerEnemy} from '../bosses/jevil/enemy';
 import {destroyWriters} from './enemy-host';
 import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
@@ -23,6 +24,7 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean}>={
  'ch1-2':{n:2,room:'room_field_start',backdrop:true},
  'ch1-8':{n:8,room:'room_forest_area3',backdrop:true},
  'ch1-12':{n:12,room:'room_field_checkersboss',backdrop:true},
+ // ch1-25 (Jevil): jokerEnemy is written but not yet verified against a recording; Jevil still runs on SourceBattle.
  'ch1-27':{n:27,room:'room_cc_6f',backdrop:false},
 };
 export const runsOnEngine=(id:string)=>id in ENGINE;
@@ -49,6 +51,7 @@ export function engineEnemies(id:string):Record<string,GmObjectDef>{
  if(!ENGINE[id])throw Error(`${id} does not run on the engine`);
  if(id==='ch1-2')return {obj_lancerboss:lancerEnemy};
  if(id==='ch1-8')return {obj_clubsenemy:cloverEnemy};
+ if(id==='ch1-25')return {obj_joker:jokerEnemy};
  return {obj_checkers_enemy:checkersEnemy};
 }
 /** Callbacks some enemies read from globals (K.Round's), installed on the battle's runtime. */
@@ -93,6 +96,8 @@ export class EngineBattle{
   partyGlobals(rt,{char,hp:BASE.hp,maxhp:BASE.hp,at:BASE.at,df:BASE.df,mag:BASE.mag,equipped,items:loadout.items,auto:id==='ch1-2'?[2]:[]});
   installEngineHosts(rt,id);encounterSetup(rt,setup.n,engineEnemies(id));
   if(setup.backdrop)rt.create(b.battleBack,0,0);
+  // Jevil's room has its own spinning background (drawn by the host view).
+  if(id==='ch1-25')rt.create(jokerBackground,0,0);
   rt.create(battleControllerFull,0,0);
  }
  get enemy():GmInstance|undefined{return this.rt.byId(this.rt.globals.monsterinstance[0]);}

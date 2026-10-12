@@ -193,10 +193,12 @@ function healShow(h:GmInstance,rt:GmRuntime,amount:number){
  if(g.hp[g.char[h.myself]]>=g.maxhp[g.char[h.myself]])w.specialmessage=3;
  h.tu+=1;
 }
-function healItem(s:GmInstance,rt:GmRuntime,amount:number){
+/** scr_healitemspell, run by the caster: heals party slot `star`. */
+export function healItem(s:GmInstance,rt:GmRuntime,amount:number){
  const g=rt.globals;heal(rt,s.star,amount);const h=rt.byId(g.charinstance[s.star]);if(h)healShow(h,rt,amount);g.spelldelay=15;
 }
-function healAllItem(rt:GmRuntime,amount:number){
+/** scr_healallitemspell. */
+export function healAllItem(rt:GmRuntime,amount:number){
  const g=rt.globals;
  for(let i=0;i<3;i++)if(g.char[i]!==0)heal(rt,i,amount);
  for(let i=0;i<3;i++){const h=rt.byId(g.charinstance[i]);if(h)healShow(h,rt,amount);}
