@@ -21,6 +21,7 @@ global.char[0] = ini_read_real(""party"", ""0"", 1);
 global.char[1] = ini_read_real(""party"", ""1"", 2);
 global.char[2] = ini_read_real(""party"", ""2"", 3);
 for (var hero = 1; hero <= HERO_MAX; hero += 1) {
+global.charauto[hero] = ini_read_real(""auto"", string(hero), 0);
 global.charweapon[hero] = ini_read_real(""weapon"", string(hero), global.charweapon[hero]);
 global.chararmor1[hero] = ini_read_real(""armor1"", string(hero), global.chararmor1[hero]);
 global.chararmor2[hero] = ini_read_real(""armor2"", string(hero), global.chararmor2[hero]);
@@ -30,7 +31,6 @@ for (var slot = 0; slot < 12; slot += 1) global.item[slot] = ini_read_real(""ite
 if (ini_read_real(""oracle"", ""god"", 0) == 1) global.chemg_god_mode = 1;
 ORACLE_JEVIL_READ
 ini_close();
-global.charauto[2] = 0;
 global.tempflag[4] = 1;
 global.ur_watch = 0;
 ORACLE_JEVIL_WATCH

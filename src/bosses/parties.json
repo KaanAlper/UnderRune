@@ -1,9 +1,8 @@
 {
  "_about": "Party (global.char[0..2]; 1 Kris, 2 Susie, 3 Ralsei, 4 Noelle) when each encounter starts in the original game. Raw code evidence: docs/encounter-parties.json (npm run derive:parties). 'code' = set by the battle room or the triggering cutscene; 'enemy' = the enemy's own code/dialogue references; 'story' = carried over from the surrounding story segment.",
- "ch1-2": {"party": [1, 2, 0], "basis": "code", "note": "obj_darkcastle_event: scr_getchar(2) right after encounterno = 2; Ralsei joins later"},
+ "ch1-2": {"party": [1, 2, 0], "auto": [2], "basis": "code", "note": "obj_darkcastle_event: scr_getchar(2) right after encounterno = 2; Ralsei joins later; gamestart sets charauto[2] = 1"},
  "ch1-8": {"party": [1, 3, 0], "basis": "story", "note": "Forest segment: Susie travels with Lancer (scarelancerevent shows both as NPCs)"},
- "ch1-12": {"party": [1, 2, 3], "basis": "code", "note": "Susie and Ralsei sprites in the K.Round cutscene; scr_losechar()+scr_getchar(3) only after the battle"},
- "ch1-15": {"party": [1, 3, 0], "basis": "story", "note": "Field/Forest random encounter while Susie is away"},
+ "ch1-12": {"party": [1, 3, 2], "auto": [2], "basis": "code", "note": "obj_getsusieevent rejoins scr_getchar(3), then scr_getchar(2); Susie remains automatic until obj_prisonevent resets charauto"},
  "ch1-20": {"party": [1, 3, 0], "basis": "code", "note": "Susie is a dark marker on Lancer's side (obj_lancerbattle2_event)"},
  "ch1-25": {"party": [1, 2, 3], "basis": "enemy", "note": "Card Castle, after Susie rejoins"},
  "ch1-27": {"party": [1, 2, 3], "basis": "enemy", "note": "K.Round rematch in Card Castle"},

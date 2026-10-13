@@ -92,7 +92,7 @@ export class EngineBattle{
    equipped[c]={weapon:slot.weapon||c,itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
   }
   const char=[...encounter.party,0,0,0].slice(0,3);
-  partyGlobals(rt,{char,hp:BASE.hp,maxhp:BASE.hp,at:BASE.at,df:BASE.df,mag:BASE.mag,equipped,items:loadout.items,auto:id==='ch1-2'?[2]:[]});
+  partyGlobals(rt,{char,hp:BASE.hp,maxhp:BASE.hp,at:BASE.at,df:BASE.df,mag:BASE.mag,equipped,items:loadout.items,auto:encounter.auto});
   installEngineHosts(rt,id);encounterSetup(rt,setup.n,engineEnemies(id));
   if(setup.backdrop)rt.create(b.battleBack,0,0);
   // Jevil's room has its own spinning background (drawn by the host view).

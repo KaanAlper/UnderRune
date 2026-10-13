@@ -56,7 +56,7 @@ async function start(id,ini,oracle){
   state.textContent='* '+profile.name+' / LOADING THE ORIGINAL ENGINE…';
   const {default:createRunner}=await import('/native/'+(supportsJspi?'browser':'portable')+'-engine/butterscotch.mjs');
   runner=await createRunner({canvas,print:report,printErr:report});mkdir('/saves');const packageName='chapter'+profile.chapter+'_windows';mkdir('/game/'+packageName);
-  runner.FS.writeFile('/saves/UnderRune.ini',ini+`[battle]\nencounter=${profile.encounter}\nspecial=${profile.special}\nmusic=${profile.music}\nroom=${profile.room??''}\n[party]\n0=${profile.party[0]}\n1=${profile.party[1]}\n2=${profile.party[2]}\n`);
+  runner.FS.writeFile('/saves/UnderRune.ini',ini+`[battle]\nencounter=${profile.encounter}\nspecial=${profile.special}\nmusic=${profile.music}\nroom=${profile.room??''}\n[party]\n0=${profile.party[0]}\n1=${profile.party[1]}\n2=${profile.party[2]}\n[auto]\n${[1,2,3,4].map(id=>`${id}=${(profile.auto??[]).includes(id)?1:0}`).join('\n')}\n`);
   let index=0,done=0;const names=profile.files;
   await Promise.all(Array.from({length:4},async()=>{while(index<names.length){const name=names[index++];if(!/^[\w./-]+$/.test(name)||name.includes('..'))throw Error('Invalid game file path');const target='/game/'+packageName+'/'+name;mkdir(target.slice(0,target.lastIndexOf('/')));runner.FS.writeFile(target,await fetchBytes(name==='data.win'?'/native/package/'+profile.chapter:'/native/game/'+packageName+'/'+name));done++;state.textContent='* '+profile.name+' / FILES '+done+' / '+names.length;}}));
   mkdir('/game/'+packageName+'/mus');for(const file of profile.musicFiles){const bytes=await fetchBytes('/native/game/mus/'+file);runner.FS.writeFile('/game/'+packageName+'/mus/'+file,bytes);}

@@ -1,13 +1,16 @@
 /** Public availability is independent of attack-module existence and local reference-test skips. */
 export interface SourceEncounter{
  id:string;chapter:number;name:string;party:readonly number[];hp:number;attack:number;defense:number;music:string;practice:boolean;
+ /** Character IDs that ignore commands and attack automatically at this story point. */
+ auto?:readonly number[];
  /** Party positions (scr_encountersetup heromakex/heromakey) where they differ from the host's defaults. */
  heroes?:readonly (readonly [number,number])[];
 }
 const playable:readonly SourceEncounter[]=[
- {id:'ch1-2',chapter:1,name:'Lancer',party:[1,2],hp:540,attack:5,defense:1,music:'lancerfight',practice:false},
+ {id:'ch1-2',chapter:1,name:'Lancer',party:[1,2],auto:[2],hp:540,attack:5,defense:1,music:'lancerfight',practice:false},
  {id:'ch1-8',chapter:1,name:'Clover',party:[1,3],hp:270,attack:6,defense:1,music:'battle',practice:false},
- {id:'ch1-12',chapter:1,name:'K.Round',party:[1,2,3],hp:1300,attack:7.5,defense:3,music:'checkers',practice:false,heroes:[[80,50],[80,130],[80,210]]},
+ // getsusieevent rejoins Ralsei, then Susie. Her gamestart charauto remains set until prisonevent.
+ {id:'ch1-12',chapter:1,name:'K.Round',party:[1,3,2],auto:[2],hp:1300,attack:7.5,defense:3,music:'checkers',practice:false,heroes:[[80,50],[80,130],[80,210]]},
  {id:'ch1-25',chapter:1,name:'JEVIL',party:[1,2,3],hp:3500,attack:10,defense:5,music:'joker',practice:true},
  {id:'ch1-27',chapter:1,name:'K.Round',party:[1,2,3],hp:1300,attack:8,defense:3,music:'checkers',practice:false,heroes:[[80,65],[80,130],[80,210]]},
 ];

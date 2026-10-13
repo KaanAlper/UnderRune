@@ -33,8 +33,8 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  expect(failures).toEqual([]);expect(native).toEqual([]);
 });
 test('unavailable encounters still open equipment previews without launching a fake fight',async({page})=>{
- await menu(page);await boss(page,"ch1-15","Clover & Hathy");
- const prep=page.getByRole('dialog',{name:'Clover & Hathy'});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
+ await menu(page);await boss(page,"ch1-40","King");
+ const prep=page.getByRole('dialog',{name:'King',exact:true});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
  await prep.getByRole('button',{name:'Close preparation'}).click();await expect(page.locator('#practice')).toBeDisabled();
 });
 test('mobile preparation fits the viewport and retains touch controls',async({page})=>{

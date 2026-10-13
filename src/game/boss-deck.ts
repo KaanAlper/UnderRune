@@ -1,7 +1,8 @@
 import type {AssetStore} from './assets';
 import type {EncounterRecord} from './types';
 
-export const CHAPTER_NAMES=['','Field & Forest',"A Cyber's World",'TV World','Sanctuary','Chapter Five'];
+/** Launcher scr_init / get_chapter_title, from the installed game's source. */
+export const CHAPTER_NAMES=['','The Beginning',"A Cyber's World",'Late Night','Prophecy','Festival Day'];
 const COLORS=['#f2bd68','#97e184','#ef91b4','#be99f5','#80d8ed'];
 /** A persistent card deck: changing selection repositions existing cards, so rapid navigation is interruptible. */
 export class BossDeck{

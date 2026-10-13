@@ -15,7 +15,7 @@ Press **PLAY**, choose the DELTARUNE remote, connect through the TV, and select 
 ## What it does
 
 - **Theater intro:** a big CRT on a stage split between UNDERTALE (red curtain, warm light, Frisk) and DELTARUNE (blue curtain, green-tinted light, Kris). Pressing a side's remote turns the TV on and sweeps that side's theme across the stage. UNDERTALE shows its logo with *coming soon*; DELTARUNE connects to the device.
-- **Device room and boss select:** 49 source encounter records (main, secret and minibosses), grouped by chapter in a playing-card deck. A source record may be an alternate or unused encounter; inclusion does not establish normal story reachability.
+- **Device room and boss select:** 48 source encounter records (main, secret and minibosses), grouped by chapter in a playing-card deck. The unused Clover/Hathy encounter 15 is excluded. A source record may be an alternate or unused encounter; inclusion does not establish normal story reachability.
 - **Battle preparation:** after choosing a boss, a side panel lets you equip weapons and armor on each character and fill the 12-slot item bag. Every piece of equipment and every item, with its name, description and stats, is read from the game's own data.
 - **Public battles:** TypeScript ports of the game's controller, party, writers and supported enemies run on a browser GameMaker runtime subset, including queued commands, per-character timing lanes and source enemy attacks. Native frame recordings verify selected gameplay traces.
 - **Local original battles:** with native launchers installed, the battle runs the original bytecode from the game's `data.win` on the open-source [Butterscotch](https://github.com/ButterscotchRunner/Butterscotch) GameMaker runner (WebAssembly).
@@ -77,7 +77,7 @@ On touch screens, a d-pad and Z/X buttons appear.
 npm test               # unit tests (engine, preparation, bridge)
 npm run test:tools     # extraction, catalog and party tests
 npm run test:e2e       # end-to-end in the browser, including original Jevil, Lancer and Clover battles
-npm run audit:native   # opens all 49 encounters one by one; screenshots and runtime diagnostics in .tools/native-census/
+npm run audit:native   # opens the catalog encounters one by one; screenshots and runtime diagnostics in .tools/native-census/
 ```
 
 ## Known limitations

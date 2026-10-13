@@ -25,7 +25,7 @@ export async function nativeProfiles(root = projectRoot) {
       const party = parties[record.id]?.party;
       if (!Array.isArray(party) || party.length !== 3 || !party[0]) throw Error('No source party for ' + record.id);
       const action = ACTION_ROOMS[record.id];
-      profiles[record.id] = {id: record.id, name: record.name, chapter, encounter: Math.max(record.encounter, 0), special, music, party, ...(action ? {room: action.room} : {}), sourceCall: call?.file ?? null, fullParity: false};
+      profiles[record.id] = {id: record.id, name: record.name, chapter, encounter: Math.max(record.encounter, 0), special, music, party, auto:parties[record.id]?.auto??[], ...(action ? {room: action.room} : {}), sourceCall: call?.file ?? null, fullParity: false};
     }
   }
   profiles['ch1-25'] = {...profiles['ch1-25'], special: 3, music: 'joker.ogg', sourceCall: 'gml_Object_obj_con24_Step_0.gml', originalRoom: 'room_cc_joker'};

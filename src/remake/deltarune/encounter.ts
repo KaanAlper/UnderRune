@@ -14,7 +14,7 @@ export interface PartySetup{
  equipped:Record<number,EquippedStats>;
  /** global.item: the bag (item ids, 0 for empty). */
  items:readonly number[];
- /** global.charauto: characters the game plays itself (Susie in the first Lancer fight). */
+ /** global.charauto: characters the game plays itself (Susie before her prison rejoin). */
  auto?:readonly number[];
 }
 /** The globals obj_initializer / scr_gamestart and the save file give a battle. */

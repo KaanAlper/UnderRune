@@ -12,7 +12,7 @@ import {loadSprites} from './parity/reference';
 import {throwRalsei,ralseiThrown} from '../src/remake/bosses/kround';
 // Battles run by the game's own controller, driven by key presses. Clover's lines come from the locally built bundle.
 const gear={id:0,name:'',description:'',attack:0,defense:0,magic:0,allowed:[1,2,3]};
-const equipment:EquipmentSource={armors:[gear],weapons:[gear],items:[{id:9,name:'ChocDiamond',description:'',usable:true,target:1}],bagCapacity:12};
+const equipment:EquipmentSource={armors:[gear,{...gear,id:5,name:'IronShackle',defense:2}],weapons:[gear],items:[{id:9,name:'ChocDiamond',description:'',usable:true,target:1}],bagCapacity:12};
 const bank=spriteBank({atLeast2022_1:false,optionsInfo:0,sprites:[]});
 const create=(id='ch1-8',items:number[]=[])=>new EngineBattle(bank,equipment,{...defaultLoadout(),items},id,11,{development:true});
 /** One game frame: Step, then Draw (writers and the FIGHT bar read keys in their Draw). */
@@ -65,20 +65,39 @@ describe.skipIf(!hasSourceText())('the battle engine (Clover)',()=>{
 });
 
 describe.skipIf(!hasSourceText())('the battle engine (K.Round)',()=>{
- for(const id of ['ch1-12','ch1-27'])it(`${id}: three heroes DEFEND, K.Round takes its turn, and the menus come back`,()=>{
+ for(const id of ['ch1-12','ch1-27'])it(`${id}: controllable heroes DEFEND, K.Round takes its turn, and the menus come back`,()=>{
   const b=create(id);frame(b,2);const g=b.rt.globals;
   expect(b.rt.count(heroParent)).toBe(3);expect(text(b)[0]).toBeTruthy();
-  for(let slot=0;slot<3;slot++){for(let i=0;i<4;i++)press(b,KEY.right);press(b,KEY.z);}
-  expect(g.charaction).toEqual([10,10,10]);
+  const actions=id==='ch1-12'?2:3;
+  for(let slot=0;slot<actions;slot++){for(let i=0;i<4;i++)press(b,KEY.right);press(b,KEY.z);}
+  expect(g.char).toEqual(id==='ch1-12'?[1,3,2]:[1,2,3]);
+  expect(g.charauto[2]).toBe(id==='ch1-12'?1:0);
+  expect(g.charaction.slice(0,actions)).toEqual(Array(actions).fill(10));
   until(b,()=>g.mnfight===2,600);
   until(b,()=>g.myfight===0&&g.mnfight===0,3000);
   expect(b.turn).toBe(1);expect(b.outcome).toBeNull();
+ });
+ it('first K.Round skips Susie’s commands and lets her swing after Kris and Ralsei DEFEND',()=>{
+  const b=create('ch1-12');frame(b,2);const g=b.rt.globals;
+  for(let i=0;i<4;i++)press(b,KEY.right);press(b,KEY.z);
+  expect(g.charturn).toBe(1);expect(g.char[g.charturn]).toBe(3);
+  for(let i=0;i<4;i++)press(b,KEY.right);press(b,KEY.z);
+  expect(g.myfight).not.toBe(0);
+  const susie=b.rt.all(heroParent).find(s=>s.char===2)!;
+  until(b,()=>susie.is_auto_susie===1,600);
+  expect(susie.myself).toBe(2);expect(g.chartarget[2]).toBe(0);
+  expect(g.charaction[2]).not.toBe(10);
  });
 });
 
 // Crown removal depends on sprite dimensions and throw collisions on the original masks.
 describe.skipIf(!hasSourceText()||!fs.existsSync('extracted/chapter1_windows/sprites.json'))('K.Round keyboard ACTs and victory',()=>{
- const make=(id:string)=>new EngineBattle(loadSprites(1),equipment,defaultLoadout(),id,11);
+ const make=(id:string)=>{
+  const loadout=defaultLoadout();
+  // Automatic Susie cannot DEFEND: equip Ralsei with two source IronShackles so the long ACT run stays alive.
+  if(id==='ch1-12')loadout.characters[3].armor=[5,5];
+  return new EngineBattle(loadSprites(1),equipment,loadout,id,11);
+ };
  const defend=(b:EngineBattle)=>{press(b,KEY.left);press(b,KEY.z);};
  const act=(b:EngineBattle,choice:number)=>{
   const g=b.rt.globals;
@@ -90,7 +109,7 @@ describe.skipIf(!hasSourceText()||!fs.existsSync('extracted/chapter1_windows/spr
   if(g.bmenucoord[9][0]%2===1)press(b,KEY.left);
   if(choice>=2)press(b,KEY.down);if(choice%2===1)press(b,KEY.right);
   expect(g.bmenucoord[9][0]).toBe(choice);press(b,KEY.z);
-  expect(g.bmenuno).toBe(0);
+  expect(g.bmenuno,JSON.stringify({choice,hp:g.hp,char:g.char,crown:b.enemy!.crown,actor:g.actactor[0][choice],acting:g.acting,buffer:findController(b.rt)!.onebuffer})).toBe(0);
   for(let i=0;i<3&&g.myfight===0&&g.charturn<3;i++)defend(b);
   expect(g.myfight).toBe(3);
  };
@@ -107,11 +126,11 @@ describe.skipIf(!hasSourceText()||!fs.existsSync('extracted/chapter1_windows/spr
  it('ch1-12: Bow and Deep Bow progress the crown through ACT menus and remove it for victory',()=>{
   const b=make('ch1-12');frame(b,2);const enemy=b.enemy!,g=b.rt.globals;
   const progress:number[]=[];
-  for(const choice of [1,2,2,2,2,2]){
+  for(const choice of [1,2,2,2,2,1]){
    act(b,choice);progress.push(enemy.crown);
    advance(b,()=>b.outcome==='victory'||(g.myfight===0&&g.mnfight===0));
   }
-  expect(progress).toEqual([15,35,55,75,95,115]);expect(b.outcome).toBe('victory');expect(g.monster).toEqual([0,0,0]);
+  expect(progress).toEqual([15,35,55,75,95,110]);expect(b.outcome).toBe('victory');expect(g.monster).toEqual([0,0,0]);
   expect(b.turn).toBe(5);
  });
  it('ch1-27: Bow progresses the crown by 18 through its ACT menu',()=>{

@@ -19,9 +19,9 @@ for(const id of ['ch1-12','ch1-27'])test(`${id}: public source-engine Bow ACT, a
  await expect(prep.getByRole('tablist')).toContainText('Kris');await expect(prep.getByRole('tablist')).toContainText('Susie');await expect(prep.getByRole('tablist')).toContainText('Ralsei');
  await prep.getByRole('button',{name:'START BATTLE',exact:true}).click();await expect(page.locator('#status')).toContainText('K.Round / command');
  await page.waitForTimeout(600);
- // Kris: ACT -> target -> Bow (the second ACT column). Susie and Ralsei: DEFEND.
+ // Kris: ACT -> target -> Bow. First encounter: Ralsei DEFEND, automatic Susie; rematch: two DEFENDs.
  await key(page,'ArrowRight');await key(page,'z');await key(page,'z');await key(page,'ArrowRight');await key(page,'z');
- for(let i=0;i<2;i++){await key(page,'ArrowLeft');await key(page,'z');}
+ for(let i=0;i<(id==='ch1-12'?1:2);i++){await key(page,'ArrowLeft');await key(page,'z');}
  await expect(page.locator('#status')).toContainText('K.Round / act');
  await page.locator('#screen').screenshot({path:`test-results/${id}-bow-act.png`});
  for(let i=0;i<60&&!(await page.locator('#status').textContent())?.includes('enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}

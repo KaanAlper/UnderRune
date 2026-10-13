@@ -2,7 +2,7 @@
 
 > For agentic workers: REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Port the original attacks, enemy states, ACT rules and special mechanics of all 49 catalog encounter variants into the public browser remake.
+**Goal:** Port the original attacks, enemy states, ACT rules and special mechanics of the 48 selected catalog encounter variants into the public browser remake. Encounter 15 was excluded at the user's request on 2026-10-14.
 
 **Architecture:** Continue the approved deterministic TypeScript remake and original-frame comparison pipeline. Shared commands, preparation and GM event scheduling stay in place; each encounter receives its own source-derived objects and behavior. An unverified encounter stays unavailable instead of falling back to a generic attack.
 
@@ -54,7 +54,7 @@ GmRuntime retains object inheritance, Create/alarms/Step/motion/collision/Draw o
 **Files:** src/remake/host/encounters.ts, battle.ts, view.ts, src/main.ts, tools/build-remake-assets.mjs, tools/build-pages.mjs; tests/remake-battle.test.ts and tests/e2e/public.spec.ts.
 
 - [ ] Add a registry for verified availability, party, enemy factories and source-specific callbacks.
-- [ ] Preserve all responsibilities listed above; add target-specific HP/DF/AT and multi-enemy retargeting before Clover/Hathy pairs.
+- [ ] Preserve all responsibilities listed above; add target-specific HP/DF/AT and multi-enemy retargeting for encounters that require them.
 - [ ] Integrate only families with complete source dependency coverage and recorded parity evidence.
 - [ ] Verify preparation, FIGHT/ACT/magic/items/spare, defeat/victory, pause/restart and continuous turns.
 - [ ] Build, test the production bundle, review, then publish under the user's existing GitHub authorization.
@@ -62,7 +62,7 @@ GmRuntime retains object inheritance, Create/alarms/Step/motion/collision/Draw o
 ## Task 3: Remaining Chapter 1 variants
 
 - [ ] Port Lancer encounter 20 and Susie/Lancer encounter 31 with their own choreography and ACTs.
-- [ ] Port Clover/Hathy multi-enemy encounter 15 and K.Round encounter 27 variants.
+- [x] K.Round encounter 27 is available. Clover/Hathy encounter 15 is excluded; do not port or re-add it to the selection.
 - [ ] Record and verify each variant, including its own party and all source attack branches.
 
 ## Task 4: Chapter 2 families

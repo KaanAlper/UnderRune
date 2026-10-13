@@ -6,7 +6,8 @@ import {fileURLToPath} from 'node:url';
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 export function buildCatalog(records){
  const map=new Map();
- for(const r of records){const prev=map.get(r.id);if(!prev){map.set(r.id,structuredClone(r));continue;}
+ // Encounter 15 is an unused Clover/Hathy pairing, excluded from the playable boss selection.
+ for(const r of records){if(r.id==='ch1-15')continue;const prev=map.get(r.id);if(!prev){map.set(r.id,structuredClone(r));continue;}
   if(prev.name!==r.name||prev.chapter!==r.chapter||prev.variant!==r.variant)throw Error('Encounter identity conflict');
   prev.sources.push(...r.sources.filter(s=>!prev.sources.some(p=>JSON.stringify(p)===JSON.stringify(s))));
  }
