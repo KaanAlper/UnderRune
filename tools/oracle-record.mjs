@@ -1,11 +1,12 @@
 // Records a reference run of an original battle for parity testing: fixed seed, scripted keys,
 // one trace line per frame (every object, the RNG state and chosen globals).
 // Requires the app dev server (npm run dev). Output: .tools/oracle/<id>-s<seed>.ndjson
-// Usage: node tools/oracle-record.mjs ch1-25 [--seed=11] [--frames=1800] [--dumps=683,700] [--god]
+// Usage: node tools/oracle-record.mjs ch1-25 [--seed=11] [--frames=1800] [--dumps=683,700] [--god] [--script=z|menu]
 import {chromium} from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {SCRIPTS,zScript} from './oracle-scripts.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const [id, ...rest] = process.argv.slice(2);
@@ -20,12 +21,10 @@ if(!Number.isInteger(jevilTurn)||jevilTurn < -1||jevilTurn>19|| (jevilTurn>=0&&i
 // Battle state worth comparing: party HP, TP, turn timer, battle phase flags, invincibility.
 const GLOBALS = 'hp,maxhp,tension,turntimer,myfight,mnfight,inv,encounterno';
 
-// Z is pressed for one frame every 8 frames: dialogue advances, FIGHT is chosen, the soul never moves.
-export function zScript(totalFrames, every = 8) {
-  const script = {};
-  for (let f = 30; f < totalFrames; f += every) { script[f] = {keysPressed: [90], keysReleased: []}; script[f + 1] = {keysPressed: [], keysReleased: [90]}; }
-  return script;
-}
+export {zScript};
+// --script=NAME: the key script (tools/oracle-scripts.mjs); z by default.
+const scriptName=rest.find(a=>a.startsWith('--script='))?.split('=')[1]??'z';
+if(!SCRIPTS[scriptName])throw Error(`Unknown key script ${scriptName}`);
 
 const browser = await chromium.launch({headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe', args: ['--enable-unsafe-swiftshader']});
 try {
@@ -33,7 +32,7 @@ try {
   await page.addInitScript(() => { window.__ev = []; addEventListener('message', e => { if (e.data?.source === 'underrune-native') window.__ev.push(e.data.type); }); });
   await page.goto(`http://127.0.0.1:5173/native/?oracle=1&seed=${seed}`);
   await page.waitForFunction(() => window.__ev.includes('ready'));
-  const inputs=zScript(frames);
+  const inputs=SCRIPTS[scriptName](frames);
   // Move through a square starting in the first attack, then test slow movement and diagonals.
   // Frame numbers are replay indices (input at index N affects the state traced at N+1).
   if(moving){
@@ -47,7 +46,7 @@ try {
   await page.evaluate(([id, ini, oracle]) => postMessage({source: 'underrune-host', type: 'start', id, ini, oracle}, location.origin), [id, ini, oracle]);
   await page.waitForFunction(() => window.__ev.includes('ended') || window.__ev.includes('failed'), null, {timeout: frames / 30 * 1000 * 4 + 120000});
   const trace = await page.evaluate(() => window.__runner.FS.readFile('/saves/trace.ndjson', {encoding: 'utf8'}));
-  const runName=`${id}-s${seed}${god ? '-god' : ''}${moving?'-moving':''}${jevilTurn>=0?'-j'+jevilTurn:''}`;
+  const runName=`${id}-s${seed}${god ? '-god' : ''}${moving?'-moving':''}${jevilTurn>=0?'-j'+jevilTurn:''}${scriptName!=='z'?'-'+scriptName:''}`;
   const out = path.join(root, '.tools', 'oracle', runName+'.ndjson');
   await fs.mkdir(path.dirname(out), {recursive: true});
   await fs.writeFile(out, trace);

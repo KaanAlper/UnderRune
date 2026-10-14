@@ -8,9 +8,12 @@ import {localizationDefaults} from '../tools/source-localization.mjs';
 
 // Spamton NEO (Chapter 2, encounter 61) against the original game, frame by frame, from the battle's first frames
 // to the end of a long local recording (party HP raised for the recording only, so it runs through many turns).
-const RUN='.tools/oracle/ch2-61-s11-god',START=40;
+// Two runs: FIGHT every turn with tapped shots (z), and the menu script (ACTs, spells, charged BIG SHOTs; see
+// tools/oracle-scripts.mjs).
+const START=40;
+for(const RUN of ['.tools/oracle/ch2-61-s11-god','.tools/oracle/ch2-61-s11-god-menu']){
 const ready=fs.existsSync(`${RUN}-f${START}.json`)&&fs.existsSync(RUN+'.ndjson')&&fs.existsSync('extracted/chapter2_windows/sprites.json')&&fs.existsSync('extracted/chapter2_windows/code');
-describe.skipIf(!ready)('Spamton NEO against the original (local recording)',()=>{
+describe.skipIf(!ready)(`Spamton NEO against the original (local recording ${RUN.split('/').pop()})`,()=>{
  it('matches every recorded frame',()=>{
   const code='extracted/chapter2_windows/code/';
   setSourceText(Object.assign({},...fs.readdirSync(code).filter(f=>f.endsWith('.gml')).map(f=>localizationDefaults(fs.readFileSync(code+f,'utf8')))));
@@ -42,7 +45,8 @@ describe.skipIf(!ready)('Spamton NEO against the original (local recording)',()=
    rt.random.next=()=>{if(rt.frame>=from-START&&rt.frame<=to-START)console.log('rng@',rt.frame+START,new Error().stack!.split('\n').slice(2,5).map(l=>l.trim().replace(/\(.*[\\/]/,'(')).join(' < '));return next();};
   }
   const result=runParity(rt,trace,START,end,tracked,['hp','tension','turntimer','myfight','mnfight','inv'],skippedIds,replay);
-  console.log(`ch2-61 ${START}-${end}`,result,'not restored:',[...skipped].join(' '));
+  console.log(`${RUN.split('/').pop()} ${START}-${end}`,result,'not restored:',[...skipped].join(' '));
   expect(result.mismatch).toBeUndefined();
  },300000);
 });
+}

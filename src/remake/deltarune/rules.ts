@@ -62,6 +62,11 @@ export interface BattleHooks{
  ringsShots?(obj:GmInstance,rt:GmRuntime):boolean;
  /** Where it pulls shots in, if it does (NEO's final form). */
  pullsShots?(obj:GmInstance,rt:GmRuntime):[number,number]|undefined;
+ /** An obj_oflash on this object: true when the object shows the flash itself (NEO flashes his parts and is
+  * electrified), so the flash draws nothing. */
+ onFlash?(obj:GmInstance,flash:GmInstance,rt:GmRuntime):boolean;
+ /** The sprite a flash on this object copies, when not its current one (Mauswheel's idle, Berdly's hurt sprite). */
+ flashSprite?(obj:GmInstance):string;
  /** True while the tension bar is hidden (GIGA Queen's boxing). */
  hidesTensionBar?(enemy:GmInstance,rt:GmRuntime):boolean;
 }

@@ -10,7 +10,7 @@ import {battleTextDefault,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
 import {attackPhase,button1_p,itemShift,mercyAdd,monsterDefeat,monsterPop,subst,winCombat} from './controller';
 import {teaAmountChapter2} from './chapter2';
-import {forChapter,rules,withHook} from './rules';
+import {forChapter,hooksOf,rules,withHook} from './rules';
 
 const destroyId=(rt:GmRuntime,id:number)=>{const i=rt.byId(id);if(i)rt.destroy(i);};
 const isHero=(i:GmInstance,name:string)=>i.object.name===name;
@@ -23,7 +23,12 @@ function afterImageOf(s:GmInstance,rt:GmRuntime){
 export const oflash:GmObjectDef={name:'obj_oflash',index:302,events:{
  create:s=>{s.flashspeed=1;s.siner=0;s.target=43843843;s.imageSpeed=0;s.flashcolor=C.white;},
  draw:(s,rt)=>{
-  const t=rt.byId(s.target);if(t){s.imageIndex=t.imageIndex;s.sprite=t.sprite;}
+  const t=rt.byId(s.target);
+  if(t){
+   s.imageIndex=t.imageIndex;s.sprite=t.sprite;
+   const h=hooksOf(t);if(h.flashSprite)s.sprite=h.flashSprite(t);
+   if(h.onFlash?.(t,s,rt))return;
+  }
   s.siner+=s.flashspeed;
   if(s.sprite)rt.drawSpriteFog(s.sprite,s.imageIndex,s.x,s.y,s.imageXscale,s.imageYscale,0,s.flashcolor,Math.sin(s.siner/3));
   if(s.siner>4&&Math.sin(s.siner/3)<0)rt.destroy(s);

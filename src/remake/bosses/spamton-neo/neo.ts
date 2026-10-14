@@ -606,6 +606,14 @@ export const spamtonNeo:HookedDef=defineEnemy({name:'obj_spamton_neo_enemy',inde
   // Susie's Super Charge: faster charging and a glowing soul while it lasts (obj_heart).
   superCharged:n=>n.bigshotcount>0,
   onBigShot:neoBigShot,
+  // A flash on him (a spell's hit) flashes his parts and electrifies him instead of drawing (obj_oflash Draw).
+  onFlash:(n,flash,rt)=>{
+   flash.siner+=flash.flashspeed;
+   if(flash.siner>4&&Math.sin(flash.siner/3)<0){rt.destroy(flash);n.state=0;return true;}
+   if(flash.siner===flash.flashspeed)Object.assign(n,{partmode:40,shockthreshold:15,shocktimer:9999,hurttimer2:10});
+   for(let i=0;i<8;i++){n.flash=1;n.fsiner=n.partsiner[i]/8;}
+   return true;
+  },
   // At full mercy the end of his turn starts his ending (obj_battlecontroller Alarm 2).
   onTurnEnd:(n,rt)=>{if(rt.globals.mercymod[n.myself]<=99)return false;n.endcon=1;return true;},
  },
