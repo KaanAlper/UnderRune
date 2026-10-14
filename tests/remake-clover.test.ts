@@ -62,7 +62,7 @@ describe('Clover original attack objects',()=>{
  });
  it('awards each successful topic once and makes Clover tired after three disagreements',()=>{
   // Each ACT runs until its last text is read (the writers are closed here by hand) and the turn moves on.
-  let completed=0;const rt=scene(),enemy=rt.create(cloverEnemy,480,90);enemy.myself=0;
+  let completed=0;const rt=scene(),enemy=rt.create(cloverEnemy,480,90);enemy.myself=0;rt.globals.mnfight=0;
   for(const act of [3,4,6,6]){
    rt.globals.myfight=3;enemy.acting=act;enemy.actcon=0;
    for(let i=0;i<10;i++){step(rt,enemy);for(const w of rt.all(writer))rt.destroy(w);if(i>0&&enemy.actcon===0){completed++;break;}}

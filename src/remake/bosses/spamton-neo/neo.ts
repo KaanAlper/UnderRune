@@ -2,7 +2,7 @@
 // Check, the wire-snapping ACTs (Kris, Susie, Ralsei, everyone), Susie's Super Charge, Ralsei's fluff guards and the
 // Kris throw, the cut wires as mercy rises, and both endings (HP to zero, or every wire cut). The side-B route's
 // branches (scr_sideb_get_phase() > 2, which encounter 61 never reaches here) are left out. The body is in body.ts.
-import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
+import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
 import {pointDistance} from '../../gm/math';
 import {afterimage,afterimageGrow,darkener,darkMarker,dmgWriter,growtangle,heart,heroKris,heroSusie,monsterParent,moveHeart,moveHeartIn,returnHeart} from '../../deltarune/battle';
 import {button3_p,findController,inputName,nextAct,randomTarget,winCombat} from '../../deltarune/controller';
@@ -487,7 +487,7 @@ function endStep(s:GmInstance,rt:GmRuntime){
   s.singleshotmercy=0;
  }
  if(!rt.exists(sneoBulletController)){
-  s.idealx??=new Array(6).fill(0);s.idealrot??=new Array(6).fill(0);
+  gmArray(s,'idealx',()=>new Array(6).fill(0));gmArray(s,'idealrot',()=>new Array(6).fill(0));
   s.idealx[5]=0;s.idealrot[5]=0;s.partsiner[5]=0;s.partrot[5]=0;s.partx[5]=0;s.party[5]=0;
   s.partxoff[5]=rt.bank.get(s.partsprite[5])!.originX*2;s.partyoff[5]=rt.bank.get(s.partsprite[5])!.originY*2;
  }

@@ -1,6 +1,6 @@
 // Jevil's bullets. Where GML passes several random expressions to one call (choose(a + random(..), b + random(..))),
 // the reference VM evaluates the arguments right to left; the code below keeps that order.
-import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
+import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime,gmArray} from '../../gm/runtime';
 import {ge,gt,le,lt,lengthdirX,lengthdirY,pointDirection} from '../../gm/math';
 import {afterimage,battleSolid,bulletParent,collideBullet,damageAll,heart,inheritBullet,regularBullet,regularBulletPermanent,shake} from '../../deltarune/battle';
 import {bulletController} from './controller';
@@ -61,7 +61,7 @@ export const suitBomb:GmObjectDef={name:'obj_suitbomb',index:270,parent:bulletPa
 export const heartBombBlast:GmObjectDef={name:'obj_heartbomb_blast',index:269,parent:bulletParent,sprite:'spr_bomb_heart',events:{
  create:s=>{s.made=0;s.active=0;s.pausetimer=0;s.con=0;s.siner=0;s.maxlength=0;s.visible=false;},
  step:(s,rt)=>{
-  const sons:number[]=s.son??=[];
+  const sons:number[]=gmArray(s,'son',()=>[]);
   if(s.made===0){for(let i=0;i<4;i++){const b=rt.create(regularBullet,s.x,s.y);sons[i]=b.id;b.sprite='spr_heartbullet';inheritBullet(s,b);}s.made=1;}
   s.pausetimer+=1;
   if(s.pausetimer>=10&&s.con===0){const h=soul(rt);moveTowardsPoint(s,h.x+8,h.y+8,7);s.con=1;}
@@ -237,7 +237,8 @@ export const centerScythe:GmObjectDef={name:'obj_centerscythe',index:272,parent:
     b.imageXscale=2;b.imageYscale=2;b.imageAlpha=0;b.sprite='spr_joker_scythebody';b.mask='spr_joker_scythebody_mask';b.imageBlend=C_RED;b.active=1;
     inheritBullet(s,b);
    }
-   const sb=rt.byId(s.sbul);
+   // The scythe body is only touched from frame 60, once it exists.
+   const sb=s.scythetimer>=60?rt.byId(s.sbul):undefined;
    if(s.scythetimer>=60&&s.scythetimer<70&&sb){sb.imageAngle+=10*s.scythesidex;sb.imageAlpha=sb.imageAlpha+0.1;}
    if(s.scythetimer>=85&&s.scythetimer<90&&sb)sb.hspeed=sb.hspeed-3*s.scythesidex;
    if(s.scythetimer>=100&&s.scythetimer<105&&sb)sb.imageAlpha=sb.imageAlpha-0.2;

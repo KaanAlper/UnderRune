@@ -26,6 +26,9 @@ import {setHudMeasure} from './remake/deltarune/controller';
 import {KEY} from './remake/deltarune/battle';
 import type {EncounterRecord} from './game/types';
 import {TheaterState,TheaterView,THEATER_HITS} from './game/theater';
+import {GmInstance} from './remake/gm/runtime';
+// During development, reading an instance variable nothing has set stops the battle with its name (as GameMaker does).
+GmInstance.strict=import.meta.env.DEV;
 const element=<T extends HTMLElement>(id:string)=>document.getElementById(id)! as T;
 const canvas=element<HTMLCanvasElement>('screen'),ctx=canvas.getContext('2d')!;
 const overlay=element('interactions'),status=element('status'),loading=element('loading'),error=element('error');

@@ -21,7 +21,7 @@ describe('Spamton NEO source yellow projectile',()=>{
  it('creates the native normal projectile without changing RNG or marking bigshot used',()=>{
   const {rt,neo,objects,shot}=setup(),rng=rt.random.snapshot(),s=shot();
   expect(objects.shot.index).toBe(596);expect(objects.shot.parent).toBeUndefined();expect(objects.shot.collisions).toBeUndefined();
-  expect([s.f,s.makeanim,s.hspeed,s.big,s.damage,s.sucked,s.trail,s.trail_timer]).toEqual([2,1,16,0,1,0,0,0]);expect(neo.bigshotused).toBeUndefined();expect(rt.random.snapshot()).toEqual(rng);
+  expect([s.f,s.makeanim,s.hspeed,s.big,s.damage,s.sucked,s.trail,s.trail_timer]).toEqual([2,1,16,0,1,0,0,0]);expect('bigshotused' in neo).toBe(false);expect(rt.random.snapshot()).toEqual(rng);
  });
  it('applies the source upgrade then grows the charged sprite without clamping alpha or scale',()=>{
   const {rt,neo,shot}=setup();neo.upgrade=1;const s=shot();

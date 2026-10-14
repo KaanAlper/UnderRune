@@ -46,7 +46,12 @@ export class GmInstance{
   this._x=f32(x);this._y=f32(y);this.xstart=this._x;this.ystart=this._y;this.xprevious=this._x;this.yprevious=this._y;
   // Objects do not inherit their parent's sprite or mask.
   this.sprite=object.sprite??null;this.mask=object.mask??null;this.depth=object.depth??0;this.visible=object.visible??true;
+  if(GmInstance.strict)return new Proxy(this,STRICT_READS);
  }
+ /** GameMaker stops with "variable not set before reading it" when code reads an instance variable nothing has set.
+  * With strict on (tests and development), so does the runtime: a misspelt or forgotten variable fails where it is
+  * read, naming the object and the variable, instead of reading as undefined and failing somewhere else later. */
+ static strict=false;
  get x(){return this._x;}set x(v:number){this._x=f32(v);}
  get y(){return this._y;}set y(v:number){this._y=f32(v);}
  get speed(){return this._speed;}set speed(v:number){this._speed=f32(v);this.componentsFromSpeed();}
@@ -97,6 +102,24 @@ export class GmInstance{
   if(this._hspeed!==0||this._vspeed!==0){this._x=f32(this._x+this._hspeed);this._y=f32(this._y+this._vspeed);}
  }
 }
+/** GML creates an array variable by writing an element to it (a[i] = v on an unset a): the instance's array, created
+ * (by `make`) the first time. Checking with `in` does not count as reading the variable. */
+export function gmArray<T=any>(inst:GmInstance,name:string,make:()=>T[]=()=>[]):T[]{
+ if(!(name in inst))inst[name]=make();
+ return inst[name];
+}
+/** A read of an instance variable that was never set (GmInstance.strict). */
+export class GmUnsetVariableError extends Error{
+ constructor(readonly objectName:string,readonly instanceId:number,readonly variable:string){
+  super(`${objectName} #${instanceId} reads ${variable}, which was never set`);this.name='GmUnsetVariableError';
+ }
+}
+const STRICT_READS:ProxyHandler<GmInstance>={
+ get(target,key,receiver){
+  if(typeof key==='string'&&!(key in target))throw new GmUnsetVariableError(target.object.name,target.id,key);
+  return Reflect.get(target,key,receiver);
+ },
+};
 /** The handler an object runs for an event: its own, else its nearest parent's (resolved event table). */
 export function resolveEvent(o:GmObjectDef|undefined,event:GmEvent):GmHandler|undefined{for(let c=o;c;c=c.parent){const h=c.events?.[event];if(h)return h;}return undefined;}
 export function isA(o:GmObjectDef,ancestor:GmObjectDef){for(let c:GmObjectDef|undefined=o;c;c=c.parent)if(c===ancestor)return true;return false;}

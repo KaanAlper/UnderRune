@@ -1,6 +1,6 @@
 // Jevil's bullet controller: one attack pattern per `type`, paced by `btimer`.
 // Where one GML call takes several random arguments, they are evaluated right to left, as in the reference VM.
-import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
+import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
 import {ge,le,lengthdirX,lengthdirY} from '../../gm/math';
 import {battleSolid,bulletGenParent,bulletParent,darkMarker,growtangle,heart,inheritBullet,marker,regularBullet} from '../../deltarune/battle';
 import {axeBullet} from '../lancer/axe';
@@ -79,7 +79,7 @@ function axeThrow(s:GmInstance,rt:GmRuntime){
  if(s.made===1&&g.turntimer<=10){if(sus)sus.visible=false;if(lan)lan.visible=false;show(true);}
  if(s.btimer>=27&&box&&g.turntimer>10){
   if(sus){sus.imageIndex=0;rt.sound?.('snd_laz_c');}
-  const axe=rt.create(axeBullet,rt.view.x+540,box.y);(s.axe??=[])[0]=axe.id;inheritBullet(s,axe);
+  const axe=rt.create(axeBullet,rt.view.x+540,box.y);gmArray(s,'axe')[0]=axe.id;inheritBullet(s,axe);
   s.btimer=0;
  }
 }
@@ -92,7 +92,7 @@ function sideSpades(s:GmInstance,rt:GmRuntime){
  s.radius=s.side===0?80:560;
  const box=rt.first(growtangle)!,h=rt.spriteHeight(box);
  const b=rt.create(regularBullet,rt.view.x+s.radius,box.y-h/2+rt.random.random(h));
- (s.sidespade??=[])[s.side]=b.id;
+ gmArray(s,'sidespade')[s.side]=b.id;
  if(s.side===0)b.direction=0;
  if(s.side===1)b.direction=180;
  b.imageAlpha=0;b.damage=s.damage;b.target=s.target;

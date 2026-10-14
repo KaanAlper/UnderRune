@@ -358,7 +358,8 @@ export const grazebox:GmObjectDef={name:'obj_grazebox',index:206,depth:2,sprite:
 
 /** The battle controller. Only the enemy-turn timer is here so far; menus and turn flow come next. */
 export const battleController:GmObjectDef={name:'obj_battlecontroller',index:196,depth:5,events:{
- draw:s=>{if(typeof s.hudDraw==='function')s.hudDraw();},
+ // Its Draw (the menus and HUD) is battleControllerFull's (controller.ts); this base only stands in for the object.
+ draw:()=>{},
  step:(s,rt)=>{
   const g=rt.globals;
   if(s.grazenoise===1){rt.sound?.('snd_graze');s.grazenoise=0;}

@@ -2,7 +2,7 @@
 // body parts and the pose they lerp to (partmode), the wire hearts he makes during the heart attack, the dance
 // that fires the big shots, the electrified and laughing poses, the fall, and the head hitbox that follows it all.
 // The side-B route's poses are left out with the route itself.
-import type {GmInstance,GmRuntime} from '../../gm/runtime';
+import {gmArray,type GmInstance,type GmRuntime} from '../../gm/runtime';
 import {C} from '../../gm/graphics';
 import {lengthdirX,lengthdirY,pointDirection} from '../../gm/math';
 import {afterimage,afterimageGrow,darkMarker,heart,marker} from '../../deltarune/battle';
@@ -161,7 +161,7 @@ function posePart(s:GmInstance,rt:GmRuntime,i:number){
  if(s.partmode>=21&&s.partmode<=30){
   const pm=s.partmode;
   if(pm===21||pm===23||pm===24||pm===25){
-   s.idealrot??=new Array(8).fill(0);
+   gmArray(s,'idealrot',()=>new Array(8).fill(0));
    s.partsiner[i]+=0.1;s.partx[i]=lerp(s.partx[i],0,0.5);s.party[i]=lerp(s.party[i],0,0.5);
    s.idealrot[i]=Math.sin(s.partsiner[i]+i/8)*20;s.idealrot[1]=Math.sin(s.partsiner[2])*60;s.idealrot[2]=Math.sin(s.partsiner[2]-0.1)*60;
    s.idealrot[3]=-Math.sin(s.partsiner[2]+0.3)*60;s.idealrot[6]=-Math.sin(s.partsiner[2]+0.1)*60;
@@ -176,7 +176,7 @@ function posePart(s:GmInstance,rt:GmRuntime,i:number){
    s.partframe[5]=0;s.partrot[5]=Math.sin(s.partsiner[0]/2)*4;s.partsiner[0]+=0.1;
    if(s.partsiner[0]>=5){s.partx[i]=rt.random.random(2);s.party[i]=rt.random.random(2);}
   }
-  if(pm===27){s.idealrot??=new Array(8).fill(0);s.partframe[5]=1;s.idealrot[i]=0;s.idealrot[2]=45;s.partframe[2]=1;s.partrot[i]=lerp(s.partrot[i],s.idealrot[i],0.5);}
+  if(pm===27){gmArray(s,'idealrot',()=>new Array(8).fill(0));s.partframe[5]=1;s.idealrot[i]=0;s.idealrot[2]=45;s.partframe[2]=1;s.partrot[i]=lerp(s.partrot[i],s.idealrot[i],0.5);}
  }
  if(s.partmode>=30)previewPoses(s,rt,i);
  if(s.partmode===34)heartAttackPose(s,rt,i);
@@ -212,7 +212,7 @@ function previewPoses(s:GmInstance,rt:GmRuntime,i:number){
  if(s.partmode===30){
   s.headsize=0;s.partsprite[5]='spr_sneo_head_preview';if(s.partframe[5]===0)s.partframe[5]=1;s.partsprite[0]='spr_nothing';
   s.partsiner[i]+=1;
-  if(s.shake_head===0){s.party[i]=Math.sin(s.partsiner[i]/15)*4;s.idealrot??=new Array(8).fill(0);s.idealrot[i]=Math.sin(s.partsiner[i]/20)*4;}
+  if(s.shake_head===0){s.party[i]=Math.sin(s.partsiner[i]/15)*4;gmArray(s,'idealrot',()=>new Array(8).fill(0));s.idealrot[i]=Math.sin(s.partsiner[i]/20)*4;}
   else if(i===5){
    if(s.shake_head===1){s.partframe[5]+=1;snd(rt,'snd_swallow');}
    s.partrot[5]=Math.sin(s.shake_head*2)*8+rt.random.random(4);s.party[5]=rt.random.random(4);s.partx[5]=rt.random.random(4);
@@ -240,7 +240,7 @@ function heartAttackPose(s:GmInstance,rt:GmRuntime,i:number){
  const g=rt.globals,f=s.f,d=s.difficulty;
  s.hearttype=d>=1&&d<=4?d:0;
  const flyx=s.heart_release_con===1?-20:0;
- s.idealx??=new Array(8).fill(0);s.idealrot??=new Array(8).fill(0);
+ gmArray(s,'idealx',()=>new Array(8).fill(0));gmArray(s,'idealrot',()=>new Array(8).fill(0));
  if(i===0){
   s.siner+=1;
   if(s.heart_release_con>=2)s.heart_release_con=0;
@@ -270,7 +270,7 @@ function heartAttackPose(s:GmInstance,rt:GmRuntime,i:number){
  }
 }
 function dancePose(s:GmInstance,rt:GmRuntime,i:number){
- const f=s.f;s.idealx??=new Array(8).fill(0);s.idealrot??=new Array(8).fill(0);
+ const f=s.f;gmArray(s,'idealx',()=>new Array(8).fill(0));gmArray(s,'idealrot',()=>new Array(8).fill(0));
  if(i===0){
   s.siner+=1.3;s.dance_timer+=1;
   if(s.dance_timer>9){s.dance_timer=0;s.dance_con+=1;}
@@ -287,7 +287,7 @@ function dancePose(s:GmInstance,rt:GmRuntime,i:number){
 }
 /** partmode 36: he dances and fires two big shots at the soul, over and over (also his spared ending dance). */
 function shootyDance(s:GmInstance,rt:GmRuntime,i:number){
- const fastshot=1;s.idealrot??=new Array(8).fill(0);
+ const fastshot=1;gmArray(s,'idealrot',()=>new Array(8).fill(0));
  if(s.shootydanceinit===0){s.shootydanceinit=1;s.shootydancex=s.x;s.shootydancey=s.y;}
  if(s.endcon>0){
   if(s.dancealtcon===1||s.dancealtcon===2)s.siner+=0.23;

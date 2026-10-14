@@ -1,6 +1,6 @@
 // Jevil's body: floating and dancing (with shadow copies once badly hurt), the chained head that whips back when
 // he is hit, shrinking away during box attacks, and his scythe metamorphosis. All of it runs in the Draw event.
-import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
+import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
 import {C} from '../../gm/graphics';
 import {battleController,heroParent} from '../../deltarune/battle';
 
@@ -30,7 +30,7 @@ function draw(s:GmInstance,rt:GmRuntime){
   if(s.dancelv===2)rt.drawSprite('spr_joker_tired',0,ox+s.flyx,oy+s.fly,2,2,0,C.white,1);
   if(s.dancelv===3){
    s.dancesiner+=1;
-   s.dalpha??=[];
+   gmArray(s,'dalpha',()=>[]);
    for(let i=0;i<7;i++){
     if(i>=1){s.shadowx[i]+=Math.sin(i+s.floatsiner/5)*8*s.sfactor[i];s.shadowy[i]+=Math.cos(i+s.floatsiner/5)*4*s.sfactor[i];}
     s.dalpha[i]=Math.sin(i+s.dancesiner/9);

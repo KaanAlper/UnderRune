@@ -340,7 +340,8 @@ function neoCreate(s:GmInstance,rt:GmRuntime){
  const su=rt.first(susieEnemy);if(su){s.susiex=su.x;s.susiey=su.y;}
 }
 function neoStep(s:GmInstance,rt:GmRuntime){
- const g=rt.globals;let sus=rt.byId(s.s);
+ // Susie (s) exists from the first Step on.
+ const g=rt.globals;let sus=s.racecon===0?undefined:rt.byId(s.s);
  if(s.racecon===0){
   s.orx=s.x;s.ory=s.y;s.ang=0;s.vdir=rt.random.choose(1,-1);s.racecon=1;s.rtimer=0;
   for(const su of rt.all(susieEnemy))su.visible=false;

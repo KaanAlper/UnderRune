@@ -1,5 +1,5 @@
 // Jevil's spade ring: spades appear around the box, glide in, then launch one by one toward the soul.
-import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
+import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
 import {lengthdirX,lengthdirY} from '../../gm/math';
 import {battleSolid,bulletParent,collideBullet,inheritBullet} from '../../deltarune/battle';
 
@@ -10,7 +10,7 @@ export const spadeRing:GmObjectDef={name:'obj_spadering',index:277,parent:bullet
 }};
 function step(s:GmInstance,rt:GmRuntime){
  const max=s.maxspade,solid=rt.first(battleSolid)!;
- const spades:(GmInstance|undefined)[]=s.spade??=[];
+ const spades:(GmInstance|undefined)[]=gmArray(s,'spade');
  if(s.t===0){
   if(s.size>1)s.startang=-rt.random.random(180);
   for(let i=0;i<max;i++){

@@ -2,7 +2,7 @@
 // enemies from the encounter globals; Step runs the command menus (global.bmenuno) and the victory; Alarm 2 ends
 // the enemy turn; Draw draws the bottom panel, the party boxes and the open menu. The heroes, the attack bar and the
 // spell phase are their own objects (party.ts); each enemy is its boss module's object.
-import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
+import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {round,le} from '../gm/math';
 import {KEY,battleController as controllerBase,bulletGenParent,bulletParent,darkener,dmgWriter,heart,heroParent,mergeColor,monsterParent,returnHeart,tensionHeal} from './battle';
@@ -92,7 +92,7 @@ export function itemInfo(s:GmInstance,id:number,rt?:GmRuntime){
  s.itemtarget=it[2];s.value=it[3];s.usable=it[4];
 }
 function itemInfoTemp(s:GmInstance,slot:number,rt:GmRuntime){
- s.tempitemnameb??=grid(13,3,' ');s.tempitemdescb??=grid(13,3,' ');s.tempitemvalue??=grid(13,3,0);s.tempitemusable??=grid(13,3,0);
+ gmArray(s,'tempitemnameb',()=>grid(13,3,' '));gmArray(s,'tempitemdescb',()=>grid(13,3,' '));gmArray(s,'tempitemvalue',()=>grid(13,3,0));gmArray(s,'tempitemusable',()=>grid(13,3,0));
  for(let i=0;i<12;i++){itemInfo(s,s.tempitem[i][slot],rt);s.tempitemnameb[i][slot]=s.itemnameb;s.tempitemdescb[i][slot]=s.itemdescb;s.tempitemvalue[i][slot]=s.value;s.tempitemusable[i][slot]=s.usable;}
 }
 /** scr_itemshift_temp: the bag as this character sees it, with the chosen item taken out. */
