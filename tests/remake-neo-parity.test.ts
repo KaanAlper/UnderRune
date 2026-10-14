@@ -60,10 +60,11 @@ describe.skipIf(!ready)(`Spamton NEO against the original (local recording ${RUN
   // Sound instance numbers come from the reference runtime's audio backend (100000 plus two per sound played); the
   // remake's audio hooks do not number sounds that way, so variables holding them are not compared.
   const SOUND_HANDLES={obj_heart:['chargeshot_sound'],obj_spamton_neo_enemy:['chargeshot_sound'],obj_herokris:['ls'],obj_herosusie:['ls'],obj_heroralsei:['ls']};
-  // Still to be matched variable for variable: Chapter 2's battle controller (merged ACT menus and HUD variables).
-  // The writer now has its own chapter part and participates in full-state comparison.
+  // Objects not yet matched variable for variable (none at the moment).
   const STATE_PENDING=new Set<string>();
-  const stateChecked=new Set([...tracked].filter(n=>process.env.PARITY_STATE==='all'||!(objects[n] as {archived?:boolean}).archived&&(process.env.PARITY_SURVEY||!STATE_PENDING.has(n))));
+  // PARITY_STATE_ONLY=obj_a,obj_b: compare only these objects (archived ones included).
+  const only=process.env.PARITY_STATE_ONLY?.split(',');
+  const stateChecked=new Set([...tracked].filter(n=>only?only.includes(n):process.env.PARITY_STATE==='all'||!(objects[n] as {archived?:boolean}).archived&&(process.env.PARITY_SURVEY||!STATE_PENDING.has(n))));
   const afterFrame=(f:number)=>{
    const file=`${RUN}-f${f}.json`;if(!fs.existsSync(file))return undefined;
    const problems=compareState(rt,JSON.parse(fs.readFileSync(file,'utf8')) as Dump,stateChecked,res,skippedIds,SOUND_HANDLES);

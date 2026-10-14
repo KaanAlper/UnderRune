@@ -6,26 +6,22 @@ import {ge,le,lt} from '../../gm/math';
 import {C,mergeColor} from '../../gm/graphics';
 import {bulletInit,tensionHeal} from '../../deltarune/battle';
 import {snd} from '../../deltarune/sound';
+import {scrAfterimageCut,scrDoom} from './support';
 
 export function flyingHeadPathEnd(s:GmInstance,rt:GmRuntime){rt.destroy(s);}
 
 export function createFlyingHeads(object:(name:string)=>GmObjectDef):GmObjectDef[]{
  const first=(rt:GmRuntime,name:string)=>rt.first(object(name));
- function afterimageCut(s:GmInstance,rt:GmRuntime){
-  const a=rt.create(object('obj_afterimage_cut'),s.x,s.y);s.afterimage=a.id;
-  Object.assign(a,{sprite:s.sprite,imageIndex:s.imageIndex,imageBlend:s.imageBlend,imageSpeed:0,depth:s.depth,imageXscale:s.imageXscale,imageYscale:s.imageYscale,imageAngle:s.imageAngle});
-  rt.userEvent(a,0);return a;
- }
  function hit(s:GmInstance,rt:GmRuntime){
   if(s.destroyable!==1)return;
   const shot=rt.byId(s.hitshot);if(!shot)throw Error('NEO flying head requires its hitshot');
   if(s.bighead&&shot.big===0){
    snd(rt,'snd_bell',0.7+rt.random.random(0.1),0.8);shot.x-=Math.abs(shot.hspeed);shot.hspeed=-8;shot.vspeed=rt.random.choose(-8,8,10,-10);
-   const doom=rt.create(object('obj_doom'),0,0);doom.depth=0;doom.alarm[0]=90;doom.target=shot.id;
+   scrDoom(rt,object,shot.id,90);
   }else{
    if(shot.big===0)rt.userEvent(shot,0);
    rt.sourceAudio?.volume('snd_bomb',0.7,0);snd(rt,'snd_bomb',1.1+rt.random.random(0.2),0.7);
-   afterimageCut(s,rt).flash=true;rt.destroy(s);
+   scrAfterimageCut(s,rt,object).flash=true;rt.destroy(s);
   }
  }
  const head:GmObjectDef={name:'obj_sneo_lilguy',index:607,parent:object('obj_collidebullet'),sprite:'spr_sneo_crew',depth:0,events:{

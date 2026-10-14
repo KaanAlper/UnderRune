@@ -97,6 +97,8 @@ export interface BattleHooks{
  showsHeals?(obj:GmInstance,rt:GmRuntime):boolean;
  /** Susie's UltimatHeal was cast (Omawaroid prompts its own heal then). */
  onUltimatHeal?(obj:GmInstance,rt:GmRuntime):void;
+ /** What every tea heals while this object is there (GIGA Queen's boxing controller: 100). */
+ teaHeals?(obj:GmInstance,rt:GmRuntime):number;
 }
 export interface HookedDef extends GmObjectDef{readonly hooks?:BattleHooks}
 /** The hooks an instance's object (or its nearest parent) declares. */

@@ -105,6 +105,11 @@ export class GmInstance{
 }
 /** GML creates an array variable by writing an element to it (a[i] = v on an unset a): the instance's array, created
  * (by `make`) the first time. Checking with `in` does not count as reading the variable. */
+/** GML built-in variable names whose runtime fields are named differently (variable_instance_get/set by name). */
+const GML_BUILTINS:Readonly<Record<string,string>>={sprite_index:'sprite',mask_index:'mask',object_index:'object',image_index:'imageIndex',image_speed:'imageSpeed',
+ image_xscale:'imageXscale',image_yscale:'imageYscale',image_angle:'imageAngle',image_alpha:'imageAlpha',image_blend:'imageBlend',gravity_direction:'gravityDirection'};
+/** The runtime field that holds the GML variable `name` (built-ins have their own names; instance variables keep theirs). */
+export function gmField(name:string){return GML_BUILTINS[name]??name;}
 export function gmArray<T=any>(inst:GmInstance,name:string,make:()=>T[]=()=>[]):T[]{
  if(!(name in inst))inst[name]=make();
  return inst[name];

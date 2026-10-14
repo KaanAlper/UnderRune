@@ -3,6 +3,7 @@ import type {GmInstance,GmRuntime} from '../gm/runtime';
 import {monsterParent} from './battle';
 import {sourceText} from '../host/text';
 import {spellInfoAll} from './controller';
+import {withHook} from './rules';
 
 /** scr_gamestart, without scr_levelup progression or equipment bonuses. Index 0 is the empty slot. */
 export function chapter2StartStats(){return {hp:[0,120,140,100],maxhp:[0,120,140,100],at:[0,12,16,10],df:[0,2,2,2],mag:[0,0,1,9]};}
@@ -31,7 +32,7 @@ export function teaAmountChapter2(rt:GmRuntime,tea:number,character:number){
  const amounts=[[10,120,120,70],[120,10,120,400],[60,120,10,50],[70,120,50,10]];
  let amount=amounts[tea-1]?.[character-1]??10;
  if(rt.globals.fighting===1&&amount<40)amount=40;
- if(rt.instances.some(i=>i.live&&i.object.name==='o_boxingcontroller'))amount=100;
+ for(const [obj,fixed] of withHook(rt,'teaHeals'))amount=fixed(obj,rt);
  return amount;
 }
 const grid=(value:unknown)=>Array.from({length:3},()=>new Array(6).fill(value));
