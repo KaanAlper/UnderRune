@@ -11,7 +11,7 @@ import {attackPhase,button1_p,nextAct,randomTarget} from './controller';
 import {monsterSetup} from './encounter';
 import {blconSkip,isPhase,turnTimer} from './chapter2-battle';
 import {destroyWriters,writer} from './writer';
-import type {EnemyDef,EnemyHooks} from './rules';
+import type {HookedDef,BattleHooks} from './rules';
 
 type Step=(s:GmInstance,rt:GmRuntime)=>void;
 export interface EnemyStrategy{
@@ -56,7 +56,7 @@ export interface EnemyStrategy{
  /** Where its HP bar and damage numbers go (scr_monstersetup's monsterx/monstery). Default: its sprite's centre. */
  monsterPosition?:(s:GmInstance,rt:GmRuntime)=>[number,number];
  /** What the shared engine does differently for this enemy (rules.ts). */
- hooks?:EnemyHooks;
+ hooks?:BattleHooks;
  /** Its other events (Draw, End Step, alarms, user events), as the enemy defines them. */
  events?:Partial<Record<GmEvent,GmHandler>>;
 }
@@ -104,7 +104,7 @@ function templateStep(st:EnemyStrategy):Step{
 }
 /** An enemy object: the template's events with the strategy's steps, as a child of obj_monsterparent. The depth is
  * required: instance_create gives new instances their object's depth from the game's table (0 when it has none). */
-export function defineEnemy(base:{name:string;index:number;depth:number;sprite?:string;parent?:GmObjectDef},st:EnemyStrategy):EnemyDef{
+export function defineEnemy(base:{name:string;index:number;depth:number;sprite?:string;parent?:GmObjectDef},st:EnemyStrategy):HookedDef{
  const position=st.monsterPosition??((s,rt)=>[s.x+rt.spriteWidth(s)/2,s.y+rt.spriteHeight(s)/2]);
  return {...base,parent:base.parent??monsterParent,hooks:st.hooks,events:{
   alarm4:s=>{s.con+=1;},

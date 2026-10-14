@@ -13,7 +13,6 @@ import {createNeoSourceObject,executeNeoSource} from '../bosses/spamton-neo/body
 import {createNeoEnemy,createNeoEnemyEffects} from '../bosses/spamton-neo/enemy';
 import {createNeoPlayerObjects} from '../bosses/spamton-neo/yellow-heart';
 import {createNeoAttackObjects} from '../bosses/spamton-neo/controller';
-import {createNeoProjectiles} from '../bosses/spamton-neo/shot';
 import {createNeoSceneObjects,enterNeoBattleScene,type NeoSceneHost} from '../bosses/spamton-neo/scene';
 import {neoHostScripts,neoHostObjectSources,neoWriterSmallFaceSource,neoResourceMetadata} from '../bosses/spamton-neo/host-source';
 import {attackScriptSources} from '../bosses/spamton-neo/attack-script-source';
@@ -23,9 +22,14 @@ import {spamtonNeo,hitDetector} from '../bosses/spamton-neo/neo';
 import * as pending from '../bosses/spamton-neo/pending';
 import {battleBalloon2,battleCleanup,growtangle2} from '../deltarune/chapter2-objects';
 import {moveToPoint,scriptDelayed} from '../deltarune/chapter2-battle';
+import {shotAfterimage,shotHit,soulSpark,superchargeEnd,yellowShot} from '../deltarune/yellow-soul';
+import type {BattleHooks,HookedDef} from '../deltarune/rules';
 
 /** Chapter 2 objects that run as hand-written code (the rest still run from the local source archive). */
-const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed];
+const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed,
+ yellowShot,shotAfterimage,shotHit,superchargeEnd,soulSpark];
+/** Shared engine objects whose Chapter 2 source versions are replaced by the engine's own (with its chapter rules). */
+const ENGINE_PORTED=new Set(['obj_heart']);
 
 export function installNeoHost(rt:GmRuntime){
  const objects:Record<string,GmObjectDef>={};
@@ -108,11 +112,11 @@ export function installNeoHost(rt:GmRuntime){
  Object.assign(objects,createNeoPlayerObjects(host));
  objects.obj_spamton_neo_enemy=createNeoEnemy(host);Object.assign(objects,createNeoEnemyEffects(host));
  Object.assign(objects,createNeoAttackObjects(host));
- // Looked up when a shot needs them, so hand-ported replacements are found.
- const projectiles=createNeoProjectiles({get neo(){return object('obj_spamton_neo_enemy');},get heart(){return object('obj_heart');},get faceAttack(){return object('obj_sneo_faceattack');},get finalForm(){return object('obj_sneo_final_forme');},get wireheart(){return object('obj_sneo_wireheart');}});
- for(const def of [projectiles.shot,projectiles.impact,projectiles.trail])objects[def.name]=def;
  Object.assign(objects,createNeoSceneObjects(host));
- for(const [name,record] of Object.entries(neoHostObjectSources))objects[name]=createNeoSourceObject(host,record.metadata,record.sources);
+ for(const [name,record] of Object.entries(neoHostObjectSources))if(!ENGINE_PORTED.has(name))objects[name]=createNeoSourceObject(host,record.metadata,record.sources);
+ // Until NEO's face attack and final form are ported, their yellow-soul hooks are attached here.
+ (objects.obj_sneo_faceattack as HookedDef&{hooks?:BattleHooks}).hooks={ringsShots:o=>o.init===1};
+ (objects.obj_sneo_final_forme as HookedDef&{hooks?:BattleHooks}).hooks={pullsShots:o=>[o.x+122,o.y+146]};
  // Hand-ported Chapter 2 objects replace their source versions; their Chapter 1 parents become the Chapter 2 ones.
  const portedAliases:(readonly [GmObjectDef,GmObjectDef])[]=[];
  const canonical=(def:GmObjectDef):GmObjectDef=>{

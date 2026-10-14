@@ -12,7 +12,7 @@ import {HERO_DEFS,attackPress,spellPhase,heal,spellText,healAnim} from './party'
 import {rules,withHook} from './rules';
 import {actorActs,actSelectChapter2,actSimulChapter2,initChapter2ActTables,itemInfoChapter2,nextActChapter2,resetChapter2Actors,spellMenuSetupChapter2} from './chapter2';
 
-const pressed=(rt:GmRuntime,...keys:number[])=>keys.some(k=>rt.input.pressed.has(k));
+import {pressed} from './keys';
 export const left_p=(rt:GmRuntime)=>pressed(rt,KEY.left);
 export const right_p=(rt:GmRuntime)=>pressed(rt,KEY.right);
 export const up_p=(rt:GmRuntime)=>pressed(rt,KEY.up);

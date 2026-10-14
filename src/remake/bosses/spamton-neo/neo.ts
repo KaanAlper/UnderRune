@@ -13,8 +13,9 @@ import {battleTextDefault,destroyWriters,writer} from '../../deltarune/writer';
 import {enemyBlcon2} from '../../deltarune/chapter2-objects';
 import {sourceText} from '../../host/text';
 import {chooseNeoAttack} from './chooser';
-import type {EnemyDef} from '../../deltarune/rules';
+import type {HookedDef} from '../../deltarune/rules';
 import {defineEnemy} from '../../deltarune/enemy';
+import {soulSpark,superchargeEnd} from '../../deltarune/yellow-soul';
 import {neoBodyDraw} from './body';
 import {bigLaser,choicerNeo,dbulletController,phoneBullet,sceneEx2,sneoBulletController,sneoPhonecall,sneoSusieAct,sneoVineCut,sneoVineTransition,sneoVineWeak,spamtonCherub,throwKris,throwKrisVineController,tinyRalsei} from './pending';
 
@@ -568,8 +569,26 @@ export const hitDetector:GmObjectDef={name:'obj_sneo_hitdetector',index:601,spri
  create:s=>{s.imageSpeed=0;s.imageXscale=2;s.imageYscale=2;s.imageAlpha=0.2;s.imageBlend=0;s.visible=false;s.active=true;},
 },collisions:[{target:phoneBullet,run:(_s,o,rt)=>{for(const n of rt.all(spamtonNeo))n.hitcon=1;rt.userEvent(o,0);}}]};
 
+/** A BIG SHOT is fired (obj_heart): firing them back to back makes him angry (event 4); he notes that a BIG SHOT was
+ * used; a Super Charge makes it fast with a trail, and the last one ends with a flash. */
+function neoBigShot(n:GmInstance,shot:GmInstance,soul:GmInstance,rt:GmRuntime){
+ if(soul.chargeshotcount>1)rt.userEvent(n,4);
+ n.bigshotused=1;
+ if(n.bigshotcount<=0)return;
+ shot.hspeed=10*soul.f;shot.trail=1;n.bigshotcount-=1;
+ let a=rt.random.random(45);
+ if(n.bigshotcount===0){
+  rt.create(superchargeEnd,soul.x,soul.y);snd(rt,'snd_stardrop');
+  for(let k=0;k<8;k++){
+   const part=rt.create(soulSpark,soul.x+10,soul.y+10);part.direction=a+rt.random.random(15);
+   part.imageXscale=2+rt.random.random(2);part.imageYscale=2+rt.random.random(2);part.speed=16;part.friction=0.8;a+=45;
+  }
+ }else for(let k=0;k<8;k++){
+  const part=rt.create(soulSpark,soul.x+10,soul.y+10);part.direction=a+rt.random.random(15);part.speed=8;part.friction=0.8;a+=45;
+ }
+}
 /** NEO is the standard enemy (deltarune/enemy.ts) with these steps of his own. */
-export const spamtonNeo:EnemyDef=defineEnemy({name:'obj_spamton_neo_enemy',index:702,depth:0,sprite:'spr_sneo_example'},{
+export const spamtonNeo:HookedDef=defineEnemy({name:'obj_spamton_neo_enemy',index:702,depth:0,sprite:'spr_sneo_example'},{
  create,
  beforeStep:(s,rt)=>{if(s.bigshot===1)rt.globals.sp=5;},
  onlyWhileFighting:true,
@@ -582,6 +601,11 @@ export const spamtonNeo:EnemyDef=defineEnemy({name:'obj_spamton_neo_enemy',index
   onHeroHit:n=>{Object.assign(n,{partmode:40,shockthreshold:15,shocktimer:9999,hurttimer2:10});},
   // At zero HP his own Step starts the ending during his next talk.
   defeatedByDamage:false,
+  // His upgrade makes every shot a BIG SHOT (obj_yheart_shot Create).
+  upgradedShot:n=>{if(n.upgrade<=0)return false;n.bigshotused=1;return true;},
+  // Susie's Super Charge: faster charging and a glowing soul while it lasts (obj_heart).
+  superCharged:n=>n.bigshotcount>0,
+  onBigShot:neoBigShot,
   // At full mercy the end of his turn starts his ending (obj_battlecontroller Alarm 2).
   onTurnEnd:(n,rt)=>{if(rt.globals.mercymod[n.myself]<=99)return false;n.endcon=1;return true;},
  },

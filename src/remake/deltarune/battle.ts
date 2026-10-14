@@ -5,9 +5,10 @@ import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '
 import {eq,ge,gt,le,lt,pointDistance,round} from '../gm/math';
 import {C} from '../gm/graphics';
 import {rules} from './rules';
+import {yellowSoul} from './yellow-soul';
 
-export const KEY={left:37,up:38,right:39,down:40,z:90,x:88,c:67,enter:13,shift:16,ctrl:17};
-const held=(rt:GmRuntime,...keys:number[])=>keys.some(k=>rt.input.held.has(k));
+import {KEY,held} from './keys';
+export {KEY};
 export const input={
  left:(rt:GmRuntime)=>held(rt,KEY.left),right:(rt:GmRuntime)=>held(rt,KEY.right),
  up:(rt:GmRuntime)=>held(rt,KEY.up),down:(rt:GmRuntime)=>held(rt,KEY.down),
@@ -263,14 +264,25 @@ export function inheritBullet(from:GmInstance,to:GmInstance){
 export function tensionHeal(rt:GmRuntime,amount:number){const g=rt.globals;g.tension+=amount;if(gt(g.tension,g.maxtension))g.tension=g.maxtension;}
 
 /** The soul: moves 4 px per frame (2 while holding cancel), slides along the box walls, stays on screen. */
+/** The soul's colour modes (scr_heartcolor): red only moves; yellow also shoots (yellow-soul.ts). */
+const SOUL_MODES:Record<number,{step?:(s:GmInstance,rt:GmRuntime)=>void;draw?:(s:GmInstance,rt:GmRuntime)=>void}>={0:{},1:yellowSoul};
+const soulMode=(s:GmInstance)=>{const m=SOUL_MODES[s.color];if(!m)throw Error(`The soul has no mode ${s.color}`);return m;};
 export const heart:GmObjectDef={name:'obj_heart',index:313,depth:1,sprite:'spr_dodgeheart',mask:'spr_dodgeheartmask',
  events:{
   create:(s,rt)=>{
+   const modes=rules(rt).soulHasModes;
    rt.globals.sp=4;s.wspeed=rt.globals.sp;s.imageSpeed=0;s.fly=0;s.darken=1;s.darkamt=0;s.dmgnoise=0;
+   if(modes){s.chargeshot_sound=-1;s.canmove=1;}
    rt.create(grazebox,s.x+10,s.y+10);
-   s.boundaryup=0;s.disableslow=0;if(input.cancel(rt))s.disableslow=1;
+   s.boundaryup=0;
+   if(modes)Object.assign(s,{color:0,z_hold:0,siner:0,z_charge:0,f:2,z_hold_f:0,chargeshot_delay:0,superchargetimer:0,chargeshotcount:0});
+   s.disableslow=0;if(input.cancel(rt))s.disableslow=1;
+   if(modes)s.remove_slow_z_buffer=40;
   },
   step:(s,rt)=>heartStep(s,rt),
+  draw:(s,rt)=>{if(rules(rt).soulHasModes)soulMode(s).draw?.(s,rt);rt.drawSelf(s);},
+  // CleanUp: the BIG SHOT's charging sound stops with the soul.
+  destroy:(s,rt)=>{if(rules(rt).soulHasModes)rt.soundStop?.('snd_chargeshot_charge');},
  },
  collisions:[{target:collideBullet,run:(_s,other,rt)=>rt.userEvent(other,5)}],
 };
@@ -278,13 +290,17 @@ function heartStep(s:GmInstance,rt:GmRuntime){
  const meet=(x:number,y:number)=>rt.placeMeeting(s,x,y,battleSolid);
  s.wallcheck=0;s.bkx=0;s.bky=0;s.bkxy=0;s.jelly=2;
  s.press_l=input.left(rt)?1:0;s.press_r=input.right(rt)?1:0;s.press_u=input.up(rt)?1:0;s.press_d=input.down(rt)?1:0;
- let px=0,py=0;const w=s.wspeed;
- if(s.press_r===1)px=w;
- if(s.press_l===1)px=-w;
- if(s.press_d===1)py=w;
- if(s.press_u===1)py=-w;
- if(input.cancel(rt)){if(s.disableslow===0){px=Math.ceil(px*0.5);py=Math.ceil(py*0.5);}}
- else s.disableslow=0;
+ let px=0,py=0;const w=s.wspeed,r=rules(rt);
+ // A frozen soul (Chapter 2's canmove) ignores the arrows; X slows it unless that is turned off (flag 22).
+ if(!r.soulHasModes||s.canmove){
+  if(s.press_r===1)px=w;
+  if(s.press_l===1)px=-w;
+  if(s.press_d===1)py=w;
+  if(s.press_u===1)py=-w;
+  if(input.cancel(rt)&&(!r.slowSoulSetting||rt.globals.flag[22]===0)){if(s.disableslow===0){px=Math.ceil(px*0.5);py=Math.ceil(py*0.5);}}
+  else s.disableslow=0;
+ }
+ if(r.soulHasModes&&s.color===0)s.remove_slow_z_buffer+=0.5;
  s.xmeet=0;s.ymeet=0;s.xymeet=0;
  if(meet(s.x+px,s.y+py))s.xymeet=1;
  if(meet(s.x+px,s.y)){
@@ -328,6 +344,7 @@ function heartStep(s:GmInstance,rt:GmRuntime){
  rt.globals.inv-=1;
  if(rt.globals.inv>0)s.imageSpeed=0.25;else{s.imageSpeed=0;s.imageIndex=0;}
  rt.globals.heartx=s.x+2-rt.view.x;rt.globals.hearty=s.y+2-rt.view.y;
+ if(r.soulHasModes)soulMode(s).step?.(s,rt);
 }
 
 /** The graze box around the soul: bullets passing through it give TP and shorten the turn. */

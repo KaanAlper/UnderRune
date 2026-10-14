@@ -4,14 +4,11 @@ import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {lengthdirX,lengthdirY,pointDirection,pointDistance} from '../gm/math';
 import {C} from '../gm/graphics';
 import {dmgWriter,heart,heroKris} from './battle';
-import {button1_p} from './controller';
+import {button1_p} from './keys';
+import {snd} from './sound';
+export {snd};
 import {destroyWriters,writer} from './writer';
 
-/** snd_play / snd_play_x: a sound effect, at a pitch and volume. */
-export function snd(rt:GmRuntime,name:string,pitch=1,volume?:number){
- if(rt.sourceAudio)return rt.sourceAudio.effect(name,pitch,volume);
- rt.sound?.(name,pitch);return undefined;
-}
 /** scr_isphase. */
 export function isPhase(rt:GmRuntime,phase:'menu'|'acting'|'victory'|'attack'|'fight'|'spell'|'item'|'enemytalk'|'balloon'|'enemyattack'|'bullets'){
  const g=rt.globals;
