@@ -1,17 +1,16 @@
-# UnderRune handoff (2026-10-14)
+# UnderRune handoff (2026-10-15)
 
 This file explains how to continue the work: the rules that must hold, how the work is verified, what is done and
 what is left, in order. Read it fully before changing code.
 
-Current checkpoint after `2babcf9`: writer/controller chapter parts and the NEO attack controller, flying heads,
-support objects, walls, wire-heart family and phone/Pipis family are hand-ported. Claude's latest session is
-`c019f36b-10fd-4c4e-913d-4d3a490ec7ea` (local `.claude/projects/C--Users-halis-flybrain-boss/`). It stopped at
-2026-10-14 17:19 Istanbul while reading phone-hand sources after the weekly limit was reached; no phone-hand port
-was written. The earlier 750843b checkpoint is on Pages; source main also includes the four later attack families.
-The fresh review reran all 377 existing tests and typecheck successfully, then reproduced a comparison false
-positive for never-allocated/fractional instance ids and narrowed that rule with two regression tests. Updated
-acceptance: 379 tests across 43 files and typecheck pass; both NEO recordings still match (3960 + 5960 frames).
-The current recordings do not prove whole-game or every-route parity.
+Current checkpoint (phone-hand migration after `0442f22`): writer/controller chapter parts and the NEO attack
+controller, flying heads, support, walls, wire heart, phone/Pipis and phone-hand families are hand-ported.
+Claude's last session (`c019f36b-10fd-4c4e-913d-4d3a490ec7ea`) stopped while reading phone-hand sources; that
+continuation is now accepted. All 391 tests across 44 files, typecheck, Pages build and both production-browser
+battle checks pass. Both NEO recordings match 3960 + 5960 frames, including full state for the migrated objects.
+The face attack is next. Difficulty-99 developer bursts have source review but no dedicated focused regression.
+The earlier 750843b checkpoint is on Pages; later source milestones have not been republished. These recordings
+do not prove whole-game or every-route parity.
 
 ## 1. Project in one paragraph
 
@@ -297,9 +296,13 @@ Port them in the order they first appear in the recordings:
 5. **Done:** `obj_sneo_wireheart` and its pieces (`wireheart.ts`).
 6. **Done:** the phone call and Pipis objects (`phonecall.ts`, 13 definitions). Difficulty 4 egg bursts retain a
    named unported boundary; the hard phone stream is ported but still needs a dedicated acceptance recording.
-7. **Next:** the phone hands and `obj_sneo_mmx_spreadshot`. Claude only read their source events; no new file or
-   registration exists for this family yet.
-8. the face attack (move its `ringsShots` hook from `host/neo.ts` into its definition)
+7. **Done:** the phone hands and `obj_sneo_mmx_spreadshot` (`phonehands.ts`, four definitions). Explicit source
+   Create/Step/Draw/Alarm/Destroy/hit handlers and the canonical basic/regular-bullet parents are preserved.
+   The shared Chapter 2 `bulletInherit2` keeps -1 defaults and copies element, with GML-tolerant comparisons.
+   Twelve focused tests cover mirrored joints, firing, caller loop fields, head push/HP and charged-shot
+   consumption, hurtbox damage, Draw fades/flashes, and continuation after Destroy. Both NEO recordings match
+   with the new objects' full state. The hurtbox is tested synthetically; it does not appear in these recordings.
+8. **Next:** the face attack (move its `ringsShots` hook from `host/neo.ts` into its definition)
 9. `obj_sneo_biglaser`, `obj_spamtonshot` (the power-up orb is already in `wireheart.ts`)
 10. the finale and final form (move the `pullsShots` hook into its definition)
 11. the scene objects
@@ -368,6 +371,24 @@ New scripts go in `tools/oracle-scripts.mjs`.
   Only test comparison and handoff files changed in this review, so no new production build or Pages deployment
   was performed.
 
+### 9. Phone-hand checkpoint (2026-10-15)
+
+- This continues Claude's source-reading boundary recorded above. The four definitions now use TypeScript and
+  retain migrated parents; no interpreter, source archive or engine component was removed.
+- All 16 event files were re-extracted read-only from the installed Chapter 2 package into
+  `.tools/phonehands-original-20261015`. Their bodies match the cache and archive. The installed package hash
+  remained `047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68`.
+- An implementation error exposed by parity at frames 2815/2975 was corrected before acceptance: concatenated
+  source reads made the preceding Destroy/End Step exit look like Collision/user5's first line. Head shots
+  actually decrement HP, push the head and all hands, and consume charged shots too. Hurtbox contact actually
+  invokes shared damage. Two failing regressions pinned these behaviours. Label file boundaries when reading
+  event batches; the source cache was not stale.
+- Acceptance: 391 tests / 44 files (73.01 seconds), typecheck, Pages build and both production-browser checks
+  passed. A fresh review of all 16 source events found no material defect. Difficulty-99 burst coverage remains
+  a nonblocking test gap; source translation matches. Details are in
+  `docs/superpowers/plans/2026-10-15-neo-phonehands.md`.
+- The face attack, large laser/shot, finale, scene objects and extra route/sound recordings remain outstanding.
+
 ## 6. Where things are
 
 | What | Where |
@@ -385,6 +406,7 @@ New scripts go in `tools/oracle-scripts.mjs`.
 | NEO | `src/remake/bosses/spamton-neo/neo.ts` (enemy), `body.ts` (Draw), `chooser.ts`, `vines.ts` |
 | NEO attack controller and flying heads | `src/remake/bosses/spamton-neo/bullet-controller.ts`, `flying-heads.ts` |
 | NEO support and later attacks | `src/remake/bosses/spamton-neo/support.ts`, `walls.ts`, `wireheart.ts`, `phonecall.ts` |
+| NEO phone hands and spread shot | `src/remake/bosses/spamton-neo/phonehands.ts` |
 | Hosts | `src/remake/host/engine.ts` (Chapter 1), `src/remake/host/neo.ts` (Chapter 2) |
 | Parity helpers | `tests/parity/reference.ts` |
 

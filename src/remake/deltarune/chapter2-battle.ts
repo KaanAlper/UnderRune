@@ -1,7 +1,7 @@
 // Chapter 2's battle scripts and small helper objects, as Chapter 2 enemies and bullets call them. Where Chapter 2
 // changed a Chapter 1 script (scr_randomtarget, scr_mercyadd, scr_enemyblcon), this is the Chapter 2 version.
 import {gmArray,gmField,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
-import {lengthdirX,lengthdirY,pointDirection,pointDistance} from '../gm/math';
+import {eq,lengthdirX,lengthdirY,pointDirection,pointDistance} from '../gm/math';
 import {C,mergeColor} from '../gm/graphics';
 import {dmgWriter,heart,heroKris} from './battle';
 import {button1_p} from './keys';
@@ -123,6 +123,14 @@ export function heartColor(caller:GmInstance,rt:GmRuntime,color:'red'|'yellow'){
 /** scr_bulletspawner: a bullet maker that knows its enemy, target and damage. */
 export function bulletSpawner(s:GmInstance,rt:GmRuntime,x:number,y:number,def:GmObjectDef){
  const d=rt.create(def,x,y);s.__dc=d.id;d.creator=s.myself;d.target=s.mytarget;d.damage=rt.globals.monsterat[s.myself]*5;return d;
+}
+/** Chapter 2 scr_bullet_inherit: -1 keeps the live recipient's defaults; eligible graze fields reset to zero. */
+export function bulletInherit2(caller:GmInstance,recipient:GmInstance){
+ if(!recipient.live)return;
+ for(const name of ['damage','grazepoints','timepoints','inv','target'])if(!eq(caller[name],-1))recipient[name]=caller[name];
+ if(!eq(caller.grazed,-1))recipient.grazed=0;
+ if(!eq(caller.grazetimer,-1))recipient.grazetimer=0;
+ recipient.element=caller.element;
 }
 /** draw_monster_body_part_ext: a body part, with the enemy's white flash over it. */
 export function drawBodyPart(s:GmInstance,rt:GmRuntime,sprite:string,frame:number,x:number,y:number,xs:number,ys:number,angle:number,blend:number,alpha:number){
