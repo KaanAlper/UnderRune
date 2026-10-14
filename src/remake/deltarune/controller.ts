@@ -384,7 +384,7 @@ function step(s:GmInstance,rt:GmRuntime){
       const sound=g.onChapter2TensionItemSound as ((name:string,pitch:number,volume:number)=>void)|undefined;
       if(sound)sound('snd_cardrive',1.4,0.8);else rt.sound?.('snd_cardrive',1.4);
       const h=rt.byId(g.charinstance[t()]);if(h){const a=rt.create(healAnim,h.x,h.y);a.target=h.id;a.particlecolor=C.orange;}
-      itemShiftTemp(s,C4(),t());nextHero(s,rt);g.onChapter2ItemUse?.(item,rt);
+      itemShiftTemp(s,C4(),t());nextHero(s,rt);
      }else itemConsume(s,rt);
     }
     if(s.itemtarget===1)g.bmenuno=7;
@@ -627,17 +627,9 @@ function draw(s:GmInstance,rt:GmRuntime){
  }
  d.color=C.white;d.alpha=1;
 }
+/** Alarm 2: the enemy turn is over; the next turn starts, unless an enemy takes over (rules.ts onTurnEnd). */
 function alarm2(s:GmInstance,rt:GmRuntime){
- const g=rt.globals;
- if(g.chapter===2){
-  const neo=g.monstertype.findIndex((type:number,i:number)=>type===50&&rt.byId(g.monsterinstance[i]));
-  if(neo>=0&&g.mercymod[neo]>99){
-   // Chapter 2 Alarm 2 enters the enemy's ending, never generic victory or another command turn.
-   const end=g.onNeoMercyTurnEnd as ((enemy:GmInstance,rt:GmRuntime)=>void)|undefined;
-   if(!end)throw Error('Chapter 2 NEO needs onNeoMercyTurnEnd for source ending dispatch');
-   end(rt.byId(g.monsterinstance[neo])!,rt);return;
-  }
- }
+ for(const [enemy,end] of withHook(rt,'onTurnEnd'))if(end(enemy,rt))return;
  s.reset=0;mnEndTurn(s,rt);
 }
 

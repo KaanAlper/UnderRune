@@ -123,7 +123,6 @@ export function installNeoHost(rt:GmRuntime){
  for(const stub of Object.values(pending))portedAliases.push([stub,object(stub.name)]);
  for(const def of Object.values(objects))def.depth=metadata.get(def.name)?.depth??def.depth;
  rt.installObjectAliases([...original.filter(old=>objects[old.name]&&!portedAliases.some(([o])=>o===old)).map(old=>[old,objects[old.name]] as const),...portedAliases]);
- rt.globals.onNeoMercyTurnEnd=(enemy:GmInstance)=>{enemy.endcon=1;};
  rt.globals.onChapter2SmallFace=(s:GmInstance,code:string)=>{Object.assign(s,{nextchar:'f',nextchar2:code,faced:0});executeNeoSource(neoWriterSmallFaceSource,s,rt,host);};
  return {host,objects,enter:(enemy:GmInstance)=>enterNeoBattleScene(rt,host,enemy)};
 }

@@ -89,11 +89,10 @@ describe.skipIf(!hasChapter2Source)('Chapter 2 source command foundation',()=>{
   const {rt,g}=make(),h=rt.byId(g.charinstance[2])!;
   expect(h.idlesprite).toBe('spr_ralsei_idle');expect(h.actsprite).toBe('spr_ralsei_act');expect([h.actframes,h.actreturnframes,h.attackframes,h.itemframes,h.defendframes]).toEqual([8,12,6,6,7]);
  });
- it('requests the NEO mercy ending at Alarm 2 without ending the practice battle',()=>{
+ it('starts the NEO mercy ending at Alarm 2 instead of another turn',()=>{
   const {rt,g,c,m}=make();g.mercymod[0]=100;g.myfight=-1;g.mnfight=2;
-  expect(()=>battleControllerFull.events!.alarm2!(c,rt)).toThrow('onNeoMercyTurnEnd');
-  const end=vi.fn();g.onNeoMercyTurnEnd=end;battleControllerFull.events!.alarm2!(c,rt);
-  expect(end).toHaveBeenCalledWith(m,rt);expect(g.myfight).toBe(-1);expect(rt.pendingRoom).toBeNull();
+  battleControllerFull.events!.alarm2!(c,rt);
+  expect(m.endcon).toBe(1);expect(g.myfight).toBe(-1);expect(rt.pendingRoom).toBeNull();
  });
  it('leaves NEO alive at nonpositive HP after physical or spell damage for source enemy ending dispatch',()=>{
   const {rt,g}=make(),h=rt.byId(g.charinstance[0])!;g.monsterhp[0]=1;h.points=150;g.chartarget[0]=0;

@@ -582,6 +582,8 @@ export const spamtonNeo:EnemyDef=defineEnemy({name:'obj_spamton_neo_enemy',index
   onHeroHit:n=>{Object.assign(n,{partmode:40,shockthreshold:15,shocktimer:9999,hurttimer2:10});},
   // At zero HP his own Step starts the ending during his next talk.
   defeatedByDamage:false,
+  // At full mercy the end of his turn starts his ending (obj_battlecontroller Alarm 2).
+  onTurnEnd:(n,rt)=>{if(rt.globals.mercymod[n.myself]<=99)return false;n.endcon=1;return true;},
  },
  events:{
   endStep,draw:neoBodyDraw,destroy:cleanUp,

@@ -5,6 +5,7 @@ import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {optionalSourceText as lang} from '../host/text';
 import {sourceText} from '../host/text';
 import {sideBPhase} from './chapter2';
+import {forChapter} from './rules';
 
 /** A party member's equipment in the game's terms: weapon and two armors, each with its AT, DF and MAGIC. */
 export interface EquippedStats{weapon:number;itemat:[number,number,number];itemdf:[number,number,number];itemmag:[number,number,number]}
@@ -19,6 +20,11 @@ export interface PartySetup{
  /** global.charauto: characters the game plays itself (Susie before her prison rejoin). */
  auto?:readonly number[];
 }
+/** Where each chapter keeps Kris's, Susie's and Ralsei's names (obj_initializer, then scr_gamestart). */
+const CHAR_NAMES:Record<number,string[]>={
+ 1:['obj_initializer_slash_Create_0_gml_48_0','obj_initializer_slash_Create_0_gml_49_0','obj_initializer_slash_Create_0_gml_50_0'],
+ 2:['scr_gamestart_slash_scr_gamestart_gml_99_0','scr_gamestart_slash_scr_gamestart_gml_100_0','scr_gamestart_slash_scr_gamestart_gml_101_0'],
+};
 /** The globals obj_initializer / scr_gamestart and the save file give a battle. */
 export function partyGlobals(rt:GmRuntime,p:PartySetup){
  const g=rt.globals;
@@ -28,8 +34,7 @@ export function partyGlobals(rt:GmRuntime,p:PartySetup){
  g.item=new Array(13).fill(0);p.items.slice(0,12).forEach((id,i)=>{g.item[i]=id;});
  // scr_gamestart: Kris has the hidden ACT spell (7), Susie Rude Buster, Ralsei Pacify and Heal Prayer.
  g.spell=Array.from({length:4},()=>new Array(13).fill(0));g.spell[1][0]=7;g.spell[2][0]=4;g.spell[3][0]=3;g.spell[3][1]=2;
- g.charname=[' ',lang('obj_initializer_slash_Create_0_gml_48_0'),lang('obj_initializer_slash_Create_0_gml_49_0'),lang('obj_initializer_slash_Create_0_gml_50_0')];
- if(g.chapter===2)g.charname=[' ',99,100,101].map((n,i)=>i===0?' ':sourceText(`scr_gamestart_slash_scr_gamestart_gml_${n}_0`));
+ g.charname=[' ',...forChapter(rt,CHAR_NAMES,'party names').map(key=>lang(key))];
  g.charauto=[0,0,0,0];for(const c of p.auto??[])g.charauto[c]=1;
  g.flag??=new Array(1000).fill(0);g.tempflag??=new Array(100).fill(0);
  g.maxtension=250;g.inv=-1;g.invc=1;g.time=0;g.lang='en';g.charselect=-1;g.chemg_god_mode=false;g.gold??=0;g.xp??=0;

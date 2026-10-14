@@ -10,7 +10,7 @@ import {battleTextDefault,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
 import {attackPhase,button1_p,itemShift,mercyAdd,monsterDefeat,monsterPop,subst,winCombat} from './controller';
 import {teaAmountChapter2} from './chapter2';
-import {rules,withHook} from './rules';
+import {forChapter,rules,withHook} from './rules';
 
 const destroyId=(rt:GmRuntime,id:number)=>{const i=rt.byId(id);if(i)rt.destroy(i);};
 const isHero=(i:GmInstance,name:string)=>i.object.name===name;
@@ -46,12 +46,17 @@ const FRAMES:Record<string,[number,number,number,number,number,number,number,num
 };
 // Chapter 2 obj_heroparent_Create_0: Kris/Susie are identical; Ralsei uses his hatless sprite set.
 const RALSEI_CH2:Record<string,string>={normal:'spr_ralsei_walk_right',idle:'spr_ralsei_idle',defend:'spr_ralsei_defend',hurt:'spr_ralsei_hurt_fixed',attackready:'spr_ralsei_attackready',attack:'spr_ralsei_attack',item:'spr_ralsei_item',itemready:'spr_ralsei_itemready',spellready:'spr_ralsei_spellready',spell:'spr_ralsei_spell',defeat:'spr_ralsei_defeat',victory:'spr_ralsei_victory',actready:'spr_ralsei_actready',act:'spr_ralsei_act'};
+/** Each chapter's battle sprites and animation frame counts per hero. */
+const HERO_LOOKS:Record<number,{sprites:Record<string,Record<string,string>>;frames:typeof FRAMES}>={
+ 1:{sprites:SPRITES,frames:FRAMES},
+ 2:{sprites:{...SPRITES,obj_heroralsei:RALSEI_CH2},frames:{...FRAMES,obj_heroralsei:[8,12,6,6,7,10,0.5,52,86]}},
+};
 function heroCreate(s:GmInstance,rt:GmRuntime){
  Object.assign(s,{char:0,myself:0,points:0,becomeflash:0,state:0,flash:0,siner:0,fsiner:0,attacktimer:0,attacked:0,combatdarken:1,darkentimer:0,darkify:0,
   imageXscale:2,imageYscale:2,index:0,specdraw:0,is_auto_susie:0,victoryanim:0,hurt:0,hurttimer:0,hurtindex:0,acttimer:0,defendtimer:0,itemed:0,tu:0});
- if(rt.globals.chapter===2){s.poisonamount=0;s.poisontimer=0;}
- const ralseiCh2=rt.globals.chapter===2&&s.object.name==='obj_heroralsei';
- const sp=ralseiCh2?RALSEI_CH2:SPRITES[s.object.name]??SPRITES.obj_herokris,f=ralseiCh2?[8,12,6,6,7,10,0.5,52,86]:FRAMES[s.object.name]??FRAMES.obj_herokris;
+ if(rules(rt).heroesCanBePoisoned){s.poisonamount=0;s.poisontimer=0;}
+ const looks=forChapter(rt,HERO_LOOKS,'obj_heroparent sprites');
+ const sp=looks.sprites[s.object.name]??looks.sprites.obj_herokris,f=looks.frames[s.object.name]??looks.frames.obj_herokris;
  for(const [k,v] of Object.entries(sp))s[k+'sprite']=v;
  if(s.object.name==='obj_herosusie'&&rt.globals.charweapon?.[2]===0){s.idlesprite='spr_susieb_idle_unarmed';s.attackreadysprite='spr_susieb_attackready_unarmed';s.attacksprite='spr_susieb_attack_unarmed';}
  [s.actframes,s.actreturnframes,s.attackframes,s.itemframes,s.defendframes,s.spellframes,s.attackspeed,s.mywidth,s.myheight]=f;
@@ -133,7 +138,8 @@ function heroDraw(s:GmInstance,rt:GmRuntime){
  }
  if(s.darkify===0){if(s.darkentimer>0)s.darkentimer-=3;s.imageBlend=mergeColor(C.white,C.black,s.darkentimer/30);}
  s.becomeflash=0;
- if(g.chapter===2&&s.poisonamount>0){
+ // Poison takes 1 HP every 10 frames, down to 1.
+ if(rules(rt).heroesCanBePoisoned&&s.poisonamount>0){
   s.poisontimer++;
   if(s.poisontimer>=10){if(g.hp[g.char[me]]>1){g.hp[g.char[me]]--;s.poisonamount--;}else s.poisonamount=0;s.poisontimer=0;}
  }
@@ -304,51 +310,77 @@ export function castSpell(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
    }
    g.spelldelay=0;break;
   }
-  case 201:healItem(s,rt,40);break;
-  case 202:{const t=g.char[s.star];let amount=Math.ceil(g.maxhp[t]/2);if(g.hp[t]<=0)amount=Math.ceil(g.maxhp[t])+Math.abs(g.hp[t]);healItem(s,rt,amount);break;}
-  case 205:healItem(s,rt,20);break;
-  case 206:healAllItem(rt,160);break;
-  case 207:healAllItem(rt,g.chapter===2?140:80);break;
-  case 208:healItem(s,rt,70);break;
-  case 209:healItem(s,rt,50);break;
-  case 210:healItem(s,rt,4);break;
-  case 211:healAllItem(rt,g.chapter===2?70:30);break;
-  case 212:healItem(s,rt,(g.chapter===2?[0,20,80,50,30]:[0,10,90,60])[g.char[s.star]]);break;
-  case 213:healItem(s,rt,(g.chapter===2?[0,80,20,50,70]:[0,80,30,30])[g.char[s.star]]);break;
-  case 214:healItem(s,rt,500);break;
-  case 215:healItem(s,rt,g.chapter===2?50:60);break;
-  case 216:if(g.chapter===2)healItem(s,rt,80);break;
-  case 218:case 219:case 220:case 221:
-   if(g.chapter===2)healItem(s,rt,teaAmountChapter2(rt,[1,4,3,2][spell-218],g.char[s.star]));break;
-  case 222:if(g.chapter===2)healItem(s,rt,60);break;
-  case 223:if(g.chapter===2)healItem(s,rt,120);break;
-  case 224:if(g.chapter===2)healItem(s,rt,100);break;
-  case 225:if(g.chapter===2)healAllItem(rt,30);break;
-  case 226:if(g.chapter===2)healItem(s,rt,g.char[s.star]===1?100:90);break;
+  default:if(spell>=201)forChapter(rt,ITEMS,'scr_spell (items)')(s,rt,spell);
+ }
+}
+// ---- Items: each chapter's item effects in scr_spell (spell = 200 + item) ----
+type ItemUse=(s:GmInstance,rt:GmRuntime,spell:number)=>void;
+/** Items both chapters share; false when the item is not one of them. */
+function sharedItem(s:GmInstance,rt:GmRuntime,spell:number){
+ const g=rt.globals;
+ switch(spell){
+  case 201:healItem(s,rt,40);return true;
+  case 202:{const t=g.char[s.star];let amount=Math.ceil(g.maxhp[t]/2);if(g.hp[t]<=0)amount=Math.ceil(g.maxhp[t])+Math.abs(g.hp[t]);healItem(s,rt,amount);return true;}
+  case 205:healItem(s,rt,20);return true;
+  case 206:healAllItem(rt,160);return true;
+  case 208:healItem(s,rt,70);return true;
+  case 209:healItem(s,rt,50);return true;
+  case 210:healItem(s,rt,4);return true;
+  case 214:healItem(s,rt,500);return true;
+ }
+ return false;
+}
+const itemsChapter1:ItemUse=(s,rt,spell)=>{
+ const g=rt.globals;if(sharedItem(s,rt,spell))return;
+ switch(spell){
+  case 207:healAllItem(rt,80);break;
+  case 211:healAllItem(rt,30);break;
+  case 212:healItem(s,rt,[0,10,90,60][g.char[s.star]]);break;
+  case 213:healItem(s,rt,[0,80,30,30][g.char[s.star]]);break;
+  case 215:healItem(s,rt,60);break;
+ }
+};
+/** Chapter 2 changes some amounts and adds the teas, the revive items and the poisoned food. */
+const itemsChapter2:ItemUse=(s,rt,spell)=>{
+ const g=rt.globals;if(sharedItem(s,rt,spell))return;
+ switch(spell){
+  case 207:healAllItem(rt,140);break;
+  case 211:healAllItem(rt,70);break;
+  case 212:healItem(s,rt,[0,20,80,50,30][g.char[s.star]]);break;
+  case 213:healItem(s,rt,[0,80,20,50,70][g.char[s.star]]);break;
+  case 215:healItem(s,rt,50);break;
+  case 216:healItem(s,rt,80);break;
+  case 218:case 219:case 220:case 221:healItem(s,rt,teaAmountChapter2(rt,[1,4,3,2][spell-218],g.char[s.star]));break;
+  case 222:healItem(s,rt,60);break;
+  case 223:healItem(s,rt,120);break;
+  case 224:healItem(s,rt,100);break;
+  case 225:healAllItem(rt,30);break;
+  case 226:healItem(s,rt,g.char[s.star]===1?100:90);break;
   case 230:case 231:
-   if(g.chapter===2)for(let i=0;i<3;i++)if(g.char[i]>0){
+   for(let i=0;i<3;i++)if(g.char[i]>0){
     s.star=i;let amount=spell===230?10:50;
     if(g.hp[g.char[i]]<=0)amount=spell===230?Math.ceil(g.maxhp[g.char[i]]/4)+Math.abs(g.hp[g.char[i]]):999;
     healItem(s,rt,amount);
    }
    break;
-  case 232:
-   if(g.chapter===2){const h=heroOf(s.star);if(h)h.poisonamount=60;rt.sound?.('snd_hurt1');const a=healItem(s,rt,40);if(a)a.particlecolor=0xff00ff;}
-   break;
+  case 232:{const h=rt.byId(g.charinstance[s.star]);if(h)h.poisonamount=60;rt.sound?.('snd_hurt1');const a=healItem(s,rt,40);if(a)a.particlecolor=0xff00ff;break;}
  }
- // scr_spell's consumer event runs only for consumable item effects, not inert/reusable items or early TP items.
- if(g.chapter===2&&spell>=201&&spell<=232&&![203,204,217,227,228,229].includes(spell))g.onChapter2ItemUse?.(spell-200,rt);
-}
+};
+const ITEMS:Record<number,ItemUse>={1:itemsChapter1,2:itemsChapter2};
 /** scr_spelltext: the battle line for a spell or item, in global.msg. */
+/** scr_spelltext's one-line spells and items: line numbers per chapter. Chapter 2 adds its new spells and items (whose
+ * lines also reset msgno; one has a second page). */
+const SPELL_LINES1:Record<number,number>={1:14,2:18,4:43,5:47,6:51,201:78,202:82,205:179,206:183,207:187,208:191,209:194,210:197,211:200,212:203,213:206,214:209,215:212};
+const SPELL_TEXT:Record<number,{lines:Record<number,number>;before?:(g:Record<string,any>,spell:number,L:(n:number)=>string)=>void}>={
+ 1:{lines:SPELL_LINES1},
+ 2:{lines:{...SPELL_LINES1,8:55,9:59,10:63,11:67,202:100,215:230,216:233,217:236,218:240,219:243,220:246,221:249,222:252,223:255,224:258,225:261,226:264,227:267,228:270,229:273,230:276,231:279,232:282,233:298},
+  before:(g,spell,L)=>{if(spell>=216&&spell<=233)g.msgno=0;if(spell===217){g.msg[1]=L(237);g.msgno=1;}}},
+};
 export function spellText(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
- const g=rt.globals,L=(n:number)=>(g.chapter===2?sourceText:lang)(`scr_spelltext_slash_scr_spelltext_gml_${n}_0`),name=g.charname[g.char[caster]];
+ const g=rt.globals,L=(n:number)=>lang(`scr_spelltext_slash_scr_spelltext_gml_${n}_0`),name=g.charname[g.char[caster]];
  s.spell=spell;s.caster=caster;s.star=g.chartarget[caster];s.spelltext=' ';
- const one:Record<number,number>={1:14,2:18,4:43,5:47,6:51,201:78,202:82,205:179,206:183,207:187,208:191,209:194,210:197,211:200,212:203,213:206,214:209,215:212};
- if(g.chapter===2){
-  Object.assign(one,{8:55,9:59,10:63,11:67,202:100,215:230,216:233,217:236,218:240,219:243,220:246,221:249,222:252,223:255,224:258,225:261,226:264,227:267,228:270,229:273,230:276,231:279,232:282,233:298});
-  if(spell>=216&&spell<=233)g.msgno=0;
-  if(spell===217){g.msg[1]=L(237);g.msgno=1;}
- }
+ const text=forChapter(rt,SPELL_TEXT,'scr_spelltext');text.before?.(g,spell,L);
+ const one=text.lines;
  if(one[spell]!==undefined){g.msg[0]=subst(L(one[spell]),name);return;}
  if(spell===3){
   g.msg[0]=subst(L(23),name);retargetSpell(s,rt);

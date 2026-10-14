@@ -14,6 +14,8 @@ export interface ChapterRules{
  readonly autoSusieMarksKill:boolean;
  /** Bringing the soul into the box (scr_moveheart) also ends its invincibility (global.inv = 0). */
  readonly moveHeartEndsInvincibility:boolean;
+ /** Heroes can be poisoned (an item's poison takes HP over time). */
+ readonly heroesCanBePoisoned:boolean;
  /** An enemy's random target is the whole party (mytarget 4, every hero that can be hit marked). */
  readonly enemiesTargetWholeParty:boolean;
  /** The tension bar keeps itself 40 pixels below the top of the view, so it moves with screen shakes. */
@@ -21,8 +23,14 @@ export interface ChapterRules{
  /** The tension bar is drawn through a surface (its cutout rounds the fill), with the TP logo and percentage last. */
  readonly tensionBarSurface:boolean;
 }
-const CHAPTER1:ChapterRules={chapter:1,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false};
-const CHAPTER2:ChapterRules={chapter:2,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true};
+const CHAPTER1:ChapterRules={chapter:1,heroesCanBePoisoned:false,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false};
+const CHAPTER2:ChapterRules={chapter:2,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true};
+/** A component's part for the running battle's chapter, from the table of its versions next to it. */
+export function forChapter<T>(rt:GmRuntime,versions:Readonly<Record<number,T>>,what:string):T{
+ const v=versions[rt.globals.chapter??1];
+ if(v===undefined)throw Error(`${what} has no Chapter ${rt.globals.chapter} version`);
+ return v;
+}
 /** The running battle's chapter rules (global.chapter). */
 export function rules(rt:GmRuntime):ChapterRules{
  const r=({1:CHAPTER1,2:CHAPTER2} as Record<number,ChapterRules>)[rt.globals.chapter??1];
@@ -36,6 +44,9 @@ export interface EnemyHooks{
  /** False when HP at zero after a FIGHT hit or a damaging spell does not defeat the enemy there: it ends the battle
   * in its own code (NEO; also Queen and Berdly). */
  readonly defeatedByDamage?:boolean;
+ /** The enemy turn is over (obj_battlecontroller Alarm 2): true when the enemy takes over instead of the next turn
+  * (NEO at full mercy starts his ending). */
+ onTurnEnd?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** True while the tension bar is hidden (GIGA Queen's boxing). */
  hidesTensionBar?(enemy:GmInstance,rt:GmRuntime):boolean;
 }
