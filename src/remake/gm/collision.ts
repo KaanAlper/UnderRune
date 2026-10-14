@@ -98,3 +98,20 @@ export function rectangleMeets(bank:SpriteBank,i:Collidable,x1:number,y1:number,
  for(let y=Math.floor(top);y<Math.ceil(bottom);y++)for(let x=Math.floor(left);x<Math.ceil(right);x++)if(pointIn(s,i,x+offset,y+offset))return true;
  return false;
 }
+/** distance_to_object: the gap between `self`'s box and the nearest of `others`' boxes (0 when `self` has no sprite;
+ * 1e10 when none of the others has a box). */
+export function distanceToObject(bank:SpriteBank,self:Collidable,others:readonly Collidable[]){
+ const a=bbox(bank,self);if(!a)return 0;
+ let min=1e20;
+ for(const o of others){
+  if(o===self)continue;
+  const b=bbox(bank,o);if(!b)continue;
+  let xd=0,yd=0;
+  if(b.left>a.right)xd=b.left-a.right;
+  if(a.left>b.right)xd=a.left-b.right;
+  if(b.top>a.bottom)yd=b.top-a.bottom;
+  if(a.top>b.bottom)yd=a.top-b.bottom;
+  const d=xd*xd+yd*yd;if(min>d)min=d;
+ }
+ return Math.sqrt(min);
+}
