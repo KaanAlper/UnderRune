@@ -24,7 +24,7 @@ test('original Jevil opens through preparation, stays local and returns to the m
  await page.getByRole('button',{name:'Chapter 1'}).click();
  await boss(page,'ch1-25','JEVIL');
  const prep=page.getByRole('dialog',{name:'JEVIL'});await expect(prep).toBeVisible();
- await expect(prep.getByRole('button',{name:/Game default/})).toBeVisible();
+ await expect(prep.locator('.prep-hero[data-character="1"]').getByRole('button',{name:/Game default/})).toBeVisible();
  await prep.getByRole('button',{name:'START BATTLE'}).click();
  await expect(page.locator('#status')).toContainText('JEVIL / ORIGINAL ENGINE',{timeout:90000});
  await expect(page.locator('#native')).toBeVisible();await expect(prep).toBeHidden();
@@ -50,14 +50,14 @@ test('winning an original battle shows the result and returns to the menu',async
 test('no-native source battle uses preparation, real commands, pause, restart and saved equipment',async({page})=>{
  const failures:string[]=[],remote:string[]=[];page.on('pageerror',e=>failures.push(e.message));page.on('request',r=>{if(!['127.0.0.1','localhost'].includes(new URL(r.url()).hostname))remote.push(r.url());});
  await withoutNative(page);await chapterMenu(page);await boss(page,'ch1-25','JEVIL');
- const prep=page.getByRole('dialog',{name:'JEVIL'});await expect(prep).toBeVisible();await prep.getByRole('button',{name:/Dice Brace/}).click();await expect(prep.locator('.prep-summary')).toContainText('DF 2');
+ const prep=page.getByRole('dialog',{name:'JEVIL'});await expect(prep).toBeVisible();await prep.getByRole('button',{name:/Dice Brace/}).click();await expect(prep.locator('.prep-hero[data-character="1"] .prep-summary')).toContainText('DF 2');
  await prep.getByRole('button',{name:'START BATTLE'}).click();await expect(prep).toBeHidden();await expect(page.locator('#status')).toContainText('JEVIL / command');await expect(page.locator('#native')).toHaveCount(0);
  for(let i=0;i<3;i++){await key(page,'ArrowLeft');await key(page,'z');}await expect(page.locator('#status')).toContainText('enemy talk');
  await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('paused');await page.locator('#pause').click();await expect(page.locator('#status')).not.toContainText('paused');
  await page.keyboard.press('r');await expect(page.locator('#status')).toContainText('command / TURN 1');
  await page.locator('#credits').click();await expect(page.locator('#difference-note')).toContainText('source-ported');await page.locator('#close-about').click();await expect(page.locator('#status')).toContainText('paused');
  await page.locator('#effects').click();await expect(page.locator('#effects')).toHaveAttribute('aria-pressed','true');await page.locator('#mute').click();await expect(page.locator('#mute')).toHaveAttribute('aria-pressed','true');
- await page.keyboard.press('x');await expect(page.locator('#boss-select')).toBeVisible();await boss(page,'ch1-25','JEVIL');await expect(prep.locator('.prep-slots')).toContainText('Dice Brace');
+ await page.keyboard.press('x');await expect(page.locator('#boss-select')).toBeVisible();await boss(page,'ch1-25','JEVIL');await expect(prep.locator('.prep-hero[data-character="1"] .prep-slots')).toContainText('Dice Brace');
  expect(failures).toEqual([]);expect(remote).toEqual([]);
 });
 
@@ -99,7 +99,7 @@ test('blocked localStorage getter does not prevent startup',async({page})=>{
 
 test('no-native source asset failure stays in preparation and retries without losing loadout',async({page})=>{
  let failed=false;await withoutNative(page);await page.route('**/generated/remake/ch1/bundle.json',async route=>{if(!failed){failed=true;await route.abort();}else await route.continue();});
- await chapterMenu(page);await boss(page,'ch1-25','JEVIL');const prep=page.getByRole('dialog',{name:'JEVIL'});await prep.getByRole('button',{name:/Dice Brace/}).click();await prep.getByRole('button',{name:'START BATTLE'}).click();await expect(prep.locator('.prep-feedback')).toContainText('Failed to fetch');await expect(prep.getByRole('button',{name:'START BATTLE'})).toBeEnabled();await expect(prep.locator('.prep-slots')).toContainText('Dice Brace');
+ await chapterMenu(page);await boss(page,'ch1-25','JEVIL');const prep=page.getByRole('dialog',{name:'JEVIL'});await prep.getByRole('button',{name:/Dice Brace/}).click();await prep.getByRole('button',{name:'START BATTLE'}).click();await expect(prep.locator('.prep-feedback')).toContainText('Failed to fetch');await expect(prep.getByRole('button',{name:'START BATTLE'})).toBeEnabled();await expect(prep.locator('.prep-hero[data-character="1"] .prep-slots')).toContainText('Dice Brace');
  await prep.getByRole('button',{name:'START BATTLE'}).click();await expect(prep).toBeHidden();await expect(page.locator('#status')).toContainText('JEVIL / command');
 });
 

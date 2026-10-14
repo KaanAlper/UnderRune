@@ -1,6 +1,136 @@
-.prep{--hero:#69bcff;box-sizing:border-box;position:fixed;inset:0 0 0 auto;margin:0;width:min(620px,100vw);max-width:100vw;height:100dvh;max-height:100dvh;padding:0;border:0;border-left:2px solid #393b44;background:#111218;color:#f4f4f5;box-shadow:-24px 0 80px #0009;font-family:'Segoe UI',sans-serif;overflow:hidden}
-.prep[open]{display:flex;flex-direction:column;animation:prep-enter .2s ease-out}.prep::backdrop{background:#000a;backdrop-filter:blur(3px)}
-.prep button,.prep input{font:inherit;border-radius:0;min-height:42px}.prep button:focus-visible,.prep input:focus-visible{outline:2px solid #ffdf66;outline-offset:3px}.prep button{cursor:pointer}.prep button:disabled{cursor:default}.prep-top{display:flex;align-items:center;justify-content:space-between;padding:25px 28px 20px;border-bottom:1px solid #30323c;background:#191b22}.prep-eyebrow{font:11px Consolas,monospace;letter-spacing:2px;color:#a7aab7;margin:0 0 9px}.prep h1{font:700 26px Consolas,monospace;color:white;margin:0;line-height:1.2}.prep-close{width:42px;flex-shrink:0;font-size:26px!important;background:transparent;border:1px solid #414450;color:#b9bdc9}.prep-body{overflow-y:auto;overscroll-behavior:contain;padding:0 28px 24px;min-height:0;flex:1;scrollbar-color:#565b6b #191b22}.prep-intro{margin:22px 0 18px;color:#b5b8c6;font-size:14px}.prep-characters{display:flex;gap:8px}.prep-character{display:flex;flex:1;flex-direction:column;align-items:center;justify-content:end;gap:7px;background:#191b22;border:1px solid #343744;color:#b8bccb;padding:12px 4px 10px;min-width:0}.prep-character img{width:34px;height:44px;object-fit:contain;image-rendering:pixelated}.prep-character span{font:700 13px Consolas,monospace}.prep-character[aria-selected=true]{color:var(--char);border-color:var(--char);background:color-mix(in srgb,var(--char) 10%,#15161c);box-shadow:inset 0 -3px var(--char)}.prep-initial{height:44px;display:grid;place-items:center;font-size:25px!important;color:var(--char)}.prep-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:18px}.prep-slot{display:flex;flex-direction:column;align-items:start;gap:8px;text-align:left;padding:12px;background:#191b22;border:1px solid #343744;color:white}.prep-slot>span{font:10px Consolas,monospace;letter-spacing:1.5px;color:#b6bbc9}.prep-slot strong{font-size:13px;overflow-wrap:anywhere}.prep-slot[aria-pressed=true]{border-color:var(--hero);box-shadow:inset 0 -2px var(--hero)}.prep-summary{font:11px Consolas,monospace;color:var(--hero);white-space:pre-wrap;margin:14px 0 24px;line-height:1.5}.prep-searchbox{display:flex;flex-direction:column;gap:10px}.prep-label{font:11px Consolas,monospace;letter-spacing:2px;color:#cdd0db}.prep-searchbox input{box-sizing:border-box;width:100%;background:#090a0e;border:1px solid #3c404d;color:white;padding:10px 13px;font-size:14px}.prep-list{display:grid;gap:8px;margin-top:14px;max-height:330px;overflow-y:auto;overscroll-behavior:contain;padding:3px;scrollbar-color:#565b6b #191b22}.prep-listlabel{font:10px Consolas,monospace;color:#a9adbb;letter-spacing:1px;margin:0 0 3px}.prep-entry{width:100%;text-align:left;padding:13px;background:#191b22;border:1px solid #343744;color:#eef0f6}.prep-entry:hover:not(:disabled){border-color:#858b9d;background:#22252e}.prep-entry[aria-pressed=true]{border-color:var(--hero)}.prep-entrytitle{display:flex;align-items:center;justify-content:space-between;gap:15px}.prep-entrytitle strong{font:700 15px Consolas,monospace}.prep-entryaction{font:10px Consolas,monospace;letter-spacing:1px;color:var(--hero);flex-shrink:0}.prep-description{font-size:12px;line-height:1.6;color:#b9bece;white-space:pre-line;margin:8px 0}.prep-entrymeta{font:11px Consolas,monospace;color:#d2d6e2;display:block;margin-top:9px;white-space:pre-wrap}.prep-entry:disabled{opacity:.48}.prep-incompatible{display:block;font-size:11px;margin-top:6px;color:#e7a98f}.prep-empty{color:#b5b8c6;font-size:13px}.prep-bagsection{margin-top:26px}.prep-baghead{display:flex;align-items:center;gap:12px;margin-bottom:12px}.prep-baghead h2{font:700 13px Consolas,monospace;letter-spacing:2px;margin:0;color:white}.prep-baghead>span{font:12px Consolas,monospace;color:#aeb5c5}.prep-add{margin-left:auto;background:transparent;border:1px solid #43495a;color:#e5e7f0;padding:6px 12px;font-size:12px!important;min-height:34px!important}.prep-bag{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.prep-bagitem{display:flex;align-items:center;gap:9px;text-align:left;padding:8px 10px;background:#0e0f14;border:1px solid #2c303b;color:#bdc4d6}.prep-bagitem>span:first-child{font:10px Consolas,monospace;color:#9299ac}.prep-bagitem strong{font-size:11px;font-weight:400;overflow-wrap:anywhere}.prep-remove{margin-left:auto;color:#9399a8;font-size:16px}.prep-footer{flex-shrink:0;display:grid;grid-template-columns:auto 1fr;gap:12px;margin:0;padding:16px 28px 20px;border-top:1px solid #343744;background:#191b22;justify-content:normal}.prep-feedback{grid-column:1/-1;min-height:16px;font-size:12px;line-height:1.4;color:#b4bbcc;margin:0}.prep-reset{padding:9px 15px;background:transparent;border:1px solid #444956;color:#cad0df;font-size:13px!important}.prep-launch{padding:12px;background:#ffdf66;color:#16120a;border:1px solid #ffdf66;font:700 14px Consolas,monospace!important;letter-spacing:1px}.prep-launch:disabled{opacity:.6}.prep-footer>span{color:inherit}
-@keyframes prep-enter{from{transform:translateX(24px);opacity:0}to{transform:translateX(0);opacity:1}}
-@media(max-width:600px){.prep-top{padding:20px}.prep-body{padding:0 16px 20px}.prep-footer{padding:14px 16px max(16px,env(safe-area-inset-bottom))}.prep h1{font-size:23px}.prep-slots{gap:6px}.prep-slot{padding:10px 8px}.prep-description{font-size:13px}.prep-list{max-height:280px}}
-@media(prefers-reduced-motion:reduce){.prep[open]{animation:none}.prep::backdrop{backdrop-filter:none}}body.reduced .prep[open]{animation:none}
+/* Party preparation, in the dark world menu's own language: black boxes with white frames, the selected row in
+   yellow, and the red soul marking the row the keys are on. Each party member keeps their battle colour. */
+.prep{
+ --void:#000;--chalk:#fff;--frame:#4a4453;--rule:#2a2531;--dim:#9a92a6;--quiet:#5b5466;--gold:#ffff00;
+ --hero:#69bcff;--ease-out:cubic-bezier(.23,1,.32,1);
+ /* Replaced by the game's own heart sprite when the assets are loaded. */
+ --soul:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 7' shape-rendering='crispEdges'%3E%3Cpath fill='%23f00' d='M1 0h2v1h2V0h2v1h1v2H7v1H6v1H5v1H3V5H2V4H1V3H0V1h1z'/%3E%3C/svg%3E");
+ box-sizing:border-box;position:fixed;inset:0;margin:auto;width:min(1180px,calc(100vw - 48px));max-width:none;height:min(860px,calc(100dvh - 48px));max-height:none;
+ padding:0;border:3px solid var(--chalk);background:var(--void);color:var(--chalk);font:700 14px 'Courier New',monospace;line-height:1.35;overflow:hidden
+}
+.prep[open]{display:flex;flex-direction:column;animation:prep-enter 200ms var(--ease-out)}
+.prep::backdrop{background:#000d}
+.prep button,.prep input{font:inherit;border-radius:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.prep button{cursor:pointer;color:inherit}.prep button:disabled{cursor:default}
+.prep :is(.prep-close,.prep-add,.prep-reset,.prep-launch):focus-visible,.prep input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+.prep-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 24px;border-bottom:1px solid var(--rule)}
+.prep-eyebrow{margin:0 0 2px;font-size:12px;font-weight:400;color:var(--dim)}
+.prep h1{margin:0;font-size:28px;line-height:1.1;color:var(--chalk)}
+.prep .prep-close{width:40px;height:40px;flex-shrink:0;font-size:24px;background:var(--void);border:2px solid var(--frame)}
+
+.prep-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px 24px;align-items:start;padding:16px 24px 20px;overflow-y:auto;overscroll-behavior:contain;scrollbar-color:var(--frame) var(--void)}
+.prep-intro{grid-column:1/-1;margin:0;font-size:12px;font-weight:400;color:var(--dim);max-width:80ch}
+.prep-intro:empty{display:none}
+.prep-party{min-width:0;display:grid;gap:14px}
+
+/* One column per party member. */
+.prep-roster{display:grid;grid-template-columns:repeat(var(--members,3),minmax(0,1fr));gap:12px}
+.prep-hero{min-width:0;border:2px solid var(--frame);padding:10px 10px 12px}
+.prep-hero:has(.prep-character[aria-pressed=true]){border-color:var(--char)}
+.prep-character{position:relative;display:grid;grid-template-columns:56px minmax(0,1fr);align-items:end;gap:10px;width:100%;min-height:76px;padding:0 6px 4px 28px;text-align:left;background:none;border:0;color:var(--char)}
+.prep-character img{width:56px;height:72px;object-fit:contain;object-position:bottom;image-rendering:pixelated}
+.prep-initial{height:72px;display:grid;place-items:center;font-size:36px}
+.prep-who{display:grid;gap:2px;min-width:0}
+.prep-name{font-size:20px;line-height:1.1}
+.prep-hero-note{font-size:11px;font-weight:400;color:var(--dim)}
+.prep-slots{display:grid;margin-top:8px}
+.prep-slot{position:relative;display:grid;grid-template-columns:72px minmax(0,1fr);align-items:baseline;gap:8px;min-height:38px;padding:6px 8px 6px 28px;text-align:left;background:none;border:0}
+.prep-slot>span{font-size:12px;font-weight:400;color:var(--dim)}
+.prep-slot strong{font-size:14px;overflow-wrap:anywhere}
+.prep-slot[aria-pressed=true]{background:color-mix(in srgb,var(--char) 16%,var(--void));box-shadow:inset 3px 0 var(--char)}
+.prep-summary{margin:8px 0 0 28px;font-size:12px;color:var(--char);white-space:pre}
+
+/* The bag is shared by the whole party; its slots are the order items appear in battle. */
+.prep-bagsection{border:2px solid var(--frame);padding:10px 10px 8px}
+.prep-baghead{display:flex;align-items:center;gap:12px;margin-bottom:6px;padding-left:8px}
+.prep-baghead h2{margin:0;font-size:18px;color:var(--chalk)}
+.prep-baghead>span{font-size:12px;font-weight:400;color:var(--dim)}
+.prep .prep-add{margin-left:auto;min-height:32px;padding:4px 10px;font-size:12px;background:var(--void);border:2px solid var(--frame)}
+.prep-bag{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));column-gap:4px}
+.prep-bagitem{position:relative;display:flex;align-items:center;gap:6px;min-width:0;min-height:34px;padding:4px 6px 4px 26px;text-align:left;background:none;border:0}
+.prep-bagitem strong{font-size:12px;overflow-wrap:anywhere}
+.prep-bagitem.is-empty strong{font-weight:400;color:var(--quiet)}
+.prep-remove{margin-left:auto;font-weight:400;color:var(--quiet)}
+
+/* Inventory for the chosen slot. */
+.prep-inventory{min-width:0;border-left:1px solid var(--rule);padding-left:22px}
+.prep-context{margin:0 0 12px;font-size:17px;color:var(--hero)}
+.prep-searchbox{display:grid;gap:6px}
+.prep-label{font-size:12px;font-weight:400;color:var(--dim)}
+.prep-searchbox input{box-sizing:border-box;width:100%;min-height:38px;padding:8px 10px;font-size:14px;color:var(--chalk);background:var(--void);border:2px solid var(--frame)}
+.prep-list{display:grid;margin-top:12px;max-height:520px;overflow-y:auto;overscroll-behavior:contain;scrollbar-color:var(--frame) var(--void)}
+.prep-listlabel{margin:0 0 4px;font-size:12px;font-weight:400;color:var(--dim)}
+.prep-entry{position:relative;width:100%;padding:10px 10px 10px 28px;text-align:left;background:none;border:0;border-bottom:1px solid var(--rule)}
+.prep-entry[aria-pressed=true]{box-shadow:inset 3px 0 var(--hero)}
+.prep-entrytitle{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.prep-entrytitle strong{font-size:14px;overflow-wrap:anywhere}
+.prep-entryaction{flex-shrink:0;font-size:11px;font-weight:400;color:var(--hero)}
+.prep-description{margin:4px 0;font-size:12px;font-weight:400;line-height:1.45;color:#c4bdcf;white-space:pre-line}
+.prep-entrymeta{display:block;margin-top:4px;font-size:11px;font-weight:400;color:var(--chalk);white-space:pre-wrap}
+.prep-entry:disabled{opacity:.42}
+.prep-incompatible{display:block;margin-top:4px;font-size:11px;font-weight:400;color:#ff8f8f}
+.prep-empty{font-size:13px;font-weight:400;color:var(--dim)}
+
+/* The soul: the row the keys are on. It moves instantly, as it does in the game. */
+.prep :is(.prep-character,.prep-slot,.prep-bagitem,.prep-entry):focus-visible{outline:none}
+.prep :is(.prep-character,.prep-slot,.prep-bagitem,.prep-entry):focus-visible::before{
+ content:'';position:absolute;left:6px;top:50%;width:16px;height:16px;margin-top:-8px;background:var(--soul) center/16px 16px no-repeat;image-rendering:pixelated
+}
+.prep-character:focus-visible::before{top:auto;bottom:10px;margin-top:0}
+.prep :is(.prep-slot,.prep-bagitem,.prep-entry):focus-visible strong,.prep-character:focus-visible .prep-name{color:var(--gold)}
+
+/* A name that just changed lights up in yellow and settles back. */
+.prep :is(.prep-slot,.prep-bagitem) strong{transition:color 450ms ease}
+.prep .is-new strong{color:var(--gold);transition:none}
+
+.prep .prep-footer{flex-shrink:0;min-height:0;flex-wrap:nowrap;justify-content:normal;align-content:normal;font-size:14px;letter-spacing:0;color:var(--chalk);display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:6px 20px;padding:12px 24px 14px;border-top:1px solid var(--rule)}
+.prep-shortcuts{margin:0;font-size:12px;font-weight:400;color:var(--dim);white-space:nowrap}
+.prep-shortcuts kbd{font:inherit;font-weight:700;color:var(--chalk);border:1px solid var(--frame);padding:1px 5px;margin:0 4px 0 8px}
+.prep-shortcuts kbd:first-child{margin-left:0}
+.prep-feedback{margin:0;min-height:16px;font-size:12px;font-weight:400;color:var(--dim)}
+.prep .prep-reset{min-height:40px;padding:6px 14px;font-size:13px;color:var(--dim);background:var(--void);border:2px solid var(--frame)}
+.prep .prep-launch{min-height:48px;padding:10px 26px;font-size:17px;letter-spacing:1px;color:var(--chalk);background:var(--void);border:3px solid var(--chalk)}
+.prep-launch:disabled{color:var(--quiet);border-color:var(--frame)}
+.prep-launch:focus-visible{color:var(--gold);border-color:var(--gold);outline:none}
+
+@keyframes prep-enter{from{transform:scale(.97);opacity:0}to{transform:scale(1);opacity:1}}
+@media(hover:hover) and (pointer:fine){
+ .prep :is(.prep-slot,.prep-bagitem,.prep-entry):hover:not(:disabled) strong,.prep-character:hover .prep-name{color:var(--gold)}
+ .prep :is(.prep-close,.prep-add,.prep-reset):hover{border-color:var(--chalk);color:var(--chalk)}
+ .prep .prep-launch:hover:not(:disabled){color:var(--gold);border-color:var(--gold)}
+}
+@media(max-width:980px){
+ .prep{width:calc(100vw - 24px);height:calc(100dvh - 24px)}
+ .prep-body{grid-template-columns:minmax(0,1fr) 270px;gap:14px 18px;padding:14px 16px 18px}
+ .prep-inventory{padding-left:16px}
+ .prep-slot{grid-template-columns:minmax(0,1fr);gap:0}
+ .prep-bag{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .prep-footer{padding:12px 16px}
+}
+@media(max-width:650px){
+ .prep{inset:0;width:100vw;height:100dvh;border-width:0}
+ .prep-top{padding:14px 14px 12px}
+ .prep h1{font-size:23px}
+ .prep-body{grid-template-columns:minmax(0,1fr);padding:12px 10px 18px}
+ .prep-roster{gap:6px}
+ .prep-hero{padding:6px 4px 8px}
+ .prep-character{grid-template-columns:minmax(0,1fr);justify-items:center;text-align:center;padding:0 2px 4px;min-height:0}
+ .prep-character img{width:44px;height:58px}
+ .prep-character:focus-visible::before{left:2px;bottom:auto;top:6px}
+ .prep-name{font-size:16px}.prep-hero-note{font-size:10px}
+ .prep-slot{padding:6px 4px 6px 22px;min-height:44px}
+ .prep :is(.prep-slot,.prep-bagitem,.prep-entry):focus-visible::before{left:3px}
+ .prep-slot strong{font-size:12px}
+ .prep-summary{margin-left:4px;font-size:11px;white-space:normal}
+ .prep-bag{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .prep-inventory{border-left:0;border-top:1px solid var(--rule);padding:16px 0 0}
+ .prep-list{max-height:none}
+ .prep-footer{grid-template-columns:minmax(0,1fr) auto;padding:10px 12px max(12px,env(safe-area-inset-bottom));gap:8px}
+ .prep-shortcuts{display:none}
+ .prep-feedback{grid-column:1/-1;grid-row:2}
+ .prep .prep-reset{grid-column:1;grid-row:1;justify-self:start}
+ .prep .prep-launch{grid-column:2;grid-row:1;font-size:15px;padding:10px 14px;white-space:nowrap}
+}
+@media(prefers-reduced-motion:reduce){.prep[open]{animation:none}}
+body.reduced .prep[open]{animation:none}

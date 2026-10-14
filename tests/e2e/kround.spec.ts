@@ -16,7 +16,7 @@ for(const id of ['ch1-12','ch1-27'])test(`${id}: public source-engine Bow ACT, a
  await page.getByRole('button',{name:'Connect DELTARUNE'}).click();await page.getByRole('button',{name:'Connect device'}).click();
  await page.getByRole('button',{name:'Chapter 1',exact:true}).click();await selectBattle(page,id);
  const prep=page.getByRole('dialog',{name:'K.Round'});await expect(prep).toBeVisible();
- await expect(prep.getByRole('tablist')).toContainText('Kris');await expect(prep.getByRole('tablist')).toContainText('Susie');await expect(prep.getByRole('tablist')).toContainText('Ralsei');
+ await expect(prep.getByRole('region',{name:'Party equipment'})).toContainText('Kris');await expect(prep.getByRole('region',{name:'Party equipment'})).toContainText('Susie');await expect(prep.getByRole('region',{name:'Party equipment'})).toContainText('Ralsei');
  await prep.getByRole('button',{name:'START BATTLE',exact:true}).click();await expect(page.locator('#status')).toContainText('K.Round / command');
  await page.waitForTimeout(600);
  // Kris: ACT -> target -> Bow. First encounter: Ralsei DEFEND, automatic Susie; rematch: two DEFENDs.

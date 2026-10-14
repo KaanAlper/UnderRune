@@ -14,7 +14,7 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  const failures:string[]=[],native:string[]=[];page.on('pageerror',e=>failures.push(e.message));page.on('request',r=>{if(/\/native\/|data\.win|\.wasm/.test(r.url()))native.push(r.url());});
  await menu(page);await boss(page,"ch1-25","JEVIL");
  const prep=page.getByRole('dialog',{name:'JEVIL'});await expect(prep).toBeVisible();
- await prep.getByRole('button',{name:/Dice Brace/}).click();await expect(prep.locator('.prep-summary')).toContainText('DF 2');
+ await prep.getByRole('button',{name:/Dice Brace/}).click();await expect(prep.locator('.prep-hero[data-character="1"] .prep-summary')).toContainText('DF 2');
  await prep.getByRole('button',{name:'+ Add item',exact:true}).click();await prep.locator('.prep-entry').filter({hasText:'Dark Candy'}).click();
  await expect(prep.locator('.prep-bag')).toContainText('Dark Candy');await prep.screenshot({path:'test-results/public-preparation.png'});
  await prep.getByRole('button',{name:'START BATTLE'}).click();await expect(prep).toBeHidden();await expect(page.locator('#status')).toContainText('JEVIL / command');
@@ -27,9 +27,9 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  await page.keyboard.press('ArrowRight');await page.keyboard.press('r');await expect(page.locator('#outcome')).toBeHidden();
  await page.waitForTimeout(600);await page.locator('#screen').screenshot({path:'test-results/public-practice.png'});
  await page.getByRole('button',{name:'Device menu',exact:true}).click();await boss(page,"ch1-25","JEVIL");
- await expect(prep.locator('.prep-slots')).toContainText('Dice Brace');await expect(prep.locator('.prep-bag')).toContainText('Dark Candy');
+ await expect(prep.locator('.prep-hero[data-character="1"] .prep-slots')).toContainText('Dice Brace');await expect(prep.locator('.prep-bag')).toContainText('Dark Candy');
  await prep.getByRole('button',{name:'Close preparation'}).click();await page.reload();await menu(page);
- await boss(page,"ch1-25","JEVIL");await expect(prep.locator('.prep-slots')).toContainText('Dice Brace');
+ await boss(page,"ch1-25","JEVIL");await expect(prep.locator('.prep-hero[data-character="1"] .prep-slots')).toContainText('Dice Brace');
  expect(failures).toEqual([]);expect(native).toEqual([]);
 });
 test('unavailable encounters still open equipment previews without launching a fake fight',async({page})=>{
