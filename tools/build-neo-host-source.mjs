@@ -19,7 +19,7 @@ const byName=new Map([...depthSource.matchAll(/global\.__objectNames\[(\d+)\]\s*
 for(const m of metadata)m.depth=byName.get(m.name)??m.depth;
 scripts.snd_pitch_time=fs.readFileSync(path.join(dir,'gml_GlobalScript_snd_pitch_time.gml'),'utf8');
 const objectSources={};
-for(const name of ['obj_animator','obj_smallface','obj_script_delayed','obj_collidebullet','obj_regularbullet','obj_growtangle','obj_growtangle_spark','obj_battle_cleanup','obj_spamtonshot','obj_lerppitch','obj_fadein','obj_battleblcon']){
+for(const name of ['obj_animator','obj_smallface','obj_script_delayed','obj_collidebullet','obj_regularbullet','obj_growtangle','obj_growtangle_spark','obj_moveheart','obj_battle_cleanup','obj_spamtonshot','obj_lerppitch','obj_fadein','obj_battleblcon']){
  const m=metadata.find(m=>m.name===name);if(!m)throw Error('Missing resource '+name);
  const sources=Object.fromEntries(fs.readdirSync(dir).filter(f=>f.startsWith(`gml_Object_${name}_`)&&f.endsWith('.gml')&&!f.endsWith('Draw_64.gml')).map(f=>[f.slice(`gml_Object_${name}_`.length,-4),fs.readFileSync(path.join(dir,f),'utf8')]));
  objectSources[name]={metadata:m,sources};

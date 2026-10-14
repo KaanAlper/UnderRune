@@ -159,6 +159,24 @@ export const neoHostObjectSources:Readonly<Record<string,{metadata:NeoSourceMeta
    "Step_0": "event_inherited();\ntimer++;\nif (timer == 4)\n{\n    image_xscale = 1.5;\n    image_yscale = 1.5;\n    image_angle = random(360);\n}\nif (timer == 8)\n{\n    timer = 1;\n    image_xscale = 2;\n    image_yscale = 2;\n    image_angle = random(360);\n}\n"
   }
  },
+ "obj_moveheart": {
+  "metadata": {
+   "index": 382,
+   "name": "obj_moveheart",
+   "parent": null,
+   "sprite": "spr_dodgeheart",
+   "mask": null,
+   "solid": false,
+   "depth": 0,
+   "visible": true
+  },
+  "sources": {
+   "Alarm_0": "x = distx;\ny = disty;\nif (!i_ex(obj_heart))\n{\n    instance_create(x, y, obj_heart);\n}\ninstance_destroy();\n",
+   "Create_0": "burst = 0;\nshift = 1;\nimage_alpha = 0;\nflytime = 8;\nif (instance_exists(obj_heartmarker))\n{\n    distx = obj_heartmarker.x;\n    disty = obj_heartmarker.y;\n}\nelse if (!instance_exists(obj_growtangle))\n{\n    distx = __view_get(e__VW.XView, 0) + 310;\n    disty = __view_get(e__VW.YView, 0) + 160;\n}\nelse\n{\n    distx = obj_growtangle.x - 10;\n    disty = obj_growtangle.y - 10;\n}\ndist = point_distance(x, y, distx, disty);\nmove_towards_point(distx, disty, dist / flytime);\nalarm[0] = flytime;\nimage_speed = 0;\ninstance_create(x, y, obj_heartburst);\n\nenum e__VW\n{\n    XView,\n    YView,\n    WView,\n    HView,\n    Angle,\n    HBorder,\n    VBorder,\n    HSpeed,\n    VSpeed,\n    Object,\n    Visible,\n    XPort,\n    YPort,\n    WPort,\n    HPort,\n    Camera,\n    SurfaceID\n}\n",
+   "Draw_0": "draw_self();\n",
+   "Step_0": "image_alpha += 0.334;\n"
+  }
+ },
  "obj_battle_cleanup": {
   "metadata": {
    "index": 58,

@@ -37,6 +37,52 @@ describe.skipIf(!hasArchive)('integrated normal NEO battle',()=>{
   }
   expect(sawAttack,JSON.stringify({phase:[g.myfight,g.mnfight,g.charturn,g.bmenuno],actions:g.charaction,enemy:b.enemy&&[b.enemy.talked,b.enemy.actcon],controller:findController(b.rt)?.alarm,coord:g.bmenucoord[0]})).toBe(true);expect(sawSoul).toBe(true);expect(b.turn).toBe(1);expect(b.outcome).toBeNull();
  });
+ it('lands the wireheart soul inside its left arena and blocks movement through every wall',()=>{
+  const b=create();frame(b,30);const rt=b.rt,g=rt.globals,e=b.enemy!;
+  e.attackdebug=2;e.difficultydebug=0;g.myfight=-1;g.mnfight=1;
+  let soul=rt.first(heart);
+  for(let i=0;i<800&&!soul;i++){
+   if(i%30===0)rt.input.pressed.add(KEY.c);
+   frame(b);soul=rt.first(heart);
+  }
+  expect(soul).toBeDefined();
+  const box=rt.instances.find(s=>s.live&&s.object.name==='obj_growtangle')!;
+  // Chapter 2 obj_moveheart targets the current box, not Chapter 1's fixed 310,160.
+  expect([soul!.x,soul!.y]).toEqual([box.x-10,box.y-10]);
+  for(let i=0;i<30;i++)frame(b);
+  for(const key of [KEY.right,KEY.down,KEY.left,KEY.up]){
+   rt.input.held.add(key);
+   for(let i=0;i<35;i++){
+    for(const c of g.char)g.hp[c]=g.maxhp[c];
+    frame(b);
+    expect(soul!.x).toBeGreaterThan(box.x-rt.spriteWidth(box)/2);
+    expect(soul!.x+rt.spriteWidth(soul!)).toBeLessThan(box.x+rt.spriteWidth(box)/2);
+    expect(soul!.y).toBeGreaterThan(box.y-rt.spriteHeight(box)/2);
+    expect(soul!.y+rt.spriteHeight(soul!)).toBeLessThan(box.y+rt.spriteHeight(box)/2);
+   }
+   rt.input.held.delete(key);
+  }
+ });
+ it('applies FIGHT damage again after completing the first enemy turn',()=>{
+  const b=create();frame(b,30);const rt=b.rt,g=rt.globals;
+  const damage:number[]=[];
+  for(let turn=0;turn<2;turn++){
+   const before=g.monsterhp[0];
+   for(let slot=0;slot<3;slot++){press(b,KEY.z);press(b,KEY.z);}
+   let sawEnemy=false;
+   for(let i=0;i<2300&&!b.outcome;i++){
+    const bar=rt.instances.find(s=>s.live&&s.object.name==='obj_attackpress');
+    if(bar&&bar.boltframe.some((position:number,j:number)=>bar.boltalive[j]===1&&position===bar.boltx))rt.input.pressed.add(KEY.z);
+    if(g.mnfight===1&&i%30===0)rt.input.pressed.add(KEY.c);
+    for(const c of g.char)g.hp[c]=g.maxhp[c];
+    frame(b);if(g.mnfight===2)sawEnemy=true;
+    if(sawEnemy&&g.myfight===0&&g.mnfight===0)break;
+   }
+   expect(b.turn).toBe(turn+1);damage.push(before-g.monsterhp[0]);
+  }
+  expect(damage[0]).toBeGreaterThan(0);
+  expect(damage[1],`per-turn FIGHT damage: ${damage}`).toBeGreaterThan(0);
+ },20000);
  it.each([[6,0],[6,1],[2,0],[2,1],[2,2],[8,0],[8,1],[8,3],[8.5,0],[8.5,1],[8.5,2],[7,0],[9,0],[0,3]])('runs native attack rr%s difficulty%s through the full host',(rr,difficulty)=>{
   const b=create();frame(b,30);const g=b.rt.globals,e=b.enemy!;
   e.attackdebug=rr;e.difficultydebug=difficulty;g.myfight=-1;g.mnfight=1;

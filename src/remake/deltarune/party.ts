@@ -4,7 +4,7 @@
 import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {f32,pointDirection,pointDistance,round} from '../gm/math';
-import {afterimage,dmgWriter,heroKris,heroRalsei,heroSusie,marker,mergeColor,shake,tensionHeal} from './battle';
+import {afterimage,dmgWriter,heroKris,heroParent,heroRalsei,heroSusie,marker,mergeColor,shake,tensionHeal} from './battle';
 import {burstBolt,basicAttack} from './player-effects';
 import {battleTextDefault,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
@@ -473,7 +473,7 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
    }
    if(s.posttimer>s.timermax){
     s.fade=1;
-    for(const h of rt.instances)if(h.live&&HERO_DEFS.some(def=>h.object===def)){if(h.state===1)h.state=0;h.attacked=0;h.itemed=0;}
+    for(const h of rt.all(heroParent)){if(h.state===1)h.state=0;h.attacked=0;h.itemed=0;}
     if(monsterPop(rt)!==0){g.mnfight=1;g.myfight=-1;}else winCombat(rt);
    }
   }
