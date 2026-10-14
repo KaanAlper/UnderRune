@@ -9,6 +9,7 @@ import {KEY,battleController as controllerBase,bulletGenParent,bulletParent,dark
 import {battleText,face,faceParent,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
 import {HERO_DEFS,attackPress,spellPhase,heal,spellText,healAnim} from './party';
+import {rules,withHook} from './rules';
 import {actorActs,actSelectChapter2,actSimulChapter2,initChapter2ActTables,itemInfoChapter2,nextActChapter2,resetChapter2Actors,spellMenuSetupChapter2} from './chapter2';
 
 const pressed=(rt:GmRuntime,...keys:number[])=>keys.some(k=>rt.input.pressed.has(k));
@@ -28,13 +29,15 @@ export const findController=(rt:GmRuntime)=>rt.first(controllerBase);
 
 /** scr_monsterpop: how many enemies are still in the battle. */
 export const monsterPop=(rt:GmRuntime)=>{const m=rt.globals.monster;return m[0]+m[1]+m[2];};
-/** scr_randomtarget, run by an enemy: a random party member who can still be targeted (3 = everyone). */
+/** scr_randomtarget, run by an enemy: a random party member who can still be targeted (3 = nobody can be). From
+ * Chapter 2 the attack then targets the whole party (mytarget 4). */
 export function randomTarget(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;s.abletotarget=1;
  if(g.charcantarget[0]===0&&g.charcantarget[1]===0&&g.charcantarget[2]===0)s.abletotarget=0;
  s.mytarget=rt.random.choose(0,1,2);
  if(s.abletotarget===1){while(g.charcantarget[s.mytarget]===0)s.mytarget=rt.random.choose(0,1,2);}else s.mytarget=3;
  g.targeted[s.mytarget]=1;
+ if(rules(rt).enemiesTargetWholeParty&&s.mytarget!==3){for(let i=0;i<3;i++)if(g.charcantarget[i])g.targeted[i]=1;s.mytarget=4;}
 }
 /** scr_mercyadd. */
 export function mercyAdd(rt:GmRuntime,enemy:number,amount:number){const g=rt.globals;g.mercymod[enemy]+=amount;if(g.mercymod[enemy]<0)g.mercymod[enemy]=0;}
@@ -640,33 +643,42 @@ function alarm2(s:GmInstance,rt:GmRuntime){
 export const battleControllerFull:GmObjectDef={...controllerBase,parent:controllerBase,events:{create,step,draw,alarm2}};
 
 /** obj_tensionbar: slides in from the left; the TP percentage in fnt_mainbig and a fill that eases toward TP. */
+/** obj_tensionbar: the TP gauge. Chapter differences are in rules.ts: from Chapter 2 it keeps below the top of the view
+ * and is drawn through a surface (its cutout rounds the fill) with the logo and percentage drawn last. */
 export const tensionBar:GmObjectDef={name:'obj_tensionbar',index:333,depth:1,sprite:'spr_tensionbar',events:{
  create:(s,rt)=>{
   const g=rt.globals;s.tsiner=0;g.tensionselect=0;s.apparent=g.tension;s.current=g.tension;s.change=0;s.changetimer=15;s.red=0;s.redtimer=0;
-  s.y=rt.view.y+40;s.x=rt.view.x-40;s.hspeed=13;s.friction=1;s.flashsiner=0;
+  s.xx=rt.view.x;s.yy=rt.view.y;s.y=s.yy+40;s.x=s.xx-40;s.hspeed=13;s.friction=1;s.flashsiner=0;s.maxed=0;
  },
  alarm5:(s,rt)=>rt.destroy(s),
  draw:(s,rt)=>{
-  const g=rt.globals,d=rt.drawState,max=g.maxtension,sh=196,sw=25;
-  rt.drawSprite('spr_tplogo',0,s.x-30,s.y+30);rt.drawSprite('spr_tensionbar',1,s.x,s.y);
-  d.color=C.white;d.font='fnt_mainbig';d.halign=0;s.flashsiner+=1;
-  const tamt=Math.floor(s.apparent/max*100);let maxed=0;
-  if(tamt<100){rt.drawText(s.x-30,s.y+70,String(Math.floor(s.apparent/max*100)));rt.drawText(s.x-25,s.y+95,'%');}
-  else{maxed=1;d.color=C.yellow;rt.drawText(s.x-28,s.y+70,'M');rt.drawText(s.x-24,s.y+90,'A');rt.drawText(s.x-20,s.y+110,'X');}
+  const g=rt.globals,d=rt.drawState,max=g.maxtension,r=rules(rt);
+  if(withHook(rt,'hidesTensionBar').some(([e,hide])=>hide(e,rt)))return;
+  if(r.tensionBarFollowsView){s.yy=rt.view.y;s.y=s.yy+40;}
+  const sw=rt.spriteWidth(s),sh=rt.spriteHeight(s),x=s.x,y=s.y;
+  const percent=()=>{
+   rt.drawSprite('spr_tplogo',0,x-30,y+30);
+   d.color=C.white;d.font='fnt_mainbig';d.halign=0;s.flashsiner+=1;
+   s.tamt=Math.floor(s.apparent/max*100);s.maxed=0;
+   if(s.tamt<100){rt.drawText(x-30,y+70,String(Math.floor(s.apparent/max*100)));rt.drawText(x-25,y+95,'%');}
+   if(s.tamt>=100){s.maxed=1;d.color=C.yellow;rt.drawText(x-28,y+70,'M');rt.drawText(x-24,y+90,'A');rt.drawText(x-20,y+110,'X');}
+  };
+  if(!r.tensionBarSurface)percent();
+  rt.drawSprite('spr_tensionbar',1,x,y);
   if(Math.abs(s.apparent-g.tension)<20)s.apparent=g.tension;
   if(s.apparent<g.tension)s.apparent+=20;
   if(s.apparent>g.tension)s.apparent-=20;
   if(s.apparent!==s.current){
    s.changetimer+=1;
    if(s.changetimer>15){
-    const diff=s.apparent-s.current;
-    if(diff>0)s.current+=2;if(diff>10)s.current+=2;if(diff>25)s.current+=3;if(diff>50)s.current+=4;if(diff>100)s.current+=5;
-    if(diff<0)s.current-=2;if(diff<-10)s.current-=2;if(diff<-25)s.current-=3;if(diff<-50)s.current-=4;if(diff<-100)s.current-=5;
+    const diff=()=>s.apparent-s.current;
+    if(diff()>0)s.current+=2;if(diff()>10)s.current+=2;if(diff()>25)s.current+=3;if(diff()>50)s.current+=4;if(diff()>100)s.current+=5;
+    if(diff()<0)s.current-=2;if(diff()<-10)s.current-=2;if(diff()<-25)s.current-=3;if(diff()<-50)s.current-=4;if(diff()<-100)s.current-=5;
     if(Math.abs(s.apparent-s.current)<3)s.current=s.apparent;
    }
   }
-  const fill=(v:number,color:number)=>{d.color=color;rt.drawRect(s.x+3,s.y+sh-1,s.x+sw-1,s.y+sh-v/max*sh);};
-  const orange=maxed===1?mergeColor(C.yellow,C.orange,0.5):C.orange;
+  const fill=(v:number,color:number)=>{d.color=color;rt.drawRect(x+3,y+sh-1,x+sw-1,y+sh-v/max*sh);};
+  const orange=s.maxed===1?mergeColor(C.yellow,C.orange,0.5):C.orange;
   if(s.current>0){
    if(s.apparent<s.current){fill(s.current,C.red);fill(s.apparent,C.orange);}
    if(s.apparent>s.current){fill(s.apparent,C.white);fill(s.current,orange);}
@@ -674,12 +686,13 @@ export const tensionBar:GmObjectDef={name:'obj_tensionbar',index:333,depth:1,spr
   }
   if(g.tensionselect>0){
    s.tsiner+=1;d.color=C.white;d.alpha=Math.abs(Math.sin(s.tsiner/8)*0.5)+0.2;
-   const t1=s.y+sh-s.current/max*sh;let t2=t1+g.tensionselect/max*sh;
-   if(t2>s.y+sh-1){t2=s.y+sh-1;d.color=0x404040;d.alpha=0.7;}
-   rt.drawRect(s.x+3,t2,s.x+sw-1,t1);d.alpha=1;
+   s.theight=sh-s.current/max*sh;s.theight2=s.theight+g.tensionselect/max*sh;
+   if(s.theight2>sh-1){s.theight2=sh-1;d.color=0x404040;d.alpha=0.7;}
+   rt.drawRect(x+3,y+s.theight2,x+sw-1,y+s.theight);d.alpha=1;
   }
-  if(s.apparent>20&&s.apparent<max)rt.drawSprite('spr_tensionmarker',0,s.x+3,s.y+sh-s.current/max*sh);
-  rt.drawSprite('spr_tensionbar',0,s.x,s.y);
+  if(s.apparent>20&&s.apparent<max)rt.drawSprite('spr_tensionmarker',0,x+3,y+sh-s.current/max*sh);
+  rt.drawSprite('spr_tensionbar',0,x,y);
+  if(r.tensionBarSurface)percent();
  },
 }};
 void spellText;

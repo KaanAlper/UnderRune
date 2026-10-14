@@ -34,15 +34,6 @@ export function msgNext(rt:GmRuntime,text:string){msgSet(rt,(rt.globals.msgno??0
 export function mergeColor(a:number,b:number,amount:number){
  let out=0;for(const sh of [0,8,16]){const x=(a>>sh)&255,y=(b>>sh)&255;out|=(Math.trunc(x*(1-amount)+y*amount)&255)<<sh;}return out;
 }
-/** scr_randomtarget (Chapter 2): an enemy turn now aims at the whole party (mytarget 4) unless nobody can be targeted. */
-export function randomTarget2(s:GmInstance,rt:GmRuntime){
- const g=rt.globals;s.abletotarget=1;
- if(g.charcantarget[0]===0&&g.charcantarget[1]===0&&g.charcantarget[2]===0)s.abletotarget=0;
- s.mytarget=rt.random.choose(0,1,2);
- if(s.abletotarget===1){while(g.charcantarget[s.mytarget]===0)s.mytarget=rt.random.choose(0,1,2);}else s.mytarget=3;
- g.targeted[s.mytarget]=1;
- if(g.chapter>=2&&s.mytarget!==3){for(let i=0;i<3;i++)if(g.charcantarget[i])g.targeted[i]=1;s.mytarget=4;}
-}
 /** scr_mercyadd (Chapter 2): mercy is capped at 100, rings by size, and shows its number over the enemy. */
 export function mercyAdd2(rt:GmRuntime,enemy:number,amount:number){
  const g=rt.globals;g.mercymod[enemy]+=amount;

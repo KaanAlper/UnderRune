@@ -10,6 +10,7 @@ import {monsterParent,KEY} from '../src/remake/deltarune/battle';
 import {chapter2StartStats,actSelectChapter2,actSimulChapter2} from '../src/remake/deltarune/chapter2';
 import {damageEnemy,HERO_DEFS,castSpell,spellText,healAnim} from '../src/remake/deltarune/party';
 import {teaAmountChapter2} from '../src/remake/deltarune/chapter2';
+import {spamtonNeo} from '../src/remake/bosses/spamton-neo/neo';
 
 // Test text comes from the user's source archive; only the keys are kept in the repo.
 const text:Record<string,string>={};
@@ -20,7 +21,8 @@ for(const name of ['scr_monstersetup','scr_encountersetup','scr_spellinfo','scr_
  for(const match of source.matchAll(/(?:stringset(?:sub)?loc|msgset(?:sub)?loc|msgnextloc)\((?:\d+, )?"((?:[^"\\]|\\.)*)"[^\r\n]*?"((?:scr|obj)_[^"]+)"\)/g))text[match[2]]=JSON.parse('"'+match[1]+'"');
 }
 beforeEach(()=>setSourceText(text));
-const enemy:GmObjectDef={name:'obj_spamton_neo_enemy',index:702,parent:monsterParent,events:{user12:monsterSetup}};
+// A stand-in NEO with the real one's hooks (what the shared engine does differently for him).
+const enemy:GmObjectDef={name:'obj_spamton_neo_enemy',index:702,parent:monsterParent,hooks:spamtonNeo.hooks,events:{user12:monsterSetup}} as GmObjectDef;
 function make(){
  const rt=new GmRuntime(spriteBank({atLeast2022_1:false,optionsInfo:0,sprites:[]}));rt.globals.chapter=2;
  partyGlobals(rt,{char:[1,2,3],...chapter2StartStats(),equipped:{},items:[]});

@@ -21,12 +21,11 @@ import {neoEnemyUtilityScriptSources} from '../bosses/spamton-neo/enemy-source-d
 import {installSourceSurfaces} from './surfaces';
 import {spamtonNeo,hitDetector} from '../bosses/spamton-neo/neo';
 import * as pending from '../bosses/spamton-neo/pending';
-import {battleBalloon2,battleCleanup,growtangle2,tensionBar2} from '../deltarune/chapter2-objects';
-import {heroHit2} from '../deltarune/chapter2-party';
+import {battleBalloon2,battleCleanup,growtangle2} from '../deltarune/chapter2-objects';
 import {moveToPoint,scriptDelayed} from '../deltarune/chapter2-battle';
 
 /** Chapter 2 objects that run as hand-written code (the rest still run from the local source archive). */
-const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,tensionBar2,growtangle2,battleCleanup,moveToPoint,scriptDelayed];
+const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed];
 
 export function installNeoHost(rt:GmRuntime){
  const objects:Record<string,GmObjectDef>={};
@@ -106,8 +105,6 @@ export function installNeoHost(rt:GmRuntime){
   while(chain?.name===old.name){layers.unshift(chain);chain=chain.parent;}
   def.events={};for(const layer of layers)Object.assign(def.events,layer.events);
  }
- // Chapter 2's FIGHT hit.
- for(const h of party.HERO_DEFS)object(h.name).events!.alarm1=heroHit2;
  Object.assign(objects,createNeoPlayerObjects(host));
  objects.obj_spamton_neo_enemy=createNeoEnemy(host);Object.assign(objects,createNeoEnemyEffects(host));
  Object.assign(objects,createNeoAttackObjects(host));

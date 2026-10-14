@@ -5,14 +5,16 @@
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {pointDistance} from '../../gm/math';
 import {afterimage,afterimageGrow,darkener,darkMarker,dmgWriter,growtangle,heart,heroKris,heroSusie,monsterParent,moveHeart,returnHeart} from '../../deltarune/battle';
-import {button3_p,findController,nextAct,winCombat} from '../../deltarune/controller';
+import {button3_p,findController,nextAct,randomTarget,winCombat} from '../../deltarune/controller';
 import {monsterSetup} from '../../deltarune/encounter';
 import {spellMenuSetupChapter2} from '../../deltarune/chapter2';
-import {blconSkip,bulletSpawner,heartColor,inputName,isPhase,mercyAdd2,mergeColor,moveHeart2,moveToPointOverTime,moveToRememberXY,msgNext,msgSet,randomTarget2,rememberXY,scriptDelayedOn,setVar,snd,turnTimer} from '../../deltarune/chapter2-battle';
+import {blconSkip,bulletSpawner,heartColor,inputName,isPhase,mercyAdd2,mergeColor,moveHeart2,moveToPointOverTime,moveToRememberXY,msgNext,msgSet,rememberXY,scriptDelayedOn,setVar,snd,turnTimer} from '../../deltarune/chapter2-battle';
 import {battleTextDefault,destroyWriters,writer} from '../../deltarune/writer';
 import {enemyBlcon2} from '../../deltarune/chapter2-objects';
 import {sourceText} from '../../host/text';
 import {chooseNeoAttack} from './chooser';
+import type {EnemyDef} from '../../deltarune/rules';
+import {defineEnemy} from '../../deltarune/enemy';
 import {neoBodyDraw} from './body';
 import {bigLaser,choicerNeo,dbulletController,phoneBullet,sceneEx2,sneoBulletController,sneoPhonecall,sneoSusieAct,sneoVineCut,sneoVineTransition,sneoVineWeak,spamtonCherub,throwKris,throwKrisVineController,tinyRalsei} from './pending';
 
@@ -93,7 +95,7 @@ const FOLLOW_UP:Record<number,[string,number]>={1:['136_0',0],2:['137_0',0],3:['
  9:['144_0',0],10:['145_0',0],11:['146_0',0],12:['147_0',0],13:['163_0',0],15:['173_0',0],25:['207_0',26],26:['208_0',27],27:['209_0',0]};
 function startTalk(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself;
- randomTarget2(s,rt);
+ randomTarget(s,rt);
  if(!rt.exists(darkener))rt.create(darkener,0,0);
  if(s.turn>14&&s.weirdpathendcon===0&&g.monsterdf[me]>-10)g.monsterdf[me]-=3;
  Object.assign(s,{ballooncon:0,balloonsubcon:0,balloonend:1,talkedcon:0,statustextupdate:0});
@@ -169,9 +171,10 @@ function startAttack(s:GmInstance,rt:GmRuntime){
  if(rr===6)turnTimer(rt,330);
  if(rr===7)turnTimer(rt,300);
  if(rr===5)turnTimer(rt,90);
- s.turns+=1;g.typer=6;g.fc=0;
- s.rr=rt.random.choose(0,1,2,3);g.battlemsg[0]=T(['294_0','295_0','296_0','297_0'][s.rr]);
- s.attacked=1;
+}
+/** The line in the battle box while he attacks. */
+function attackLine(s:GmInstance,rt:GmRuntime){
+ s.rr=rt.random.choose(0,1,2,3);rt.globals.battlemsg[0]=T(['294_0','295_0','296_0','297_0'][s.rr]);
 }
 /** The status line after the attack, while the soul flies home. */
 function statusText(s:GmInstance,rt:GmRuntime){
@@ -274,16 +277,20 @@ function acts(s:GmInstance,rt:GmRuntime){
    g.hp[a]+=10;snd(rt,'snd_boost');
   }
  }
+}
+/** ACTs are over (his own and Susie's or Ralsei's): full mercy starts the ending instead of the next turn. */
+function actsDone(s:GmInstance,rt:GmRuntime){
  if((s.actcon===1&&!rt.exists(writer))||s.actconsus===20||s.actconral===20){
   s.usedact=1;
-  if(g.mercymod[me]>99&&s.endcon===0)s.endcon=1;
+  if(rt.globals.mercymod[s.myself]>99&&s.endcon===0)s.endcon=1;
   else if(s.endcon===0)nextAct(rt);
  }
 }
 
 // ---- Step: the endings ----
 const sceneOf=(rt:GmRuntime)=>rt.first(sceneEx2);
-function endTalk(s:GmInstance,rt:GmRuntime){
+/** An ending balloon: his next line, shaking from the eighth one on. */
+function endingBalloon(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;s.endcon=3;g.typer=72;enemyBlcon2(s,rt,s.x-10,g.monstery[s.myself],10);
  if(s.ballooncon>=8)for(const w of rt.all(writer))w.shake=2;
  return s;
@@ -320,7 +327,7 @@ function lostEnding(s:GmInstance,rt:GmRuntime){
    else if(b===11){msgSet(rt,0,T('1089_0'));s.ballooncon=12;s.balloonend=0;s.shockthreshold=2;rt.soundPitch?.('snd_sneo_overpower',0.9);s.targetbgspeed=-17;}
    else if(b===12){msgSet(rt,0,T('1095_0'));s.ballooncon=13;s.balloonend=0;s.shockthreshold=1;rt.soundPitch?.('snd_sneo_overpower',1.1);s.targetbgspeed=-21;}
    else if(b===13){msgSet(rt,0,T('1101_0'));s.ballooncon=0;s.balloonend=1;s.shocktimer=1;rt.soundPitch?.('snd_sneo_overpower',1.3);s.targetbgspeed=-25;}
-   endTalk(s,rt);
+   endingBalloon(s,rt);
    if(s.ballooncon===0)for(const w of rt.all(writer)){w.shake=3;w.rate=3;}
    s.alarm[6]=1;
   }
@@ -379,7 +386,7 @@ function sparedEnding(s:GmInstance,rt:GmRuntime){
    else if(b===11){msgSet(rt,0,T('1220_0'));s.ballooncon=12;s.balloonend=0;}
    else if(b===12){msgSet(rt,0,T('1225_0'));s.ballooncon=13;s.balloonend=0;s.partmode=36;}
    else if(b===13){msgSet(rt,0,T('1229_0'));s.ballooncon=0;s.balloonend=1;s.partmode=36;s.dancealtcon=2;}
-   endTalk(s,rt);
+   endingBalloon(s,rt);
    if(s.ballooncon===13||s.ballooncon===0)for(const w of rt.all(writer)){w.shake=3;w.rate=3;}
    s.alarm[6]=1;
   }
@@ -411,44 +418,45 @@ function sparedEnding(s:GmInstance,rt:GmRuntime){
  }
 }
 
-function step(s:GmInstance,rt:GmRuntime){
- const g=rt.globals,me=s.myself;
- if(s.bigshot===1)g.sp=5;
- if(g.fighting!==1)return;
- if(g.monster[me]===1){
-  if((isPhase(rt,'enemytalk')&&s.talked===0&&g.monsterhp[me]<=0)||s.endcon===1){s.talked=-1;s.endcon=1;}
-  if(isPhase(rt,'enemytalk')&&s.talked===0)startTalk(s,rt);
-  if(s.talked===0.6){
-   s.talktimer+=1;
-   if((button3_p(rt)&&s.talktimer>15)||!rt.exists(writer)){
-    destroyWriters(rt);
-    const next=FOLLOW_UP[s.ballooncon];
-    if(next){msgSet(rt,0,T(next[0]));s.ballooncon=next[1];s.balloonend=next[1]===0?1:0;}
-    s.talked=0.7;s.talktimer=0;
-    if(s.correct_answer!==1){g.typer=72;enemyBlcon2(s,rt,s.x-10,g.monstery[me],10);}
-    s.correct_answer=-1;s.alarm[6]=1;
-   }
-  }
-  if(s.talked===1&&isPhase(rt,'enemytalk')&&!rt.exists(choicerNeo)){
-   s.talktimer+=1;
-   if((button3_p(rt)&&s.talktimer>15)||!rt.exists(writer)){destroyWriters(rt);s.talkedcon=1;}
-   if(s.talkedcon===1){
-    if(s.partmode===40){s.partmode=1;s.shockthreshold=0;s.hurttimer2=0;}
-    s.rtimer=0;
-    if(!rt.exists(spamtonCherub))blconSkip(s,rt,-1);else s.talktimer+=1;
-    if(isPhase(rt,'bullets')){
-     if(!rt.exists(growtangle))placeBox(s,rt);
-     if(!rt.exists(moveHeart)&&!rt.exists(heart))moveHeart2(rt,moveHeart);
-    }
-   }
-  }
-  if(isPhase(rt,'bullets')&&s.attacked===0){
-   s.rtimer+=1;
-   if(s.rtimer===15)startAttack(s,rt);else turnTimer(rt,120);
-  }
-  if(rt.exists(returnHeart)&&s.statustextupdate===0){s.statustextupdate=1;statusText(s,rt);}
+/** At zero HP during his talk (or once mercy is full) the ending starts instead of a turn. */
+function beforeTalk(s:GmInstance,rt:GmRuntime){
+ if((isPhase(rt,'enemytalk')&&s.talked===0&&rt.globals.monsterhp[s.myself]<=0)||s.endcon===1){s.talked=-1;s.endcon=1;}
+}
+/** His follow-up balloons (talked 0.6), each after the previous one is read or skipped with C. */
+function duringTalk(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals;
+ if(s.talked!==0.6)return;
+ s.talktimer+=1;
+ if((button3_p(rt)&&s.talktimer>15)||!rt.exists(writer)){
+  destroyWriters(rt);
+  const next=FOLLOW_UP[s.ballooncon];
+  if(next){msgSet(rt,0,T(next[0]));s.ballooncon=next[1];s.balloonend=next[1]===0?1:0;}
+  s.talked=0.7;s.talktimer=0;
+  if(s.correct_answer!==1){g.typer=72;enemyBlcon2(s,rt,s.x-10,g.monstery[s.myself],10);}
+  s.correct_answer=-1;s.alarm[6]=1;
  }
- if(g.myfight===3)acts(s,rt);
+}
+/** His last balloon is read (or skipped with C): the box takes the attack's shape, then the soul comes in. */
+function endTalk(s:GmInstance,rt:GmRuntime){
+ if(s.talked!==1||!isPhase(rt,'enemytalk')||rt.exists(choicerNeo))return;
+ s.talktimer+=1;
+ if((button3_p(rt)&&s.talktimer>15)||!rt.exists(writer)){destroyWriters(rt);s.talkedcon=1;}
+ if(s.talkedcon!==1)return;
+ if(s.partmode===40){s.partmode=1;s.shockthreshold=0;s.hurttimer2=0;}
+ s.rtimer=0;
+ if(!rt.exists(spamtonCherub))blconSkip(s,rt,-1);else s.talktimer+=1;
+ if(isPhase(rt,'bullets')){
+  if(!rt.exists(growtangle))placeBox(s,rt);
+  if(!rt.exists(moveHeart)&&!rt.exists(heart))moveHeart2(rt,moveHeart);
+ }
+}
+/** The status line once the soul is home. */
+function afterAttack(s:GmInstance,rt:GmRuntime){
+ if(rt.exists(returnHeart)&&s.statustextupdate===0){s.statustextupdate=1;statusText(s,rt);}
+}
+/** The endings, after his turn: HP at zero (or mercy full) leads to EX or to the wire cut. */
+function endings(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself;
  if(s.endcon===1){
   s.endtimer+=1;
   if(s.endtimer===1){rt.sourceAudio?.free(g.batmusic[0]);rt.userEvent(s,3);}
@@ -560,12 +568,27 @@ export const hitDetector:GmObjectDef={name:'obj_sneo_hitdetector',index:601,spri
  create:s=>{s.imageSpeed=0;s.imageXscale=2;s.imageYscale=2;s.imageAlpha=0.2;s.imageBlend=0;s.visible=false;s.active=true;},
 },collisions:[{target:phoneBullet,run:(_s,o,rt)=>{for(const n of rt.all(spamtonNeo))n.hitcon=1;rt.userEvent(o,0);}}]};
 
-export const spamtonNeo:GmObjectDef={name:'obj_spamton_neo_enemy',index:702,parent:monsterParent,sprite:'spr_sneo_example',events:{
- create,step,endStep,draw:neoBodyDraw,destroy:cleanUp,
- alarm4:s=>{s.actcon+=1;},alarm6,
- user0:chooseNeoAttack,user1:actSetup,user3:defeatFlags,user4:funnyCheat,
- // Event 10 does nothing: NEO never runs the usual spare-and-leave defeat.
- user10:()=>{},
- user12:(s,rt)=>{rt.globals.monsterx[s.myself]=s.x+rt.spriteWidth(s)/3;rt.globals.monstery[s.myself]=s.y+rt.spriteHeight(s)/2;monsterSetup(s,rt);},
-}};
+/** NEO is the standard enemy (deltarune/enemy.ts) with these steps of his own. */
+export const spamtonNeo:EnemyDef=defineEnemy({name:'obj_spamton_neo_enemy',index:702,sprite:'spr_sneo_example'},{
+ create,
+ beforeStep:(s,rt)=>{if(s.bigshot===1)rt.globals.sp=5;},
+ onlyWhileFighting:true,
+ beforeTalk,startTalk,duringTalk,endTalk,
+ attackDelay:15,attack:startAttack,statusLine:attackLine,afterAttack,
+ acts,actsDone,afterStep:endings,
+ monsterPosition:(s,rt)=>[s.x+rt.spriteWidth(s)/3,s.y+rt.spriteHeight(s)/2],
+ hooks:{
+  // A FIGHT hit electrifies him (obj_heroparent Alarm 1).
+  onHeroHit:n=>{Object.assign(n,{partmode:40,shockthreshold:15,shocktimer:9999,hurttimer2:10});},
+  // At zero HP his own Step starts the ending during his next talk.
+  defeatedByDamage:false,
+ },
+ events:{
+  endStep,draw:neoBodyDraw,destroy:cleanUp,
+  alarm4:s=>{s.actcon+=1;},alarm6,
+  user0:chooseNeoAttack,user1:actSetup,user3:defeatFlags,user4:funnyCheat,
+  // Event 10 does nothing: NEO never runs the usual spare-and-leave defeat.
+  user10:()=>{},
+ },
+});
 void afterimage;void bigLaser;void first;

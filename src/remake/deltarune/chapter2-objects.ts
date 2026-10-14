@@ -6,7 +6,6 @@ import {writer} from './writer';
 import {afterimage,battleSolid,heart} from './battle';
 import {round} from '../gm/math';
 import {mergeColor} from './chapter2-battle';
-import {sourceText} from '../host/text';
 
 /** obj_battleblcon (Chapter 2): a balloon with a writer inside; with auto_length it is drawn around the text. */
 export const battleBalloon2:GmObjectDef={name:'obj_battleblcon',index:875,sprite:'spr_battleblcon',events:{
@@ -58,59 +57,6 @@ export function enemyBlcon2(s:GmInstance,rt:GmRuntime,x:number,y:number,kind:num
  if(b[2])bl.auto_length=1;
  return bl;
 }
-
-/** obj_tensionbar (Chapter 2): the TP bar. It is drawn through a surface (the cutout rounds its fill) and keeps
- * itself 40 pixels below the top of the view, so it follows screen shakes. */
-export const tensionBar2:GmObjectDef={name:'obj_tensionbar',index:384,depth:1,sprite:'spr_tensionbar',events:{
- create:(s,rt)=>{
-  const g=rt.globals;s.tsiner=0;g.tensionselect=0;s.apparent=g.tension;s.current=g.tension;s.change=0;s.changetimer=15;s.red=0;s.redtimer=0;
-  s.xx=rt.view.x;s.yy=rt.view.y;s.y=s.yy+40;s.x=s.xx-40;s.hspeed=13;s.friction=1;s.flashsiner=0;s.maxed=0;
- },
- alarm5:(s,rt)=>rt.destroy(s),
- draw:(s,rt)=>{
-  const g=rt.globals,d=rt.drawState,max=g.maxtension;
-  const gq=rt.instances.find(i=>i.live&&i.object.name==='obj_gigaqueen_enemy');
-  if(g.chapter===2&&gq&&rt.instances.find(i=>i.live&&i.object.name==='obj_battlecontroller')?.gigaqueencon!==0)return;
-  s.yy=rt.view.y;s.y=s.yy+40;
-  const sw=rt.spriteWidth(s),sh=rt.spriteHeight(s),x=s.x,y=s.y;
-  rt.drawSprite('spr_tensionbar',1,x,y);
-  if(Math.abs(s.apparent-g.tension)<20)s.apparent=g.tension;
-  if(s.apparent<g.tension)s.apparent+=20;
-  if(s.apparent>g.tension)s.apparent-=20;
-  if(s.apparent!==s.current){
-   s.changetimer+=1;
-   if(s.changetimer>15){
-    const diff=()=>s.apparent-s.current;
-    if(diff()>0)s.current+=2;if(diff()>10)s.current+=2;if(diff()>25)s.current+=3;if(diff()>50)s.current+=4;if(diff()>100)s.current+=5;
-    if(diff()<0)s.current-=2;if(diff()<-10)s.current-=2;if(diff()<-25)s.current-=3;if(diff()<-50)s.current-=4;if(diff()<-100)s.current-=5;
-    if(Math.abs(s.apparent-s.current)<3)s.current=s.apparent;
-   }
-  }
-  const fill=(v:number,color:number)=>{d.color=color;rt.drawRect(x+3,y+sh-1,x+sw-1,y+sh-v/max*sh);};
-  const orange=s.maxed===1?mergeColor(C.yellow,C.orange,0.5):C.orange;
-  if(s.current>0){
-   if(s.apparent<s.current){fill(s.current,C.red);fill(s.apparent,C.orange);}
-   if(s.apparent>s.current){fill(s.apparent,C.white);fill(s.current,orange);}
-   if(s.apparent===s.current)fill(s.current,orange);
-  }
-  if(g.tensionselect>0){
-   s.tsiner+=1;d.color=C.white;d.alpha=Math.abs(Math.sin(s.tsiner/8)*0.5)+0.2;
-   s.theight=sh-s.current/max*sh;s.theight2=s.theight+g.tensionselect/max*sh;
-   if(s.theight2>sh-1){s.theight2=sh-1;d.color=0x404040;d.alpha=0.7;}
-   rt.drawRect(x+3,y+s.theight2,x+sw-1,y+s.theight);d.alpha=1;
-  }
-  if(s.apparent>20&&s.apparent<max)rt.drawSprite('spr_tensionmarker',0,x+3,y+sh-s.current/max*sh);
-  rt.drawSprite('spr_tensionbar',0,x,y);
-  rt.drawSprite('spr_tplogo',0,x-30,y+30);
-  d.color=C.white;d.font='fnt_mainbig';d.halign=0;s.flashsiner+=1;
-  s.tamt=Math.floor(s.apparent/max*100);s.maxed=0;
-  if(s.tamt<100){rt.drawText(x-30,y+70,String(Math.floor(s.apparent/max*100)));rt.drawText(x-25,y+95,sourceText('obj_tensionbar_slash_Draw_0_gml_18_0'));}
-  if(s.tamt>=100){
-   s.maxed=1;d.color=C.yellow;
-   rt.drawText(x-28,y+70,sourceText('obj_tensionbar_slash_Draw_0_gml_25_0'));rt.drawText(x-24,y+90,sourceText('obj_tensionbar_slash_Draw_0_gml_26_0'));rt.drawText(x-20,y+110,sourceText('obj_tensionbar_slash_Draw_0_gml_27_0'));
-  }
- },
-}};
 
 /** obj_growtangle (Chapter 2): the battle box. A box of another size than the standard one gets its own sprite,
  * stretched from spr_battlebg_stretch on a surface, so its border keeps its width; the afterimages of its growth

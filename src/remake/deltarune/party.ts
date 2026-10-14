@@ -10,6 +10,7 @@ import {battleTextDefault,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
 import {attackPhase,button1_p,itemShift,mercyAdd,monsterDefeat,monsterPop,subst,winCombat} from './controller';
 import {teaAmountChapter2} from './chapter2';
+import {rules,withHook} from './rules';
 
 const destroyId=(rt:GmRuntime,id:number)=>{const i=rt.byId(id);if(i)rt.destroy(i);};
 const isHero=(i:GmInstance,name:string)=>i.object.name===name;
@@ -148,30 +149,38 @@ function retarget(s:GmInstance,rt:GmRuntime,slot:number){
  if(t===3)s.cancelattack=1;
  g.chartarget[slot]=t;
 }
-/** Alarm 1: the FIGHT hit lands, for the points the attack bar gave. */
+/** Whether damage at zero HP defeats the enemy there (an enemy in the battle may end it its own way). */
+const defeatable=(rt:GmRuntime)=>!withHook(rt,'defeatedByDamage').some(([,d])=>d===false);
+/** The slash effect each hero's hit leaves on the enemy (Kris: the plain cut). */
+const HIT_EFFECTS:Record<string,{sprite:string;speed:number;sound?:string;shake?:boolean}>={
+ obj_herosusie:{sprite:'spr_attack_mash2',speed:0.5,sound:'snd_impact',shake:true},
+ obj_heroralsei:{sprite:'spr_attack_slap1',speed:0.5},
+ obj_heronoelle:{sprite:'spr_attack_slap2',speed:0.5},
+};
+/** Alarm 1: the FIGHT hit lands, for the points the attack bar gave. Chapter differences and enemy-specific reactions
+ * come from rules.ts at the points where the original has them. */
 function heroHit(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself as number;
  g.faceaction[me]=0;retarget(s,rt,me);
  if(s.cancelattack!==0)return;
  const t=g.chartarget[me],m=rt.byId(g.monsterinstance[t]);
- const dm=rt.create(dmgWriter,g.monsterx[t],g.monstery[t]-g.hittarget[t]*20+20);dm.type=s.char-1;dm.delay=8;
+ const dm=rt.create(dmgWriter,g.monsterx[t],g.monstery[t]-g.hittarget[t]*20+20);dm.type=s.char===4?6:s.char-1;dm.delay=8;
  let damage=round(g.battleat[me]*s.points/20-g.monsterdf[t]*3);
  if(g.monstertype[t]===19)damage=Math.ceil(damage*0.3);
  if(damage<0)damage=0;
  if(damage===0){dm.delay=2;if(m&&m.hurttimer<=15&&m.candodge===1){m.dodgetimer=0;m.state=4;}}
  s.damage=damage;dm.damage=damage;g.hittarget[t]+=1;g.monsterhp[t]-=damage;
- if(s.is_auto_susie===1&&g.monsterhp[t]<=0&&m)g.flag[51+m.myself]=5;
+ if(s.is_auto_susie===1&&g.monsterhp[t]<=0&&m&&rules(rt).autoSusieMarksKill)g.flag[51+m.myself]=5;
  if(damage>0){
   tensionHeal(rt,round(s.points/(g.monstertype[0]===20?15:10)));
   const y=g.monstery[t]+rt.random.random(6),x=g.monsterx[t]+rt.random.random(6);
-  const a=rt.create(basicAttack,x,y);
-  if(isHero(s,'obj_herosusie')){a.sprite='spr_attack_mash2';a.imageSpeed=0.5;a.maxindex=4;rt.sound?.('snd_impact');rt.create(shake,0,0);}
-  if(isHero(s,'obj_heroralsei')){a.sprite='spr_attack_slap1';a.maxindex=4;a.imageSpeed=0.5;}
+  const a=rt.create(basicAttack,x,y),fx=HIT_EFFECTS[s.object.name];
+  if(fx){a.sprite=fx.sprite;a.imageSpeed=fx.speed;a.maxindex=4;if(fx.sound)rt.sound?.(fx.sound);if(fx.shake)rt.create(shake,0,0);}
   if(s.points===150){a.imageXscale=2.5;a.imageYscale=2.5;}
+  for(const [enemy,hit] of withHook(rt,'onHeroHit'))hit(enemy,rt);
   if(m){m.shakex=9;m.state=3;m.hurttimer=30;m.hurtamt=damage;}
  }
- // Chapter 2 Alarm 1 excludes NEO from generic defeat; its Step starts the source ending during enemy talk.
- if(g.monsterhp[t]<=0&&m&&!(g.chapter===2&&g.monstertype.includes(50)))monsterDefeat(m,rt);
+ if(g.monsterhp[t]<=0&&m&&defeatable(rt))monsterDefeat(m,rt);
 }
 /** Alarm 4: the spell or item takes effect. */
 function heroSpell(s:GmInstance,rt:GmRuntime){
@@ -218,12 +227,16 @@ export function healAllItem(rt:GmRuntime,amount:number){
 /** scr_damage_enemy, run by the caster: damage number, recoil, and defeat at 0 HP. */
 export function damageEnemy(s:GmInstance,rt:GmRuntime,enemy:number,amount:number){
  const g=rt.globals,m=rt.byId(g.monsterinstance[enemy]);
- const dm=rt.create(dmgWriter,g.monsterx[enemy],g.monstery[enemy]+20-g.hittarget[enemy]*20);dm.type=g.char[s.caster]-1;dm.damage=amount;
+ const dm=rt.create(dmgWriter,g.monsterx[enemy],g.monstery[enemy]+20-g.hittarget[enemy]*20);
+ // The damage number's colour: the caster's (Noelle's is 6), or 5 for a caster outside the party.
+ if(s.caster<4)dm.type=g.char[s.caster]===4?6:g.char[s.caster]-1;
+ if(s.caster===5)dm.type=5;
+ dm.damage=amount;
  g.monsterhp[enemy]-=amount;
  if(amount>0&&m){m.shakex=9;m.state=3;m.hurttimer=30;m.hurtamt=amount;}
  g.hittarget[enemy]+=1;
  if(amount===0&&m){m.hurtamt=0;if(m.hurttimer<=15&&m.candodge===1){m.dodgetimer=0;m.state=4;}}
- if(g.monsterhp[enemy]<=0&&m&&!(g.chapter===2&&g.monstertype.includes(50)))monsterDefeat(m,rt);
+ if(g.monsterhp[enemy]<=0&&m&&defeatable(rt))monsterDefeat(m,rt);
 }
 /** scr_retarget_spell. */
 function retargetSpell(s:GmInstance,rt:GmRuntime){

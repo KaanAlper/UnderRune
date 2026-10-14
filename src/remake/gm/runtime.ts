@@ -116,6 +116,24 @@ export function moveTowardsPoint(i:GmInstance,x:number,y:number,speed:number){
 
 export interface GmInput{held:Set<number>;pressed:Set<number>;released:Set<number>}
 
+/** An error inside an object's event, naming where it happened: the object, instance and event, the frame, and the
+ * events it ran inside (an instance created from another's Step runs its Create inside that Step). */
+export class GmEventError extends Error{
+ readonly within:string[]=[];
+ constructor(readonly where:string,readonly frame:number,readonly original:unknown){
+  super('');this.name='GmEventError';this.update();
+  if(original instanceof Error&&original.stack)this.stack=this.message+'\n'+original.stack.split('\n').slice(1).join('\n');
+ }
+ private update(){
+  const reason=this.original instanceof Error?this.original.message:String(this.original);
+  this.message=`${this.where}, frame ${this.frame}: ${reason}`+(this.within.length?` (inside ${this.within.join(' < ')})`:'');
+ }
+ static wrap(e:unknown,where:string,frame:number){
+  if(e instanceof GmEventError){e.within.push(where);e.update();return e;}
+  return new GmEventError(where,frame,e);
+ }
+}
+
 export class GmRuntime{
  instances:GmInstance[]=[];frame=0;nextId:number;random:GmRandom;
  /** Engine lifetime must not share a name with GML variables such as NEO wireheart's `destroyed`. */
@@ -192,7 +210,7 @@ export class GmRuntime{
  create(object:GmObjectDef,x:number,y:number,id=this.nextId++):GmInstance{
   object=this.object(object);
   const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;this.instances.push(inst);
-  resolveEvent(object,'create')?.(inst,this);return inst;
+  this.run(inst,'create');return inst;
  }
  /** Recreate an instance from a reference snapshot without running its Create event (ids keep creation order). */
  restore(object:GmObjectDef,id:number,x:number,y:number,vars:Record<string,unknown>={}):GmInstance{
@@ -200,7 +218,7 @@ export class GmRuntime{
   const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;Object.assign(inst,vars);
   this.instances.push(inst);this.instances.sort((a,b)=>a.id-b.id);return inst;
  }
- destroy(inst:GmInstance){if(this.destroyedInstances.has(inst))return;this.destroyedInstances.add(inst);resolveEvent(inst.object,'destroy')?.(inst,this);inst.live=false;}
+ destroy(inst:GmInstance){if(this.destroyedInstances.has(inst))return;this.destroyedInstances.add(inst);this.run(inst,'destroy');inst.live=false;}
  /** `with (object)`: every active instance of the object or its children, in creation order. */
  all(object:GmObjectDef){object=this.object(object);return this.instances.filter(i=>i.live&&isA(i.object,object));}
  exists(object:GmObjectDef){object=this.object(object);return this.instances.some(i=>i.live&&isA(i.object,object));}
@@ -211,7 +229,13 @@ export class GmRuntime{
  /** sprite_width / sprite_height: the sprite's size times the instance's scale. */
  spriteWidth(i:GmInstance){const s=i.sprite?this.bank.get(i.sprite):undefined;return s?s.width*i.imageXscale:0;}
  spriteHeight(i:GmInstance){const s=i.sprite?this.bank.get(i.sprite):undefined;return s?s.height*i.imageYscale:0;}
- userEvent(inst:GmInstance,n:number){resolveEvent(inst.object,`user${n}`)?.(inst,this);}
+ userEvent(inst:GmInstance,n:number){this.run(inst,`user${n}`);}
+ /** Runs one of an instance's events (its own or its parent's handler); errors say where they happened. */
+ private run(inst:GmInstance,event:GmEvent,handler=resolveEvent(inst.object,event),label:string=event){
+  if(!handler)return false;
+  try{handler(inst,this);}catch(e){throw GmEventError.wrap(e,`${inst.object.name} #${inst.id} ${label}`,this.frame);}
+  return true;
+ }
  /** place_meeting: would `inst` at (x, y) touch any instance of `target`? */
  placeMeeting(inst:GmInstance,x:number,y:number,target:GmObjectDef){
   target=this.object(target);
@@ -224,7 +248,7 @@ export class GmRuntime{
  private dispatch(event:GmEvent,perObject:boolean){
   let list=this.instances.filter(i=>i.live&&resolveEvent(i.object,event));
   if(perObject)list=list.map((i,n)=>({i,n})).sort((a,b)=>a.i.object.index-b.i.object.index||a.n-b.n).map(e=>e.i);
-  for(const inst of list)if(inst.live)resolveEvent(inst.object,event)!(inst,this);
+  for(const inst of list)if(inst.live)this.run(inst,event);
  }
  private animate(){
   for(const i of [...this.instances]){
@@ -236,7 +260,7 @@ export class GmRuntime{
    else i.imageIndex=i.imageIndex+(1/this.bank.roomSpeed)*s.playbackSpeed*i.imageSpeed;
    let wrapped=false;
    if(i.imageIndex>=s.frames){i.imageIndex=i.imageIndex-s.frames;wrapped=true;}else if(i.imageIndex<0){i.imageIndex=i.imageIndex+s.frames;wrapped=true;}
-   if(wrapped)resolveEvent(i.object,'animationEnd')?.(i,this);
+   if(wrapped)this.run(i,'animationEnd');
   }
  }
  /** runner.c dispatchCollisionEvents: objects by first target then index; each pair fires its most specific event. */
@@ -253,7 +277,7 @@ export class GmRuntime{
       if(!other.live||other===self)continue;
       if(mostSpecific(flat,other.object)!==evt.target)continue;
       if(!instancesMeet(this.bank,self,other))continue;
-      evt.run(self,other,this);
+      try{evt.run(self,other,this);}catch(e){throw GmEventError.wrap(e,`${self.object.name} #${self.id} collision with ${other.object.name} #${other.id}`,this.frame);}
      }
     }
    }
@@ -269,7 +293,7 @@ export class GmRuntime{
   for(let a=0;a<12;a++){
    const key=`alarm${a}` as GmEvent;
    const list=this.instances.map((i,n)=>({i,n})).filter(e=>e.i.live&&e.i.alarm[a]>0&&resolveEvent(e.i.object,key)).sort((x,y)=>x.i.object.index-y.i.object.index||x.n-y.n).map(e=>e.i);
-   for(const inst of list){if(!inst.live||inst.alarm[a]<=0)continue;inst.alarm[a]--;if(inst.alarm[a]===0){inst.alarm[a]=-1;resolveEvent(inst.object,key)!(inst,this);}}
+   for(const inst of list){if(!inst.live||inst.alarm[a]<=0)continue;inst.alarm[a]--;if(inst.alarm[a]===0){inst.alarm[a]=-1;this.run(inst,key);}}
   }
   this.dispatch('step',true);
   for(const i of [...this.instances])if(i.live)i.move();
@@ -298,7 +322,7 @@ export class GmRuntime{
    for(let j=0;j<count;j++){
     const els=layer();if(j>=els.length)break;
     const inst=els[j];if(!inst.live||!inst.visible)continue;
-    const h=resolveEvent(inst.object,'draw');if(h)h(inst,this);else this.drawSelf(inst);
+    if(!this.run(inst,'draw'))this.drawSelf(inst);
    }
    last=depth;
   }
