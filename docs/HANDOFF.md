@@ -3,8 +3,10 @@
 This file explains how to continue the work: the rules that must hold, how the work is verified, what is done and
 what is left, in order. Read it fully before changing code.
 
-Last commit: `b471ab2` on branch `feat/boss-battles`, pushed to `origin/main`. All 341 unit tests pass, including
-the 8 Chapter 1 parity runs and both NEO parity runs.
+Current checkpoint after `c8d2d81`: the Chapter 2 battle writer now has a dedicated chapter part and participates
+in full-state comparison. All 352 unit tests pass, including the 8 Chapter 1 parity runs and both NEO parity runs.
+Typecheck, the Pages build and two production-browser battle tests (NEO and JEVIL) pass. These results cover the
+existing local recordings and available English battle paths; optional dependencies listed in section 4 remain.
 
 ## 1. Project in one paragraph
 
@@ -141,8 +143,8 @@ variables, events, sounds and the hooks it reaches. Port line by line from the G
     `node tools/extract-script-index.mjs 1|2`, which writes `extracted/chapterN_windows/functions.json`.
   - Sound handles are 100000 plus 2 per sound played. They are listed in `SOUND_HANDLES` and not compared.
   - Sprites made from surfaces are named `__newsprite<N>`.
-- `STATE_PENDING` in the NEO test lists objects whose full-state check is still off: `obj_battlecontroller` and
-  `obj_writer`. Remove each one from that list once it matches.
+- `STATE_PENDING` in the NEO test now contains only `obj_battlecontroller`. The writer is fully compared at every
+  available dump in both NEO recordings (4000 and 6000 frames). Do not exempt it again to mask a mismatch.
 - Run everything with `npx tsc --noEmit` and `npx vitest run`. The parity runs take about 1–2 minutes.
 
 ### GML semantics already learned (keep following them)
@@ -161,16 +163,31 @@ variables, events, sounds and the hooks it reaches. Port line by line from the G
 - The runtime's built-in fields are stored under `$` names (`$x`, `$sprite`, …) so GML variables like `_sprite`
   cannot clash with them.
 
-## 4. Next task: Chapter 2 `obj_writer` (it was in progress)
+## 4. Writer checkpoint; next main task is Chapter 2 `obj_battlecontroller`
 
-- The current `src/remake/deltarune/writer.ts` is a compact re-implementation (262 lines).
+- `writer.ts` dispatches Create, Alarm 0–2, Draw and text setup through `WRITER[1|2]` and `forChapter`.
+- `writer-chapter2.ts` preserves instance working variables, input buffering, formatting, text codes, voices,
+  page transitions and Draw effects. It contains no archived GML or game dialogue.
+- Both NEO recordings match with writer state included: 3960 and 5960 frames after the frame-40 snapshot.
+- Eleven new focused tests cover lifecycle, buffering, forced input, escape handling, RNG, missing chapter rules,
+  portrait cleanup including descendants, camera offsets, ordinary audio hosts and the installed debug behavior.
+- A fresh review found an ordinary-audio Queen pitch handle issue; a failing test confirmed it and the fix passed.
+- Optional Japanese fonts/effects, controller-button sprite resolution and choice objects still throw explicit
+  named errors. They are outside the accepted NEO recording paths and must be ported before enabling encounters
+  that need them. The existing small-face host boundary is retained until its own object is ported.
+- Continue with the battle controller task in section 5. Keep the writer acceptance checks enabled.
+
+The original audit below remains useful when extending the writer to its optional dependencies:
+
+- The Chapter 1 part remains in `src/remake/deltarune/writer.ts`; the Chapter 2 part is in
+  `src/remake/deltarune/writer-chapter2.ts`.
 - The GML is about 1100 lines (Create, Alarm 0–2, Draw).
 - The GML keeps its working values on the instance: `accept`, `charpos`, `remspace`, `remchar`, `linecount`, `i`,
   `j`, `n`, `mychar`, `thischar`, `nextchar`, `nextchar2`, `getchar`, `wx`, `wy`, `button1/2/3`, `skip`, `play`,
   `playcheck`, `playtextsound`, `sound_timer`, `sound_count`, …
-- Port it line by line from `extracted/chapter2_windows/code/gml_Object_obj_writer_*.gml`, plus `scr_texttype`,
-  `scr_textsound` and `scr_nextmsg`.
-- Put the Chapter 1 differences in a table, for example `WRITER[1|2]`.
+- Use `extracted/chapter2_windows/code/gml_Object_obj_writer_*.gml`, `scr_texttype`, `scr_textsound` and `scr_nextmsg`
+  as the local read-only reference when extending the remaining dependencies.
+- Preserve the `WRITER[1|2]` chapter table and caller-required helpers.
 
 Chapter 2 adds or changes:
 
@@ -209,14 +226,19 @@ Chapter 2 adds or changes:
 - Halting destroys every `obj_smallface`.
 - Alarm 0 adds `sound_timer`, `reachedend` and the `` ` `` handling.
 - Remember: after `scr_nextmsg` or `instance_destroy` inside the loop, the GML keeps going (`siner += 1` still
-  happens). The current port returns early.
+  happens). The Chapter 2 port now preserves this; do not reintroduce early returns there.
 
-Check after each step with `PARITY_SURVEY=1`; currently 34 writer variables differ. Keep the 8 Chapter 1 runs green.
+Check after each step with `PARITY_SURVEY=1`; the writer differences in the existing recordings have been resolved.
+Keep the 8 Chapter 1 runs green.
 They exercise the Chapter 1 writer heavily, including RNG per character.
 
 ## 5. Remaining work, in order
 
-### 1. Chapter 2 `obj_writer` (section 4)
+### 1. Writer milestone and optional dependencies (section 4)
+
+The available English battle paths are accepted against both current NEO recordings. Japanese font/effect support,
+button sprites and choice objects remain explicit unported dependency boundaries. Address these when an encounter
+or new recording exercises them; do not silently ignore their control codes.
 
 ### 2. Chapter 2 `obj_battlecontroller`
 

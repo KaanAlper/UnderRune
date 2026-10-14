@@ -6,6 +6,8 @@ import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {KEY} from './battle';
 import {optionalSourceText} from '../host/text';
+import {forChapter} from './rules';
+import {writer2,type WriterPart} from './writer-chapter2';
 
 /** scr_textsetup values per global.typer (English, Chapter 1): font, colour, speed, voice, spacing, effect. */
 type Typer={font:string;color:number;rate:number;sound:string|null;hspace:number;vspace:number;special:number;yoff?:number};
@@ -25,7 +27,7 @@ export const TYPERS:Record<number,Typer>={
  60:main(null,8),666:{...main(null,4,2),hspace:12,vspace:20},667:{...main(null,2,2),hspace:12,vspace:20},999:main('snd_txtecho',4,3),
 };
 /** scr_texttype: apply the current global.typer (unknown typers keep the writer's settings). */
-export function textType(s:GmInstance,rt:GmRuntime){
+function textType1(s:GmInstance,rt:GmRuntime){
  s.textscale=1;const t=TYPERS[rt.globals.typer];if(!t)return;
  s.myfont=t.font;s.mycolor=t.color;s.writingx=s.x;s.writingy=s.y+(t.yoff??0);s.charline=33;s.shake=0;s.rate=t.rate;s.textsound=t.sound;
  s.hspace=t.hspace;s.vspace=t.vspace;s.special=t.special;s.colorchange=1;s.xcolor=t.color;
@@ -93,13 +95,13 @@ function format(s:GmInstance,rt:GmRuntime){
 /** \F codes: none, Susie, Ralsei, Noelle, Toriel, Lancer, Alphys, Asgore(a), Berdly, Rudy, Rurus, King. */
 const FACE_CODES:Record<string,number>={'0':0,S:1,R:2,N:3,T:4,L:5,A:10,a:11,B:12,r:15,u:18,K:20};
 
-export const writer:GmObjectDef={name:'obj_writer',index:10,events:{
+const writer1:WriterPart={
  create:(s,rt)=>{
   const g=rt.globals;
   Object.assign(s,{skipme:0,textsound:'snd_text',charline:33,hspace:8,vspace:18,rate:1,mycolor:C.white,myfont:'fnt_main',shake:0,special:0,
    skippable:g.flag?.[6]===1?0:1,automash_timer:0,f:g.darkzone===1?2:1});
   s.originalcharline=s.charline;
-  textType(s,rt);
+  textType1(s,rt);
   Object.assign(s,{autoaster:1,pos:2,lineno:0,aster:0,halt:0,xcolor:C.black,wxskip:0,msgno:0,first_alarm:0,firstnoise:0,noiseskip:0,formatted:0,
    colorchange:0,fontchange:0,sound_played:0,writingx:s.x,writingy:s.y,dialoguer:0,smallface:505050,faced:0,facedever:0,facer:0,siner:0,specfade:1,
    specx:[0,6,12,18,24,30,36],specy:[0,6,12,18,24,30,36]});
@@ -122,7 +124,8 @@ export const writer:GmObjectDef={name:'obj_writer',index:10,events:{
  alarm1:(s,rt)=>{if(s.pos<s.length+2)textSound(s,rt);},
  alarm2:(s,rt)=>{if(s.firstnoise===0){s.firstnoise=1;textSound(s,rt);}},
  draw:(s,rt)=>drawWriter(s,rt),
-}};
+ textType:textType1,
+};
 
 function drawWriter(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;
@@ -150,10 +153,9 @@ function drawWriter(s:GmInstance,rt:GmRuntime){
    const n1=at(s.mystring,n+1),n2=at(s.mystring,n+2);
    if(n1==='E'){const e='0123456789ABCDE'.indexOf(n2);if(e>=0)g.fe=e;}
    if(n1==='F'){const f=FACE_CODES[n2];if(f!==undefined)g.fc=f;}
-   if(n1==='f'&&g.chapter===2){if(!g.onChapter2SmallFace)throw Error('Chapter 2 writer needs small face source');g.onChapter2SmallFace(s,n2);}
    // \* draws a controller button icon; no Chapter 1 battle line uses it.
    if(n1==='T'){
-    const t=SPEAKER_TYPERS[n2];if(t!==undefined){g.typer=t(g);textType(s,rt);d.font=s.myfont;}
+    const t=SPEAKER_TYPERS[n2];if(t!==undefined){g.typer=t(g);textType1(s,rt);d.font=s.myfont;}
     // A voice change in the battle box also returns the line to the left edge (or past the portrait).
     if(s.dialoguer===1){if(g.fc===0){s.charline=s.originalcharline;wx=s.x;}else s.wxskip=1;}
    }
@@ -202,6 +204,17 @@ const SPEAKER_TYPERS:Record<string,(g:Record<string,any>)=>number>={
  X:()=>40,r:()=>55,T:()=>7,J:()=>35,A:()=>18,a:()=>20,N:()=>12,n:()=>23,
  K:g=>g.fighting===1?48:(g.plot??0)<235?36:33,
 };
+
+/** Each chapter owns its writer execution, selected once at the shared event boundary. */
+const WRITER:Readonly<Record<number,WriterPart>>={1:writer1,2:writer2};
+export function textType(s:GmInstance,rt:GmRuntime){forChapter(rt,WRITER,'writer').textType(s,rt);}
+export const writer:GmObjectDef={name:'obj_writer',index:10,events:{
+ create:(s,rt)=>forChapter(rt,WRITER,'writer').create(s,rt),
+ alarm0:(s,rt)=>forChapter(rt,WRITER,'writer').alarm0(s,rt),
+ alarm1:(s,rt)=>forChapter(rt,WRITER,'writer').alarm1(s,rt),
+ alarm2:(s,rt)=>forChapter(rt,WRITER,'writer').alarm2(s,rt),
+ draw:(s,rt)=>forChapter(rt,WRITER,'writer').draw(s,rt),
+}};
 
 /** Susie's portrait has one sprite per emotion (the two frames are her mouth). */
 const SUSIE_FACES=['','spr_face_s1','spr_face_s2','spr_face_s3','spr_face_s4','spr_face_s5','spr_face_s6','spr_face_s7','spr_face_s8','spr_face_s9','spr_face_sA','spr_face_sB','spr_face_sC','spr_face_sD'];
