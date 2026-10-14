@@ -59,7 +59,7 @@ describe.skipIf(!ready)(`Spamton NEO against the original (local recording ${RUN
   const res=loadResources(2);
   // Sound instance numbers come from the reference runtime's audio backend (100000 plus two per sound played); the
   // remake's audio hooks do not number sounds that way, so variables holding them are not compared.
-  const SOUND_HANDLES={obj_heart:['chargeshot_sound'],obj_spamton_neo_enemy:['chargeshot_sound'],obj_herokris:['ls'],obj_herosusie:['ls'],obj_heroralsei:['ls']};
+  const SOUND_HANDLES={obj_heart:['chargeshot_sound'],obj_spamton_neo_enemy:['chargeshot_sound'],obj_herokris:['ls'],obj_herosusie:['ls'],obj_heroralsei:['ls'],obj_sneo_rotatingwall_bomb:['bomsfallsfx']};
   // Objects not yet matched variable for variable (none at the moment).
   const STATE_PENDING=new Set<string>();
   // PARITY_STATE_ONLY=obj_a,obj_b: compare only these objects (archived ones included).

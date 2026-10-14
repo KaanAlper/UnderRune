@@ -28,6 +28,7 @@ import type {BattleHooks,HookedDef} from '../deltarune/rules';
 import {createSneoBulletController,sneoBulletController} from '../bosses/spamton-neo/bullet-controller';
 import {createFlyingHeads} from '../bosses/spamton-neo/flying-heads';
 import {createNeoSupport} from '../bosses/spamton-neo/support';
+import {createNeoWalls} from '../bosses/spamton-neo/walls';
 
 /** Chapter 2 objects that run as hand-written code (the rest still run from the local source archive). */
 const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed,
@@ -129,7 +130,7 @@ export function installNeoHost(rt:GmRuntime){
  };
  // Each factory runs after the ones before it are registered, so the parents and objects it looks up are the
  // hand-written ones.
- const factories:(()=>GmObjectDef[])[]=[()=>NEO_PORTED,()=>createNeoSupport(object),()=>[createSneoBulletController(object)],()=>createFlyingHeads(object)];
+ const factories:(()=>GmObjectDef[])[]=[()=>NEO_PORTED,()=>createNeoSupport(object),()=>[createSneoBulletController(object)],()=>createFlyingHeads(object),()=>createNeoWalls(object)];
  for(const make of factories)for(const def of make()){
   const previous=objects[def.name],c=canonical(def);objects[def.name]=c;
   // Archived attack closures may retain their own registry's old definition. Their object selectors must

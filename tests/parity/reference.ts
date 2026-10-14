@@ -104,8 +104,11 @@ export function loadResources(chapter:number):ResourceIndex{
 const RUNTIME_FIELDS=new Set(['xprevious','yprevious','xstart','ystart','imageAngle','imageBlend','mask','visible','live','frameCount','layerEntry','alarm','id','object']);
 /** Whether a remake value stands for the reference's value: numbers within GML's tolerance, booleans as 0/1,
  * resource names as their numbers, objects and instances as their indices and ids, arrays element by element. */
-function sameValue(ours:unknown,ref:unknown,res:ResourceIndex):boolean{
- if(Array.isArray(ref)){const a=ours;return Array.isArray(a)&&a.length===ref.length&&ref.every((v,k)=>sameValue(a[k],v,res));}
+function sameValue(ours:unknown,ref:unknown,res:ResourceIndex,gone:(id:number)=>boolean=()=>false):boolean{
+ if(Array.isArray(ref)){const a=ours;return Array.isArray(a)&&a.length===ref.length&&ref.every((v,k)=>sameValue(a[k],v,res,gone));}
+ // The reference runtime turns a variable holding a self/other reference into noone (-4) when that instance is
+ // destroyed; the remake keeps the number of the instance that is gone.
+ if(ref===-4&&typeof ours==='number'&&ours>=100000&&gone(ours))return true;
  if(typeof ref==='number'){
   if(typeof ours==='boolean')ours=ours?1:0;
   if(typeof ours==='number')return ours===ref||Math.abs(ours-ref)<=1e-5*Math.max(1,Math.abs(ref));
@@ -125,12 +128,12 @@ const show=(v:unknown)=>{const s=v&&typeof v==='object'&&!Array.isArray(v)?`<${(
  * step): built-ins, alarms and instance variables, missing and extra ones included. Instances are paired in creation
  * order per object, as in compareFrame. Returns one line per difference. */
 export function compareState(rt:GmRuntime,dump:Dump,checked:Set<string>,res:ResourceIndex,skippedIds=new Set<number>(),ignore:Readonly<Record<string,readonly string[]>>={}):string[]{
- const problems:string[]=[];
+ const problems:string[]=[],gone=(id:number)=>!rt.byId(id);
  for(const name of checked){
   const ref=dump.instances.filter(d=>d.objectName===name&&!skippedIds.has(d.instanceId)),ours=rt.instances.filter(i=>i.live&&i.object.name===name);
   if(ref.length!==ours.length){problems.push(`${name}: ${ours.length} instances, reference has ${ref.length}`);continue;}
   ref.forEach((d,k)=>{
-   const o=ours[k],at=`${name} ${d.instanceId}`,diff=(what:string,a:unknown,b:unknown)=>{if(!sameValue(a,b,res))problems.push(`${at} ${what}: ${show(a)} vs ${show(b)}`);};
+   const o=ours[k],at=`${name} ${d.instanceId}`,diff=(what:string,a:unknown,b:unknown)=>{if(!sameValue(a,b,res,gone))problems.push(`${at} ${what}: ${show(a)} vs ${show(b)}`);};
    if(o.id!==d.instanceId)problems.push(`${at}: id ${o.id}`);
    diff('depth',o.depth,d.depth);diff('sprite',o.sprite??null,d.sprite.name);diff('image_index',o.imageIndex,d.sprite.imageIndex);diff('image_speed',o.imageSpeed,d.sprite.imageSpeed);
    diff('image_xscale',o.imageXscale,d.scale.x);diff('image_yscale',o.imageYscale,d.scale.y);diff('image_angle',o.imageAngle,d.angle);
