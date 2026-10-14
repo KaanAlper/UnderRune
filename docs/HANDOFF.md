@@ -3,10 +3,11 @@
 This file explains how to continue the work: the rules that must hold, how the work is verified, what is done and
 what is left, in order. Read it fully before changing code.
 
-Current checkpoint after `c8d2d81`: the Chapter 2 battle writer now has a dedicated chapter part and participates
-in full-state comparison. All 352 unit tests pass, including the 8 Chapter 1 parity runs and both NEO parity runs.
-Typecheck, the Pages build and two production-browser battle tests (NEO and JEVIL) pass. These results cover the
-existing local recordings and available English battle paths; optional dependencies listed in section 4 remain.
+Current checkpoint after `d8ed54a`: the Chapter 2 writer and battle controller have chapter parts and participate
+in full-state comparison. The full 361-test suite passes, including all 8 Chapter 1 parity runs and both NEO runs;
+two additional unported-dependency tests also pass in the focused controller suite. Typecheck and the Pages build
+pass; both production-browser battle checks (NEO and JEVIL) pass. Acceptance covers the current recordings and English normal-route NEO paths; optional dependencies below
+remain. Source is pushed separately from Pages publication.
 
 ## 1. Project in one paragraph
 
@@ -143,8 +144,9 @@ variables, events, sounds and the hooks it reaches. Port line by line from the G
     `node tools/extract-script-index.mjs 1|2`, which writes `extracted/chapterN_windows/functions.json`.
   - Sound handles are 100000 plus 2 per sound played. They are listed in `SOUND_HANDLES` and not compared.
   - Sprites made from surfaces are named `__newsprite<N>`.
-- `STATE_PENDING` in the NEO test now contains only `obj_battlecontroller`. The writer is fully compared at every
-  available dump in both NEO recordings (4000 and 6000 frames). Do not exempt it again to mask a mismatch.
+- `STATE_PENDING` in the NEO test is empty. The writer and controller are fully compared at every available dump
+  in both NEO recordings (4000 and 6000 frames). Do not add exemptions to mask a mismatch. The test uses the original
+  main font glyph advances, so controller name-width fields are compared as well.
 - Run everything with `npx tsc --noEmit` and `npx vitest run`. The parity runs take about 1–2 minutes.
 
 ### GML semantics already learned (keep following them)
@@ -163,7 +165,7 @@ variables, events, sounds and the hooks it reaches. Port line by line from the G
 - The runtime's built-in fields are stored under `$` names (`$x`, `$sprite`, …) so GML variables like `_sprite`
   cannot clash with them.
 
-## 4. Writer checkpoint; next main task is Chapter 2 `obj_battlecontroller`
+## 4. Writer checkpoint and optional dependencies
 
 - `writer.ts` dispatches Create, Alarm 0–2, Draw and text setup through `WRITER[1|2]` and `forChapter`.
 - `writer-chapter2.ts` preserves instance working variables, input buffering, formatting, text codes, voices,
@@ -175,7 +177,7 @@ variables, events, sounds and the hooks it reaches. Port line by line from the G
 - Optional Japanese fonts/effects, controller-button sprite resolution and choice objects still throw explicit
   named errors. They are outside the accepted NEO recording paths and must be ported before enabling encounters
   that need them. The existing small-face host boundary is retained until its own object is ported.
-- Continue with the battle controller task in section 5. Keep the writer acceptance checks enabled.
+- The controller acceptance checkpoint is in section 5.2. Keep the writer acceptance checks enabled.
 
 The original audit below remains useful when extending the writer to its optional dependencies:
 
@@ -240,22 +242,28 @@ The available English battle paths are accepted against both current NEO recordi
 button sprites and choice objects remain explicit unported dependency boundaries. Address these when an encounter
 or new recording exercises them; do not silently ignore their control codes.
 
-### 2. Chapter 2 `obj_battlecontroller`
+### 2. Chapter 2 controller acceptance checkpoint
 
-- The Chapter 2 events differ from Chapter 1 by about 540 lines in Step and 537 in Draw, plus Create, Alarm 2 and a
-  new Draw_64.
-- `controller.ts` still has Codex's `if (chapter === 2)` branches for the merged ACT menus. Make them a Chapter 2 part.
-- The survey shows these differing variables:
-  - `btc` (button highlight), `t_siner`, `myxx`, `slmxx`, `gc`, `prevturn`, `i`, `j`;
-  - `tempitem` (rows of 4 in Chapter 2, 3 in Chapter 1);
-  - `mercyamt`;
-  - `bpoff`, `tpoff`, `xx`, `yy`: the HUD follows the screen shake through `scr_battletext`'s `xx`/`yy`;
-  - instance arrays `actname`, `actdesc`, `acttpcost`, `canact`, `actsimul`;
-  - `drawsus`, `drawral`, `drawnoe`, the `*blend` variables, `icx`/`icy`, `xoffset`/`yoffset`;
-  - `__acti`, `__hiti`, `__noactors`, `charcan`, `hptarget`, `sus`, `spellcoord`, `thischar`, `thiscost`, `cango`,
-    `canpress`, `cant`, `page`, `chartime`, `charoffset`.
-- Port from `gml_Object_obj_battlecontroller_*.gml` (Chapter 2) with chapter parts. Then remove it from
-  `STATE_PENDING`.
+- `controller.ts` retains one shared command row, turn progression, phase creation, enemy timer, input buffers,
+  sounds, cleanup and victory lifecycle. It contains no direct chapter checks or encounter-number branches.
+- `CONTROLLER_MENUS`, `CONTROLLER_DRAW`, `CONTROLLER_TAIL` and `CONTROLLER_SCRIPTS` dispatch with `forChapter`.
+  Chapter 2 parts are `controller-menu2.ts`, `controller-chapter2.ts` and `controller-script-parts.ts`.
+- HUD spacing, panel/shake offsets, selection fields, ACT actor portraits, MERCY/HP displays, merged spell tables,
+  next/previous hero fields and the bag propagated to slot 3 follow the local source.
+- `spellMenuSetupChapter2(rt, caller)` and `actSimulChapter2(rt, caller)` require the calling instance and preserve
+  its working fields. The transitional host and NEO pass that instance explicitly.
+- The controller's former pending-state exemption is removed. Both current NEO recordings match all 9920 frames
+  after the frame-40 starting snapshots, including all recorded controller fields. This is not whole-game parity.
+- Focused tests cover missing chapters, reordered parties, camera offsets, ACT cancellation, caller state, bag
+  propagation, reward ordering and simultaneous left/down item input. A fresh review found the latter input-order
+  regression; a failing test reproduced it, and the correction passed. The final delta review found no further
+  blocking/high/medium issues in enabled paths.
+- Japanese HUD, A-held ACT preview, hero 4/Noelle creation and victory level progression currently have named
+  unported-dependency errors. Port them before enabling encounters needing them. Boxing/Queen-specific visuals
+  and state gates have hook interfaces but require those future boss definitions. Additional recordings must
+  exercise the first 40 creation frames, ambush/story portrait flags, conditional victory rewards and endings.
+- Continue with the archived NEO attack objects in section 5.3. Do not remove the interpreter while they still
+  depend on it, and do not assert 100% similarity from these two recordings.
 
 ### 3. NEO's archived objects
 
@@ -325,7 +333,8 @@ New scripts go in `tools/oracle-scripts.mjs`.
 | Runtime (instances, events, draw order, strict reads) | `src/remake/gm/runtime.ts` |
 | Maths, colours, sprites, collision | `src/remake/gm/math.ts`, `graphics.ts`, `sprites.ts`, `collision.ts` |
 | Shared battle objects (soul, bullets, darkener, shake, damage writer, scr_damage) | `src/remake/deltarune/battle.ts` |
-| Battle controller, menus, tension bar | `src/remake/deltarune/controller.ts` |
+| Shared controller and tension bar | `src/remake/deltarune/controller.ts` |
+| Chapter 2 controller menu, HUD and scripts | `controller-menu2.ts`, `controller-chapter2.ts`, `controller-script-parts.ts` |
 | Heroes, FIGHT bar, spells, items | `src/remake/deltarune/party.ts` |
 | Writer, faces, balloons, scr_battletext | `src/remake/deltarune/writer.ts` |
 | Enemy template | `src/remake/deltarune/enemy.ts` |

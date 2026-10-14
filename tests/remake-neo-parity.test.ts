@@ -5,6 +5,7 @@ import {GmRuntime} from '../src/remake/gm/runtime';
 import {installNeoHost} from '../src/remake/host/neo';
 import {setSourceText} from '../src/remake/host/text';
 import {localizationDefaults} from '../tools/source-localization.mjs';
+import {setHudMeasure} from '../src/remake/deltarune/controller';
 
 // Spamton NEO (Chapter 2, encounter 61) against the original game, frame by frame, from the battle's first frames
 // to the end of a long local recording (party HP raised for the recording only, so it runs through many turns).
@@ -21,6 +22,9 @@ describe.skipIf(!ready)(`Spamton NEO against the original (local recording ${RUN
   const trace=new Map<number,TraceLine>(fs.readFileSync(RUN+'.ndjson','utf8').trim().split('\n').map(l=>{const x=JSON.parse(l) as TraceLine;return [x.f,x];}));
   const replay=JSON.parse(fs.readFileSync(RUN+'.inputs.json','utf8')) as Replay,dump=JSON.parse(fs.readFileSync(`${RUN}-f${START}.json`,'utf8')) as Dump;
   const SPRITES:string[]=JSON.parse(fs.readFileSync('extracted/chapter2_windows/index.json','utf8')).sprites.map((s:{name:string})=>s.name);
+  const mainFont=JSON.parse(fs.readFileSync('extracted/chapter2_windows/index.json','utf8')).fonts.find((f:{name:string})=>f.name==='fnt_mainbig');
+  const advances=new Map<number,number>(mainFont.glyphs.map((g:{charCode:number;shift:number})=>[g.charCode,g.shift]));
+  setHudMeasure(text=>Math.max(0,...text.split('\n').map(line=>[...line].reduce((n,ch)=>n+(advances.get(ch.charCodeAt(0))??0),0))));
   const line=trace.get(START)!,rt=new GmRuntime(loadSprites(2),{rng:line.rng});
   rt.globals=structuredClone(dump.globalVariables);
   const {objects}=installNeoHost(rt);
@@ -58,7 +62,7 @@ describe.skipIf(!ready)(`Spamton NEO against the original (local recording ${RUN
   const SOUND_HANDLES={obj_heart:['chargeshot_sound'],obj_spamton_neo_enemy:['chargeshot_sound'],obj_herokris:['ls'],obj_herosusie:['ls'],obj_heroralsei:['ls']};
   // Still to be matched variable for variable: Chapter 2's battle controller (merged ACT menus and HUD variables).
   // The writer now has its own chapter part and participates in full-state comparison.
-  const STATE_PENDING=new Set(['obj_battlecontroller']);
+  const STATE_PENDING=new Set<string>();
   const stateChecked=new Set([...tracked].filter(n=>process.env.PARITY_STATE==='all'||!(objects[n] as {archived?:boolean}).archived&&(process.env.PARITY_SURVEY||!STATE_PENDING.has(n))));
   const afterFrame=(f:number)=>{
    const file=`${RUN}-f${f}.json`;if(!fs.existsSync(file))return undefined;

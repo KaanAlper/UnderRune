@@ -11,6 +11,7 @@ import {chapter2StartStats,actSelectChapter2,actSimulChapter2} from '../src/rema
 import {damageEnemy,HERO_DEFS,castSpell,spellText,healAnim} from '../src/remake/deltarune/party';
 import {teaAmountChapter2} from '../src/remake/deltarune/chapter2';
 import {spamtonNeo} from '../src/remake/bosses/spamton-neo/neo';
+import {localizationDefaults} from '../tools/source-localization.mjs';
 
 // Test text comes from the user's source archive; only the keys are kept in the repo.
 const text:Record<string,string>={};
@@ -20,6 +21,7 @@ for(const name of ['scr_monstersetup','scr_encountersetup','scr_spellinfo','scr_
  const source=fs.readFileSync(`extracted/chapter2_windows/code/gml_GlobalScript_${name}.gml`,'utf8');
  for(const match of source.matchAll(/(?:stringset(?:sub)?loc|msgset(?:sub)?loc|msgnextloc)\((?:\d+, )?"((?:[^"\\]|\\.)*)"[^\r\n]*?"((?:scr|obj)_[^"]+)"\)/g))text[match[2]]=JSON.parse('"'+match[1]+'"');
 }
+if(hasChapter2Source)Object.assign(text,localizationDefaults(fs.readFileSync('extracted/chapter2_windows/code/gml_Object_obj_battlecontroller_Step_0.gml','utf8')));
 beforeEach(()=>setSourceText(text));
 // A stand-in NEO with the real one's hooks (what the shared engine does differently for him).
 const enemy:GmObjectDef={name:'obj_spamton_neo_enemy',index:702,parent:monsterParent,hooks:spamtonNeo.hooks,events:{user12:monsterSetup}} as GmObjectDef;
@@ -32,6 +34,31 @@ function make(){
 }
 const press=(rt:GmRuntime,key:number)=>{rt.input.pressed.add(key);rt.step();for(let i=0;i<3;i++)rt.step();};
 describe.skipIf(!hasChapter2Source)('Chapter 2 source command foundation',()=>{
+ it('rejects an unported hero instead of creating an invisible party member',()=>{
+  const {rt,g}=make();g.char[0]=4;expect(()=>rt.create(battleControllerFull,0,0)).toThrow(/hero 4.*not ported/i);
+ });
+ it('keeps spell-table setup working variables on its caller',()=>{
+  const {g,c}=make();expect([c.__i,c.__fj,c.__ib]).toEqual([3,12,g.battleactcount[2]+11]);
+ });
+ it('processes simultaneous left/down item input in the original event order',()=>{
+  const {rt,g,c}=make();g.bmenuno=4;g.item[0]=1;g.item[1]=8;g.item[2]=9;
+  for(let i=0;i<3;i++)c.tempitem[i][0]=g.item[i];rt.input.pressed.add(KEY.left);rt.input.pressed.add(KEY.down);rt.step();
+  expect([g.bmenucoord[4][0],c.itemcoord,c.cango]).toEqual([1,1,0]);
+ });
+ it('applies Chapter 2 TP and equipment gold bonuses in source order at victory',()=>{
+  const {rt,g,c}=make();g.tension=100;g.monstergold[3]=100;g.charweapon[1]=8;g.chararmor1[2]=8;g.chararmor2[3]=21;c.victory=1;
+  rt.step();expect(g.gold).toBe(Math.floor(126*1.05*1.3));
+ });
+ it('keeps caller fields while propagating the chosen bag through the end-of-commands slot',()=>{
+  const {rt,g,c}=make();g.charturn=2;g.bmenuno=1;c.onebuffer=-1;c.twobuffer=-1;press(rt,KEY.z);
+  expect(c.prevturn).toBe(2);expect(c.tempitem[0]).toHaveLength(4);expect(c.__hiti).toBe(3);expect(c.__noactorsi).toBe(3);expect(c.t_siner).toBe(8);
+ });
+ it('writes ACT selection tables before Draw and resets the ACT cursor after cancellation',()=>{
+  const {rt,g,c}=make();g.bmenuno=9;g.bmenucoord[9][0]=2;rt.step();
+  expect(c.thisenemy).toBe(0);expect(c.__acti).toBe(6);expect(c.acttpcost).toEqual(g.actcost[0]);
+  // X also reaches the target-menu block later in the same source event, returning to the command row.
+  press(rt,KEY.x);expect(g.bmenuno).toBe(0);expect(g.bmenucoord[9][0]).toBe(0);
+ });
  it('uses gamestart stats, encounter 61 positions and only normal monster 50 ACTs',()=>{
   const {g}=make();
   expect(g.maxhp.slice(1)).toEqual([120,140,100]);expect(g.at.slice(1)).toEqual([12,16,10]);expect(g.mag.slice(1)).toEqual([0,1,9]);
@@ -61,7 +88,7 @@ describe.skipIf(!hasChapter2Source)('Chapter 2 source command foundation',()=>{
  it('dispatches simultaneous actor flags and orders without inventing ACT effects',()=>{
   const {rt,g,c,m}=make();g.actsimul[0][1]=1;g.actsimulsus[0][0]=1;g.actsimulral[0][0]=1;
   actSelectChapter2(c,rt,0,1);g.charturn=1;actSelectChapter2(c,rt,0,0);g.charturn=2;actSelectChapter2(c,rt,0,0);
-  actSimulChapter2(rt);expect(g.actingsingle).toEqual([0,0,0]);expect(m.simultotal).toBe(3);
+  actSimulChapter2(rt,c);expect(g.actingsingle).toEqual([0,0,0]);expect(m.simultotal).toBe(3);
   expect([m.simulorderkri,m.simulordersus,m.simulorderral]).toEqual([0,1,2]);expect([m.actcon,m.actconsus,m.actconral]).toEqual([0,1,1]);expect(g.mercymod[0]).toBe(0);
  });
  it('undoes Susie ACT selection and restores the TP snapshot when going back',()=>{

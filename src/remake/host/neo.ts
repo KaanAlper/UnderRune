@@ -56,7 +56,7 @@ export function installNeoHost(rt:GmRuntime){
     case 'scr_monstersetup':return monsterSetup(s,r);
     case 'scr_nextact':return controller.nextAct(r,s);
     case 'scr_attackphase':return controller.attackPhase(r);
-    case 'scr_spellmenu_setup':return spellMenuSetupChapter2(r);
+    case 'scr_spellmenu_setup':return spellMenuSetupChapter2(r,s);
     case 'scr_randomtarget':return controller.randomTarget(s,r);
     case 'scr_battletext_default':return writer.battleTextDefault(r,s).id;
     case 'scr_battletext':return writer.battleText(r,s).id;

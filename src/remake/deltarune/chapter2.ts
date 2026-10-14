@@ -2,6 +2,7 @@
 import type {GmInstance,GmRuntime} from '../gm/runtime';
 import {monsterParent} from './battle';
 import {sourceText} from '../host/text';
+import {spellInfoAll} from './controller';
 
 /** scr_gamestart, without scr_levelup progression or equipment bonuses. Index 0 is the empty slot. */
 export function chapter2StartStats(){return {hp:[0,120,140,100],maxhp:[0,120,140,100],at:[0,12,16,10],df:[0,2,2,2],mag:[0,0,1,9]};}
@@ -56,22 +57,28 @@ export function actorActs(rt:GmRuntime,enemy:number,character=rt.globals.char[rt
   name:g['actname'+suffix][enemy] as string[],desc:g['actdesc'+suffix][enemy] as string[],simul:g['actsimul'+suffix][enemy] as number[]};
 }
 /** scr_spellmenu_setup: ACTs from enemy slot zero, followed by the actor's twelve spell slots. */
-export function spellMenuSetupChapter2(rt:GmRuntime){
+export function spellMenuSetupChapter2(rt:GmRuntime,caller:GmInstance){
  const g=rt.globals;
  g.battleactcount=[0,0,0];
  for(const [key,value] of Object.entries({battlespell:0,battlespellcost:0,battlespellname:' ',battlespelldesc:' ',battlespelltarget:2,battlespellspecial:0}))
   g[key]=Array.from({length:3},()=>new Array(18).fill(value));
- const mixed=g.monster.some((alive:number,i:number)=>i>0&&alive===1&&g.monstertype[i]!==g.monstertype[0]);
- for(let i=0;i<3;i++){
+ let mixed=false;for(caller.__i=1;caller.__i<3;caller.__i++)if(g.monster[caller.__i]===1&&g.monstertype[caller.__i]!==g.monstertype[0])mixed=true;
+ for(caller.__i=0;caller.__i<3;caller.__i++){
+  const i=caller.__i;
   const char=g.char[i],acts=actorActs(rt,0,char);
-  for(let j=0;j<6;j++)if(char>=1&&char<=4&&acts.can[j]===1){
+  for(caller.__fj=0;caller.__fj<6;caller.__fj++)if(char>=1&&char<=4&&acts.can[caller.__fj]===1){
+   const j=caller.__fj;
    g.battlespell[i][j]=-1;g.battleactcount[i]=j+1;g.battlespellcost[i][j]=acts.cost[j];
    const generic=char===2?1053:char===3?1057:1061;
    g.battlespellname[i][j]=mixed&&char!==1?sourceText(`scr_monstersetup_slash_scr_monstersetup_gml_${generic}_0`):acts.name[j];
    g.battlespelldesc[i][j]=acts.desc[j];g.battlespelltarget[i][j]=char===1?0:2;g.battlespellspecial[i][j]=char;
   }
-  for(let j=0;j<12;j++){
-   const index=g.battleactcount[i]+j;
+ }
+ spellInfoAll(rt,caller);
+ for(caller.__i=0;caller.__i<3;caller.__i++){
+  const i=caller.__i,char=g.char[i];
+  for(caller.__fj=0;caller.__fj<12;caller.__fj++){
+   const j=caller.__fj;caller.__ib=g.battleactcount[i]+j;const index=caller.__ib;
    g.battlespell[i][index]=g.spell[char][j];g.battlespellcost[i][index]=g.spellcost[char][j];
    g.battlespellname[i][index]=g.spellnameb[char][j];g.battlespelldesc[i][index]=g.spelldescb[char][j];g.battlespelltarget[i][index]=g.spelltarget[char][j];
   }
@@ -87,22 +94,24 @@ export function actSelectChapter2(s:GmInstance,rt:GmRuntime,enemy:number,choice:
   const actor=g.actactor[enemy][choice];
   if(actor===2)g.acting[s.charpos[1]]=1;if(actor===3)g.acting[s.charpos[2]]=1;
   if(actor===4){g.acting[1]=1;g.acting[2]=1;}
-  for(let i=0;i<3;i++)if(g.acting[i]===1){g.faceaction[i]=6;g.charaction[i]=9;}
+  if(actor===5)g.acting[s.charpos[3]]=1;
+  for(s.i=0;s.i<3;s.i++)if(g.acting[s.i]===1){g.faceaction[s.i]=6;g.charaction[s.i]=9;}
  }else{g.faceaction[t]=6;g.charaction[t]=9;}
 }
 /** scr_act_simul: publish each simultaneous actor's order and state to the enemy. */
-export function actSimulChapter2(rt:GmRuntime){
- const g=rt.globals,monsters=rt.all(monsterParent);let count=0;
- for(let i=g.currentactingchar;i<3;i++){
+export function actSimulChapter2(rt:GmRuntime,caller:GmInstance){
+ const g=rt.globals,monsters=rt.all(monsterParent);caller.__simulcount=0;
+ for(caller.__ii=g.currentactingchar;caller.__ii<3;caller.__ii++){
+  const i=caller.__ii;caller.__foundsimul=0;
   if(g.actingsingle[i]!==1||monsters.length===0)continue;
   const char=g.char[i],enemy=g.actingtarget[i],choice=g.actingchoice[i],acts=actorActs(rt,enemy,char);
   if(acts.simul[choice]===1){
    const suffix=['','','sus','ral','noe'][char],order=['','','sus','ral','noe'][char];
-   for(const m of monsters)m[char===1?'simulorderkri':`simulorder${order}`]=count;
+   for(const m of monsters)m[char===1?'simulorderkri':`simulorder${order}`]=caller.__simulcount;
    const m=rt.byId(g.monsterinstance[enemy]);if(m)m['actcon'+suffix]=char===1?0:1;
-   g.actingsingle[i]=0;count++;
+   caller.__foundsimul=1;g.actingsingle[i]=0;caller.__simulcount++;
   }
-  for(const m of monsters)m.simultotal=count;
+  for(const m of monsters)m.simultotal=caller.__simulcount;
  }
 }
 /** scr_nextact. Returns true when the caller must enter scr_attackphase. The script keeps the enemy it works on in
@@ -129,6 +138,6 @@ export function nextActChapter2(rt:GmRuntime,caller:GmInstance){
   for(const m of rt.all(monsterParent))for(const suffix of ['','sus','ral','noe'])m['acting'+suffix]=0;
   g.currentactingchar=0;return true;
  }
- if(!singleComplete)actSimulChapter2(rt);
+ if(!singleComplete)actSimulChapter2(rt,caller);
  return false;
 }

@@ -527,7 +527,7 @@ function actSetup(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself;
  g.canact[me][0]=1;g.actactor[me][0]=1;g.actname[me][0]=sourceText('obj_spamton_neo_enemy_slash_Other_11_gml_7_0');g.actdesc[me][0]='';g.actcost[me][0]=0;
  for(const j of [1,2]){g.canact[me][j]=0;g.actactor[me][j]=0;g.actname[me][j]='';g.actdesc[me][j]='';g.actcost[me][j]=0;}
- spellMenuSetupChapter2(rt);
+ spellMenuSetupChapter2(rt,s);
 }
 /** Event 3: the battle's results flags (scr_monsterdefeat bookkeeping, NEO's own copy). */
 function defeatFlags(s:GmInstance,rt:GmRuntime){
@@ -598,6 +598,7 @@ export const spamtonNeo:HookedDef=defineEnemy({name:'obj_spamton_neo_enemy',inde
  acts,actsDone,afterStep:endings,
  monsterPosition:(s,rt)=>[s.x+rt.spriteWidth(s)/3,s.y+rt.spriteHeight(s)/2],
  hooks:{
+  drawActOverlay:(n,c,rt)=>{if(n.savemeactcon>0)rt.drawSprite(n.savemeactcon<=2?'spr_headralsei':n.savemeactcon<=4?'spr_headsusie':'spr_headnoelle',0,c.xx+30,c.yy+380,1,1,0,c.noeblend,1);},
   // A FIGHT hit electrifies him (obj_heroparent Alarm 1).
   onHeroHit:n=>{Object.assign(n,{partmode:40,shockthreshold:15,shocktimer:9999,hurttimer2:10});},
   // At zero HP his own Step starts the ending during his next talk.

@@ -46,6 +46,20 @@ export function rules(rt:GmRuntime):ChapterRules{
 }
 
 export interface BattleHooks{
+ /** The encounter suppresses the tired/Pacify cue even when its enemy is tired. */
+ suppressesPacifyHighlight?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** Extra vertical movement of the command panel (boxing transitions). */
+ controllerHudOffset?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime):number;
+ /** An encounter replaces a party portrait and name (boxing). True when it drew them. */
+ drawPartyHead?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime,character:number,x:number,y:number):boolean;
+ /** An encounter displays a different HP value in the HUD (boxing knockout). */
+ partyHudHp?(enemy:GmInstance,rt:GmRuntime,character:number,hp:number):number;
+ /** Additional portraits on ACT rows (NEO's rescue sequence). */
+ drawActOverlay?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime):void;
+ /** Source encounter reaction after a shared command has been chosen. */
+ onCommandChosen?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime,command:'defend'|'item'):void;
+ /** Encounter introductions/transitions can suspend controller Step. */
+ blocksControllerStep?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime):boolean;
  /** A FIGHT hit lands on the battle (damage above 0), before the target flinches. NEO: the electrified pose. */
  onHeroHit?(enemy:GmInstance,rt:GmRuntime):void;
  /** False when HP at zero after a FIGHT hit or a damaging spell does not defeat the enemy there: it ends the battle

@@ -165,6 +165,7 @@ function susieDraw(s:GmInstance,rt:GmRuntime){
 }
 /** Susie on Lancer's side: the standard enemy (deltarune/enemy.ts) with these steps of her own. */
 export const susieEnemy:GmObjectDef=defineEnemy({name:'obj_susieenemy',index:289,depth:95,sprite:'spr_susie_enemy'},{
+ hooks:{suppressesPacifyHighlight:()=>true},
  create:susieCreate,
  isAlive:(s,rt)=>rt.globals.monster[s.myself]===1&&s.defeated===0,
  // She talks in her event 1, which also decides whether she wakes up.
@@ -320,6 +321,7 @@ function lancerDraw(s:GmInstance,rt:GmRuntime){
 /** Lancer with Susie: the standard enemy (deltarune/enemy.ts) with these steps of his own. He attacks as soon as the
  * enemy turn starts (no delay). */
 export const lancerEnemy3:GmObjectDef=defineEnemy({name:'obj_lancerboss3',index:290,depth:90,sprite:'spr_lancerbike'},{
+ hooks:{suppressesPacifyHighlight:()=>true},
  create:s=>lancerCreate(s),
  beforeStep:(s,rt)=>{if(s.defeated===1&&rt.globals.mnfight===1){rt.globals.mnfight=99;s.con=1;}},
  isAlive:(s,rt)=>rt.globals.monster[s.myself]===1&&s.defeated===0,

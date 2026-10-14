@@ -8,7 +8,7 @@ import {sideBPhase} from './chapter2';
 import {forChapter} from './rules';
 
 /** A party member's equipment in the game's terms: weapon and two armors, each with its AT, DF and MAGIC. */
-export interface EquippedStats{weapon:number;itemat:[number,number,number];itemdf:[number,number,number];itemmag:[number,number,number]}
+export interface EquippedStats{weapon:number;armor?:readonly [number,number];itemat:[number,number,number];itemdf:[number,number,number];itemmag:[number,number,number]}
 export interface PartySetup{
  /** global.char: the three slots (1 Kris, 2 Susie, 3 Ralsei, 0 empty). */
  char:readonly number[];
@@ -30,7 +30,8 @@ export function partyGlobals(rt:GmRuntime,p:PartySetup){
  const g=rt.globals;
  g.char=[...p.char];g.hp=[...p.hp];g.maxhp=[...p.maxhp];g.at=[...p.at];g.df=[...p.df];g.mag=[...p.mag];
  g.itemat=[[0,0,0],[0,0,0],[0,0,0],[0,0,0]];g.itemdf=[[0,0,0],[0,0,0],[0,0,0],[0,0,0]];g.itemmag=[[0,0,0],[0,0,0],[0,0,0],[0,0,0]];g.charweapon=[0,0,0,0];
- for(const [id,e] of Object.entries(p.equipped)){const c=Number(id);g.itemat[c]=[...e.itemat];g.itemdf[c]=[...e.itemdf];g.itemmag[c]=[...e.itemmag];g.charweapon[c]=e.weapon;}
+ g.chararmor1=new Array(5).fill(0);g.chararmor2=new Array(5).fill(0);
+ for(const [id,e] of Object.entries(p.equipped)){const c=Number(id);g.itemat[c]=[...e.itemat];g.itemdf[c]=[...e.itemdf];g.itemmag[c]=[...e.itemmag];g.charweapon[c]=e.weapon;g.chararmor1[c]=e.armor?.[0]??0;g.chararmor2[c]=e.armor?.[1]??0;}
  g.item=new Array(13).fill(0);p.items.slice(0,12).forEach((id,i)=>{g.item[i]=id;});
  // scr_gamestart: Kris has the hidden ACT spell (7), Susie Rude Buster, Ralsei Pacify and Heal Prayer.
  g.spell=Array.from({length:4},()=>new Array(13).fill(0));g.spell[1][0]=7;g.spell[2][0]=4;g.spell[3][0]=3;g.spell[3][1]=2;
