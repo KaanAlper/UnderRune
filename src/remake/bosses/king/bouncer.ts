@@ -1,4 +1,4 @@
-// Chapter1 obj_growtangle_bouncer Create/Step/Draw/User2. Released King attacks use types5 and3.
+// Chapter 1 obj_growtangle_bouncer Create, End Step (Step_2), Draw and User 2. Released King attacks use types 5 and 3.
 import type {GmObjectDef} from '../../gm/runtime';
 import {le,lt,ge,gt} from '../../gm/math';
 import {C} from '../../gm/graphics';
@@ -6,7 +6,7 @@ import {regularBulletPermanent,growtangle,shake} from '../../deltarune/battle';
 export const growtangleBouncer:GmObjectDef={name:'obj_growtangle_bouncer',depth:4,index:253,parent:regularBulletPermanent,sprite:'spr_battlebg_2',events:{
  create:(s,rt)=>{s.imageSpeed=0;s.imageXscale=1.96;s.imageYscale=1.96;s.initdir=rt.random.choose(45,135,225,315);s.direction=s.initdir;s.speed=.1;s.active=1;const box=rt.first(growtangle);if(box){s.x=box.x;s.y=box.y;box.megakeep=1;}Object.assign(s,{timer:0,type:0,con:0,xx:rt.view.x,yy:rt.view.y,lx:140+rt.view.x,rx:480+rt.view.x,ux:rt.view.y,dx:320+rt.view.y,fadein:0,spikecount:0,inv:60,timepoints:0,grazepoints:3,target:0,damage:50,grazed:0,grazetimer:0,minitimer:0,bumpnoise:0,timerbonus:0,wall_destroy:0});},
  user2:(s,rt)=>{for(const b of rt.all(growtangle))b.growcon=3;rt.globals.turntimer=3;rt.destroy(s);},
- step:(s,rt)=>{
+ endStep:(s,rt)=>{
   if(s.type!==3&&s.type!==5)throw new Error(`Unsupported King debug bouncer type ${s.type}`);
   if(s.con===0){if(s.type===3)s.direction+=rt.random.random(20)-rt.random.random(20);const inset=s.type===3?50:30;s.ux+=inset;s.dx-=inset;s.lx+=inset;s.rx-=inset;s.con=.4;}
   if(s.con===.4){s.minitimer++;if(s.minitimer>=14)s.con=.5;}

@@ -4,7 +4,7 @@
 // obj_dbulletcontroller's Jevil types (controller.ts).
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {C} from '../../gm/graphics';
-import {afterimageGrow,darkener,darkMarker,growtangle,heroKris,marker,monsterParent,moveHeart,spareAnim} from '../../deltarune/battle';
+import {afterimageGrow,darkener,darkMarker,growtangle,heroKris,marker,monsterParent,moveHeart,spareAnim,sndFreeAll} from '../../deltarune/battle';
 import {attackPhase,button1_p,findController,monsterDefeat,randomTarget} from '../../deltarune/controller';
 import {monsterSetup} from '../../deltarune/encounter';
 import {healAllItem,healItem} from '../../deltarune/party';
@@ -258,7 +258,7 @@ function defeated(s:GmInstance,rt:GmRuntime){
   jb.x-=20;jb.y-=18;
  }
  const c=findController(rt);if(c)c.skipvictory=1;
- rt.stopAllSounds?.();
+ sndFreeAll(rt);
  if(b){b.dancelv=4;b.condition=0;}
  for(const bg of rt.all(jokerBackground))bg.on=0;
  monsterDefeat(s,rt);g.invc=s.reminvc;rt.destroy(s);

@@ -3,7 +3,7 @@
 // types 20, 21 and 24) and loses heart as his HP drops. The seventh talk ends the battle in the game's cutscene.
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {C} from '../../gm/graphics';
-import {darkMarker,darkener,growtangle,heroKris,heroSusie,monsterParent,moveHeart} from '../../deltarune/battle';
+import {darkMarker,darkener,growtangle,heroKris,heroSusie,monsterParent,moveHeart,sndFreeAll} from '../../deltarune/battle';
 import {attackPhase,randomTarget} from '../../deltarune/controller';
 import {monsterSetup} from '../../deltarune/encounter';
 import {defeatRun} from '../../deltarune/party';
@@ -76,7 +76,7 @@ function step(s:GmInstance,rt:GmRuntime){
   }
   if(s.actcon===1&&!rt.exists(writer)){s.actcon=0;attackPhase(rt);}
   if(s.actcon===2&&!rt.exists(writer)){
-   rt.stopAllSounds?.();rt.sound?.('snd_laz_c');
+   sndFreeAll(rt);rt.sound?.('snd_laz_c');
    const black=darkMarker(rt,rt.view.x-20,rt.view.y-20,'spr_pixel_white');black.imageBlend=C.black;black.depth=-10000;black.imageXscale=900;black.imageYscale=900;
    s.actcon=3;s.acttimer=0;
    // The game hands over to obj_lancerbattle2_event's scene; the remake ends the battle here.

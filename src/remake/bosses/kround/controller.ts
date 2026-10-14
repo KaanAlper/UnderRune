@@ -1,6 +1,6 @@
 import type {GmInstance,GmRuntime,GmObjectDef} from '../../gm/runtime';
 import {le,gt} from '../../gm/math';
-import {heart,moveHeart,growtangle,darkener,heroKris,heroRalsei,heroSusie,battleController,darkMarker,dmgWriter} from '../../deltarune/battle';
+import {heart,moveHeart,growtangle,darkener,heroKris,heroRalsei,heroSusie,battleController,darkMarker,dmgWriter,sndFreeAll} from '../../deltarune/battle';
 import {checkersEnemy,checkersLeap,startCheckersAttack,bowCrown,checkersAfterimage} from './attacks';
 import {throwTarget,throwRalsei} from './throw';
 export interface KRoundHost{
@@ -118,7 +118,7 @@ export function checkersStep(s:GmInstance,rt:GmRuntime){
   }
   if(s.actcon===12){g.fe=7;msg(578);msg(579,1);text(false);s.actcon=13;}
   if(s.actcon===13&&!writer())s.actcon=0;
-  if(s.actcon===50){s.visible=false;rt.stopAllSounds?.();const anim=rt.create(host().checkerTransform,s.x,s.y);s.animtest=anim.id;anim.sprite='spr_smallchecker_transform3';anim.imageXscale=2;anim.imageYscale=2;anim.type=1;s.actcon=51;}
+  if(s.actcon===50){s.visible=false;sndFreeAll(rt);const anim=rt.create(host().checkerTransform,s.x,s.y);s.animtest=anim.id;anim.sprite='spr_smallchecker_transform3';anim.imageXscale=2;anim.imageYscale=2;anim.type=1;s.actcon=51;}
  }
  if(g.myfight===7)s.hspeed=15;
  function lecture(){msg(s.actcon===30?445:330);face(1,'ralsei',0);msg(s.actcon===30?447:332,2);msg(s.actcon===30?448:333,3);msg(s.actcon===30?449:334,4);face(5,'susie',0);msg(s.actcon===30?451:336,6);msg(s.actcon===30?452:337,7);face(8,'ralsei',1);msg(s.actcon===30?454:339,9);s.ralsei_lecture=1;}

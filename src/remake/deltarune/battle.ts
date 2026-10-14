@@ -438,4 +438,6 @@ export function damageAll(s:GmInstance,rt:GmRuntime){
  for(let t=0;t<3;t++){g.inv=-1;s.damage=rem;s.target=t;if(gt(g.hp[g.char[t]],0)&&g.char[t]!==0)damage(s,rt);}
  g.inv=g.invc*40;s.target=keep;damageCheck(rt,before);
 }
-export function gameOver(rt:GmRuntime){rt.stopAllSounds?.();rt.sound?.('snd_hurt1');rt.pendingRoom='room_gameover';}
+/** snd_free_all: every sound stops, and the music stream object (obj_astream) goes with it. */
+export function sndFreeAll(rt:GmRuntime){rt.stopAllSounds?.();for(const a of rt.all(astream))rt.destroy(a);}
+export function gameOver(rt:GmRuntime){sndFreeAll(rt);rt.sound?.('snd_hurt1');rt.pendingRoom='room_gameover';}

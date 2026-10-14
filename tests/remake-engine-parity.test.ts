@@ -18,6 +18,8 @@ import * as jevilController from '../src/remake/bosses/jevil/controller';
 import * as jevilBullets from '../src/remake/bosses/jevil/bullets';
 import * as jevilSpadering from '../src/remake/bosses/jevil/spadering';
 import * as jevilEnemy from '../src/remake/bosses/jevil/enemy';
+import * as king from '../src/remake/bosses/king';
+import * as kingEnemy from '../src/remake/bosses/king/enemy';
 import type {GmObjectDef} from '../src/remake/gm/runtime';
 import {engineEnemies,installEngineHosts} from '../src/remake/host/engine';
 import {hasSourceText} from '../src/remake/host/text';
@@ -38,6 +40,7 @@ const RUNS:{id:string;run:string;start:number;enemies:GmObjectDef[]}[]=[
  {id:'ch1-12',run:'ch1-12-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundEffects,kroundThrow,kroundTransform,kroundController)},
  {id:'ch1-27',run:'ch1-27-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundEffects,kroundThrow,kroundTransform,kroundController)},
  {id:'ch1-20',run:'ch1-20-s11-god',start:40,enemies:defsOf(jevilController)},
+ {id:'ch1-40',run:'ch1-40-s11-god',start:40,enemies:defsOf(king,kingEnemy)},
  // Jevil's room plays an intro first: the battle controller appears at frame 119.
  {id:'ch1-25',run:'ch1-25-s11-god',start:135,enemies:defsOf(jevilBody,jevilController,jevilBullets,jevilSpadering,jevilEnemy)},
 ];

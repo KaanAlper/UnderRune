@@ -3,7 +3,7 @@
 // (event 10). The attacks themselves (event 5) are in boss.ts.
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {C} from '../../gm/graphics';
-import {darkener,growtangle,heroKris,heroParent,heroRalsei,heroSusie} from '../../deltarune/battle';
+import {darkener,growtangle,heroKris,heroParent,heroRalsei,heroSusie,sndFreeAll} from '../../deltarune/battle';
 import {attackPhase,findController,monsterDefeat,randomTarget,subst} from '../../deltarune/controller';
 import {monsterSetup} from '../../deltarune/encounter';
 import {oflashOf} from '../../deltarune/party';
@@ -128,7 +128,7 @@ function draw(s:GmInstance,rt:GmRuntime){
 }
 /** Event 10: the battle ends without a victory line; the throne room scene takes over in the game. */
 function defeated(s:GmInstance,rt:GmRuntime){
- rt.stopAllSounds?.();
+ sndFreeAll(rt);
  const c=findController(rt);if(c)c.skipvictory=1;
  rt.globals.invc=1;rt.destroy(s);
 }
