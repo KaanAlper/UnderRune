@@ -69,6 +69,11 @@ export interface BattleHooks{
  flashSprite?(obj:GmInstance):string;
  /** True while the tension bar is hidden (GIGA Queen's boxing). */
  hidesTensionBar?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** A bullet takes a hero's HP to zero: true when the enemy catches it instead (the hero keeps 1 HP and the enemy
+  * reacts in its own code; GIGA Queen's boxing round ends). */
+ catchesKnockout?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** Where the soul flies back to after the enemy's turn, when not to Kris (GIGA Queen's boxing ring). */
+ soulReturnsTo?(enemy:GmInstance,rt:GmRuntime):[number,number];
 }
 export interface HookedDef extends GmObjectDef{readonly hooks?:BattleHooks}
 /** The hooks an instance's object (or its nearest parent) declares. */

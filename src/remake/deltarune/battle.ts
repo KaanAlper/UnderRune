@@ -4,7 +4,7 @@
 import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {eq,ge,gt,le,lt,pointDistance,round} from '../gm/math';
 import {C} from '../gm/graphics';
-import {forChapter,rules} from './rules';
+import {forChapter,rules,withHook} from './rules';
 import {yellowSoul} from './yellow-soul';
 
 import {KEY,held} from './keys';
@@ -24,7 +24,8 @@ export const heroSusie:GmObjectDef={name:'obj_herosusie',index:214,depth:100,par
 export const heroRalsei:GmObjectDef={name:'obj_heroralsei',index:215,depth:100,parent:heroParent,sprite:'spr_krisplace'};
 /** The enemy turn's darkness: it fades the screen and the heroes in; with darken = 0 it closes the box and fades out. */
 export const darkener:GmObjectDef={name:'obj_darkener',index:205,depth:200,events:{
- create:(s,rt)=>{if(rt.count(darkener)>1){rt.destroy(s);return;}s.darken=1;s.darkamt=0;},
+ // From Chapter 2 it sets its own depth (205) when made.
+ create:(s,rt)=>{if(rules(rt).chapter>=2)s.depth=205;if(rt.count(darkener)>1){rt.destroy(s);return;}s.darken=1;s.darkamt=0;},
  draw:(s,rt)=>{
   if(s.darken===1){for(const h of rt.all(heroParent))h.darkify=1;if(s.darkamt<15)s.darkamt+=1;}
   if(s.darken===0){
@@ -53,16 +54,31 @@ export const returnHeart:GmObjectDef={name:'obj_returnheart',index:220,sprite:'s
  create:(s,rt)=>{
   s.burst=0;s.shift=1;s.imageAlpha=1;s.flytime=8;
   const kris=rt.first(heroKris)!;s.distx=kris.x+10;s.disty=kris.y+40;
+  for(const [e,to] of withHook(rt,'soulReturnsTo'))[s.distx,s.disty]=to(e,rt);
   s.dist=pointDistance(s.x,s.y,s.distx,s.disty);moveTowardsPoint(s,s.distx,s.disty,s.dist/s.flytime);
   s.alarm[0]=s.flytime;s.imageSpeed=0;
  },
  alarm0:(s,rt)=>{s.x=s.distx;s.y=s.disty;rt.create(heartBurst,s.x,s.y);rt.destroy(s);},
 }};
 /** The soul leaves Kris and flies to the arena in eight original game frames. */
+/** Per chapter: from Chapter 2 the soul flies to the box's own place (custom boxes are moved) and is not made twice. */
+const MOVE_HEART:Record<number,{toBox:boolean;once:boolean}>={1:{toBox:false,once:false},2:{toBox:true,once:true}};
+const named=(rt:GmRuntime,name:string)=>rt.instances.find(i=>i.live&&i.object.name===name);
 export const moveHeart:GmObjectDef={name:'obj_moveheart',index:219,sprite:'spr_dodgeheart',events:{
- create:(s,rt)=>{s.burst=0;s.shift=1;s.imageAlpha=0;s.flytime=8;s.distx=rt.view.x+310;s.disty=rt.view.y+160;s.dist=pointDistance(s.x,s.y,s.distx,s.disty);moveTowardsPoint(s,s.distx,s.disty,s.dist/s.flytime);s.alarm[0]=s.flytime;s.imageSpeed=0;rt.create(heartBurst,s.x,s.y);},
+ create:(s,rt)=>{
+  s.burst=0;s.shift=1;s.imageAlpha=0;s.flytime=8;
+  const marker=named(rt,'obj_heartmarker'),box=rt.first(growtangle);
+  if(marker){s.distx=marker.x;s.disty=marker.y;}
+  else if(!forChapter(rt,MOVE_HEART,'obj_moveheart').toBox||!box){s.distx=rt.view.x+310;s.disty=rt.view.y+160;}
+  else{s.distx=box.x-10;s.disty=box.y-10;}
+  s.dist=pointDistance(s.x,s.y,s.distx,s.disty);moveTowardsPoint(s,s.distx,s.disty,s.dist/s.flytime);s.alarm[0]=s.flytime;s.imageSpeed=0;rt.create(heartBurst,s.x,s.y);
+ },
  step:s=>{s.imageAlpha+=.334;},
- alarm0:(s,rt)=>{s.x=s.distx;s.y=s.disty;rt.create(heart,s.x,s.y).depth=1;rt.destroy(s);},
+ alarm0:(s,rt)=>{
+  s.x=s.distx;s.y=s.disty;
+  if(!forChapter(rt,MOVE_HEART,'obj_moveheart').once||!rt.exists(heart))rt.create(heart,s.x,s.y).depth=1;
+  rt.destroy(s);
+ },
 }};
 
 /** The music stream holder. Its Draw event moves it near the player with two random calls every frame. */
@@ -75,8 +91,10 @@ export const astream:GmObjectDef={name:'obj_astream',index:134,depth:-200,sprite
  draw:(s,rt)=>{const m=rt.first(mainchara);if(m){s.x=m.x+rt.random.random(20);s.y=m.y+rt.random.random(20);}},
 }};
 
+/** Fades out and goes. From Chapter 2 its fading speed is its own variable (fadeSpeed). */
 export const afterimage:GmObjectDef={name:'obj_afterimage',index:192,events:{
- step:(s,rt)=>{s.imageAlpha=s.imageAlpha-0.04;if(lt(s.imageAlpha,0))rt.destroy(s);},
+ create:(s,rt)=>{if(rules(rt).chapter>=2)s.fadeSpeed=0.04;},
+ step:(s,rt)=>{s.imageAlpha=s.imageAlpha-(rules(rt).chapter>=2?s.fadeSpeed:0.04);if(lt(s.imageAlpha,0))rt.destroy(s);},
 }};
 export const afterimageGrow:GmObjectDef={name:'obj_afterimage_grow',index:193,events:{
  create:s=>{s.xrate=.2;s.yrate=.2;s.fade=.1;},
@@ -84,21 +102,33 @@ export const afterimageGrow:GmObjectDef={name:'obj_afterimage_grow',index:193,ev
 }};
 
 /** Camera shake: offsets the view, alternating sides, shrinking by a pixel per swing. */
+/** Per chapter: Chapter 2 keeps one shake at a time and restores the view only once it has moved it. Its
+ * remembered view position has another name there (mycamerax). */
+const SHAKE:Record<number,{single:boolean;x:string;y:string}>={1:{single:false,x:'camerax',y:'cameray'},2:{single:true,x:'mycamerax',y:'mycameray'}};
 export const shake:GmObjectDef={name:'obj_shake',index:147,events:{
- create:s=>{s.camera=0;s.shakespeed=1;s.shakesign=1;s.shakex=4;s.shakey=4;s.siner=0;s.active=0;s.permashake=0;},
+ create:(s,rt)=>{
+  s.camera=0;s.shakespeed=1;s.shakesign=1;s.shakex=4;s.shakey=4;s.siner=0;s.active=0;s.permashake=0;
+  if(forChapter(rt,SHAKE,'obj_shake').single){s.beenset=0;if(rt.count(shake)>=2){s.active=-1;rt.destroy(s);}}
+ },
  step:(s,rt)=>{
   if(s.active!==0)return;
-  s.camerax=rt.view.x;s.cameray=rt.view.y;
-  if(rt.globals.flag[12]===0){rt.view.x=s.camerax+s.shakex;rt.view.y=s.cameray+s.shakey;}
+  const v=forChapter(rt,SHAKE,'obj_shake');
+  if(v.single)s.beenset=1;
+  s[v.x]=rt.view.x;s[v.y]=rt.view.y;
+  if(rt.globals.flag[12]===0){rt.view.x=s[v.x]+s.shakex;rt.view.y=s[v.y]+s.shakey;}
   s.shakesign=-s.shakesign;s.active=1;s.alarm[0]=s.shakespeed;
  },
  alarm0:(s,rt)=>{
-  if(rt.globals.flag[12]===0){rt.view.x=s.camerax+s.shakex*s.shakesign;rt.view.y=s.cameray+s.shakey*s.shakesign;}
+  const v=forChapter(rt,SHAKE,'obj_shake');
+  if(rt.globals.flag[12]===0){rt.view.x=s[v.x]+s.shakex*s.shakesign;rt.view.y=s[v.y]+s.shakey*s.shakesign;}
   if(s.permashake===0){if(s.shakex>0)s.shakex-=1;if(s.shakey>0)s.shakey-=1;}
   s.shakesign=-s.shakesign;s.alarm[0]=s.shakespeed;
   if(s.shakex===0&&s.shakey===0)rt.destroy(s);
  },
- destroy:(s,rt)=>{rt.view.x=s.camerax;rt.view.y=s.cameray;},
+ destroy:(s,rt)=>{
+  const v=forChapter(rt,SHAKE,'obj_shake');
+  if(!v.single||s.beenset){rt.view.x=s[v.x];rt.view.y=s[v.y];}
+ },
 }};
 
 const mergeColor=(a:number,b:number,t:number)=>{
@@ -108,42 +138,66 @@ const mergeColor=(a:number,b:number,t:number)=>{
 export {mergeColor};
 
 /** Damage numbers: they pop, bounce twice, then fade upward. The motion runs in the Draw event. */
+/** Per chapter: Chapter 2's damage writer also shows mercy (type 5: "+N%" in the gold digits, the MAX message at 100),
+ * a yellow type 6 and more messages, and is kept inside the view while fighting. */
+const DMG_WRITER:Record<number,{mercy:boolean}>={1:{mercy:false},2:{mercy:true}};
+/** The battle message sprite frame and blend for each message (blend undefined: the current colour). */
+const BATTLE_MESSAGES:Record<number,[number,number|undefined]>={1:[0,undefined],2:[1,C.red],3:[2,C.lime],4:[3,C.lime],
+ 5:[5,C.lime],6:[8,C.white],7:[9,C.white],8:[10,C.white],9:[11,C.white]};
+/** obj_dmgwriter: a number (or message) that bounces up from whoever was hit. */
 export const dmgWriter:GmObjectDef={name:'obj_dmgwriter',index:312,events:{
  create:(s,rt)=>{
+  const mercy=forChapter(rt,DMG_WRITER,'obj_dmgwriter').mercy;
   s.spec=0;s.delaytimer=0;s.delay=2;s.active=0;s.damage=round(rt.random.random(600));s.bounces=0;s.type=-1;
   s.stretch=0.2;s.stretchgo=1;s.lightf=mergeColor(C.purple,C.white,0.6);s.lightb=mergeColor(C.aqua,C.white,0.5);s.lightg=mergeColor(C.lime,C.white,0.5);
+  if(mercy){s.lighty=mergeColor(C.yellow,C.white,0.3);s.init=0;}
   s.kill=0;s.killtimer=0;s.killactive=0;
   for(const o of rt.all(dmgWriter))if(o.type!==3)o.killtimer=0;
   s.specialmessage=0;
+  if(mercy){s.stayincamera=1;s.xx=rt.view.x;s.message_sprite='spr_battlemsg';}
  },
  draw:(s,rt)=>{
+  const mercy=forChapter(rt,DMG_WRITER,'obj_dmgwriter').mercy;
   if(s.delaytimer<s.delay)for(const o of rt.all(dmgWriter))o.killtimer=0;
   s.delaytimer+=1;
   if(s.delaytimer===s.delay){s.vspeed=-5-rt.random.random(2);s.hspeed=10;s.vstart=s.vspeed;s.flip=90;}
-  if(s.delaytimer<s.delay)return;
-  s.message=s.specialmessage;if(eq(s.damage,0))s.message=1;if(s.type===4)s.message=2;
-  if(gt(s.hspeed,0))s.hspeed=s.hspeed-1;
-  if(lt(s.hspeed,0))s.hspeed=s.hspeed+1;
-  if(lt(Math.abs(s.hspeed),1))s.hspeed=0;
-  const d=rt.drawState;
-  d.color=s.type===0?s.lightb:s.type===1?s.lightf:s.type===2?s.lightg:s.type===3?C.lime:s.type===4?C.red:C.white;
-  d.font='damagefont';
-  if(s.message===0){
-   d.alpha=1-s.kill;d.halign=2;rt.drawText(s.x+30,s.y,String(s.damage),2-s.stretch,s.stretch+s.kill,s.spec===1?90:0);d.halign=0;d.alpha=1;
-  }else{
-   const [frame,blend]=s.message===1?[0,d.color]:s.message===2?[1,C.red]:s.message===3?[2,C.lime]:[3,C.lime];
-   rt.drawSprite('spr_battlemsg',frame,s.x+30,s.y,2-s.stretch,s.stretch+s.kill,0,blend,1-s.kill);
-  }
-  if(s.bounces<2)s.vspeed=s.vspeed+1;
-  if(gt(s.y,s.ystart)&&s.bounces<2&&s.killactive===0){s.y=s.ystart;s.vspeed=s.vstart/2;s.bounces+=1;}
-  if(s.bounces>=2&&s.killactive===0){s.vspeed=0;s.y=s.ystart;}
-  if(s.stretchgo===1)s.stretch+=0.4;
-  if(ge(s.stretch,1.2)){s.stretch=1;s.stretchgo=0;}
-  s.killtimer+=1;if(s.killtimer>35)s.killactive=1;
-  if(s.killactive===1){s.kill+=0.08;s.y=s.y-4;}
-  if(gt(s.kill,1))rt.destroy(s);
+  if(s.delaytimer>=s.delay)writeDamage(s,rt,mercy);
+  if(mercy&&rt.globals.fighting===1&&s.stayincamera===1&&s.x>=s.xx+600)s.x=s.xx+600;
  },
 }};
+function writeDamage(s:GmInstance,rt:GmRuntime,mercy:boolean){
+ const d=rt.drawState;
+ d.color=s.type===0?s.lightb:s.type===1?s.lightf:s.type===2?s.lightg:s.type===3?C.lime:s.type===4?C.red:C.white;
+ if(mercy&&s.type===5&&s.damage<0)d.color=C.ltgray;
+ if(mercy&&s.type===6)d.color=s.lighty;
+ s.message=s.specialmessage;if(eq(s.damage,0))s.message=1;if(s.type===4)s.message=2;
+ if(mercy&&s.type===5&&s.damage===100)s.message=5;
+ d.font=mercy&&s.type===5?'damagefontgold':'damagefont';
+ if(gt(s.hspeed,0))s.hspeed=s.hspeed-1;
+ if(lt(s.hspeed,0))s.hspeed=s.hspeed+1;
+ if(lt(Math.abs(s.hspeed),1))s.hspeed=0;
+ if(mercy&&s.init===0){
+  s.damagemessage=String(s.damage);
+  if(s.type===5)s.damagemessage='+'+String(s.damage)+'%';
+  if(s.type===5&&s.damage<0)s.damagemessage=String(s.damage)+'%';
+  s.init=1;
+ }
+ if(s.message===0){
+  d.alpha=1-s.kill;d.halign=2;rt.drawText(s.x+30,s.y,mercy?s.damagemessage:String(s.damage),2-s.stretch,s.stretch+s.kill,s.spec===1?90:0);d.halign=0;d.alpha=1;
+ }else{
+  // Chapter 1 has the first four messages only.
+  const m=BATTLE_MESSAGES[s.message];
+  if(m&&(mercy||s.message<=4))rt.drawSprite(mercy?s.message_sprite:'spr_battlemsg',m[0],s.x+30,s.y,2-s.stretch,s.stretch+s.kill,0,m[1]??d.color,1-s.kill);
+ }
+ if(s.bounces<2)s.vspeed=s.vspeed+1;
+ if(gt(s.y,s.ystart)&&s.bounces<2&&s.killactive===0){s.y=s.ystart;s.vspeed=s.vstart/2;s.bounces+=1;}
+ if(s.bounces>=2&&s.killactive===0){s.vspeed=0;s.y=s.ystart;}
+ if(s.stretchgo===1)s.stretch+=0.4;
+ if(ge(s.stretch,1.2)){s.stretch=1;s.stretchgo=0;}
+ s.killtimer+=1;if(s.killtimer>35)s.killactive=1;
+ if(s.killactive===1){s.kill+=0.08;s.y=s.y-4;}
+ if(gt(s.kill,1))rt.destroy(s);
+}
 
 export const battleSolid:GmObjectDef={name:'obj_battlesolid',index:197};
 /** The battle box: grows in while spinning (leaving afterimages), shrinks away when told to. */
@@ -181,22 +235,43 @@ export const growtangle:GmObjectDef={name:'obj_growtangle',index:311,depth:5,par
 
 export const bulletParent:GmObjectDef={name:'obj_bulletparent',index:199};
 /** A bullet that hurts the soul on contact (User Event 5 runs the damage, then the bullet is gone). */
+/** Per chapter: Chapter 2 bullets start from scr_bullet_init, may survive a hit (destroyonhit), reach further out of
+ * view before they go, and can turn with their direction, spin or fade near the bottom. */
+const BULLETS:Record<number,{v2:boolean;bounds:[number,number,number,number]}>={1:{v2:false,bounds:[40,680,40,520]},2:{v2:true,bounds:[80,760,80,580]}};
+/** scr_bullet_init (Chapter 2): a bullet's starting fields. */
+export function bulletInit(s:GmInstance){
+ Object.assign(s,{grazed:0,grazetimer:0,destroyonhit:1,target:0,inv:60,damage:10,element:0,grazepoints:1,timepoints:1,active:1,updateimageangle:0});
+}
 export const collideBullet:GmObjectDef={name:'obj_collidebullet',index:201,parent:bulletParent,events:{
- user5:(s,rt)=>{if(s.active!==1)return;if(s.target!==3)damage(s,rt);else damageAll(s,rt);rt.destroy(s);},
+ // Event 15 (user 5): it hits the soul.
+ user5:(s,rt)=>{
+  if(s.active!==1)return;
+  if(s.target!==3)damage(s,rt);else damageAll(s,rt);
+  if(!forChapter(rt,BULLETS,'obj_collidebullet').v2||s.destroyonhit===1)rt.destroy(s);
+ },
 }};
 /** The usual bullet: default damage values, removed once well outside the view. */
 export const regularBullet:GmObjectDef={name:'obj_regularbullet',index:203,depth:-10,parent:collideBullet,events:{
  create:(s,rt)=>{
-  s.grazed=0;s.grazepoints=5;s.timepoints=5;s.target=0;s.dont=1;s.inv=60;s.damage=124;s.active=1;s.spec=0;s.imageAlpha=1;
+  if(forChapter(rt,BULLETS,'obj_regularbullet').v2){bulletInit(s);s.spin=0;s.spinspeed=0;}
+  else{s.grazed=0;s.grazepoints=5;s.timepoints=5;s.target=0;s.dont=1;s.inv=60;s.damage=124;s.active=1;s.spec=0;}
+  s.imageAlpha=1;
   if(!rt.exists(heart))rt.destroy(s);
   s.wall_destroy=1;
+  if(forChapter(rt,BULLETS,'obj_regularbullet').v2)s.bottomfade=0;
  },
  step:(s,rt)=>{
-  if(s.wall_destroy!==1)return;
-  if(lt(s.x,rt.view.x-40))rt.destroy(s);
-  if(gt(s.x,rt.view.x+680))rt.destroy(s);
-  if(lt(s.y,rt.view.y-40))rt.destroy(s);
-  if(gt(s.y,rt.view.y+520))rt.destroy(s);
+  const b=forChapter(rt,BULLETS,'obj_regularbullet'),[l,r,u,d]=b.bounds;
+  if(s.wall_destroy===1){
+   if(lt(s.x,rt.view.x-l))rt.destroy(s);
+   if(gt(s.x,rt.view.x+r))rt.destroy(s);
+   if(lt(s.y,rt.view.y-u))rt.destroy(s);
+   if(gt(s.y,rt.view.y+d))rt.destroy(s);
+  }
+  if(!b.v2)return;
+  if(s.updateimageangle===1)s.imageAngle=s.direction;
+  if(s.spin===1)s.imageAngle+=s.spinspeed;
+  if(s.bottomfade!==0&&s.y>rt.view.y+s.bottomfade)s.imageAlpha*=0.8;
  },
 }};
 /** A bullet that hurts on contact but stays (scythes, carousel horses). */
@@ -441,19 +516,78 @@ const hpOf=(rt:GmRuntime)=>[0,1,2].map(i=>rt.globals.hp[rt.globals.char[i]]);
 function damageCheck(rt:GmRuntime,before:number[]){
  if(hpOf(rt).some((hp,i)=>lt(hp,before[i])))for(const m of rt.all(eventManager))m.tookDamage=1;
 }
-/** scr_damage: the bullet's damage minus 3 per defense point (two thirds when defending, at least 1). */
+/** What differs in scr_damage between chapters. */
+interface DamageRules{
+ /** Chapter 1 honours its debug god switch (global.chemg_god_mode). */
+ readonly godSwitch:boolean;
+ /** The damage a hit does through the defense of the hero in this party slot. */
+ defense(rt:GmRuntime,damage:number,slot:number):number;
+ /** Chapter 2: the bullet's element can be resisted by armor, and target 4 means "a party member, avoiding the weakest". */
+ readonly elements:boolean;
+ /** A whole-party hit on the hero in this slot: the damage carried on to the next one, and the HP this one loses. */
+ partyHit(rt:GmRuntime,damage:number,slot:number,element:number):[number,number];
+}
+const DAMAGE:Record<number,DamageRules>={
+ 1:{godSwitch:true,elements:false,
+  defense:(rt,d,slot)=>Math.ceil(d-rt.globals.battledf[slot]*3),
+  partyHit:(rt,d,slot)=>[d,rt.globals.charaction[slot]===10?Math.ceil(d/2):d]},
+ 2:{godSwitch:false,elements:true,
+  defense:damageCalculation,
+  partyHit:(rt,d,slot,element)=>{
+   const g=rt.globals,next=Math.ceil(damageCalculation(rt,d,slot)*elementReduction(rt,element,g.char[slot]));
+   return [next,g.charaction[slot]===10?Math.ceil(3*next/4):next];
+  }},
+};
+/** scr_damage_calculation (Chapter 2): each defense point takes 3 off a big hit (over a fifth of max HP), 2 off a
+ * medium one (over an eighth) and 1 otherwise; at least 1 is left. */
+function damageCalculation(rt:GmRuntime,damage:number,slot:number){
+ const g=rt.globals,def=g.battledf[slot],maxhp=g.maxhp[g.char[slot]],a=maxhp/5,b=maxhp/8;
+ for(let i=0;i<def;i++){if(damage>a)damage-=3;else if(damage>b)damage-=2;else damage-=1;}
+ return Math.max(damage,1);
+}
+/** scr_element_damage_reduction (Chapter 2): the share of an element's damage this hero's armors let through. */
+function elementReduction(rt:GmRuntime,element:number,char:number){
+ const g=rt.globals;let r=1;
+ if(element!==0)for(let i=0;i<2;i++){
+  const e=g.itemelement[char][i+1],amount=g.itemelementamount[char][i+1];
+  if(e===0)continue;
+  if(e===element)r-=amount;
+  if(e===9&&(element===2||element===8))r-=amount;
+  if(e===10)r-=amount;
+ }
+ return Math.max(r,0.25);
+}
+/** scr_party_hpaverage: the party's HP over its max HP, rounded down (so 1 only when everyone is at full HP). */
+function partyHpAverage(rt:GmRuntime){
+ const g=rt.globals;let hp=0,max=0;
+ for(let i=0;i<3;i++)if(g.char[i]>0){hp+=g.hp[g.char[i]];max+=g.maxhp[g.char[i]];}
+ return hp>0?Math.floor(hp/max):0;
+}
+/** scr_damage: a bullet hits its target (a party slot, 3 for everyone, from Chapter 2 also 4 for "someone"). */
 export function damage(s:GmInstance,rt:GmRuntime){
- const g=rt.globals;
- if(g.inv>=0||g.chemg_god_mode)return;
+ const g=rt.globals,r=forChapter(rt,DAMAGE,'scr_damage');
+ if(g.inv>=0||(r.godSwitch&&g.chemg_god_mode))return;
  const before=hpOf(rt);
+ const element=r.elements&&'element' in s&&typeof s.element==='number'?s.element:0;
  if(s.target<3&&le(g.hp[g.char[s.target]],0)){
   randomTarget(s,rt);s.target=s.mytarget;
   const c=rt.byId(g.charinstance[s.target]);if(c){c.imageBlend=C.white;c.darkify=0;}
  }
+ let remtarget=-1;
+ if(r.elements&&s.target===4){
+  remtarget=4;
+  randomTarget(s,rt);s.target=s.mytarget;
+  const share=()=>g.hp[g.char[s.target]]/g.maxhp[g.char[s.target]];
+  if(share()<partyHpAverage(rt)/2){randomTarget(s,rt);s.target=s.mytarget;}
+  if(share()<partyHpAverage(rt)/2){randomTarget(s,rt);s.target=s.mytarget;}
+  if(s.target===0&&share()<0.35){randomTarget(s,rt);s.target=s.mytarget;}
+  const c=rt.byId(g.charinstance[s.target]);if(c){c.imageBlend=C.white;c.darkify=0;}
+ }
  s.chartarget=3;let td=s.damage;
  if(s.target<3){
-  td=Math.ceil(td-g.battledf[s.target]*3);s.chartarget=g.char[s.target];
+  td=r.defense(rt,td,s.target);s.chartarget=g.char[s.target];
   if(g.charaction[s.target]===10)td=Math.ceil(2*td/3);
+  if(r.elements)td=Math.ceil(td*elementReduction(rt,element,g.char[s.target]));
   if(lt(td,1))td=1;
  }
  s.tdamage=td;
@@ -468,32 +602,35 @@ export function damage(s:GmInstance,rt:GmRuntime){
   if(le(g.hp[ct],0)){s.doomtype=4;g.hp[ct]-=round(td/4);s.hpdiff=round(td/4);}
   else{
    g.hp[ct]-=td;
+   if(le(g.hp[ct],0)&&withHook(rt,'catchesKnockout').some(([e,h])=>h(e,rt)))g.hp[ct]=1;
    if(le(g.hp[ct],0)){s.hpdiff=Math.abs(g.hp[ct]-g.maxhp[ct]/2);s.doomtype=4;g.hp[ct]=round(-g.maxhp[ct]/2);dead(rt,s.target);}
   }
   const ci=rt.byId(g.charinstance[s.target])!;
   const w=rt.create(dmgWriter,ci.x,ci.y+ci.myheight-24);s.dmgwriter=w.id;w.damage=s.hpdiff;w.type=s.doomtype;
  }
  if(s.target===3){
-  for(let i=0;i<3;i++){
-   const ct=g.char[i];
+  for(s.hpi=0;s.hpi<3;s.hpi+=1){
+   s.chartarget=g.char[s.hpi];const ct=s.chartarget;
    if(ge(g.hp[ct],0)){
-    g.hp[ct]-=g.charaction[i]===10?Math.ceil(td/2):td;
+    const [next,lost]=r.partyHit(rt,td,s.hpi,element);td=next;s.tdamage=td;
+    g.hp[ct]-=lost;
     if(le(g.hp[ct],0))g.hp[ct]=round(-g.maxhp[0]/2);
    }
   }
  }
  g.inv=g.invc*40;
  damageCheck(rt,before);
- let over=1;
- for(let i=0;i<3;i++)if(g.char[i]!==0&&gt(g.hp[g.char[i]],0))over=0;
- if(over===1)gameOver(rt);
+ s.gameover=1;
+ for(let i=0;i<3;i++)if(g.char[i]!==0&&gt(g.hp[g.char[i]],0))s.gameover=0;
+ if(s.gameover===1)gameOver(rt);
+ if(remtarget!==-1)s.target=remtarget;
 }
 /** scr_damage_all: the bullet hits every standing party member. */
 export function damageAll(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;if(g.inv>=0)return;
- const before=hpOf(rt);const rem=s.damage,keep=s.target;
- for(let t=0;t<3;t++){g.inv=-1;s.damage=rem;s.target=t;if(gt(g.hp[g.char[t]],0)&&g.char[t]!==0)damage(s,rt);}
- g.inv=g.invc*40;s.target=keep;damageCheck(rt,before);
+ const before=hpOf(rt);s.remdamage=s.damage;s._temptarget=s.target;
+ for(s.ti=0;s.ti<3;s.ti+=1){g.inv=-1;s.damage=s.remdamage;s.target=s.ti;if(gt(g.hp[g.char[s.ti]],0)&&g.char[s.ti]!==0)damage(s,rt);}
+ g.inv=g.invc*40;s.target=s._temptarget;damageCheck(rt,before);
 }
 /** snd_free_all: every sound stops, and the music stream object (obj_astream) goes with it. */
 export function sndFreeAll(rt:GmRuntime){rt.stopAllSounds?.();for(const a of rt.all(astream))rt.destroy(a);}

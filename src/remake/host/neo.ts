@@ -29,7 +29,7 @@ import type {BattleHooks,HookedDef} from '../deltarune/rules';
 const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed,
  yellowShot,shotAfterimage,shotHit,superchargeEnd,soulSpark];
 /** Shared engine objects whose Chapter 2 source versions are replaced by the engine's own (with its chapter rules). */
-const ENGINE_PORTED=new Set(['obj_heart','obj_grazebox']);
+const ENGINE_PORTED=new Set(['obj_heart','obj_grazebox','obj_moveheart','obj_collidebullet','obj_regularbullet']);
 
 export function installNeoHost(rt:GmRuntime){
  const objects:Record<string,GmObjectDef>={};

@@ -39,6 +39,13 @@ describe.skipIf(!ready)(`Spamton NEO against the original (local recording ${RUN
   const tracked=new Set(Object.keys(objects).filter(n=>!skipped.has(n)));
   const end=process.env.PARITY_END?Number(process.env.PARITY_END):Math.max(...trace.keys());
   if(process.env.PARITY_DEBUG)(globalThis as any).__parityRt=rt;
+  // PARITY_LIFE=obj_name: every creation and destruction of that object, with the calling code.
+  if(process.env.PARITY_LIFE){
+   const name=process.env.PARITY_LIFE,where=()=>new Error().stack!.split('\n').slice(3,6).map(l=>l.trim().replace(/\(.*[\/]/,'(')).join(' < ');
+   const create=rt.create.bind(rt),destroy=rt.destroy.bind(rt);
+   rt.create=(o,x,y,id)=>{const i=create(o,x,y,id);if(i.object.name===name)console.log('create@',rt.frame+START,i.id,i.live,where());return i;};
+   rt.destroy=i=>{if(i.object.name===name)console.log('destroy@',rt.frame+START,i.id,where());destroy(i);};
+  }
   // PARITY_RNG=from,to: who calls the random generator in those frames (stack excerpts).
   if(process.env.PARITY_RNG){
    const [from,to]=process.env.PARITY_RNG.split(',').map(Number),next=rt.random.next.bind(rt.random);
