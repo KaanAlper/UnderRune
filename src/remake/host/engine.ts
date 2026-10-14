@@ -15,6 +15,7 @@ import {checkersEnemy,checkerTransform,type KRoundHost,type KRoundThrowHost,type
 import {checkersHealAnim,flashCheckers} from '../bosses/kround/effects';
 import {lancerEnemy} from '../bosses/lancer/enemy';
 import {lancerEnemy2} from '../bosses/lancer/enemy2';
+import {susieEnemy,lancerEnemy3} from '../bosses/lancer/susie';
 import {jokerBackground,jokerEnemy} from '../bosses/jevil/enemy';
 import {kingEnemy} from '../bosses/king/enemy';
 import {sourceText} from './text';
@@ -31,6 +32,7 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean}>={
  'ch1-12':{n:12,room:'room_field_checkersboss',backdrop:true},
  'ch1-25':{n:25,room:'room_cc_joker',backdrop:false},
  'ch1-27':{n:27,room:'room_cc_6f',backdrop:false},
+ 'ch1-31':{n:31,room:'room_field_secret1',backdrop:true},
  'ch1-40':{n:40,room:'room_castle_throneroom',backdrop:true},
 };
 export const runsOnEngine=(id:string)=>id in ENGINE;
@@ -60,6 +62,7 @@ export function engineEnemies(id:string):Record<string,GmObjectDef>{
  if(id==='ch1-20')return {obj_lancerboss2:lancerEnemy2};
  if(id==='ch1-25')return {obj_joker:jokerEnemy};
  if(id==='ch1-40')return {obj_king_boss:kingEnemy};
+ if(id==='ch1-31')return {obj_susieenemy:susieEnemy,obj_lancerboss3:lancerEnemy3};
  return {obj_checkers_enemy:checkersEnemy};
 }
 /** Callbacks some enemies read from globals (K.Round's), installed on the battle's runtime. */
@@ -106,6 +109,8 @@ export class EngineBattle{
   }
   const char=[...encounter.party,0,0,0].slice(0,3);
   partyGlobals(rt,{char,...(neo?chapter2StartStats():{...BASE,maxhp:BASE.hp}),equipped,items:loadout.items,auto:encounter.auto});
+  // global.batmusic: the battle's music, which some enemies pause (Ralsei's lullaby).
+  if(!neo)rt.globals.batmusic=[encounter.music,encounter.music];
   if(neo){
    const g=rt.globals;g.fighting=0;g.sp=4;g.currentsong=[-1,-1];g.batmusic=['spamton_neo_mix_ex_wip','spamton_neo_mix_ex_wip'];
    g.chararmor1=[0,...[1,2,3].map(c=>loadout.characters[c].armor[0])];g.chararmor2=[0,...[1,2,3].map(c=>loadout.characters[c].armor[1])];

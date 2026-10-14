@@ -208,3 +208,17 @@ describe.skipIf(!hasSourceText())('the battle engine (King)',()=>{
   expect(b.turn).toBe(1);expect(b.outcome).toBeNull();
  });
 });
+
+describe.skipIf(!hasSourceText())('the battle engine (Susie & Lancer)',()=>{
+ it('two enemies: Kris and Ralsei DEFEND, both talk, the team-up bike attacks, and the menus come back',()=>{
+  const b=create('ch1-31');frame(b,2);const g=b.rt.globals;
+  expect(g.monster).toEqual([1,1,0]);expect(g.monstername.slice(0,2).every((n:string)=>n.trim())).toBe(true);
+  for(let slot=0;slot<2;slot++){for(let i=0;i<4;i++)press(b,KEY.right);press(b,KEY.z);}
+  until(b,()=>g.mnfight===1,400);
+  // Both speak: their balloons appear on the enemies' next Step.
+  until(b,()=>b.rt.all(writer).length===2,10);
+  until(b,()=>b.rt.instances.some(i=>i.live&&i.object.name==='obj_lancerbike_neo'),400);
+  until(b,()=>g.myfight===0&&g.mnfight===0,3000);
+  expect(b.turn).toBe(1);expect(b.outcome).toBeNull();
+ });
+});

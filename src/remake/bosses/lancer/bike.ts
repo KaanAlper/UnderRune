@@ -41,7 +41,8 @@ export const lancerBike:GmObjectDef={name:'obj_lancerbike',index:211,depth:-20,p
   if(s.racecon===3){s.rtimer++;if(eq(s.rtimer,5)||eq(s.rtimer,10)){rt.sound?.('snd_lancerhonk');rt.create(afterimageGrow,s.x-60,s.y-40).sprite='spr_lancernoise';}if(s.rtimer>=25){rt.sound?.('snd_drive');s.racecon=4;s.hspeed=-20;s.rtimer=0;s.ang=0;}}
   if(s.racecon===4){s.rtimer++;s.ang+=s.rtimer*2+4;if(s.ang>50)s.ang=50;s.imageAngle=-s.ang;if(le(s.x,vx-40)){s.ang=0;s.imageAngle=0;s.x=vx+740;s.y=s.ory;s.hspeed=-12;s.racecon=5;}}
   if(s.racecon===5&&le(s.x,s.orx+5)){s.hspeed=0;s.x=s.orx;s.racecon=0;s.endcon=1;}
-  if(s.endcon===1){rt.globals.turntimer=2;for(const b of rt.all(lancerBoss)){b.visible=true;if(b.turns>=4){b.con=1;for(const c of rt.all(battleController))c.noreturn=1;}}rt.destroy(s);}
+  // Lancer in the Susie & Lancer battle (obj_lancerboss3) reappears too; it is looked up by name to keep the modules apart.
+  if(s.endcon===1){rt.globals.turntimer=2;for(const b of rt.all(lancerBoss)){b.visible=true;if(b.turns>=4){b.con=1;for(const c of rt.all(battleController))c.noreturn=1;}}for(const b of rt.instances)if(b.live&&b.object.name==='obj_lancerboss3')b.visible=true;rt.destroy(s);}
   if(rt.first(lancerBoss)?.compliment>=3)for(const d of rt.all(dmgWriter))d.spec=1;
  },
 }};

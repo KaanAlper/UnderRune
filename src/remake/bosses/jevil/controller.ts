@@ -2,7 +2,8 @@
 // Where one GML call takes several random arguments, they are evaluated right to left, as in the reference VM.
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {ge,le,lengthdirX,lengthdirY} from '../../gm/math';
-import {battleSolid,bulletGenParent,darkMarker,growtangle,heart,inheritBullet,marker,regularBullet} from '../../deltarune/battle';
+import {battleSolid,bulletGenParent,bulletParent,darkMarker,growtangle,heart,inheritBullet,marker,regularBullet} from '../../deltarune/battle';
+import {axeBullet} from '../lancer/axe';
 import {centerScythe,clubsBulletDark,dbulletVert,jokerTeleport,laserScythe,carouselBullet,suitBomb} from './bullets';
 import {spadeRing} from './spadering';
 
@@ -13,7 +14,7 @@ export const bulletController:GmObjectDef={name:'obj_dbulletcontroller',index:24
   const box=rt.first(growtangle);if(box){s.miny=box.y-rt.spriteHeight(box)/2;s.maxy=box.y+rt.spriteHeight(box)/2;}
   s.ratio=1;const m=rt.globals.monster,pop=m[0]+m[1]+m[2];if(pop===2)s.ratio=1.6;if(pop===3)s.ratio=2.3;
  },
- step:(s,rt)=>{s.btimer+=1;fallingSpades(s,rt);sideSpades(s,rt);spadeRain(s,rt);if(s.joker===1)jevilAttack(s,rt);},
+ step:(s,rt)=>{s.btimer+=1;fallingSpades(s,rt);sideSpades(s,rt);spadeRain(s,rt);axeThrow(s,rt);if(s.joker===1)jevilAttack(s,rt);},
 }};
 
 const solid=(rt:GmRuntime)=>rt.first(battleSolid)!;
@@ -53,6 +54,34 @@ function spadeRain(s:GmInstance,rt:GmRuntime){
   }
  }
  if(s.btimer>=s.bmax)dropSpade(s,rt,-20);
+}
+/** Type 85: Susie throws axes across the box while a stand-in Lancer cheers when the soul is hit. */
+function axeThrow(s:GmInstance,rt:GmRuntime){
+ if(s.type!==85)return;
+ const g=rt.globals,box=rt.first(battleSolid);
+ const show=(v:boolean)=>{for(const o of [...named(rt,'obj_susieenemy'),...named(rt,'obj_lancerboss3')])o.visible=v;};
+ if(s.made===0){
+  s.cheer=0;s.cheertimer=0;s.remhp=[g.hp[g.char[0]],g.hp[g.char[1]]];show(false);
+  const lan=rt.create(bulletParent,rt.view.x+580,(box?.y??0)+160);s.fakelan=lan.id;
+  lan.depth+=1;lan.imageXscale=2;lan.imageYscale=2;lan.visible=true;lan.sprite='spr_lancerbike';lan.active=0;lan.imageSpeed=0.2;
+  const sus=rt.create(bulletParent,rt.view.x+530,(box?.y??0)-40);s.fakesus=sus.id;
+  sus.imageXscale=2;sus.imageYscale=2;sus.visible=true;sus.sprite='spr_susie_enemy_attack';sus.active=0;sus.imageSpeed=0;
+  s.made=1;
+ }
+ const lan=rt.byId(s.fakelan),sus=rt.byId(s.fakesus);
+ if(s.made===1){
+  if(lan){
+   if(s.cheer===0&&g.inv>10){s.cheer=1;rt.sound?.('snd_lancerwhistle');lan.sprite='spr_lancerbike_l';}
+   if(s.cheer===1){s.cheertimer+=1;if(s.cheertimer>=30){s.cheertimer=0;lan.sprite='spr_lancerbike';s.cheer=0;}}
+  }
+  if(sus&&sus.imageIndex<5)sus.imageIndex+=0.334;
+ }
+ if(s.made===1&&g.turntimer<=10){if(sus)sus.visible=false;if(lan)lan.visible=false;show(true);}
+ if(s.btimer>=27&&box&&g.turntimer>10){
+  if(sus){sus.imageIndex=0;rt.sound?.('snd_laz_c');}
+  const axe=rt.create(axeBullet,rt.view.x+540,box.y);(s.axe??=[])[0]=axe.id;inheritBullet(s,axe);
+  s.btimer=0;
+ }
 }
 /** Types 21/23/25: spades slide in from alternating sides of the screen, speeding up. */
 function sideSpades(s:GmInstance,rt:GmRuntime){

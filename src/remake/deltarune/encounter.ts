@@ -60,6 +60,11 @@ export function encounterSetup(rt:GmRuntime,n:number,enemies:Record<string,GmObj
   case 8:one('obj_clubsenemy',16,400,120,139);break;
   case 12:one('obj_checkers_enemy',10,480,120,172);break;
   case 20:one('obj_lancerboss2',12,480,160,292);g.heromakex[0]=xx+120;break;
+  case 31:{
+   one('obj_susieenemy',19,520,80,463);
+   const lan=enemies.obj_lancerboss3;if(!lan)throw Error('Encounter 31 needs obj_lancerboss3');
+   g.monsterinstancetype[1]=lan;g.monstertype[1]=18;g.monstermakex[1]=xx+540;g.monstermakey[1]=yy+240;g.monstertype[2]=0;break;
+  }
   case 25:
    g.heromakex=[xx+80,xx+90,xx+100];g.heromakey=[yy+100,yy+150,yy+210];
    one('obj_joker',20,500,160,384);break;
@@ -105,6 +110,12 @@ export function monsterSetup(s:GmInstance,rt:GmRuntime){
   case 21:
    stats(594,1300,8,3,100,0,100);act(0,g.flag[246]===1?607:606);act(1,609);act(2,611,4);break;
   case 12:stats(346,2400,4,-40,0,0,100);act(0,358);break;
+  case 18:stats(512,800,6,1,0,0,100);act(0,524);act(1,527);act(2,530,3);break;
+  case 19:{
+   // Susie's defense follows the armor she wears in the party.
+   const armordf=g.itemdf[2][0]+g.itemdf[2][1]+g.itemdf[2][2];
+   stats(538,120,7,-5+armordf,0,0,100);act(0,550);act(1,553);act(2,556,3);break;
+  }
   case 25:{
    stats(665,2800,8,0,0,0,999);act(0,677);
    const special=(slot:number,actor:number,flag:number,name:number,desc:number,cost:number,first:number)=>{

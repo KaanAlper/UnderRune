@@ -16,6 +16,8 @@ const playable:readonly SourceEncounter[]=[
  {id:'ch1-27',chapter:1,name:'K.Round',party:[1,2,3],hp:1300,attack:8,defense:3,music:'checkers',practice:false,heroes:[[80,65],[80,130],[80,210]]},
  // Kris and Ralsei against Lancer, with Susie on his side (obj_lancerbattle2_event).
  {id:'ch1-20',chapter:1,name:'Lancer',party:[1,3],hp:2400,attack:4,defense:-40,music:'lancerfight',practice:false},
+ // Susie fights on Lancer's side; Kris and Ralsei face them both.
+ {id:'ch1-31',chapter:1,name:'Susie & Lancer',party:[1,3],hp:800,attack:6,defense:1,music:'lancer_susie',practice:false},
  {id:'ch1-40',chapter:1,name:'King',party:[1,2,3],hp:2800,attack:8,defense:0,music:'kingboss',practice:false},
 ];
 export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);

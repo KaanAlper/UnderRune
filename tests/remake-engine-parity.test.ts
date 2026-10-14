@@ -13,6 +13,8 @@ import * as kroundThrow from '../src/remake/bosses/kround/throw';
 import * as kroundTransform from '../src/remake/bosses/kround/transform';
 import * as kroundController from '../src/remake/bosses/kround/controller';
 import * as lancerBike from '../src/remake/bosses/lancer/bike';
+import * as lancerSusie from '../src/remake/bosses/lancer/susie';
+import * as lancerAxe from '../src/remake/bosses/lancer/axe';
 import * as jevilBody from '../src/remake/bosses/jevil/body';
 import * as jevilController from '../src/remake/bosses/jevil/controller';
 import * as jevilBullets from '../src/remake/bosses/jevil/bullets';
@@ -41,6 +43,7 @@ const RUNS:{id:string;run:string;start:number;enemies:GmObjectDef[]}[]=[
  {id:'ch1-27',run:'ch1-27-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundEffects,kroundThrow,kroundTransform,kroundController)},
  {id:'ch1-20',run:'ch1-20-s11-god',start:40,enemies:defsOf(jevilController)},
  {id:'ch1-40',run:'ch1-40-s11-god',start:40,enemies:defsOf(king,kingEnemy)},
+ {id:'ch1-31',run:'ch1-31-s11-god',start:40,enemies:defsOf(lancerBike,lancerSusie,lancerAxe,jevilController)},
  // Jevil's room plays an intro first: the battle controller appears at frame 119.
  {id:'ch1-25',run:'ch1-25-s11-god',start:135,enemies:defsOf(jevilBody,jevilController,jevilBullets,jevilSpadering,jevilEnemy)},
 ];
@@ -62,6 +65,8 @@ for(const {id,run,start,enemies} of RUNS){
    // The snapshot keeps sprite variables (idlesprite, hurtsprite...) as the game's sprite numbers; the remake uses names.
    for(const i of rt.instances)for(const k of Object.keys(i))if(/sprite$/.test(k)&&k!=='sprite'&&typeof i[k]==='number'&&SPRITE_NAMES[i[k]])i[k]=SPRITE_NAMES[i[k]];
    installEngineHosts(rt,id);
+   // The snapshot keeps global.monsterinstancetype as object numbers; the engine creates enemies from their definitions.
+   rt.globals.monsterinstancetype=(rt.globals.monsterinstancetype??[]).map((v:unknown)=>typeof v==='number'?defs.find(d=>d.index===v)??v:v);
    const end=process.env.PARITY_END?Number(process.env.PARITY_END):Math.max(...trace.keys());
    if(process.env.PARITY_DEBUG)(globalThis as any).__parityRt=rt;
    const result=runParity(rt,trace,start,end,new Set([...battleObjects,...enemies.map(e=>e.name),...defs.map(e=>e.name)]),['hp','tension','turntimer','myfight','mnfight','inv'],skippedIds,replay);

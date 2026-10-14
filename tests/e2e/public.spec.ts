@@ -5,10 +5,10 @@ async function key(page:Page,k:string,wait=180){await page.keyboard.press(k);awa
 /** DEFEND: from FIGHT, left wraps to the last button. */
 async function defend(page:Page){await key(page,'ArrowLeft');await key(page,'z');}
 async function boss(page:Page,id:string,name:string){await page.locator('#boss-select').selectOption(id);const card=page.getByRole('button',{name:`Battle ${name} ${id}`,exact:true});await expect(card).toHaveAttribute('aria-current','true');await card.click();}
-async function menu(page:Page){
+async function menu(page:Page,chapter=1){
  await page.goto(url);await page.getByRole('button',{name:'DELTARUNE remote'}).click();
  await page.getByRole('button',{name:'Connect DELTARUNE'}).click();await page.getByRole('button',{name:'Connect device'}).click();
- await page.getByRole('button',{name:'Chapter 1',exact:true}).click();
+ await page.getByRole('button',{name:`Chapter ${chapter}`,exact:true}).click();
 }
 test('public PLAY opens commands with the party, equipment and continuous battle turns',async({page})=>{
  const failures:string[]=[],native:string[]=[];page.on('pageerror',e=>failures.push(e.message));page.on('request',r=>{if(/\/native\/|data\.win|\.wasm/.test(r.url()))native.push(r.url());});
@@ -33,8 +33,9 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  expect(failures).toEqual([]);expect(native).toEqual([]);
 });
 test('unavailable encounters still open equipment previews without launching a fake fight',async({page})=>{
- await menu(page);await boss(page,"ch1-31","Susie & Lancer");
- const prep=page.getByRole('dialog',{name:'Susie & Lancer',exact:true});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
+ // Every Chapter 1 boss is playable; Chapter 2's Queen is still in development.
+ await menu(page,2);await boss(page,"ch2-59","Queen");
+ const prep=page.getByRole('dialog',{name:'Queen',exact:true});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
  await prep.getByRole('button',{name:'Close preparation'}).click();await expect(page.locator('#practice')).toBeDisabled();
 });
 test('mobile preparation fits the viewport and retains touch controls',async({page})=>{
@@ -103,7 +104,7 @@ test('Clover launches with Kris and Ralsei, runs a Check turn and her own attack
  expect(failures).toEqual([]);
 });
 
-test('King and the second Lancer battle launch and play a turn',async({page})=>{
+test('King, the second Lancer battle and Susie & Lancer launch and play',async({page})=>{
  const failures:string[]=[];page.on('pageerror',e=>failures.push(e.message));
  // King: everyone DEFENDs; his words wait for Z, then his attack runs and the menus return.
  await menu(page);await boss(page,'ch1-40','King');await page.getByRole('button',{name:'START BATTLE'}).click();
@@ -115,5 +116,10 @@ test('King and the second Lancer battle launch and play a turn',async({page})=>{
  await page.getByRole('button',{name:'Device menu',exact:true}).click();await boss(page,'ch1-20','Lancer');await page.getByRole('button',{name:'START BATTLE'}).click();
  for(let i=0;i<60&&!(await page.locator('#status').textContent())?.includes('enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
  await expect(page.locator('#status')).toContainText('Lancer / enemy attack');
+ // Susie & Lancer: Kris and Ralsei DEFEND, both enemies speak, the team-up attack plays.
+ await page.getByRole('button',{name:'Device menu',exact:true}).click();await boss(page,'ch1-31','Susie & Lancer');await page.getByRole('button',{name:'START BATTLE'}).click();
+ await expect(page.locator('#status')).toContainText('Susie & Lancer / command');await page.waitForTimeout(600);await defend(page);await defend(page);
+ for(let i=0;i<40&&!(await page.locator('#status').textContent())?.includes('enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
+ await expect(page.locator('#status')).toContainText('Susie & Lancer / enemy attack');
  expect(failures).toEqual([]);
 });
