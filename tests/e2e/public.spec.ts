@@ -85,6 +85,9 @@ test('FIGHT shows source timing lanes, plays original samples and continues afte
  await page.addInitScript(()=>{(window as any).__sampleStarts=0;const create=AudioContext.prototype.createBufferSource;AudioContext.prototype.createBufferSource=function(){const voice=create.call(this),start=voice.start.bind(voice);voice.start=(...args:Parameters<AudioBufferSourceNode['start']>)=>{(window as any).__sampleStarts++;start(...args);};return voice;};});
  const failures:string[]=[],sounds:string[]=[];page.on('pageerror',e=>failures.push(e.message));page.on('request',r=>{if(r.url().includes('/remake/ch1/sounds/'))sounds.push(r.url());});
  await menu(page);await boss(page,"ch1-25","JEVIL");await page.getByRole('button',{name:'START BATTLE',exact:true}).click();
+ // The battle's files may still be loading (over the network, or compiled on first use by the dev server); the
+ // commands open once they are in.
+ await expect(page.locator('#status')).toContainText('JEVIL / command',{timeout:20000});
  await page.waitForTimeout(600);for(let i=0;i<3;i++){await key(page,'z');await key(page,'z');}
  await expect(page.locator('#status')).toContainText('JEVIL / attack');await page.waitForTimeout(650);await page.locator('#screen').screenshot({path:'test-results/public-timing.png'});
  await page.keyboard.press('z');await expect.poll(()=>page.evaluate(()=>(window as any).__sampleStarts)).toBeGreaterThan(0);
