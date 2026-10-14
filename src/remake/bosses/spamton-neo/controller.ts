@@ -11,6 +11,7 @@ import {attackSources as finale} from './attack-finale';
 import {attackSources as support} from './attack-support';
 import {controllerSource} from './attack-controller-source';
 import {attackScriptSources} from './attack-script-source';
+import {flyingHeadPathEnd} from './flying-heads';
 
 export interface NeoAttackSourceRecord {metadata:NeoSourceMetadata;sources:Readonly<Record<string,string>>;}
 export type NeoAttackHost=NeoSourceHost;
@@ -50,6 +51,7 @@ export function endNeoAttackRoom(objects:Readonly<Record<string,GmObjectDef>>,ex
 /** Source path-end hook for the guymaker's developer difficulty7 path; the NORMAL rotation
  * does not start this path, so it never synthesizes a path event during normal attacks. */
 export function endNeoAttackPath(s:GmInstance,rt:GmRuntime,host:NeoAttackHost){
+ if(s.object.name==='obj_sneo_lilguy'&&!(s.object as {archived?:boolean}).archived){flyingHeadPathEnd(s,rt);return;}
  const source=neoAttackSources.find(r=>r.metadata.name===s.object.name)?.sources.Other_8;
  if(!source)throw Error(`${s.object.name} has no source path-end event`);
  executeNeoSource(source,s,rt,host);

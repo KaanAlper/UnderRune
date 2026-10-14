@@ -8,7 +8,8 @@ import {lengthdirX,lengthdirY,pointDirection} from '../../gm/math';
 import {afterimage,afterimageGrow,darkMarker,heart,marker} from '../../deltarune/battle';
 import {findController} from '../../deltarune/controller';
 import {drawBodyPart,mergeColor,scriptDelayedOn,setVar,snd} from '../../deltarune/chapter2-battle';
-import {bigLaser,dbulletController,heartAttack,pipisDestroyFx,sneoBulletController,sneoPhonecall,spamtonShot,wireheart} from './pending';
+import {bigLaser,dbulletController,heartAttack,pipisDestroyFx,sneoPhonecall,spamtonShot,wireheart} from './pending';
+import {sneoBulletController} from './bullet-controller';
 import {vineCut as sneoVineCut,vineTransition as sneoVineTransition} from './vines';
 
 const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;

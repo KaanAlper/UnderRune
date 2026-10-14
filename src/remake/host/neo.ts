@@ -25,6 +25,8 @@ import {moveToPoint,scriptDelayed} from '../deltarune/chapter2-battle';
 import {shotAfterimage,shotHit,soulSpark,superchargeEnd,yellowShot} from '../deltarune/yellow-soul';
 import {vineCut,vineTransition,vineWeak} from '../bosses/spamton-neo/vines';
 import type {BattleHooks,HookedDef} from '../deltarune/rules';
+import {createSneoBulletController,sneoBulletController} from '../bosses/spamton-neo/bullet-controller';
+import {createFlyingHeads} from '../bosses/spamton-neo/flying-heads';
 
 /** Chapter 2 objects that run as hand-written code (the rest still run from the local source archive). */
 const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed,
@@ -124,7 +126,14 @@ export function installNeoHost(rt:GmRuntime){
   const parent=def.parent?objects[def.parent.name]??def.parent:undefined;
   return parent===def.parent?def:{...def,parent};
  };
- for(const def of NEO_PORTED){const c=canonical(def);objects[def.name]=c;if(c!==def)portedAliases.push([def,c]);}
+ for(const def of [...NEO_PORTED,createSneoBulletController(object),...createFlyingHeads(object)]){
+  const previous=objects[def.name],c=canonical(def);objects[def.name]=c;
+  // Archived attack closures may retain their own registry's old definition. Their object selectors must
+  // address the same live instances after migration, including Create-time target inheritance.
+  if(previous&&previous!==c)portedAliases.push([previous,c]);
+  if(c!==def)portedAliases.push([def,c]);
+ }
+ portedAliases.push([sneoBulletController,object(sneoBulletController.name)]);
  for(const stub of Object.values(pending))portedAliases.push([stub,object(stub.name)]);
  for(const def of Object.values(objects))def.depth=metadata.get(def.name)?.depth??def.depth;
  rt.installObjectAliases([...original.filter(old=>objects[old.name]&&!portedAliases.some(([o])=>o===old)).map(old=>[old,objects[old.name]] as const),...portedAliases]);

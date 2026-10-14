@@ -3,11 +3,13 @@
 This file explains how to continue the work: the rules that must hold, how the work is verified, what is done and
 what is left, in order. Read it fully before changing code.
 
-Current checkpoint after `d8ed54a`: the Chapter 2 writer and battle controller have chapter parts and participate
-in full-state comparison. The full 361-test suite passes, including all 8 Chapter 1 parity runs and both NEO runs;
-two additional unported-dependency tests also pass in the focused controller suite. Typecheck and the Pages build
-pass; both production-browser battle checks (NEO and JEVIL) pass. Acceptance covers the current recordings and English normal-route NEO paths; optional dependencies below
-remain. Source is pushed separately from Pages publication.
+Current checkpoint after `7a140af`: the Chapter 2 writer and battle controller have chapter parts and participate
+in full-state comparison. NEO's normal-route bullet controller and three flying-head objects now have explicit
+TypeScript events. The full 377-test suite (43 files) passes, including all 8 Chapter 1 parity runs and both freshly
+recorded NEO runs: 9920 compared frames after their starting snapshots. Typecheck, the Pages build and both
+production-browser battle checks (NEO and JEVIL) pass. Acceptance covers the current recordings and English
+normal-route NEO paths; remaining dependencies and recordings below are still required. Source is pushed
+separately from Pages publication.
 
 ## 1. Project in one paragraph
 
@@ -104,7 +106,9 @@ variables, events, sounds and the hooks it reaches. Port line by line from the G
 ### Reference recordings ("oracle")
 
 - The recordings come from a patched Butterscotch build: the original game running in a headless browser. Sources
-  are in `.tools/butterscotch-browser`.
+  are in `.tools/butterscotch-browser-source`; active builds are `.tools/butterscotch-browser-current-build`
+  and `.tools/butterscotch-portable-build`. The reviewed patch and hash are in
+  `runtime/patches/browser-compat.patch` and `tools-lock.json`.
 - The recordings are local in `.tools/oracle/`.
 - Record with:
   ```
@@ -139,7 +143,11 @@ variables, events, sounds and the hooks it reaches. Port line by line from the G
   - `PARITY_LIFE=obj_x`: log every creation and destruction with the calling code.
   - `PARITY_RNG=from,to`: log who calls the RNG.
 - Known representation rules, already handled:
-  - The reference runtime writes `creator` on every `instance_create`. This is a runtime artifact and is skipped.
+  - Older captures contain an automatic `creator` write from the reference VM. The current patch removes that
+    write from all four creation builtins, preserving the game's Create-event fields. Both NEO recordings were
+    regenerated with this fix; their previous 502 files are backed up locally in
+    `.tools/oracle-legacy-creator-20261014`. Existing comparison handling for an absent `creator` is retained for
+    legacy captures; no new exemption or reference normalization was added.
   - Script references are numbers in the FUNC chunk's order. Get them with
     `node tools/extract-script-index.mjs 1|2`, which writes `extracted/chapterN_windows/functions.json`.
   - Sound handles are 100000 plus 2 per sound played. They are listed in `SOUND_HANDLES` and not compared.
@@ -267,15 +275,20 @@ or new recording exercises them; do not silently ignore their control codes.
 
 ### 3. NEO's archived objects
 
-These still run from decompiled source through the interpreter (`src/source-runtime/gml.ts`):
+The remaining attack objects run from decompiled source through the interpreter (`src/source-runtime/gml.ts`):
 - the transitional host is `src/remake/host/neo.ts` (`NEO_PORTED`, `ENGINE_PORTED`, pending stubs in
   `bosses/spamton-neo/pending.ts`);
 - archived objects are marked `archived` by `createNeoSourceObject`.
 
 Port them in the order they first appear in the recordings:
-1. `obj_sneo_bulletcontroller`
-2. the flying heads: `obj_sneo_guymaker`, `obj_sneo_lilguy`, `obj_sneo_lilguy_bullet`
-3. `obj_afterimage_cut`, `obj_lerpvar`, `obj_basicbullet_sneo`, `obj_doom`
+1. **Done:** `obj_sneo_bulletcontroller` (`bullet-controller.ts`), normal types 0/1/1.5/6/8.5/9/12.
+2. **Done:** the flying heads: `obj_sneo_guymaker`, `obj_sneo_lilguy`, `obj_sneo_lilguy_bullet`
+   (`flying-heads.ts`). Create, Step, alarms, Draw, animation/path end and shot handling are ported. The head
+   projectile still inherits archived `obj_basicbullet_sneo` events. Cut effects and doom also remain archived.
+   The canonical host aliases both old registry definitions and factory references so archived children find
+   the migrated controller and preserve party targeting. Fourteen focused tests cover rare paths and aliasing;
+   a fresh source review found no material issues. Developer difficulty 7 retains its named unported boundary.
+3. **Next:** `obj_afterimage_cut`, `obj_lerpvar`, `obj_basicbullet_sneo`, `obj_doom`
 4. the walls: `obj_sneo_wall_controller_new`, `obj_sneo_wallbullet_new`, `obj_sneo_rotatingwall_bomb`,
    `obj_mettaton_bomb_hitbox`
 5. `obj_sneo_wireheart` and its pieces
@@ -341,6 +354,7 @@ New scripts go in `tools/oracle-scripts.mjs`.
 | Chapter rules, hooks | `src/remake/deltarune/rules.ts` |
 | Chapter 2 helpers and objects | `deltarune/chapter2*.ts`, `yellow-soul.ts` |
 | NEO | `src/remake/bosses/spamton-neo/neo.ts` (enemy), `body.ts` (Draw), `chooser.ts`, `vines.ts` |
+| NEO attack controller and flying heads | `src/remake/bosses/spamton-neo/bullet-controller.ts`, `flying-heads.ts` |
 | Hosts | `src/remake/host/engine.ts` (Chapter 1), `src/remake/host/neo.ts` (Chapter 2) |
 | Parity helpers | `tests/parity/reference.ts` |
 

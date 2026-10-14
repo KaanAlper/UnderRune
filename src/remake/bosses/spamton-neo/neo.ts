@@ -18,7 +18,8 @@ import {defineEnemy} from '../../deltarune/enemy';
 import {soulSpark,superchargeEnd} from '../../deltarune/yellow-soul';
 import {neoBodyDraw} from './body';
 import {vineCut as sneoVineCut,vineTransition as sneoVineTransition,vineWeak as sneoVineWeak} from './vines';
-import {bigLaser,choicerNeo,dbulletController,phoneBullet,sceneEx2,sneoBulletController,sneoPhonecall,sneoSusieAct,spamtonCherub,throwKris,throwKrisVineController,tinyRalsei} from './pending';
+import {bigLaser,choicerNeo,dbulletController,phoneBullet,sceneEx2,sneoPhonecall,sneoSusieAct,spamtonCherub,throwKris,throwKrisVineController,tinyRalsei} from './pending';
+import {sneoBulletController} from './bullet-controller';
 
 const T=(k:string)=>sourceText('obj_spamton_neo_enemy_slash_Step_0_gml_'+k);
 const first=(rt:GmRuntime,def:GmObjectDef)=>rt.first(def);

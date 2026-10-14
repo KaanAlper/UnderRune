@@ -464,7 +464,7 @@ index 8877ffe..6eb9b09 100644
  RuntimeLayer* Runner_findRuntimeLayerByName(Runner* runner, char* name);
  RuntimeLayer* Runner_findRuntimeLayerById(Runner* runner, int32_t id);
 diff --git a/src/vm_builtins.c b/src/vm_builtins.c
-index 3d33803..c7bc703 100644
+index 3d33803..d32fc7d 100644
 --- a/src/vm_builtins.c
 +++ b/src/vm_builtins.c
 @@ -7704,6 +7704,41 @@ static RValue builtin_audio_listener_position(VMContext* ctx, RValue* args, int3
@@ -509,7 +509,65 @@ index 3d33803..c7bc703 100644
  static RValue builtin_audio_emitter_exists(VMContext* ctx, RValue* args, int32_t argCount) {
      REQUIRE_ARGC_AT_LEAST("audio_emitter_exists", 1, RValue_makeBool(false));
      if (args[0].type == RVALUE_UNDEFINED) return RValue_makeBool(false);
-@@ -19390,6 +19425,14 @@ static RValue builtin_gpu_set_texfilter(VMContext* ctx, RValue* args, int32_t ar
+@@ -9495,12 +9530,9 @@ static RValue builtin_instance_create(VMContext* ctx, RValue* args, int32_t argC
+         logWarn("VM: instance_create: objectIndex %d out of range\n", objectIndex);
+         return RValue_makeReal(0.0);
+     }
+-    Instance* callerInst = ctx->currentInstance;
+     Instance* inst = Runner_createInstance(runner, x, y, objectIndex);
+     if (inst == nullptr) return RValue_makeReal(INSTANCE_NOONE);
+-    if (callerInst != nullptr && ctx->creatorVarID >= 0) {
+-        Instance_setSelfVar(inst, ctx->creatorVarID, RValue_makeReal((GMLReal) callerInst->instanceId));
+-    }
++    // creator is a game-owned variable: preserve what Create or copied state assigned.
+     return RValue_makeReal((GMLReal) inst->instanceId);
+ }
+ 
+@@ -9550,10 +9582,7 @@ static RValue builtin_instance_create_layer(VMContext* ctx, RValue* args, int32_
+         }
+     }
+ 
+-    Instance* callerInst = ctx->currentInstance;
+-    if (callerInst != nullptr && ctx->creatorVarID >= 0) {
+-        Instance_setSelfVar(inst, ctx->creatorVarID, RValue_makeReal((GMLReal) callerInst->instanceId));
+-    }
++    // creator is a game-owned variable: preserve what Create or copied state assigned.
+ 
+     return RValue_makeReal((GMLReal) inst->instanceId);
+ }
+@@ -9590,7 +9619,6 @@ static RValue builtin_instance_create_depth(VMContext* ctx, RValue* args, int32_
+         logWarn("VM: instance_create_depth: objectIndex %d out of range\n", objectIndex);
+         return RValue_makeReal(INSTANCE_NOONE);
+     }
+-    Instance* callerInst = ctx->currentInstance;
+     Instance* inst = Runner_createInstanceWithDepth(runner, x, y, objectIndex, depth);
+     if (inst == nullptr) return RValue_makeReal(INSTANCE_NOONE);
+ 
+@@ -9610,9 +9638,7 @@ static RValue builtin_instance_create_depth(VMContext* ctx, RValue* args, int32_
+     Runner_executeEvent(runner, inst, EVENT_CREATE, 0);
+     inst->createEventFired = true;
+ 
+-    if (callerInst != nullptr && ctx->creatorVarID >= 0) {
+-        Instance_setSelfVar(inst, ctx->creatorVarID, RValue_makeReal((GMLReal) callerInst->instanceId));
+-    }
++    // creator is a game-owned variable: preserve what Create or copied state assigned.
+     return RValue_makeReal((GMLReal) inst->instanceId);
+ }
+ 
+@@ -9880,10 +9906,8 @@ static RValue builtin_action_create_object(VMContext* ctx, RValue* args, int32_t
+         x += callerInst->x;
+         y += callerInst->y;
+     }
+-    Instance* inst = Runner_createInstance(runner, x, y, objectIndex);
+-    if (callerInst != nullptr && ctx->creatorVarID >= 0) {
+-        Instance_setSelfVar(inst, ctx->creatorVarID, RValue_makeReal((GMLReal) callerInst->instanceId));
+-    }
++    Runner_createInstance(runner, x, y, objectIndex);
++    // creator is a game-owned variable: preserve what Create assigned.
+     return RValue_makeUndefined();
+ }
+ 
+@@ -19390,6 +19414,14 @@ static RValue builtin_gpu_set_texfilter(VMContext* ctx, RValue* args, int32_t ar
      return RValue_makeUndefined();
  }
  
@@ -524,7 +582,7 @@ index 3d33803..c7bc703 100644
  static RValue builtin_gpu_get_texfilter(VMContext* ctx, MAYBE_UNUSED RValue* args, MAYBE_UNUSED int32_t argCount) {
      return RValue_makeReal(ctx->runner->renderer->texFilter ? 1.0 : 0.0);
  }
-@@ -23455,6 +23498,9 @@ void VMBuiltins_registerAll(VMContext* ctx) {
+@@ -23455,6 +23487,9 @@ void VMBuiltins_registerAll(VMContext* ctx) {
      VM_registerBuiltin(ctx, "audio_emitter_falloff", builtin_audio_emitter_falloff);
      VM_registerBuiltin(ctx, "audio_emitter_position", builtin_audio_emitter_position);
      VM_registerBuiltin(ctx, "audio_listener_position", builtin_audio_listener_position);
@@ -534,7 +592,7 @@ index 3d33803..c7bc703 100644
      VM_registerBuiltin(ctx, "audio_play_sound_on", builtin_audio_play_sound_on);
      VM_registerBuiltin(ctx, "audio_emitter_exists", builtin_audio_emitter_exists);
      VM_registerBuiltin(ctx, "audio_emitter_free", builtin_audio_emitter_free);
-@@ -24360,6 +24406,8 @@ void VMBuiltins_registerAll(VMContext* ctx) {
+@@ -24360,6 +24395,8 @@ void VMBuiltins_registerAll(VMContext* ctx) {
      VM_registerBuiltin(ctx,"gpu_get_blendenable", builtin_gpu_get_blendenable);
      VM_registerBuiltin(ctx,"gpu_set_texfilter", builtin_gpu_set_texfilter);
      VM_registerBuiltin(ctx,"gpu_set_tex_filter", builtin_gpu_set_texfilter);

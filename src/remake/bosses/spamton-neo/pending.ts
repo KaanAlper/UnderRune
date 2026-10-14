@@ -3,7 +3,6 @@
 import type {GmObjectDef} from '../../gm/runtime';
 
 const stub=(name:string,index:number):GmObjectDef=>({name,index});
-export const sneoBulletController=stub('obj_sneo_bulletcontroller',703);
 export const dbulletController=stub('obj_dbulletcontroller',394);
 export const sneoPhonecall=stub('obj_sneo_phonecall',629);
 export const spamtonCherub=stub('obj_spamton_cherub',595);
