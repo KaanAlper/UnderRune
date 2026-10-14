@@ -15,12 +15,13 @@ it.skipIf(!fs.existsSync(table))('every ported Chapter 1 object declares its sou
  for(const m of src.matchAll(/__objectNames\[(\d+)\] = "([^"]+)"/g))names.set(Number(m[1]),m[2]);
  for(const m of src.matchAll(/__objectDepths\[(\d+)\] = (-?\d+)/g))depths.set(Number(m[1]),Number(m[2]));
  const depthOf=new Map([...names].map(([slot,name])=>[name,depths.get(slot)!]));
- const defs=new Map<string,GmObjectDef>();
+ // Every definition, including several that share a name (an engine version and a boss's own).
+ const defs=new Set<GmObjectDef>();
  for(const mod of Object.values(modules))for(const v of Object.values(mod)){
-  if(isDef(v))defs.set(v.name,v);
-  if(Array.isArray(v))for(const d of v)if(isDef(d))defs.set(d.name,d);
+  if(isDef(v))defs.add(v);
+  if(Array.isArray(v))for(const d of v)if(isDef(d))defs.add(d);
  }
- const wrong=[...defs.values()].filter(d=>depthOf.has(d.name)&&(d.depth??0)!==depthOf.get(d.name)).map(d=>`${d.name}: ${d.depth??0}, source ${depthOf.get(d.name)}`);
+ const wrong=[...defs].filter(d=>depthOf.has(d.name)&&(d.depth??0)!==depthOf.get(d.name)).map(d=>`${d.name}: ${d.depth??0}, source ${depthOf.get(d.name)}`);
  expect(defs.size).toBeGreaterThan(40);
  expect(wrong).toEqual([]);
 });

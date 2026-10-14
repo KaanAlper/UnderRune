@@ -4,11 +4,11 @@
 // branches (scr_sideb_get_phase() > 2, which encounter 61 never reaches here) are left out. The body is in body.ts.
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {pointDistance} from '../../gm/math';
-import {afterimage,afterimageGrow,darkener,darkMarker,dmgWriter,growtangle,heart,heroKris,heroSusie,monsterParent,moveHeart,returnHeart} from '../../deltarune/battle';
+import {afterimage,afterimageGrow,darkener,darkMarker,dmgWriter,growtangle,heart,heroKris,heroSusie,monsterParent,moveHeart,moveHeartIn,returnHeart} from '../../deltarune/battle';
 import {button3_p,findController,nextAct,randomTarget,winCombat} from '../../deltarune/controller';
 import {monsterSetup} from '../../deltarune/encounter';
 import {spellMenuSetupChapter2} from '../../deltarune/chapter2';
-import {blconSkip,bulletSpawner,heartColor,inputName,isPhase,mercyAdd2,mergeColor,moveHeart2,moveToPointOverTime,moveToRememberXY,msgNext,msgSet,rememberXY,scriptDelayedOn,setVar,snd,turnTimer} from '../../deltarune/chapter2-battle';
+import {blconSkip,bulletSpawner,heartColor,inputName,isPhase,mercyAdd2,mergeColor,moveToPointOverTime,moveToRememberXY,msgNext,msgSet,rememberXY,scriptDelayedOn,setVar,snd,turnTimer} from '../../deltarune/chapter2-battle';
 import {battleTextDefault,destroyWriters,writer} from '../../deltarune/writer';
 import {enemyBlcon2} from '../../deltarune/chapter2-objects';
 import {sourceText} from '../../host/text';
@@ -447,7 +447,7 @@ function endTalk(s:GmInstance,rt:GmRuntime){
  if(!rt.exists(spamtonCherub))blconSkip(s,rt,-1);else s.talktimer+=1;
  if(isPhase(rt,'bullets')){
   if(!rt.exists(growtangle))placeBox(s,rt);
-  if(!rt.exists(moveHeart)&&!rt.exists(heart))moveHeart2(rt,moveHeart);
+  if(!rt.exists(moveHeart)&&!rt.exists(heart))moveHeartIn(rt);
  }
 }
 /** The status line once the soul is home. */
@@ -569,7 +569,7 @@ export const hitDetector:GmObjectDef={name:'obj_sneo_hitdetector',index:601,spri
 },collisions:[{target:phoneBullet,run:(_s,o,rt)=>{for(const n of rt.all(spamtonNeo))n.hitcon=1;rt.userEvent(o,0);}}]};
 
 /** NEO is the standard enemy (deltarune/enemy.ts) with these steps of his own. */
-export const spamtonNeo:EnemyDef=defineEnemy({name:'obj_spamton_neo_enemy',index:702,sprite:'spr_sneo_example'},{
+export const spamtonNeo:EnemyDef=defineEnemy({name:'obj_spamton_neo_enemy',index:702,depth:0,sprite:'spr_sneo_example'},{
  create,
  beforeStep:(s,rt)=>{if(s.bigshot===1)rt.globals.sp=5;},
  onlyWhileFighting:true,

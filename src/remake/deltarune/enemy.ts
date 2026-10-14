@@ -6,11 +6,11 @@
 // template's default (obj_baseenemy's code). The order of the steps never changes, so an enemy cannot run them out
 // of order, and a difference from the template is always one named step in that enemy's strategy.
 import type {GmEvent,GmHandler,GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
-import {darkener,growtangle,monsterParent,moveHeart} from './battle';
-import {nextAct,randomTarget} from './controller';
+import {darkener,growtangle,monsterParent,moveHeart,moveHeartIn} from './battle';
+import {attackPhase,button1_p,nextAct,randomTarget} from './controller';
 import {monsterSetup} from './encounter';
-import {blconSkip,isPhase,moveHeart2,turnTimer} from './chapter2-battle';
-import {writer} from './writer';
+import {blconSkip,isPhase,turnTimer} from './chapter2-battle';
+import {destroyWriters,writer} from './writer';
 import type {EnemyDef,EnemyHooks} from './rules';
 
 type Step=(s:GmInstance,rt:GmRuntime)=>void;
@@ -21,6 +21,8 @@ export interface EnemyStrategy{
  beforeStep?:Step;
  /** The rest of the Step runs only while global.fighting is 1. */
  onlyWhileFighting?:boolean;
+ /** Whether it takes its turn (the template: global.monster[myself] is 1). */
+ isAlive?:(s:GmInstance,rt:GmRuntime)=>boolean;
  /** While alive, before the talk can start. */
  beforeTalk?:Step;
  /** The enemy turn begins. Default: a random target, the darkness, then talk(), and the talk is under way. */
@@ -31,14 +33,18 @@ export interface EnemyStrategy{
  duringTalk?:Step;
  /** The words end and the soul and box come in. Default: scr_blconskip(15), then the soul, then the box. */
  endTalk?:Step;
- /** Frames from the end of the talk to the attack (the template's 12). */
+ /** Frames from the end of the talk to the attack (the template's 12); 0 attacks at once, with no wait. */
  attackDelay?:number;
  /** The attack starts: bullet makers and the turn's length. */
  attack:Step;
+ /** Each frame before the attack starts: the turn lasts at least this long (the template's scr_turntimer(120)). */
+ attackWait?:Step;
  /** The status line once the attack has started (after the turn count, voice and portrait are reset). */
  statusLine?:Step;
  /** While alive, after the attack step. */
  afterAttack?:Step;
+ /** After the alive enemy's turn steps, before the ACTs (whether or not it is still alive): battle-ending sequences. */
+ afterEnemyTurn?:Step;
  /** The party's ACTs on this enemy (global.myfight 3). */
  acts?:Step;
  /** The ACTs are over. Default: the next act (or the enemy turn) once the writer is gone. */
@@ -58,7 +64,7 @@ function defaultEndTalk(s:GmInstance,rt:GmRuntime){
  if(s.talked!==1||!isPhase(rt,'enemytalk'))return;
  s.rtimer=0;blconSkip(s,rt,15);
  if(isPhase(rt,'bullets')){
-  if(!rt.exists(moveHeart))moveHeart2(rt,moveHeart);
+  if(!rt.exists(moveHeart))moveHeartIn(rt);
   if(!rt.exists(growtangle))rt.create(growtangle,rt.view.x+320,rt.view.y+170);
  }
 }
@@ -71,28 +77,32 @@ function templateStep(st:EnemyStrategy):Step{
   st.talk?.(s,rt);s.talked=1;s.talktimer=0;
  });
  const endTalk=st.endTalk??defaultEndTalk,actsDone=st.actsDone??defaultActsDone,delay=st.attackDelay??12;
+ const attackWait:Step=st.attackWait??((_s,rt)=>turnTimer(rt,120));
+ const isAlive=st.isAlive??((s,rt)=>rt.globals.monster[s.myself]===1);
  return (s,rt)=>{
   const g=rt.globals;
   st.beforeStep?.(s,rt);
   if(st.onlyWhileFighting&&g.fighting!==1)return;
-  if(g.monster[s.myself]===1){
+  if(isAlive(s,rt)){
    st.beforeTalk?.(s,rt);
    if(isPhase(rt,'enemytalk')&&s.talked===0)startTalk(s,rt);
    st.duringTalk?.(s,rt);
    endTalk(s,rt);
    if(isPhase(rt,'bullets')&&s.attacked===0){
-    s.rtimer+=1;
-    if(s.rtimer===delay){st.attack(s,rt);s.turns+=1;g.typer=6;g.fc=0;st.statusLine?.(s,rt);s.attacked=1;}
-    else turnTimer(rt,120);
+    if(delay>0)s.rtimer+=1;
+    if(delay===0||s.rtimer===delay){st.attack(s,rt);s.turns+=1;g.typer=6;g.fc=0;st.statusLine?.(s,rt);s.attacked=1;}
+    else attackWait(s,rt);
    }
    st.afterAttack?.(s,rt);
   }
+  st.afterEnemyTurn?.(s,rt);
   if(g.myfight===3){st.acts?.(s,rt);actsDone(s,rt);}
   st.afterStep?.(s,rt);
  };
 }
-/** An enemy object: the template's events with the strategy's steps, as a child of obj_monsterparent. */
-export function defineEnemy(base:{name:string;index:number;sprite?:string;parent?:GmObjectDef},st:EnemyStrategy):EnemyDef{
+/** An enemy object: the template's events with the strategy's steps, as a child of obj_monsterparent. The depth is
+ * required: instance_create gives new instances their object's depth from the game's table (0 when it has none). */
+export function defineEnemy(base:{name:string;index:number;depth:number;sprite?:string;parent?:GmObjectDef},st:EnemyStrategy):EnemyDef{
  const position=st.monsterPosition??((s,rt)=>[s.x+rt.spriteWidth(s)/2,s.y+rt.spriteHeight(s)/2]);
  return {...base,parent:base.parent??monsterParent,hooks:st.hooks,events:{
   alarm4:s=>{s.con+=1;},
@@ -102,3 +112,20 @@ export function defineEnemy(base:{name:string;index:number;sprite?:string;parent
   user12:(s,rt)=>{const [x,y]=position(s,rt);rt.globals.monsterx[s.myself]=x;rt.globals.monstery[s.myself]=y;monsterSetup(s,rt);},
  }};
 }
+
+// ---- Strategy steps several enemies share ----
+/** The talk ends after talkmax frames (skippable with Z after `skip` frames): the soul and box come in, the writers go,
+ * and the enemy turn starts (the Chapter 1 Lancer fights). */
+export const endTalkAfter=(skip:number):Step=>(s,rt)=>{
+ const g=rt.globals;
+ if(s.talked!==1||g.mnfight!==1)return;
+ if(button1_p(rt)&&s.talktimer>skip)s.talktimer=s.talkmax;
+ s.talktimer+=1;
+ if(s.talktimer>=s.talkmax){
+  if(!rt.exists(moveHeart))moveHeartIn(rt);
+  if(!rt.exists(growtangle))rt.create(growtangle,rt.view.x+320,rt.view.y+170);
+  destroyWriters(rt);g.mnfight=2;
+ }
+};
+/** Chapter 1's end of the ACTs: once the writer is gone, the enemy turn (scr_attackphase). */
+export const actsDoneAttackPhase:Step=(s,rt)=>{if(s.actcon===1&&!rt.exists(writer)){s.actcon=0;attackPhase(rt);}};

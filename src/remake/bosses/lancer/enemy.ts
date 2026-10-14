@@ -3,9 +3,8 @@
 // The bike itself is obj_lancerbike (bike.ts).
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {C} from '../../gm/graphics';
-import {darkener,growtangle,heroKris,moveHeart} from '../../deltarune/battle';
-import {attackPhase,button1_p,findController,mercyAdd,monsterDefeat,randomTarget} from '../../deltarune/controller';
-import {monsterSetup} from '../../deltarune/encounter';
+import {findController,mercyAdd,monsterDefeat} from '../../deltarune/controller';
+import {actsDoneAttackPhase,defineEnemy,endTalkAfter} from '../../deltarune/enemy';
 import {battleTextDefault,enemyBalloon,writer} from '../../deltarune/writer';
 import {optionalSourceText} from '../../host/text';
 import {lancerBike,lancerBoss} from './bike';
@@ -15,54 +14,48 @@ function create(s:GmInstance){
  Object.assign(s,{bikeflip:0,becomeflash:0,turnt:0,turns:0,talktimer:0,talkmax:90,state:0,flash:0,siner:0,fsiner:0,talked:0,attacked:0,hurt:0,hurttimer:0,hurtshake:0,
   mywriter:343249823,acting:0,actcon:0,acttimer:0,mercymod:0,maxmercy:9999,warned:0,compliment:0,compliment_just:0,attacks:0,dodgetimer:0,candodge:1,con:0,shakex:0,imageSpeed:0});
 }
-function step(s:GmInstance,rt:GmRuntime){
+/** His line: one per turn, or his reaction to the last compliment. */
+function talk(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself as number;
- if(g.monster[me]===1){
-  if(g.mnfight===1&&s.talked===0){
-   randomTarget(s,rt);g.flag[51+me]=4;g.targeted[s.mytarget]=1;
-   if(!rt.exists(darkener))rt.create(darkener,0,0);
-   g.typer=50;
-   if(s.turns===0)g.msg[0]=L(17);if(s.turns===1)g.msg[0]=L(18);if(s.turns===2)g.msg[0]=L(19);if(s.turns>=3)g.msg[0]=L(20);
-   if(s.compliment_just===1){if(s.compliment===1)g.msg[0]=L(26);if(s.compliment===2)g.msg[0]=L(30);if(s.compliment===3)g.msg[0]=L(34);s.compliment_just=0;}
-   enemyBalloon(rt,s.x-235,s.y-65,3);s.talked=1;s.talktimer=0;
-  }
-  if(s.talked===1&&g.mnfight===1){
-   if(button1_p(rt)&&s.talktimer>15)s.talktimer=s.talkmax;
-   s.talktimer+=1;
-   if(s.talktimer>=s.talkmax){
-    // scr_moveheart: the soul leaves Kris.
-    if(!rt.exists(moveHeart)){const k=rt.first(heroKris);if(k)rt.create(moveHeart,k.x+10,k.y+40);}
-    if(!rt.exists(growtangle))rt.create(growtangle,rt.view.x+320,rt.view.y+170);
-    for(const w of rt.all(writer))rt.destroy(w);
-    g.mnfight=2;
-   }
-  }
-  if(g.mnfight===2&&s.attacked===0){
-   const bike=rt.create(lancerBike,s.x,s.y);s.bike=bike.id;s.visible=false;
-   if(s.attacks===0){bike.racecon=1;s.attacks=1;}else{bike.lcon=1;s.attacks=0;}
-   bike.target=s.mytarget;bike.damage=g.monsterat[me]*5;
-   s.turns+=1;g.turntimer=999;s.attacked=1;
-   s.rr=Math.floor(rt.random.random(5));g.typer=6;g.fc=0;
-   g.battlemsg[0]=L([90,91,92,93,94][s.rr]);
-   if(s.turns===1){g.typer=47;g.fc=1;g.fe=2;g.battlemsg[0]=L(100);}
-  }
+ g.flag[51+me]=4;g.targeted[s.mytarget]=1;
+ g.typer=50;
+ if(s.turns===0)g.msg[0]=L(17);if(s.turns===1)g.msg[0]=L(18);if(s.turns===2)g.msg[0]=L(19);if(s.turns>=3)g.msg[0]=L(20);
+ if(s.compliment_just===1){if(s.compliment===1)g.msg[0]=L(26);if(s.compliment===2)g.msg[0]=L(30);if(s.compliment===3)g.msg[0]=L(34);s.compliment_just=0;}
+ enemyBalloon(rt,s.x-235,s.y-65,3);
+}
+/** His bike: the race, then the laps, in turn. */
+function attack(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself as number;
+ const bike=rt.create(lancerBike,s.x,s.y);s.bike=bike.id;s.visible=false;
+ if(s.attacks===0){bike.racecon=1;s.attacks=1;}else{bike.lcon=1;s.attacks=0;}
+ bike.target=s.mytarget;bike.damage=g.monsterat[me]*5;
+ g.turntimer=999;
+}
+function statusLine(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals;
+ s.rr=Math.floor(rt.random.random(5));
+ g.battlemsg[0]=L([90,91,92,93,94][s.rr]);
+ if(s.turns===1){g.typer=47;g.fc=1;g.fe=2;g.battlemsg[0]=L(100);}
+}
+function acts(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself as number;
+ if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(118);g.msg[1]=L(119);battleTextDefault(rt);}
+ if(s.acting===2&&s.actcon===0){
+  s.actcon=1;
+  if(g.automiss[me]===0){g.msg[0]=L(130);g.automiss[me]=1;}else g.msg[0]=L(135);
+  battleTextDefault(rt);
  }
- if(g.myfight===3){
-  if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(118);g.msg[1]=L(119);battleTextDefault(rt);}
-  if(s.acting===2&&s.actcon===0){
-   s.actcon=1;
-   if(g.automiss[me]===0){g.msg[0]=L(130);g.automiss[me]=1;}else g.msg[0]=L(135);
-   battleTextDefault(rt);
-  }
-  if(s.acting===3&&s.actcon===0){
-   if(s.compliment>=3)g.msg[0]=L(145);
-   if(s.compliment===2){g.msg[0]=L(150);g.msg[1]=L(151);mercyAdd(rt,me,20);}
-   if(s.compliment===1){g.msg[0]=L(157);g.msg[1]=L(158);mercyAdd(rt,me,20);g.monsterat[me]+=1;}
-   if(s.compliment===0){g.msg[0]=L(164);g.msg[1]=L(165);mercyAdd(rt,me,20);g.monsterat[me]-=1;}
-   s.compliment_just=1;s.compliment+=1;battleTextDefault(rt);s.actcon=1;
-  }
-  if(s.actcon===1&&!rt.exists(writer)){s.actcon=0;attackPhase(rt);}
+ if(s.acting===3&&s.actcon===0){
+  if(s.compliment>=3)g.msg[0]=L(145);
+  if(s.compliment===2){g.msg[0]=L(150);g.msg[1]=L(151);mercyAdd(rt,me,20);}
+  if(s.compliment===1){g.msg[0]=L(157);g.msg[1]=L(158);mercyAdd(rt,me,20);g.monsterat[me]+=1;}
+  if(s.compliment===0){g.msg[0]=L(164);g.msg[1]=L(165);mercyAdd(rt,me,20);g.monsterat[me]-=1;}
+  s.compliment_just=1;s.compliment+=1;battleTextDefault(rt);s.actcon=1;
  }
+}
+/** Spared: his parting lines, then he rides off. */
+function leave(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself as number;
  if(s.con===1){s.alarm[4]=5;s.con=2;}
  if(s.con===3){
   g.typer=50;for(let i=0;i<7;i++)g.msg[i]=L(196+i);
@@ -103,9 +96,14 @@ function draw(s:GmInstance,rt:GmRuntime){
  s.becomeflash=0;
 }
 /** The engine's Lancer: obj_lancerboss with its own events, under the shared enemy parent. */
-export const lancerEnemy:GmObjectDef={...lancerBoss,parent:lancerBoss,events:{
- create:(s)=>create(s),step,draw,
- alarm4:s=>{s.con+=1;},
- // Event 12: where damage numbers appear, then scr_monstersetup.
- user12:(s,rt)=>{rt.globals.monsterx[s.myself]=s.x;rt.globals.monstery[s.myself]=s.y-rt.spriteHeight(s)/2-30;monsterSetup(s,rt);},
-}};
+/** The first Lancer fight: the standard enemy (deltarune/enemy.ts) with these steps of his own. He attacks as soon
+ * as the enemy turn starts. */
+export const lancerEnemy:GmObjectDef=defineEnemy({name:lancerBoss.name,index:lancerBoss.index,depth:90,sprite:lancerBoss.sprite,parent:lancerBoss},{
+ create:s=>create(s),
+ talk,endTalk:endTalkAfter(15),
+ attackDelay:0,attack,statusLine,
+ acts,actsDone:actsDoneAttackPhase,afterStep:leave,
+ // Event 12: where damage numbers appear.
+ monsterPosition:(s,rt)=>[s.x,s.y-rt.spriteHeight(s)/2-30],
+ events:{draw},
+});

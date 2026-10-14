@@ -4,6 +4,7 @@
 import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {eq,ge,gt,le,lt,pointDistance,round} from '../gm/math';
 import {C} from '../gm/graphics';
+import {rules} from './rules';
 
 export const KEY={left:37,up:38,right:39,down:40,z:90,x:88,c:67,enter:13,shift:16,ctrl:17};
 const held=(rt:GmRuntime,...keys:number[])=>keys.some(k=>rt.input.held.has(k));
@@ -64,6 +65,11 @@ export const moveHeart:GmObjectDef={name:'obj_moveheart',index:219,sprite:'spr_d
 }};
 
 /** The music stream holder. Its Draw event moves it near the player with two random calls every frame. */
+/** scr_moveheart: the soul leaves Kris for the box. */
+export function moveHeartIn(rt:GmRuntime){
+ if(rules(rt).moveHeartEndsInvincibility)rt.globals.inv=0;
+ const k=rt.first(heroKris)!;return rt.create(moveHeart,k.x+10,k.y+40);
+}
 export const astream:GmObjectDef={name:'obj_astream',index:134,depth:-200,sprite:'spr_heart',events:{
  draw:(s,rt)=>{const m=rt.first(mainchara);if(m){s.x=m.x+rt.random.random(20);s.y=m.y+rt.random.random(20);}},
 }};

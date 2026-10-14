@@ -12,6 +12,8 @@ export interface ChapterRules{
  /** Auto-Susie's finishing FIGHT hit marks the enemy as beaten by her (flag 51+n = 5). Chapter 2's code addresses
   * the wrong instance there, so the mark never happens. */
  readonly autoSusieMarksKill:boolean;
+ /** Bringing the soul into the box (scr_moveheart) also ends its invincibility (global.inv = 0). */
+ readonly moveHeartEndsInvincibility:boolean;
  /** An enemy's random target is the whole party (mytarget 4, every hero that can be hit marked). */
  readonly enemiesTargetWholeParty:boolean;
  /** The tension bar keeps itself 40 pixels below the top of the view, so it moves with screen shakes. */
@@ -19,8 +21,8 @@ export interface ChapterRules{
  /** The tension bar is drawn through a surface (its cutout rounds the fill), with the TP logo and percentage last. */
  readonly tensionBarSurface:boolean;
 }
-const CHAPTER1:ChapterRules={chapter:1,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false};
-const CHAPTER2:ChapterRules={chapter:2,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true};
+const CHAPTER1:ChapterRules={chapter:1,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false};
+const CHAPTER2:ChapterRules={chapter:2,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true};
 /** The running battle's chapter rules (global.chapter). */
 export function rules(rt:GmRuntime):ChapterRules{
  const r=({1:CHAPTER1,2:CHAPTER2} as Record<number,ChapterRules>)[rt.globals.chapter??1];
