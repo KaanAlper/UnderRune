@@ -117,6 +117,8 @@ function sameValue(ours:unknown,ref:unknown,res:ResourceIndex,gone:(id:number)=>
    const made=/^__newsprite(\d+)$/.exec(ours);if(made)return Number(made[1])===ref;
    return [res.sprites,res.sounds,res.fonts,res.objects,res.functions].some(list=>list.indexOf(ours as string)===ref);
   }
+  // A delayed script is kept as the function standing for that GML script.
+  if(typeof ours==='function'){const name=(ours as {gmlName?:string}).gmlName;return name!==undefined&&res.functions.indexOf(name)===ref;}
   if(ours&&typeof ours==='object'){const o=ours as {index?:number;id?:number};return o.index===ref||o.id===ref;}
   return false;
  }

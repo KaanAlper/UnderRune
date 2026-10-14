@@ -5,6 +5,7 @@
 import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
 import {rectangleMeets,instancesMeet} from '../../gm/collision';
 import {C,mergeColor} from '../../gm/graphics';
+import {gt,lt} from '../../gm/math';
 import {bulletInit,damage,damageAll} from '../../deltarune/battle';
 import {snd} from '../../deltarune/sound';
 import {scrAfterimageCut} from './support';
@@ -147,7 +148,7 @@ export function createNeoWalls(object:(name:string)=>GmObjectDef):GmObjectDef[]{
   },
   step:(s,rt)=>{
    s.timer+=1;
-   if(rt.globals.turntimer<1)rt.destroy(s);
+   if(lt(rt.globals.turntimer,1))rt.destroy(s);
    if(s.wallcount<s.wallcountmax&&s.timer===s.wallcreatetimer[s.wallcount]){
     const right=rt.view.x+rt.view.width,top=s.yy+rt.view.height/2,c=s.wallcount;
     const has=(kind:string,i:number)=>[1,2,3,4,5].some(n=>s[kind+n][c]===i);
@@ -180,7 +181,7 @@ export function createNeoWalls(object:(name:string)=>GmObjectDef):GmObjectDef[]{
   },
   draw:(s,rt)=>{
    const right=rt.view.x+rt.view.width,y=rt.view.y+rt.view.height-180;
-   for(const k of ['track1_x','track2_x','track3_x']){s[k]+=4;if(s[k]>right)s[k]-=960;}
+   for(const k of ['track1_x','track2_x','track3_x']){s[k]+=4;if(gt(s[k],right))s[k]-=960;}
    for(const k of ['track1_x','track2_x','track3_x'])rt.drawSprite('spr_sneo_wall_track',0,s[k],y);
   },
  }};
@@ -200,7 +201,7 @@ export function createNeoWalls(object:(name:string)=>GmObjectDef):GmObjectDef[]{
  const glancing=(s:GmInstance,rt:GmRuntime,shot:GmInstance)=>{
   const mailAt=(dy:number)=>placeMeets(s,rt,s.x,s.y+dy,wallBullet)&&nearest(rt,s.x,s.y+dy,wallBullet)?.sprite==='spr_sneo_mail';
   if((shot.y<s.y&&mailAt(-40))||(shot.y>s.y&&mailAt(40)))return false;
-  return Math.abs(shot.y-s.y)>12;
+  return gt(Math.abs(shot.y-s.y),12);
  };
  const shotBurst=(s:GmInstance,rt:GmRuntime)=>{
   const anim=rt.create(object('obj_yshot_anim'),s.x,s.y);s.anim=anim.id;
@@ -215,7 +216,7 @@ export function createNeoWalls(object:(name:string)=>GmObjectDef):GmObjectDef[]{
     Object.assign(s,{wallcontroller:-1,wallspeed:-7,wallnumber:0,walltype:0,timer:0,hp:1});
    },
    step:(s,rt)=>{
-    if(rt.globals.turntimer<1)rt.destroy(s);
+    if(lt(rt.globals.turntimer,1))rt.destroy(s);
     const c=controllerOf(rt);
     if(c)s.x+=c.wallspeed[s.wallnumber];
     if(s.wallcontroller>-1){
@@ -295,7 +296,7 @@ export function createNeoWalls(object:(name:string)=>GmObjectDef):GmObjectDef[]{
     fromAttack(s,rt);s.wallspeed=-7;s.wallnumber=0;
    },
    step:(s,rt)=>{
-    if(rt.globals.turntimer<1)rt.destroy(s);
+    if(lt(rt.globals.turntimer,1))rt.destroy(s);
     const c=controllerOf(rt);
     if(s.timer===0&&c)s.x+=c.wallspeed[s.wallnumber];
     if(s.timer>0)s.timer+=1;

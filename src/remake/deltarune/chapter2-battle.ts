@@ -1,6 +1,6 @@
 // Chapter 2's battle scripts and small helper objects, as Chapter 2 enemies and bullets call them. Where Chapter 2
 // changed a Chapter 1 script (scr_randomtarget, scr_mercyadd, scr_enemyblcon), this is the Chapter 2 version.
-import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
+import {gmArray,gmField,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {lengthdirX,lengthdirY,pointDirection,pointDistance} from '../gm/math';
 import {C,mergeColor} from '../gm/graphics';
 import {dmgWriter,heart,heroKris} from './battle';
@@ -78,10 +78,28 @@ export const moveToPoint:GmObjectDef={name:'obj_move_to_point',index:928,events:
  },
 }};
 /** obj_script_delayed: runs a script on its target after a delay (scr_script_delayed). */
+/** A script obj_script_delayed runs later, on its target, with the arguments it was given. */
+type DelayedScript=((target:GmInstance,rt:GmRuntime,...args:any[])=>void)&{readonly gmlName?:string};
+/** Names a delayed script after the GML script it stands for (the original keeps the script's number). */
+export function gmlScript<F extends (target:GmInstance,rt:GmRuntime,...args:any[])=>void>(name:string,run:F):F&{readonly gmlName:string}{
+ return Object.defineProperty(run,'gmlName',{value:name}) as F&{readonly gmlName:string};
+}
+/** obj_script_delayed: runs its script on its target after alarm 0 (or every `rate` frames while `constant`). Before
+ * each run the target gets the script and its first ten arguments (__scipt, __scipt_arg), as in the original. */
 export const scriptDelayed:GmObjectDef={name:'obj_script_delayed',index:932,events:{
- create:s=>{Object.assign(s,{script:null,target:-1,rate:1,arg_count:0,constant:0,max_time:0,timer:999,totaltimer:0});s.script_arg=new Array(13).fill(0);s.alarm[0]=1;},
+ create:s=>{
+  s.script=-1;s.target=-1;s.rate=1;s.alarm[0]=1;
+  s.script_arg=[];for(s.i=0;s.i<13;s.i+=1)s.script_arg[s.i]=0;
+  Object.assign(s,{arg_count:0,constant:0,max_time:0,timer:999,totaltimer:0});
+ },
  alarm0:(s,rt)=>{rt.userEvent(s,0);rt.destroy(s);},
- user0:(s,rt)=>{const t=rt.byId(s.target);if(t&&typeof s.script==='function')s.script(t,rt,...s.script_arg.slice(0,s.arg_count));},
+ user0:(s,rt)=>{
+  const t=rt.byId(s.target);if(!t)return;
+  t.__scipt=s.script;
+  const args=gmArray(t,'__scipt_arg');for(s.i=0;s.i<10;s.i+=1)args[s.i]=s.script_arg[s.i];
+  if(typeof t.__scipt!=='function')throw Error(`obj_script_delayed has no script to run (${String(t.__scipt)})`);
+  t.__scipt(t,rt,...args.slice(0,s.arg_count));
+ },
  step:(s,rt)=>{
   if(s.constant!==1)return;
   if(s.max_time===-1)s.totaltimer=-10;
@@ -90,12 +108,12 @@ export const scriptDelayed:GmObjectDef={name:'obj_script_delayed',index:932,even
   s.totaltimer+=1;
  },
 }};
-type DelayedScript=(target:GmInstance,rt:GmRuntime,...args:any[])=>void;
+/** scr_script_delayed, run by `s`: the script runs on `s` after `delay` frames with these arguments. */
 export function scriptDelayedOn(s:GmInstance,rt:GmRuntime,script:DelayedScript,delay:number,...args:unknown[]){
  const d=rt.create(scriptDelayed,0,0);d.script=script;d.alarm[0]=delay;d.target=s.id;args.forEach((a,i)=>{d.script_arg[i]=a;});d.arg_count=args.length;return d;
 }
 /** scr_var: sets one of the target's variables. */
-export const setVar:DelayedScript=(t,_rt,name:string,value:unknown)=>{(t as any)[name]=value;};
+export const setVar=gmlScript('scr_var',(t:GmInstance,_rt:GmRuntime,name:string,value:unknown)=>{(t as any)[gmField(name)]=value;});
 /** scr_heartcolor: the soul's mode (red or yellow); the yellow soul's graze box has its own sprite. */
 export function heartColor(caller:GmInstance,rt:GmRuntime,color:'red'|'yellow'){
  caller.__heartcolor=color;
