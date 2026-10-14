@@ -1,0 +1,329 @@
+# UnderRune handoff (2026-10-14)
+
+This file explains how to continue the work: the rules that must hold, how the work is verified, what is done and
+what is left, in order. Read it fully before changing code.
+
+Last commit: `b471ab2` on branch `feat/boss-battles`, pushed to `origin/main`. All 341 unit tests pass, including
+the 8 Chapter 1 parity runs and both NEO parity runs.
+
+## 1. Project in one paragraph
+
+UnderRune rewrites DELTARUNE boss battles in TypeScript. They must match the original game frame by frame and run
+in the browser (https://kaanalper.github.io/UnderRune/play/). This is the owner's graduation project.
+
+- Repository: https://github.com/KaanAlper/UnderRune (AGPL-3.0).
+- Work on `feat/boss-battles`, then push with `git push origin feat/boss-battles:main`.
+- The site is served from the `gh-pages` branch (deploy steps are in section 7).
+- Done so far:
+  - all 8 Chapter 1 bosses: Lancer, Lancer 2, Susie & Lancer, Lancer 3, King, Clover, K. Round, Jevil;
+  - Chapter 2 Spamton NEO (encounter 61), partly hand-ported (section 5).
+
+## 2. Hard rules (do not break)
+
+### Data and licensing
+
+- **Never commit** these, or anything derived from them:
+  - `data.win`;
+  - bytecode;
+  - decompiled GML.
+- `extracted/` and `.tools/` stay local and are git-ignored.
+- Game text is never in the repo. Code refers to text **keys** only:
+  - Chapter 1 keys: `src/remake/host/text-keys.json`;
+  - Chapter 2 keys: `src/remake/deltarune/text-keys-ch2.json`.
+- Text is built locally from the player's own game with `node tools/build-remake-assets.mjs 1|2`.
+- The Spamton NEO folder still holds the old archived decompiled sources. They are being replaced (section 5) and
+  must then be deleted.
+- **Do not touch or run** `tools/patch-encounter15.ps1` or `tools/utmt/enable_encounter15.csx`. They are untracked and
+  modify the user's game files.
+
+### Language and commits
+
+- Code, comments, README, commits and docs: **English**.
+- Chat with the owner: **Turkish**.
+- End commit messages with your own co-author trailer, like the existing commits do.
+
+### Architecture (the owner's explicit request)
+
+The goal: no special cases, one shared engine, a strategy only where something really differs, and bugs either
+impossible or easy to locate.
+
+**One shared engine.**
+- Every enemy is `src/remake/deltarune/enemy.ts` (`defineEnemy`, Chapter 2's obj_baseenemy) plus a strategy of its
+  own steps.
+- The soul, bullets, battle controller, writer and FIGHT bar are shared engine objects
+  (`src/remake/deltarune/*.ts`).
+
+**Shared code never tests the chapter number and never names a boss.** When chapters differ:
+- Use a **chapter part**: a `Record<number, …>` table placed next to the component and picked with
+  `forChapter(rt, TABLE, 'what')` from `rules.ts`.
+  - Examples: `GRAZE`, `DAMAGE`, `FIGHT_BAR`, `SPELLS`, `MERCY_ADD`, `NEXT_ACT`, `DMG_WRITER`, `SHAKE`.
+- Or use a `ChapterRules` flag (`rules(rt).soulHasModes`, `phaseScript`, …).
+- A missing chapter must throw a named error, never fall back silently.
+
+**Boss-specific behaviour is a hook, not a branch.** The original often writes things like
+`with (obj_spamton_neo_enemy) …` or `if (instance_exists(obj_queen_enemy))` inside shared code.
+- That case becomes a hook in `BattleHooks` (`rules.ts`), declared on the boss's object definition.
+- Shared code runs `withHook(rt, 'name')` at the same point.
+- Existing hooks: `onHeroHit`, `defeatedByDamage`, `onTurnEnd`, `upgradedShot`, `superCharged`, `onBigShot`,
+  `ringsShots`, `pullsShots`, `onFlash`, `flashSprite`, `hidesTensionBar`, `catchesKnockout`, `soulReturnsTo`,
+  `takesFightBar`, `showsHeals`, `onUltimatHeal`.
+
+**A small difference is a strategy or rule point; a big difference replaces that part of the component.**
+
+**Scripts that write their caller's variables take the caller as a required parameter.** The required parameter
+makes it impossible to forget. Examples:
+- `scr_battletext` sets the caller's `xx`, `yy`, `battlewriter` and `myface`;
+- `scr_heal` sets `abovemaxhp`, `belowzero`, `hltarget` and `_curhp`;
+- `scr_damage_enemy` sets `dm`;
+- `scr_afterimage` sets `afterimage`;
+- `scr_mercyadd` (Chapter 2) sets `__mercydmgwriter`;
+- `scr_bulletspawner` sets `__dc`;
+- `scr_heartcolor` sets `__heartcolor`;
+- `scr_nextact` sets `__minstance`;
+- `scr_move_to_point_over_time` sets `_mmm`;
+- `scr_isphase` (Chapter 2) sets `__isphase`.
+
+**GML instance variables stay instance variables.** This includes loop counters like `i`, `j`, `n`, `xyz` when the
+GML does not use `var`. Event 1 of `obj_attackpress` depends on sharing `i` with the Draw loop that calls it.
+
+**Errors must be easy to locate.**
+- The runtime wraps every event in `GmEventError`, which names the object, instance, event, frame and caller chain.
+- `GmInstance.strict` is on in tests and in the dev build. Reading an unset instance variable throws
+  `GmUnsetVariableError`.
+- Use `gmArray(inst, name)` where GML creates an array by writing to it.
+- A path that is not ported must throw a named "not ported" error.
+
+**Before rewriting a large component, list everything it does (global CLAUDE.md audit rule).** That means its
+variables, events, sounds and the hooks it reaches. Port line by line from the GML.
+
+## 3. How the work is verified
+
+### Reference recordings ("oracle")
+
+- The recordings come from a patched Butterscotch build: the original game running in a headless browser. Sources
+  are in `.tools/butterscotch-browser`.
+- The recordings are local in `.tools/oracle/`.
+- Record with:
+  ```
+  node tools/oracle-record.mjs ch2-61 --seed=11 --frames=4000 --god --dumps=40,60,...,3980 --script=z|menu
+  ```
+- The recorder needs the dev server running (`npm run dev` on 127.0.0.1:5173).
+- Key scripts are in `tools/oracle-scripts.mjs`:
+  - `z` taps Z;
+  - `menu` cycles menus, ACTs, spells and a charged shot.
+- Chapter 2 has no god switch. The native launcher's `ORACLE_HP` raises the party's HP instead. Rebuild it with
+  `powershell -File tools/build-native-launchers.ps1 -Chapters 2`.
+- Every line of the trace (`*.ndjson`) holds, after that frame's step:
+  - the RNG state;
+  - selected globals;
+  - every instance's id, object, x, y, image_index, sprite and visible flag.
+- `*-fN.json` files are full dumps of every instance's variables. The NEO runs have one every 20 frames.
+
+### Tests
+
+- `tests/remake-engine-parity.test.ts` checks the 8 Chapter 1 runs frame by frame.
+- `tests/remake-neo-parity.test.ts` checks the two NEO runs: `ch2-61-s11-god` (4000 frames) and
+  `ch2-61-s11-god-menu` (6000 frames).
+- At every dump frame, `compareState` (`tests/parity/reference.ts`) also compares **every variable** of every
+  non-archived object:
+  - built-ins and alarms;
+  - missing and extra instance variables.
+- Debug environment variables:
+  - `PARITY_SURVEY=1`: do not stop; list every differing object variable once, with the first frame it differs.
+    This is the main tool for finding the next work.
+  - `PARITY_STATE=all`: also compare archived objects.
+  - `PARITY_DEBUG=obj_a,obj_b` with `PARITY_VARS=x,y,...` and `PARITY_END=N`: print per-frame values.
+  - `PARITY_LIFE=obj_x`: log every creation and destruction with the calling code.
+  - `PARITY_RNG=from,to`: log who calls the RNG.
+- Known representation rules, already handled:
+  - The reference runtime writes `creator` on every `instance_create`. This is a runtime artifact and is skipped.
+  - Script references are numbers in the FUNC chunk's order. Get them with
+    `node tools/extract-script-index.mjs 1|2`, which writes `extracted/chapterN_windows/functions.json`.
+  - Sound handles are 100000 plus 2 per sound played. They are listed in `SOUND_HANDLES` and not compared.
+  - Sprites made from surfaces are named `__newsprite<N>`.
+- `STATE_PENDING` in the NEO test lists objects whose full-state check is still off: `obj_battlecontroller` and
+  `obj_writer`. Remove each one from that list once it matches.
+- Run everything with `npx tsc --noEmit` and `npx vitest run`. The parity runs take about 1–2 minutes.
+
+### GML semantics already learned (keep following them)
+
+- Number comparisons use a 1e-5 tolerance: use `lt`, `le`, `gt`, `ge`, `eq` from `gm/math`.
+- `round()` is banker's rounding.
+- Call arguments are evaluated right to left. For example, `draw_text(wx + random(s), wy + random(s))` draws y's
+  random number first.
+- `merge_color` rounds each channel in 32-bit floats: `mergeColor` in `gm/graphics.ts`.
+- Draw events also run logic and use the RNG (the writer draws 2–4 random numbers per character).
+- `instance_destroy()` does **not** stop the event. The rest of the event still runs.
+- `var` declarations apply to the whole event.
+- Setting `sprite_index` resets `image_index` when it is past the new sprite's last frame.
+- Among instances at the same depth, the most recent arrival draws first.
+- `instance_create` gives the new instance the object's depth from `__global_object_depths`.
+- The runtime's built-in fields are stored under `$` names (`$x`, `$sprite`, …) so GML variables like `_sprite`
+  cannot clash with them.
+
+## 4. Next task: Chapter 2 `obj_writer` (it was in progress)
+
+- The current `src/remake/deltarune/writer.ts` is a compact re-implementation (262 lines).
+- The GML is about 1100 lines (Create, Alarm 0–2, Draw).
+- The GML keeps its working values on the instance: `accept`, `charpos`, `remspace`, `remchar`, `linecount`, `i`,
+  `j`, `n`, `mychar`, `thischar`, `nextchar`, `nextchar2`, `getchar`, `wx`, `wy`, `button1/2/3`, `skip`, `play`,
+  `playcheck`, `playtextsound`, `sound_timer`, `sound_count`, …
+- Port it line by line from `extracted/chapter2_windows/code/gml_Object_obj_writer_*.gml`, plus `scr_texttype`,
+  `scr_textsound` and `scr_nextmsg`.
+- Put the Chapter 1 differences in a table, for example `WRITER[1|2]`.
+
+Chapter 2 adds or changes:
+
+**Input**
+- `prevent_mash_buffer` (counts down every frame and blocks button1/button2 while > 0).
+- `forcebutton1`.
+- `miniface_drawn = -1` at the start of Draw.
+- Automash: with `flag[10]` or debug, button3 alternates between button1 and button2 (`automash_timer`).
+
+**Formatting pass**
+- `` ` `` escapes the next character.
+- `\n` counts like `&`.
+- `\m` sets `drawaster = 0`.
+- `\s0` is already applied while formatting.
+- `autocenter` is used instead of Chapter 1's `\a`/`textalignment`.
+- The continuation indent is the literal `"||"`. Chapter 1 takes it from a language string.
+
+**Codes while drawing**
+- `\E` maps digits, `A–Z` (code − 55) and `a–z` (code − 61). Chapter 1 has a fixed table from 0–9 and A–E.
+- `\F` adds `s` → 6, `U` → 9, `b` → 19 and `Q` → 21.
+- `\f`: small faces go through `global.sminstance[fam]` (Chapter 1 uses `faced`/`getrid`).
+- `\*`: button sprite offsets.
+- `\T` table differences:
+  - Chapter 1: `0` → 4 while fighting.
+  - Chapter 2: `N` → 56/59, `B` → 57/77; `K` checks the chapter; new codes `q`, `Q`, `s`, `U`, `p`.
+- Colours `P`, `M`, `S` (#FF80FF) and `V` (#80FF80).
+- `\C1`–`\C4` open choicers (`obj_choicer_old`, `obj_choicer_neo` with `choicetotal`) and set `halt = 5`.
+- `\S` plays `global.writersnd[i]`; `\I` draws `global.writerimg[i]`; `\m` draws a mini face.
+- `drawaster == 0` turns `*` into a space.
+- `#` handling; the `jpspecial` branches (Japanese only).
+- `special == 3`: this effect exists in both chapters; check it.
+- The Comic Sans width tweak checks `myfont == 4` in Chapter 2 and `11` in Chapter 1.
+  - Font ids → use names: `index.json` has `fonts`.
+
+**Halting**
+- Halting destroys every `obj_smallface`.
+- Alarm 0 adds `sound_timer`, `reachedend` and the `` ` `` handling.
+- Remember: after `scr_nextmsg` or `instance_destroy` inside the loop, the GML keeps going (`siner += 1` still
+  happens). The current port returns early.
+
+Check after each step with `PARITY_SURVEY=1`; currently 34 writer variables differ. Keep the 8 Chapter 1 runs green.
+They exercise the Chapter 1 writer heavily, including RNG per character.
+
+## 5. Remaining work, in order
+
+### 1. Chapter 2 `obj_writer` (section 4)
+
+### 2. Chapter 2 `obj_battlecontroller`
+
+- The Chapter 2 events differ from Chapter 1 by about 540 lines in Step and 537 in Draw, plus Create, Alarm 2 and a
+  new Draw_64.
+- `controller.ts` still has Codex's `if (chapter === 2)` branches for the merged ACT menus. Make them a Chapter 2 part.
+- The survey shows these differing variables:
+  - `btc` (button highlight), `t_siner`, `myxx`, `slmxx`, `gc`, `prevturn`, `i`, `j`;
+  - `tempitem` (rows of 4 in Chapter 2, 3 in Chapter 1);
+  - `mercyamt`;
+  - `bpoff`, `tpoff`, `xx`, `yy`: the HUD follows the screen shake through `scr_battletext`'s `xx`/`yy`;
+  - instance arrays `actname`, `actdesc`, `acttpcost`, `canact`, `actsimul`;
+  - `drawsus`, `drawral`, `drawnoe`, the `*blend` variables, `icx`/`icy`, `xoffset`/`yoffset`;
+  - `__acti`, `__hiti`, `__noactors`, `charcan`, `hptarget`, `sus`, `spellcoord`, `thischar`, `thiscost`, `cango`,
+    `canpress`, `cant`, `page`, `chartime`, `charoffset`.
+- Port from `gml_Object_obj_battlecontroller_*.gml` (Chapter 2) with chapter parts. Then remove it from
+  `STATE_PENDING`.
+
+### 3. NEO's archived objects
+
+These still run from decompiled source through the interpreter (`src/source-runtime/gml.ts`):
+- the transitional host is `src/remake/host/neo.ts` (`NEO_PORTED`, `ENGINE_PORTED`, pending stubs in
+  `bosses/spamton-neo/pending.ts`);
+- archived objects are marked `archived` by `createNeoSourceObject`.
+
+Port them in the order they first appear in the recordings:
+1. `obj_sneo_bulletcontroller`
+2. the flying heads: `obj_sneo_guymaker`, `obj_sneo_lilguy`, `obj_sneo_lilguy_bullet`
+3. `obj_afterimage_cut`, `obj_lerpvar`, `obj_basicbullet_sneo`, `obj_doom`
+4. the walls: `obj_sneo_wall_controller_new`, `obj_sneo_wallbullet_new`, `obj_sneo_rotatingwall_bomb`,
+   `obj_mettaton_bomb_hitbox`
+5. `obj_sneo_wireheart` and its pieces
+6. the phone call and pipis objects
+7. the phone hands and `obj_sneo_mmx_spreadshot`
+8. the face attack (move its `ringsShots` hook from `host/neo.ts` into its definition)
+9. `obj_sneo_biglaser`, `obj_spamtonshot`, `obj_rouxls_power_up_orb`
+10. the finale and final form (move the `pullsShots` hook into its definition)
+11. the scene objects
+
+For each port:
+- verify with both NEO runs (trace plus full state);
+- move the object from the pending stubs into `NEO_PORTED`;
+- `bosses/spamton-neo/shot.ts` (Codex's collision handlers) can go once the targets are ported.
+
+### 4. More NEO recordings
+
+Record runs that reach:
+- the finale and final form;
+- the spared ending;
+- Susie's Super Charge, Ralsei's fluff, the Kris throw;
+- items.
+
+New scripts go in `tools/oracle-scripts.mjs`.
+
+### 5. Chapter 1 full-state checks
+
+- Re-record the 8 Chapter 1 runs with dumps every 20 frames (`--dumps=`).
+- Use `compareState` in `tests/remake-engine-parity.test.ts` too, with `loadResources(1)`.
+- This will show Chapter 1 instance-variable gaps the same way.
+
+### 6. Sound parity
+
+- Sounds are not in the trace.
+- Patch the oracle VM to log the sounds played each frame. Then compare names per frame. This also makes
+  `SOUND_HANDLES` unnecessary.
+
+### 7. Finish NEO
+
+- Delete the archived sources:
+  - `bosses/spamton-neo/*source*`, `attack-*.ts`, `host-source.ts`, `player-source.ts`,
+    `source-scene-data.ts`, `enemy-source-data.ts`, `coverage*.ts`, `body-source.ts`;
+  - `tools/build-neo-host-source.mjs`, `tools/build-neo-player-source.mjs`.
+- Check other users of `src/source-runtime/gml.ts` before removing it: `tools/build-equipment.mjs`,
+  `tests/gml.test.ts` and the source-turn audit use it.
+- Restore the README line saying decompiled code is excluded.
+- Check that text keys and sounds are still referenced literally.
+- Redeploy.
+- Ask the owner whether to purge the old sources from git history. This needs their decision.
+
+## 6. Where things are
+
+| What | Where |
+| --- | --- |
+| Runtime (instances, events, draw order, strict reads) | `src/remake/gm/runtime.ts` |
+| Maths, colours, sprites, collision | `src/remake/gm/math.ts`, `graphics.ts`, `sprites.ts`, `collision.ts` |
+| Shared battle objects (soul, bullets, darkener, shake, damage writer, scr_damage) | `src/remake/deltarune/battle.ts` |
+| Battle controller, menus, tension bar | `src/remake/deltarune/controller.ts` |
+| Heroes, FIGHT bar, spells, items | `src/remake/deltarune/party.ts` |
+| Writer, faces, balloons, scr_battletext | `src/remake/deltarune/writer.ts` |
+| Enemy template | `src/remake/deltarune/enemy.ts` |
+| Chapter rules, hooks | `src/remake/deltarune/rules.ts` |
+| Chapter 2 helpers and objects | `deltarune/chapter2*.ts`, `yellow-soul.ts` |
+| NEO | `src/remake/bosses/spamton-neo/neo.ts` (enemy), `body.ts` (Draw), `chooser.ts`, `vines.ts` |
+| Hosts | `src/remake/host/engine.ts` (Chapter 1), `src/remake/host/neo.ts` (Chapter 2) |
+| Parity helpers | `tests/parity/reference.ts` |
+
+## 7. Deploy (only when asked)
+
+1. Run `npm run build:pages`.
+2. In `.tools/gh-pages-deploy`, run `git fetch`, then `git reset --hard origin/gh-pages`.
+3. Copy `dist-pages/index.html` and `dist-pages/play`, and touch `.nojekyll`.
+4. Commit, then `git push origin HEAD:gh-pages`.
+5. Check `gh api repos/KaanAlper/UnderRune/pages/builds/latest`.
+
+## 8. Working with the owner
+
+- When a lot of code changes, say what each change found or fixed. The owner asked once whether everything was
+  being rewritten. It was not: the fixes were targeted, and the new full-state test is what found them.
+- Do not steal window focus. The recorder runs headless.
+- Restart the dev server after new files appear in `public/generated`. Otherwise Vite serves `index.html` for them.
