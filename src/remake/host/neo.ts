@@ -19,6 +19,14 @@ import {neoHostScripts,neoHostObjectSources,neoWriterSmallFaceSource,neoResource
 import {attackScriptSources} from '../bosses/spamton-neo/attack-script-source';
 import {neoEnemyUtilityScriptSources} from '../bosses/spamton-neo/enemy-source-data';
 import {installSourceSurfaces} from './surfaces';
+import {spamtonNeo,hitDetector} from '../bosses/spamton-neo/neo';
+import * as pending from '../bosses/spamton-neo/pending';
+import {battleBalloon2,battleCleanup,growtangle2,tensionBar2} from '../deltarune/chapter2-objects';
+import {heroHit2} from '../deltarune/chapter2-party';
+import {moveToPoint,scriptDelayed} from '../deltarune/chapter2-battle';
+
+/** Chapter 2 objects that run as hand-written code (the rest still run from the local source archive). */
+const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,tensionBar2,growtangle2,battleCleanup,moveToPoint,scriptDelayed];
 
 export function installNeoHost(rt:GmRuntime){
  const objects:Record<string,GmObjectDef>={};
@@ -98,15 +106,26 @@ export function installNeoHost(rt:GmRuntime){
   while(chain?.name===old.name){layers.unshift(chain);chain=chain.parent;}
   def.events={};for(const layer of layers)Object.assign(def.events,layer.events);
  }
+ // Chapter 2's FIGHT hit.
+ for(const h of party.HERO_DEFS)object(h.name).events!.alarm1=heroHit2;
  Object.assign(objects,createNeoPlayerObjects(host));
  objects.obj_spamton_neo_enemy=createNeoEnemy(host);Object.assign(objects,createNeoEnemyEffects(host));
  Object.assign(objects,createNeoAttackObjects(host));
- const projectiles=createNeoProjectiles({neo:object('obj_spamton_neo_enemy'),heart:object('obj_heart'),faceAttack:object('obj_sneo_faceattack'),finalForm:object('obj_sneo_final_forme'),wireheart:object('obj_sneo_wireheart')});
+ // Looked up when a shot needs them, so hand-ported replacements are found.
+ const projectiles=createNeoProjectiles({get neo(){return object('obj_spamton_neo_enemy');},get heart(){return object('obj_heart');},get faceAttack(){return object('obj_sneo_faceattack');},get finalForm(){return object('obj_sneo_final_forme');},get wireheart(){return object('obj_sneo_wireheart');}});
  for(const def of [projectiles.shot,projectiles.impact,projectiles.trail])objects[def.name]=def;
  Object.assign(objects,createNeoSceneObjects(host));
  for(const [name,record] of Object.entries(neoHostObjectSources))objects[name]=createNeoSourceObject(host,record.metadata,record.sources);
+ // Hand-ported Chapter 2 objects replace their source versions; their Chapter 1 parents become the Chapter 2 ones.
+ const portedAliases:(readonly [GmObjectDef,GmObjectDef])[]=[];
+ const canonical=(def:GmObjectDef):GmObjectDef=>{
+  const parent=def.parent?objects[def.parent.name]??def.parent:undefined;
+  return parent===def.parent?def:{...def,parent};
+ };
+ for(const def of NEO_PORTED){const c=canonical(def);objects[def.name]=c;if(c!==def)portedAliases.push([def,c]);}
+ for(const stub of Object.values(pending))portedAliases.push([stub,object(stub.name)]);
  for(const def of Object.values(objects))def.depth=metadata.get(def.name)?.depth??def.depth;
- rt.installObjectAliases(original.filter(old=>objects[old.name]).map(old=>[old,objects[old.name]] as const));
+ rt.installObjectAliases([...original.filter(old=>objects[old.name]&&!portedAliases.some(([o])=>o===old)).map(old=>[old,objects[old.name]] as const),...portedAliases]);
  rt.globals.onNeoMercyTurnEnd=(enemy:GmInstance)=>{enemy.endcon=1;};
  rt.globals.onChapter2SmallFace=(s:GmInstance,code:string)=>{Object.assign(s,{nextchar:'f',nextchar2:code,faced:0});executeNeoSource(neoWriterSmallFaceSource,s,rt,host);};
  return {host,objects,enter:(enemy:GmInstance)=>enterNeoBattleScene(rt,host,enemy)};

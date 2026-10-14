@@ -282,10 +282,26 @@ export class GmRuntime{
  /** Presses a step has seen: cleared after the following draw, or at the next step if no draw ran. */
  private consumed={pressed:new Set<number>(),released:new Set<number>()};
  private dropConsumed(){for(const k of this.consumed.pressed)this.input.pressed.delete(k);for(const k of this.consumed.released)this.input.released.delete(k);this.consumed.pressed.clear();this.consumed.released.clear();}
- /** Draw events by depth (deepest first); equal depths most recent arrival first. Draw code may use the random generator. */
+ /** Draw events by depth layer (deepest first); within a layer the most recent arrival first. Draw code may use the
+  * random generator. As in the runner, layers are visited one after another and each is read as it is at that moment:
+  * an instance that moves to (or is created in) a layer not yet drawn this frame is drawn there, even if it was
+  * already drawn in another layer; one leaving the layer being drawn shifts the rest. */
  draw(){
-  const list=this.instances.map((i,n)=>({i,n})).filter(e=>e.i.live&&e.i.visible).sort((a,b)=>b.i.depth-a.i.depth||b.i.layerEntry-a.i.layerEntry).map(e=>e.i);
-  for(const inst of list){if(!inst.live)continue;const h=resolveEvent(inst.object,'draw');if(h)h(inst,this);else this.drawSelf(inst);}
+  let last=Infinity;
+  for(;;){
+   let depth=-Infinity;
+   for(const i of this.instances)if(i.live&&i.depth<last&&i.depth>depth)depth=i.depth;
+   if(depth===-Infinity)break;
+   // Instances destroyed during this frame keep their place in the layer until cleanup, without drawing.
+   const layer=()=>this.instances.filter(i=>i.depth===depth&&(i.live||this.destroyedInstances.has(i))).sort((a,b)=>b.layerEntry-a.layerEntry);
+   const count=layer().length;
+   for(let j=0;j<count;j++){
+    const els=layer();if(j>=els.length)break;
+    const inst=els[j];if(!inst.live||!inst.visible)continue;
+    const h=resolveEvent(inst.object,'draw');if(h)h(inst,this);else this.drawSelf(inst);
+   }
+   last=depth;
+  }
   this.instances=this.instances.filter(i=>!this.destroyedInstances.has(i));
   this.dropConsumed();
  }

@@ -26,7 +26,7 @@ export function createNeoAttackObjects(external:NeoAttackHost):Record<string,GmO
  const host:NeoSourceHost={...external,scripts:{...attackScriptSources,...external.scripts},object:name=>objects[name]??external.object(name)};
  for(const record of neoAttackSources)objects[record.metadata.name]=createNeoSourceObject(host,record.metadata,record.sources);
  // Use the independently audited projectile receiver implementations on the real owners.
- const primitives=createNeoProjectiles({neo:host.object('obj_spamton_neo_enemy'),heart:host.object('obj_heart'),faceAttack:objects.obj_sneo_faceattack,finalForm:objects.obj_sneo_final_forme,wireheart:objects.obj_sneo_wireheart}).collisions;
+ const primitives=createNeoProjectiles({get neo(){return host.object('obj_spamton_neo_enemy');},get heart(){return host.object('obj_heart');},faceAttack:objects.obj_sneo_faceattack,finalForm:objects.obj_sneo_final_forme,wireheart:objects.obj_sneo_wireheart}).collisions;
  const handlers:Record<string,GmCollision['run']>={obj_basicbullet_sneo:primitives.basicBullet,obj_basicbullet_sneo_finale:primitives.basicBullet,obj_sneo_lilguy:primitives.flyingHead,obj_sneo_wireheart:primitives.wireheart,obj_sneo_faceattack:primitives.facePart};
  for(const [name,run] of Object.entries(handlers)){
   const def=objects[name],sourceCollisions=Object.getOwnPropertyDescriptor(def,'collisions')?.get;

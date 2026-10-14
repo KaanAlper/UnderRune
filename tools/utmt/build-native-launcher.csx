@@ -29,6 +29,7 @@ global.chararmor2[hero] = ini_read_real(""armor2"", string(hero), global.chararm
 for (var slot = 0; slot < 12; slot += 1) global.item[slot] = ini_read_real(""items"", string(slot), 0);
 // Reference recordings only: the debug no-damage switch keeps a run going through many enemy turns.
 if (ini_read_real(""oracle"", ""god"", 0) == 1) global.chemg_god_mode = 1;
+ORACLE_HP
 ORACLE_JEVIL_READ
 ini_close();
 global.tempflag[4] = 1;
@@ -41,6 +42,8 @@ else if (global.ur_watch == 1 && !instance_exists(obj_battlecontroller)) { globa
 JEvil_BRANCH
 room_goto(room_battletest);
 ".Replace("HERO_MAX",chapter==1?"3":"4")
+// Later chapters have no debug no-damage switch: reference runs give the party enough HP instead. Damage itself is unchanged.
+.Replace("ORACLE_HP",chapter==1?"":"if (ini_read_real(\"oracle\", \"god\", 0) == 1) for (var hero = 1; hero <= HERO_MAX; hero += 1) { global.maxhp[hero] = 99999; global.hp[hero] = 99999; }".Replace("HERO_MAX",chapter==1?"3":"4"))
 .Replace("ORACLE_JEVIL_READ",chapter==1?"global.ur_oracle_jevil_turn = ini_read_real(\"oracle\", \"jevil_turn\", -1);":"")
 .Replace("ORACLE_JEVIL_WATCH",chapter==1?@"
 // Test-only initial phase preset; enemy events, damage and attack code stay unchanged.
