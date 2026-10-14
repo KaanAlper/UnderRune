@@ -7,6 +7,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import {fileURLToPath} from 'node:url';
 import {parseSounds,embeddedAudio} from './sound-assets.mjs';
+import {localizationDefaults} from './source-localization.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const chapter = Number(process.argv[2] ?? 1);
@@ -90,13 +91,18 @@ const soundNames=new Set(text.match(/\bsnd_[A-Za-z0-9_]+/g)??[]),sounds={},banks
 await fs.mkdir(path.join(out,'sounds'),{recursive:true});
 for(const sound of parseSounds(data,soundNames)){
  if(!/^snd_[A-Za-z0-9_]+$/.test(sound.name)||sound.group<0||sound.volume<0||!Number.isFinite(sound.pitch))throw Error('Invalid sound metadata');
- if(!banks.has(sound.group))banks.set(sound.group,await fs.readFile(path.join(gameChapter,`audiogroup${sound.group}.dat`)));
- const sample=embeddedAudio(banks.get(sound.group),sound.audio),format=sample.toString('ascii',0,4),extension=format==='RIFF'?'wav':format==='OggS'?'ogg':null;if(!extension)throw Error('Unsupported embedded audio: '+sound.name);
+ if(sound.audio>=0&&!banks.has(sound.group))banks.set(sound.group,await fs.readFile(path.join(gameChapter,`audiogroup${sound.group}.dat`)));
+ const sample=sound.audio===-1?await fs.readFile(path.join(gameChapter,sound.name+'.ogg')):embeddedAudio(banks.get(sound.group),sound.audio),format=sample.toString('ascii',0,4),extension=format==='RIFF'?'wav':format==='OggS'?'ogg':null;if(!extension)throw Error('Unsupported source audio: '+sound.name);
  const file=`sounds/${sound.name}.${extension}`;await fs.writeFile(path.join(out,file),sample);sounds[sound.name]={file,volume:sound.volume,pitch:sound.pitch};
 }
 // Dialogue lines named in src/remake/host/text-keys.json, from the same language file the game loads.
-const textKeys = JSON.parse(await fs.readFile(path.join(root, 'src', 'remake', 'host', 'text-keys.json'), 'utf8'))[`chapter${chapter}`] ?? [];
-const lang = JSON.parse((await fs.readFile(path.join(gameChapter, 'lang', 'lang_en.json'), 'utf8')).replace(/^﻿/, ''));
+const keySet=new Set(JSON.parse(await fs.readFile(path.join(root, 'src', 'remake', 'host', 'text-keys.json'), 'utf8'))[`chapter${chapter}`]??[]);
+if(chapter===2){for(const key of JSON.parse(await fs.readFile(path.join(root,'src/remake/deltarune/text-keys-ch2.json'),'utf8')).chapter2)keySet.add(key);}
+let lang={};
+if(chapter===2){for(const file of await fs.readdir(path.join(base,'code')))if(file.endsWith('.gml'))Object.assign(lang,localizationDefaults(await fs.readFile(path.join(base,'code',file),'utf8')));}
+try{Object.assign(lang,JSON.parse((await fs.readFile(path.join(gameChapter,'lang','lang_en.json'),'utf8')).replace(/^\uFEFF/,'')));}catch(error){if(error.code!=='ENOENT'||chapter!==2)throw error;}
+if(chapter===2)for(const key of text.match(/(?:scr|obj|o)_[A-Za-z0-9_]+_gml_[A-Za-z0-9_]+/g)??[])if(typeof lang[key]==='string')keySet.add(key);
+const textKeys=[...keySet];
 const gameText = {};
 for (const key of textKeys) { if (typeof lang[key] !== 'string') throw Error('Game text not found: ' + key); gameText[key] = lang[key]; }
 await fs.writeFile(path.join(out, 'bundle.json'), JSON.stringify({

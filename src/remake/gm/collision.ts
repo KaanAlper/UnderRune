@@ -89,3 +89,12 @@ export function instancesMeet(bank:SpriteBank,a:Collidable,b:Collidable){
  if(precise(sa)||precise(sb)||needsSat(sa,a)||needsSat(sb,b))return overlap(bank,a,b,ba,bb);
  return true;
 }
+/** Rectangle query against the same native sprite margins and per-pixel masks. */
+export function rectangleMeets(bank:SpriteBank,i:Collidable,x1:number,y1:number,x2:number,y2:number,usePrecise:boolean){
+ const b=bbox(bank,i),s=collisionSprite(bank,i);if(!b||!s)return false;
+ const left=Math.max(b.left,Math.min(x1,x2)),right=Math.min(b.right,Math.max(x1,x2)+1),top=Math.max(b.top,Math.min(y1,y2)),bottom=Math.min(b.bottom,Math.max(y1,y2)+1);
+ if(left>=right||top>=bottom)return false;if(!usePrecise||(!precise(s)&&!needsSat(s,i)))return true;
+ const offset=bank.collisionCompat?0:.5;
+ for(let y=Math.floor(top);y<Math.ceil(bottom);y++)for(let x=Math.floor(left);x<Math.ceil(right);x++)if(pointIn(s,i,x+offset,y+offset))return true;
+ return false;
+}

@@ -1,17 +1,18 @@
 /** Strict execution of decoded GML. Unsupported operations are errors, never no-op fallbacks. */
+import {bankersRound} from '../remake/gm/math';
 type Token={value:string;offset:number;kind:string};
 export type GmlNode={kind:string;[key:string]:any};
 export type GmlProgram={statements:GmlNode[]};
 type ObjectValue=Record<string,any>;
 type Scope={self:ObjectValue;other:ObjectValue;locals:Map<string,any>};
-export type ExecutionOptions={budget?:number;calls?:Record<string,(self:ObjectValue,...args:any[])=>any>;targets?:(value:any)=>ObjectValue[];truth?:(value:any)=>boolean;operators?:Record<string,(a:any,b:any)=>any>};
+export type ExecutionOptions={budget?:number;calls?:Record<string,(self:ObjectValue,...args:any[])=>any>;targets?:(value:any)=>ObjectValue[];truth?:(value:any)=>boolean;operators?:Record<string,(a:any,b:any)=>any>;argumentOrder?:'left-to-right'|'right-to-left';other?:ObjectValue;member?:(value:any)=>ObjectValue};
 function tokenize(source:string):Token[]{
  const tokens:Token[]=[];let pos=0;
  while(pos<source.length){
   const tail=source.slice(pos),skip=tail.match(/^(?:\s+|\/\/[^\n]*|\/\*[\s\S]*?\*\/)/);
   if(skip){pos+=skip[0].length;continue;}
   const string=tail.match(/^(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/);
-  const number=tail.match(/^(?:0x[\da-f]+|\$[\da-f]+|(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)/i);
+  const number=tail.match(/^(?:#[\da-f]{6}(?![\da-f])|0x[\da-f]+|\$[\da-f]+|(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)/i);
   const word=tail.match(/^[a-zA-Z_][a-zA-Z_\d]*/);
   const operator=tail.match(/^(?:\+\+|--|\+=|-=|\*=|\/=|%=|==|!=|<>|<=|>=|&&|\|\||<<|>>|[{}()[\];,.?:+\-*\/%=!<>~&|^])/);
   const value=(string??number??word??operator)?.[0];if(!value)throw Error(`Unsupported token at ${pos}: ${tail.slice(0,16)}`);
@@ -44,12 +45,13 @@ class Parser{
   }
   if(this.match('with')){this.take('(');const target=this.expression();this.take(')');return {kind:'with',target,body:this.statement()};}
   if(this.match('while')){this.take('(');const condition=this.expression();this.take(')');return {kind:'while',condition,body:this.statement()};}
+  if(this.match('repeat')){this.take('(');const count=this.expression();this.take(')');return {kind:'repeat',count,body:this.statement()};}
   if(this.match('for')){this.take('(');const init=this.match(';')?undefined:this.peek()==='var'?this.variable():this.expressionStatement();const condition=this.peek()===';'?undefined:this.expression();this.take(';');const increment=this.peek()===')'?undefined:this.expression();this.take(')');return {kind:'for',init,condition,increment,body:this.statement()};}
   if(keyword==='var')return this.variable();
   if(this.match('enum')){const name=this.take();if(name.kind!=='word')throw Error('Expected enum name');this.take('{');const members=[];while(this.peek()!=='}'){const member=this.take();if(member.kind!=='word')throw Error('Expected enum member');members.push({name:member.value,value:this.match('=')?this.expression(2):undefined});if(!this.match(','))break;}this.take('}');this.match(';');return {kind:'enum',name:name.value,members};}
   if(this.match('function')){const name=this.take();if(name.kind!=='word')throw Error('Expected function name');this.take('(');const parameters:string[]=[];if(this.peek()!==')')do{const parameter=this.take();if(parameter.kind!=='word')throw Error('Expected parameter name');parameters.push(parameter.value);}while(this.match(','));this.take(')');const body=this.statement();if(body.kind!=='block')throw Error('Expected function body');return {kind:'function',name:name.value,parameters,body};}
   if(['exit','break','continue','return'].includes(keyword)){this.take();const value=keyword==='return'&&this.peek()!==';'?this.expression():undefined;this.match(';');return {kind:keyword,value};}
-  if(['repeat','do','try','new','static','globalvar'].includes(keyword))throw Error(`Unsupported statement ${keyword} at ${this.tokens[this.index].offset}`);
+  if(['do','try','new','static','globalvar'].includes(keyword))throw Error(`Unsupported statement ${keyword} at ${this.tokens[this.index].offset}`);
   return this.expressionStatement();
  }
  variable():GmlNode{this.take('var');const declarations=[];do{const name=this.take();if(name.kind!=='word')throw Error('Expected variable name');const value=this.match('=')?this.expression(2):undefined;declarations.push({name:name.value,value});}while(this.match(','));this.take(';');return {kind:'var',declarations};}
@@ -58,7 +60,7 @@ class Parser{
   let left=this.prefix();
   while(true){
    if(this.match('.')){left={kind:'member',object:left,key:{kind:'literal',value:this.take().value}};continue;}
-   if(this.match('[')){const key=this.expression();this.take(']');left={kind:'member',object:left,key};continue;}
+   if(this.match('[')){do{const key=this.expression();left={kind:'member',object:left,key};}while(this.match(','));this.take(']');continue;}
    if(this.match('(')){const args=[];if(this.peek()!==')')do{args.push(this.expression());}while(this.match(','));this.take(')');left={kind:'call',callee:left,args};continue;}
    if(['++','--'].includes(this.peek())){left={kind:'update',operand:left,operator:this.take().value,postfix:true};continue;}
    const operator=this.peek(),priority=precedences[operator];if(!priority||priority<min)break;this.take();
@@ -72,7 +74,11 @@ class Parser{
   if(token.value==='('){const expression=this.expression();this.take(')');return expression;}
   if(token.value==='['){const values:GmlNode[]=[];if(this.peek()!==']')do{values.push(this.expression());}while(this.match(','));this.take(']');return {kind:'array',values};}
   if(['!','not','-','+','~','++','--'].includes(token.value))return {kind:token.value==='++'||token.value==='--'?'update':'unary',operator:token.value,operand:this.expression(12),postfix:false};
-  if(token.kind==='number')return {kind:'literal',value:token.value.startsWith('$')?parseInt(token.value.slice(1),16):Number(token.value)};
+  if(token.kind==='number'){
+   const text=token.value;let value=text.startsWith('$')?parseInt(text.slice(1),16):Number(text);
+   if(text.startsWith('#')){const rgb=parseInt(text.slice(1),16);value=((rgb&255)<<16)|(rgb&0xff00)|(rgb>>>16);}
+   return {kind:'literal',value};
+  }
   if(token.kind==='string'){
    const body=token.value.slice(1,-1),escapes:Record<string,string>={n:'\n',r:'\r',t:'\t'},value=body.replace(/\\([\\'"nrt])/g,(_m,x:string)=>escapes[x]??x);return {kind:'literal',value};
   }
@@ -88,7 +94,7 @@ function binary(operator:string,a:any,b:any):any{
 }
 export function executeGml(program:GmlProgram,self:ObjectValue,environment:ObjectValue,options:ExecutionOptions={}):any{
  let budget=options.budget??100000;const work=()=>{if(--budget<0)throw Error('GML execution budget exhausted');};
- const root:Scope={self,other:self,locals:new Map()};
+ const root:Scope={self,other:options.other??self,locals:new Map()};
  const truth=options.truth??((value:any)=>{if(typeof value==='boolean')return value;if(typeof value==='number')return value>.5;if(value===undefined)return false;throw Error('GML boolean conversion requires native runtime for this type');});
  const operate=(operator:string,a:any,b:any)=>{const native=options.operators?.[operator];return native?native(a,b):binary(operator,a,b);};
  const functions=new Map<string,GmlNode>();
@@ -97,7 +103,7 @@ export function executeGml(program:GmlProgram,self:ObjectValue,environment:Objec
  const read=(name:string,scope:Scope):any=>{if(name==='self')return scope.self;if(name==='other')return scope.other;if(scope.locals.has(name))return scope.locals.get(name);if(enums.has(name))return enums.get(name);if(name in scope.self)return scope.self[name];if(name in environment)return environment[name];throw Error('Unknown GML variable '+name);};
  const reference=(node:GmlNode,scope:Scope):{get:()=>any;set:(v:any)=>void}=>{
   if(node.kind==='identifier')return {get:()=>read(node.name,scope),set:v=>{if(scope.locals.has(node.name))scope.locals.set(node.name,v);else scope.self[node.name]=v;}};
-  if(node.kind==='member'){const object=expression(node.object,scope),key=expression(node.key,scope);if(object===null||typeof object!=='object')throw Error('GML member target is not an instance/array');return {get:()=>{if(!(key in object))throw Error('Unknown GML member '+key);return object[key];},set:v=>{object[key]=v;}};}
+  if(node.kind==='member'){const value=expression(node.object,scope),object=options.member?options.member(value):value,key=expression(node.key,scope);if(object===null||typeof object!=='object')throw Error('GML member target is not an instance/array');return {get:()=>{if(!(key in object))throw Error('Unknown GML member '+key);return object[key];},set:v=>{object[key]=v;}};}
   throw Error('Invalid GML assignment target');
  };
  const expression=(node:GmlNode,scope:Scope):any=>{
@@ -109,7 +115,9 @@ export function executeGml(program:GmlProgram,self:ObjectValue,environment:Objec
    case 'binary':{const a=expression(node.left,scope);if(node.operator==='&&'||node.operator==='and')return truth(a)&&truth(expression(node.right,scope));if(node.operator==='||'||node.operator==='or')return truth(a)||truth(expression(node.right,scope));return operate(node.operator,a,expression(node.right,scope));}
    case 'conditional':return truth(expression(node.condition,scope))?expression(node.yes,scope):expression(node.no,scope);
    case 'call':{
-    const args=node.args.map((a:GmlNode)=>expression(a,scope));
+    const args=new Array(node.args.length);
+    if(options.argumentOrder==='right-to-left'){for(let i=node.args.length-1;i>=0;i--)args[i]=expression(node.args[i],scope);}
+    else for(let i=0;i<node.args.length;i++)args[i]=expression(node.args[i],scope);
     if(node.callee.kind!=='identifier')throw Error('Unsupported GML method call');
     const name=node.callee.name,declared=functions.get(name);
     if(declared){const locals=new Map<string,any>();declared.parameters.forEach((parameter:string,index:number)=>locals.set(parameter,args[index]));locals.set('argument',args);locals.set('argument_count',args.length);args.forEach((value:any,index:number)=>locals.set('argument'+index,value));try{statement(declared.body,{self:scope.self,other:scope.other,locals});}catch(e){if(e instanceof Control&&(e.kind==='return'||e.kind==='exit'))return e.value;throw e;}return undefined;}
@@ -135,6 +143,10 @@ export function executeGml(program:GmlProgram,self:ObjectValue,environment:Objec
     return;
    }
    case 'while':while(truth(expression(node.condition,scope))){work();if(!loopBody(node.body,scope))break;}return;
+   case 'repeat':{
+    const value=expression(node.count,scope);if(typeof value!=='number'||!Number.isFinite(value))throw Error('Unsupported GML repeat count');
+    const count=bankersRound(value);for(let i=0;i<count;i++){work();if(!loopBody(node.body,scope))break;}return;
+   }
    case 'for':if(node.init)statement(node.init,scope);while(!node.condition||truth(expression(node.condition,scope))){work();if(!loopBody(node.body,scope))break;if(node.increment)expression(node.increment,scope);}return;
    case 'with':{
     const target=expression(node.target,scope),targets=options.targets?options.targets(target):Array.isArray(target)?target:[target];

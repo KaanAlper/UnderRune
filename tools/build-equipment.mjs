@@ -6,7 +6,9 @@ import {transformWithOxc} from 'vite';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const scratch=path.join(root,'.tools/equipment');await fs.mkdir(scratch,{recursive:true});
 const runtime=await transformWithOxc(await fs.readFile(path.join(root,'src/source-runtime/gml.ts'),'utf8'),'gml.ts',{lang:'ts'});
-await fs.writeFile(path.join(scratch,'gml.mjs'),runtime.code);
+const math=await transformWithOxc(await fs.readFile(path.join(root,'src/remake/gm/math.ts'),'utf8'),'math.ts',{lang:'ts'});
+await fs.writeFile(path.join(scratch,'math.mjs'),math.code);
+await fs.writeFile(path.join(scratch,'gml.mjs'),runtime.code.replace(/(['"])\.\.\/remake\/gm\/math\1/g,"'./math.mjs'"));
 const {parseGml,executeGml}=await import(pathToFileURL(path.join(scratch,'gml.mjs')));
 const game=process.env.DELTARUNE_DIR??'C:/Program Files (x86)/Steam/steamapps/common/DELTARUNE';
 const catalog={version:1,chapters:{}};
@@ -30,7 +32,7 @@ for(let chapter=1;chapter<=5;chapter++){
    executeGml({statements:[...program.statements,...invocation.statements]},self,environment,{calls});
    const plain=text=>String(text??'').replaceAll('#','\n').trim();
    if(kind==='items'){data.items.push({id,name:plain(self.itemnameb),description:plain(self.itemdescb),usable:self.usable===1,target:self.itemtarget??0,replaceable:self.replaceable??0});}
-   else data[kind].push({id,name:plain(self[prefix+'nametemp']),description:plain(self[prefix+'desctemp']),attack:self[prefix+'attemp'],defense:self[prefix+'dftemp'],magic:self[prefix+'magtemp'],allowed:[1,2,3,4].filter(char=>self[prefix+'char'+char+'temp']===1),ability:plain(self[prefix+'abilitytemp']),icon:self[prefix+'icontemp'],grazeAmount:self[prefix+'grazeamttemp'],grazeSize:self[prefix+'grazesizetemp'],bolts:self[prefix+'boltstemp']});
+   else data[kind].push({id,name:plain(self[prefix+'nametemp']),description:plain(self[prefix+'desctemp']),attack:self[prefix+'attemp'],defense:self[prefix+'dftemp'],magic:self[prefix+'magtemp'],allowed:[1,2,3,4].filter(char=>self[prefix+'char'+char+'temp']===1),ability:plain(self[prefix+'abilitytemp']),icon:self[prefix+'icontemp'],grazeAmount:self[prefix+'grazeamttemp'],grazeSize:self[prefix+'grazesizetemp'],bolts:self[prefix+'boltstemp'],element:self[prefix+'elementtemp']??0,elementAmount:self[prefix+'elementamounttemp']??0});
   }
  }
  for(const key of ['armors','weapons','items'])for(const entry of data[key])if(entry.id!==0&&!entry.name)throw Error(`Unnamed source ${key} ${chapter}:${entry.id}`);

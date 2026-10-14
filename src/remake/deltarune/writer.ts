@@ -20,6 +20,7 @@ export const TYPERS:Record<number,Typer>={
  37:{...big('snd_txtsus',36,3),hspace:18},40:main(null,2),41:main(null,3),42:big(null,36,2),
  45:big('snd_txtral',28),46:big('snd_txtlan',28),47:big('snd_txtsus',28),48:big('snd_dadtxt',28),
  50:dotum('snd_text'),51:big('snd_text',36,10),52:big('snd_text',36,4),53:dotum('snd_txtsus'),54:dotum('snd_txtsus',2),55:main('snd_txtrud'),
+ 72:dotum('snd_txtspam2'),
  60:main(null,8),666:{...main(null,4,2),hspace:12,vspace:20},667:{...main(null,2,2),hspace:12,vspace:20},999:main('snd_txtecho',4,3),
 };
 /** scr_texttype: apply the current global.typer (unknown typers keep the writer's settings). */
@@ -84,6 +85,7 @@ function format(s:GmInstance,rt:GmRuntime){
   }
  }
  if(charpos>stringmax)stringmax=charpos;
+ s.stringmax=stringmax;s.linecount=(str.match(/&/g)??[]).length;
  s.mystring=str;s.length=str.length;s.formatted=1;
  if(align==='c')s.writingx=rt.view.x+320-stringmax*s.hspace/2;
 }
@@ -147,6 +149,7 @@ function drawWriter(s:GmInstance,rt:GmRuntime){
    const n1=at(s.mystring,n+1),n2=at(s.mystring,n+2);
    if(n1==='E'){const e='0123456789ABCDE'.indexOf(n2);if(e>=0)g.fe=e;}
    if(n1==='F'){const f=FACE_CODES[n2];if(f!==undefined)g.fc=f;}
+   if(n1==='f'&&g.chapter===2){if(!g.onChapter2SmallFace)throw Error('Chapter 2 writer needs small face source');g.onChapter2SmallFace(s,n2);}
    // \* draws a controller button icon; no Chapter 1 battle line uses it.
    if(n1==='T'){
     const t=SPEAKER_TYPERS[n2];if(t!==undefined){g.typer=t(g);textType(s,rt);d.font=s.myfont;}

@@ -7,7 +7,7 @@ import type {GmObjectDef} from '../src/remake/gm/runtime';
 // setting depth by hand draws in the wrong order (e.g. the box fill covering the soul).
 // The table comes from the maintainer's local extraction; the test is skipped without it.
 const table='extracted/chapter1_windows/code/gml_GlobalScript___global_object_depths.gml';
-const modules=import.meta.glob(['../src/remake/deltarune/*.ts','../src/remake/bosses/*/*.ts'],{eager:true}) as Record<string,Record<string,unknown>>;
+const modules=import.meta.glob(['../src/remake/deltarune/*.ts','../src/remake/bosses/*/*.ts','!../src/remake/bosses/spamton-neo/*.ts'],{eager:true}) as Record<string,Record<string,unknown>>;
 const isDef=(v:unknown):v is GmObjectDef=>!!v&&typeof v==='object'&&typeof (v as GmObjectDef).name==='string'&&typeof (v as GmObjectDef).index==='number';
 
 it.skipIf(!fs.existsSync(table))('every ported Chapter 1 object declares its source creation depth',()=>{

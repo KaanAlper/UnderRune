@@ -7,8 +7,9 @@ import {C} from '../gm/graphics';
 import {round,le} from '../gm/math';
 import {KEY,battleController as controllerBase,bulletGenParent,bulletParent,darkener,dmgWriter,heart,heroParent,mergeColor,monsterParent,returnHeart,tensionHeal} from './battle';
 import {battleText,face,faceParent,writer} from './writer';
-import {optionalSourceText as lang} from '../host/text';
-import {HERO_DEFS,attackPress,spellPhase,heal,spellText} from './party';
+import {optionalSourceText as lang,sourceText} from '../host/text';
+import {HERO_DEFS,attackPress,spellPhase,heal,spellText,healAnim} from './party';
+import {actorActs,actSelectChapter2,actSimulChapter2,initChapter2ActTables,itemInfoChapter2,nextActChapter2,resetChapter2Actors,spellMenuSetupChapter2} from './chapter2';
 
 const pressed=(rt:GmRuntime,...keys:number[])=>keys.some(k=>rt.input.pressed.has(k));
 export const left_p=(rt:GmRuntime)=>pressed(rt,KEY.left);
@@ -46,7 +47,7 @@ function charCan(rt:GmRuntime,slot:number){
 
 /** scr_spellinfo: name, battle name and description, cost and target kind of a spell. */
 export function spellInfo(s:GmInstance,rt:GmRuntime,id:number){
- const L=(n:number)=>lang(`scr_spellinfo_slash_scr_spellinfo_gml_${n}_0`);
+ const L=(n:number)=>(rt.globals.chapter===2?sourceText:lang)(`scr_spellinfo_slash_scr_spellinfo_gml_${n}_0`);
  s.cost=-1;s.spelltarget=1;s.spellname=' ';s.spellnameb=' ';s.spelldescb=' ';s.spelldesc=' ';s.spellanim=0;s.spellusable=0;s.spelltext=' ';
  const set=(name:number,nameb:number,descb:number,desc:number|null,target:number,cost:number,usable:number)=>{
   s.spellname=L(name);s.spellnameb=L(nameb);s.spelldescb=L(descb);s.spelldesc=desc===null?' ':L(desc);s.spelltarget=target;s.cost=cost;s.spellusable=usable;
@@ -54,12 +55,12 @@ export function spellInfo(s:GmInstance,rt:GmRuntime,id:number){
  switch(id){
   case 0:s.spellname=' ';s.spellnameb=' ';s.spelltarget=0;s.cost=-1;s.spelldescb=L(18);break;
   case 1:set(21,22,23,24,2,125,0);break;
-  case 2:set(31,32,33,34,1,80,1);s.usable=0;break;
+  case 2:set(31,32,33,34,1,80,rt.globals.chapter===2?0:1);s.usable=0;break;
   case 3:set(42,43,44,45,2,40,0);s.usable=0;break;
   case 4:set(52,53,54,55,2,rt.globals.charweapon[2]===7?100:125,0);break;
   case 5:set(64,65,66,null,2,0,0);break;
   case 6:set(75,76,77,null,0,0,0);break;
-  case 7:set(86,87,88,89,0,0,0);break;
+  case 7:set(86,87,88,rt.globals.chapter===2?93:89,0,0,0);break;
  }
 }
 /** scr_spellinfo_all: the spell tables the menus read, for every character's 12 slots. */
@@ -77,16 +78,17 @@ const ITEMS:Record<number,[number,number,number,number,number]>={
  9:[70,71,1,10,1],10:[77,78,1,10,1],11:[84,85,2,70,1],12:[91,92,1,40,1],13:[98,99,1,40,1],14:[105,106,1,10,1],15:[112,113,1,50,1],
 };
 /** scr_iteminfo: an item's battle name and description, its target kind (0 none, 1 one ally, 2 everyone) and use. */
-export function itemInfo(s:GmInstance,id:number){
+export function itemInfo(s:GmInstance,id:number,rt?:GmRuntime){
+ if(rt?.globals.chapter===2){itemInfoChapter2(s,rt,id);return;}
  s.usable=0;s.value=0;s.itemtarget=0;s.itemnameb=' ';s.itemdescb=' ';
  if(id===0){s.itemnameb=' ';s.itemdescb='---';return;}
  const it=ITEMS[id];if(!it)return;
  s.itemnameb=lang(`scr_iteminfo_slash_scr_iteminfo_gml_${it[0]}_0`);s.itemdescb=lang(`scr_iteminfo_slash_scr_iteminfo_gml_${it[1]}_0`);
  s.itemtarget=it[2];s.value=it[3];s.usable=it[4];
 }
-function itemInfoTemp(s:GmInstance,slot:number){
+function itemInfoTemp(s:GmInstance,slot:number,rt:GmRuntime){
  s.tempitemnameb??=grid(13,3,' ');s.tempitemdescb??=grid(13,3,' ');s.tempitemvalue??=grid(13,3,0);s.tempitemusable??=grid(13,3,0);
- for(let i=0;i<12;i++){itemInfo(s,s.tempitem[i][slot]);s.tempitemnameb[i][slot]=s.itemnameb;s.tempitemdescb[i][slot]=s.itemdescb;s.tempitemvalue[i][slot]=s.value;s.tempitemusable[i][slot]=s.usable;}
+ for(let i=0;i<12;i++){itemInfo(s,s.tempitem[i][slot],rt);s.tempitemnameb[i][slot]=s.itemnameb;s.tempitemdescb[i][slot]=s.itemdescb;s.tempitemvalue[i][slot]=s.value;s.tempitemusable[i][slot]=s.usable;}
 }
 /** scr_itemshift_temp: the bag as this character sees it, with the chosen item taken out. */
 function itemShiftTemp(s:GmInstance,index:number,slot:number){s.tempitem[12][slot]=0;for(let i=index;i<12;i++)s.tempitem[i][slot]=s.tempitem[i+1][slot];}
@@ -96,14 +98,16 @@ export function itemShift(rt:GmRuntime,index:number){const g=rt.globals;g.item[1
 /** scr_spellconsumeb: the chosen spell (or SPARE's 100) is this character's action. */
 function spellConsume(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,t=g.charturn;
- g.tension-=s.cost;g.faceaction[t]=2;g.charaction[t]=2;g.charspecial[t]=g.spell[g.char[t]][g.bmenucoord[2][t]];g.tensionselect=0;
+ g.tension-=s.cost;g.faceaction[t]=2;g.charaction[t]=2;
+ g.charspecial[t]=g.chapter===2&&g.flag[34]===0?g.battlespell[t][g.bmenucoord[2][t]]:g.spell[g.char[t]][g.bmenucoord[2][t]];g.tensionselect=0;
  nextHero(s,rt);
 }
 /** scr_itemconsumeb: the chosen item, as spell 200 + id. */
 function itemConsume(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,t=g.charturn;
  g.faceaction[t]=3;g.charaction[t]=4;g.charspecial[t]=s.tempitem[g.bmenucoord[4][t]][t]+200;
- if(s.usable===1)itemShiftTemp(s,g.bmenucoord[4][t],t);
+ if(g.chapter===2&&s.replaceable>0)s.tempitem[g.bmenucoord[4][t]][t]=s.replaceable;
+ else if(s.usable===1)itemShiftTemp(s,g.bmenucoord[4][t],t);
  nextHero(s,rt);
 }
 /** scr_nexthero: the next party member who can choose, or the end of choosing. */
@@ -125,7 +129,13 @@ function prevHero(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;const prev=g.charturn;s.moveswapped=0;
  if(g.charturn===1&&g.charmove[0]===1){g.charturn=0;s.moveswapped=1;}
  if(g.charturn===2){s.moveswapped=1;if(g.charmove[1]===1&&g.acting[1]===0)g.charturn=1;else if(g.charmove[0]===1)g.charturn=0;}
- if(s.moveswapped===1){const t=g.charturn;g.bmenuno=0;g.faceaction[t]=0;g.chartarget[t]=0;g.charaction[t]=0;g.charspecial[t]=0;s.movenoise=1;}
+ if(s.moveswapped===1){
+  const t=g.charturn;g.bmenuno=0;g.faceaction[t]=0;g.chartarget[t]=0;g.charaction[t]=0;g.charspecial[t]=0;s.movenoise=1;
+  if(g.chapter===2){
+   const suffix=['','','sus','ral','noe'][g.char[t]];for(const m of rt.all(monsterParent))m['acting'+suffix]=0;
+   g.actingsingle[t]=0;g.actingsimul[t]=0;
+  }
+ }
  if(g.charturn===0){
   for(const m of rt.all(monsterParent))m.acting=0;
   g.acting[0]=0;g.acting[1]=0;g.acting[2]=0;g.faceaction[1]=0;g.chartarget[1]=0;g.charaction[1]=0;g.charspecial[1]=0;g.faceaction[2]=0;
@@ -145,13 +155,24 @@ function endTurn(s:GmInstance,rt:GmRuntime){
   if(g.charauto[g.char[i]]===1&&g.hp[g.char[i]]>0){if(g.monster[2]===1)g.chartarget[i]=2;if(g.monster[1]===1)g.chartarget[i]=1;if(g.monster[0]===1)g.chartarget[i]=0;}
   if(g.charaction[i]===1)g.attacking=1;
  }
- if(g.acting[0]===0)attackPhase(rt);else{g.charturn=3;g.myfight=3;}
+ if(g.chapter===2){
+  if(g.acting[0]===0&&!g.actingsingle.includes(1))attackPhase(rt);
+  else{
+   g.charturn=3;g.myfight=3;g.currentactingchar=0;
+   if(g.acting[0]===0)nextAct(rt);
+   if(g.acting[0]===1&&g.actingsimul[0]===1)actSimulChapter2(rt);
+  }
+  s.messagepriority=-1;s.attackpriority=-1;
+ }else if(g.acting[0]===0)attackPhase(rt);else{g.charturn=3;g.myfight=3;}
 }
+/** scr_nextact: enemies call this after the current ACT's writer/animation completes. */
+export function nextAct(rt:GmRuntime){if(rt.globals.chapter===2){if(nextActChapter2(rt))attackPhase(rt);}else attackPhase(rt);}
 /** scr_attackphase: spells and items first (obj_spellphase), then the FIGHT bar (obj_attackpress). */
 export function attackPhase(rt:GmRuntime){
  const g=rt.globals,c=findController(rt);if(!c)return;
  c.techwon=0;if(monsterPop(rt)===0)c.techwon=1;
  if(c.techwon===0){
+  if(g.chapter===2)g.hittarget=[0,0,0];
   c.fightphase=1;g.charturn=3;
   for(let i=0;i<3;i++)if(g.charaction[i]===4||g.charaction[i]===2)c.fightphase=0;
   if(g.myfight===4)c.fightphase=1;
@@ -202,6 +223,7 @@ function mnEndTurn(s:GmInstance,rt:GmRuntime){
  if(g.charturn===2&&(g.charmove[2]===0||g.charauto[g.char[2]]===1))s.skip=1;
  for(let i=0;i<3;i++){g.acting[i]=0;g.temptension[i]=g.tension;g.charspecial[i]=0;g.targeted[i]=0;g.charaction[i]=0;g.faceaction[i]=0;}
  for(const m of rt.all(monsterParent)){m.attacked=0;m.talked=0;m.acting=0;}
+ if(g.chapter===2){resetChapter2Actors(rt);s.messagepriority=-1;s.attackpriority=-1;g.hittarget=[0,0,0];}
  if(s.skip===1){if(g.char[0]===2&&g.charauto[2]===1){g.acting[0]=1;g.myfight=3;}endTurn(s,rt);}
  for(let i=0;i<12;i++)for(let j=0;j<3;j++)s.tempitem[i][j]=g.item[i];
 }
@@ -226,11 +248,13 @@ function create(s:GmInstance,rt:GmRuntime){
  g.monstername=[' ',' ',' '];g.monstercomment=[' ',' ',' '];g.monsterinstance=[12913921839,12913921839,12913921839];g.monstergold=[0,0,0,0];g.monsterexp=[0,0,0,0];
  for(const key of ['act','canact','acttype','actspell','actcost'])g[key]=grid(3,6,0);
  g.actname=grid(3,6,' ');g.actdesc=grid(3,6,' ');g.actactor=grid(3,6,1);
+ if(g.chapter===2)initChapter2ActTables(rt);
  for(let i=0;i<3;i++)if(g.monstertype[i]>0){
   g.monster[i]=1;const m=rt.create(g.monsterinstancetype[i],g.monstermakex[i],g.monstermakey[i]);g.monsterinstance[i]=m.id;m.myself=i;rt.userEvent(m,12);
  }
  g.charturn=0;
  for(const key of ['acting','charaction','charspecial','chartarget','faceaction','rembmenuno','targeted','battleat','battledf','battlemag'])g[key]=[0,0,0];
+ if(g.chapter===2){resetChapter2Actors(rt);spellMenuSetupChapter2(rt);s.spellpage=0;g.turntimer=120;s.messagepriority=-1;s.attackpriority=-1;}
  for(let i=0;i<3;i++){
   const c=g.char[i],sum=(base:number[],item:number[][])=>base[c]+item[c][0]+item[c][1]+item[c][2];
   g.battleat[i]=sum(g.at,g.itemat);g.battledf[i]=sum(g.df,g.itemdf);g.battlemag[i]=sum(g.mag,g.itemmag);
@@ -267,7 +291,7 @@ function step(s:GmInstance,rt:GmRuntime){
   if(s.skipvictory===0){
    g.monstergold[3]+=Math.floor(g.tension/10);if(g.charweapon[1]===8)g.monstergold[3]+=Math.floor(g.monstergold[3]/20);
    g.gold=(g.gold??0)+g.monstergold[3];g.xp=(g.xp??0)+g.monsterexp[3];g.fc=0;g.fe=0;
-   g.battlemsg[0]=subst(lang('obj_battlecontroller_slash_Step_0_gml_40_0'),g.monsterexp[3],g.monstergold[3]);
+   g.battlemsg[0]=subst(g.chapter===2?sourceText('obj_battlecontroller_slash_Step_0_gml_42_0'):lang('obj_battlecontroller_slash_Step_0_gml_40_0'),g.monsterexp[3],g.monstergold[3]);
    g.msg[0]=g.battlemsg[0];g.typer=g.battletyper;s.lastbattlewriter=battleText(rt).id;
    for(let i=0;i<3;i++)withId(rt,g.charinstance[i],h=>{h.state=7;h.hurt=0;h.hurttimer=0;});
   }
@@ -287,7 +311,7 @@ function step(s:GmInstance,rt:GmRuntime){
     if(c===1&&g.char[t()]!==1){s.onebuffer=1;g.bmenuno=2;}
     if(c===1&&g.char[t()]===1){s.onebuffer=1;g.bmenuno=11;}
     if(c===2&&s.tempitem[0][t()]!==0){
-     s.onebuffer=1;g.bmenuno=4;itemInfoTemp(s,t());
+     s.onebuffer=1;g.bmenuno=4;itemInfoTemp(s,t(),rt);
      for(let i=0;i<12;i++)if(s.tempitem[coord[4][t()]][t()]===0&&coord[4][t()]>0)coord[4][t()]-=1;
     }
     if(c===3){s.onebuffer=1;g.bmenuno=12;}
@@ -298,27 +322,31 @@ function step(s:GmInstance,rt:GmRuntime){
   }
   if(g.bmenuno===2){
    writerDepth(s,rt,10,true);
-   const ch=g.char[t()],sp=g.spell[ch],C2=()=>coord[2][t()] as number;
-   if(right_p(rt)){
+   const ch=g.char[t()],merged=g.chapter===2&&g.flag[34]===0,sp=merged?g.battlespell[t()]:g.spell[ch],costs=merged?g.battlespellcost[t()]:g.spellcost[ch],C2=()=>coord[2][t()] as number;
+   if(right_p(rt)||(g.chapter===2&&left_p(rt))){
     let cango=1;const sc=C2();
     if(sc<11){if(sp[C2()+1]===0){cango=0;if(sc%2===1&&sc>0)coord[2][t()]-=1;}}
     else{coord[2][t()]-=1;cango=0;}
     if(cango===1){if(sc%2===0)coord[2][t()]+=1;else coord[2][t()]-=1;}
    }
-   if(left_p(rt)){const sc=C2();if(sp[1]!==0){if(sc%2===0)coord[2][t()]+=1;else coord[2][t()]-=1;}}
+   if(g.chapter!==2&&left_p(rt)){const sc=C2();if(sp[1]!==0){if(sc%2===0)coord[2][t()]+=1;else coord[2][t()]-=1;}}
    if(down_p(rt)){
     const sc=C2();let cango=1;
     if(sc>=10)cango=0;else{if(sp[sc+2]===0)cango=0;if(sc===5&&sp[6]!==0&&sp[7]===0)cango=2;}
     if(cango===1)coord[2][t()]+=2;if(cango===2)coord[2][t()]=6;
    }
    if(up_p(rt)){const sc=C2();if(sc>1)coord[2][t()]-=2;}
-   g.tensionselect=g.spellcost[ch][C2()];
+   g.tensionselect=costs[C2()];
    if(button1_p(rt)&&sp[C2()]!==0&&s.onebuffer<0){
-    if(g.spellcost[ch][C2()]<=g.tension){
-     s.onebuffer=2;g.bmenuno=0;s.selnoise=1;spellInfo(s,rt,sp[C2()]);
-     if(s.spelltarget===0)spellConsume(s,rt);
-     if(s.spelltarget===1)g.bmenuno=8;
-     if(s.spelltarget===2)g.bmenuno=3;
+    if(costs[C2()]<=g.tension){
+     s.onebuffer=2;g.bmenuno=0;s.selnoise=1;
+     if(merged&&sp[C2()]===-1)g.bmenuno=13;
+     else{
+      spellInfo(s,rt,sp[C2()]);
+      if(s.spelltarget===0)spellConsume(s,rt);
+      if(s.spelltarget===1)g.bmenuno=8;
+      if(s.spelltarget===2)g.bmenuno=3;
+     }
     }
    }
    if(button2_p(rt)&&s.onebuffer<0){g.tensionselect=0;s.twobuffer=1;g.bmenuno=0;s.movenoise=1;}
@@ -342,14 +370,24 @@ function step(s:GmInstance,rt:GmRuntime){
    if(up_p(rt)){const ic=C4();if(ic>1)coord[4][t()]-=2;}
    if(ti[C4()][t()]===0)coord[4][t()]-=1;
    if(button1_p(rt)&&ti[C4()][t()]!==0&&s.onebuffer<0){
-    s.onebuffer=2;g.bmenuno=0;s.selnoise=1;itemInfo(s,ti[C4()][t()]);
-    if(s.itemtarget===0||s.itemtarget===2)itemConsume(s,rt);
+    s.onebuffer=2;g.bmenuno=0;s.selnoise=1;itemInfo(s,ti[C4()][t()],rt);
+    if(s.itemtarget===0||s.itemtarget===2){
+     const item=ti[C4()][t()];
+     if(g.chapter===2&&item>=27&&item<=29){
+      tensionHeal(rt,item===27?80:item===28?Math.ceil(g.maxtension/2):Math.ceil(g.maxtension));
+      // The source applies TP at selection time, creates orange heal particles and consumes this turn without a spell.
+      const sound=g.onChapter2TensionItemSound as ((name:string,pitch:number,volume:number)=>void)|undefined;
+      if(sound)sound('snd_cardrive',1.4,0.8);else rt.sound?.('snd_cardrive',1.4);
+      const h=rt.byId(g.charinstance[t()]);if(h){const a=rt.create(healAnim,h.x,h.y);a.target=h.id;a.particlecolor=C.orange;}
+      itemShiftTemp(s,C4(),t());nextHero(s,rt);g.onChapter2ItemUse?.(item,rt);
+     }else itemConsume(s,rt);
+    }
     if(s.itemtarget===1)g.bmenuno=7;
    }
    if(button2_p(rt)&&s.onebuffer<0){s.twobuffer=1;g.bmenuno=0;s.movenoise=1;}
   }
   if(g.bmenuno===9){
-   const enemy=coord[11][t()],C9=()=>coord[9][t()] as number,can=g.canact[enemy];
+   const enemy=coord[11][t()],C9=()=>coord[9][t()] as number,acts=g.chapter===2?actorActs(rt,enemy):null,can=acts?acts.can:g.canact[enemy],costs=acts?acts.cost:g.actcost[enemy];
    if(right_p(rt)){
     let cango=1;const ac=C9();
     if(ac<5){if(can[C9()+1]===0){cango=0;if(ac%2===1&&ac>0)coord[9][t()]-=1;}}
@@ -359,36 +397,39 @@ function step(s:GmInstance,rt:GmRuntime){
    if(left_p(rt)){const ac=C9();if(ac%2===0){if(can[ac+1]!==0)coord[9][t()]+=1;}else coord[9][t()]-=1;}
    if(down_p(rt)){const ac=C9();let cango=1;if(ac>=4)cango=0;else if(can[ac+2]===0)cango=0;if(cango===1)coord[9][t()]+=2;}
    if(up_p(rt)){const ac=C9();if(ac>1)coord[9][t()]-=2;}
-   g.tensionselect=g.actcost[enemy][C9()];
-   let canpress=1;const actor=g.actactor[coord[11][t()]][C9()];
+   g.tensionselect=costs[C9()];
+   let canpress=1;const actor=g.chapter===2&&g.char[t()]!==1?1:g.actactor[coord[11][t()]][C9()];
    if((actor===2||actor===4)&&(s.havechar[1]===0||g.hp[2]<=0))canpress=0;
    if((actor===3||actor===4)&&(s.havechar[2]===0||g.hp[3]<=0))canpress=0;
    if(canpress===1&&button1_p(rt)&&can[C9()]===1&&g.tension>=g.tensionselect&&s.onebuffer<0){
-    s.onebuffer=2;g.bmenuno=0;s.selnoise=1;g.tension-=g.actcost[enemy][C9()];g.tensionselect=0;
+    s.onebuffer=2;g.bmenuno=0;s.selnoise=1;g.tension-=costs[C9()];g.tensionselect=0;
+    if(g.chapter===2)actSelectChapter2(s,rt,enemy,C9());
+    else{
     withId(rt,g.monsterinstance[enemy],m=>{m.acting=C9()+1;});
     g.acting[0]=1;
     if(actor===2)g.acting[s.charpos[1]]=1;
     if(actor===3)g.acting[s.charpos[2]]=1;
     if(actor===4){g.acting[2]=1;g.acting[1]=1;}
     for(let i=0;i<3;i++)if(g.acting[i]===1){g.faceaction[i]=6;g.charaction[i]=9;}
+    }
     nextHero(s,rt);
    }
    if(button2_p(rt)&&s.onebuffer<0){g.tensionselect=0;s.twobuffer=1;g.bmenuno=11;s.movenoise=1;}
   }
-  const targetMenu=()=>[7,1,8,3,11,12].includes(g.bmenuno);
+  const targetMenu=()=>[7,1,8,3,11,12,...(g.chapter===2?[13]:[])].includes(g.bmenuno);
   if(targetMenu()){
    writerDepth(s,rt,10,true);
    if(button2_p(rt)&&s.onebuffer<0){
     s.twobuffer=1;
     if(g.bmenuno===1||g.bmenuno===11||g.bmenuno===12)g.bmenuno=0;
     if(g.bmenuno===7)g.bmenuno=4;
-    if(g.bmenuno===8||g.bmenuno===3)g.bmenuno=2;
+    if(g.bmenuno===8||g.bmenuno===3||g.bmenuno===13)g.bmenuno=2;
     s.movenoise=1;
    }
    if(targetMenu()){
     const ht=[0,0,0],m=g.bmenuno;
     if(m===7||m===8)for(let i=0;i<3;i++)ht[i]=g.char[i]>0?1:0;
-    if(m===1||m===3||m===11||m===12)for(let i=0;i<3;i++)ht[i]=g.monster[i];
+    if(m===1||m===3||m===11||m===12||m===13)for(let i=0;i<3;i++)ht[i]=g.monster[i];
     const cur=()=>coord[m][t()] as number,set=(v:number)=>{coord[m][t()]=v;};
     if(cur()===2&&ht[2]===0)set(0);
     if(cur()===0&&ht[0]===0)set(1);
@@ -404,10 +445,16 @@ function step(s:GmInstance,rt:GmRuntime){
      if(m===8||m===3){g.chartarget[t()]=cur();spellConsume(s,rt);}
      if(m===11){
       g.bmenuno=9;let ac=coord[9][t()];const enemy=coord[11][t()];
-      for(let i=0;i<6;i++)if(g.canact[enemy][ac]===0&&ac>0){coord[9][t()]-=1;ac-=1;}
+      const can=g.chapter===2?actorActs(rt,enemy).can:g.canact[enemy];
+      for(let i=0;i<6;i++)if(can[ac]===0&&ac>0){coord[9][t()]-=1;ac-=1;}
       s.onebuffer=1;
      }
      if(m===12){g.faceaction[t()]=10;g.chartarget[t()]=cur();g.charaction[t()]=2;g.charspecial[t()]=100;nextHero(s,rt);}
+     if(m===13){
+      const choice=coord[2][t()],cost=g.battlespellcost[t()][choice];
+      s.onebuffer=2;g.tension-=cost;g.tensionselect=0;g.bmenuno=0;
+      actSelectChapter2(s,rt,cur(),choice);nextHero(s,rt);
+     }
     }
    }
   }
@@ -501,7 +548,7 @@ function draw(s:GmInstance,rt:GmRuntime){
  charBox(s,rt);
  const text=(x:number,y:number,str:string)=>rt.drawText(x,y,nl(str));
  const m=g.bmenuno;
- if((m===1||m===3||m===11||m===12)&&g.myfight===0){
+ if((m===1||m===3||m===11||m===12||(g.chapter===2&&m===13))&&g.myfight===0){
   rt.drawSprite('spr_heart',0,xx+55,yy+385+coord[m][t]*30);d.font='fnt_mainbig';
   for(let i=0;i<3;i++){
    flashOn(rt.byId(g.monsterinstance[coord[m][t]]));
@@ -519,18 +566,20 @@ function draw(s:GmInstance,rt:GmRuntime){
  }
  const cursorAt=(c:number,right:number)=>{const cc=c%6;return {x:cc%2===1?right:10,y:cc>3?445:cc>1?415:385};};
  if(m===2&&g.myfight===0){
-  const ch=g.char[t];let sc=coord[2][t],page=0;if(sc>5){page=1;sc-=6;}
+  const ch=g.char[t],merged=g.chapter===2&&g.flag[34]===0,spells=merged?g.battlespell[t]:g.spell[ch],costs=merged?g.battlespellcost[t]:g.spellcost[ch],names=merged?g.battlespellname[t]:g.spellnameb[ch],descs=merged?g.battlespelldesc[t]:g.spelldescb[ch];
+  let sc=coord[2][t],page=0;if(sc>5){page=1;sc-=6;}
   const h=cursorAt(sc,230);rt.drawSprite('spr_heart',0,xx+h.x,yy+h.y);d.font='fnt_mainbig';
   for(let i=0;i<3;i++){
    const l=page*6+i*2;d.color=C.white;
-   if(g.tension<g.spellcost[ch][l])d.color=C.gray;
-   else if(g.spell[ch][l]===3){let glow=0;for(let k=0;k<3;k++)if(g.monster[k]===1&&g.monsterstatus[k]===1&&g.encounterno!==31)glow=1;if(glow)d.color=mergeColor(C.aqua,0xff0000,0.3);}
-   text(xx+30,yy+375+i*30,g.spellnameb[ch][l]);
-   d.color=C.white;if(g.tension<g.spellcost[ch][l+1])d.color=C.gray;
-   text(xx+260,yy+375+i*30,g.spellnameb[ch][l+1]);
+   if(g.tension<costs[l])d.color=C.gray;
+   else if(spells[l]===3){let glow=0;for(let k=0;k<3;k++)if(g.monster[k]===1&&g.monsterstatus[k]===1&&g.encounterno!==31)glow=1;if(glow)d.color=mergeColor(C.aqua,0xff0000,0.3);}
+   text(xx+30,yy+375+i*30,names[l]);
+   d.color=C.white;if(g.tension<costs[l+1])d.color=C.gray;
+   text(xx+260,yy+375+i*30,names[l+1]);
   }
-  d.color=C.gray;text(xx+500,yy+375,g.spelldescb[ch][page*6+sc]);
-  d.color=C.orange;text(xx+500,yy+440,round(g.spellcost[ch][page*6+sc]/g.maxtension*100)+lang('obj_battlecontroller_slash_Draw_0_gml_171_0'));
+  d.color=C.gray;text(xx+500,yy+375,descs[page*6+sc]);
+  const costPercent=round(costs[page*6+sc]/g.maxtension*100);
+  if(!merged||costPercent>0){d.color=C.orange;text(xx+500,yy+440,costPercent+(g.chapter===2?'% TP':lang('obj_battlecontroller_slash_Draw_0_gml_171_0')));}
  }
  if(m===4&&g.myfight===0){
   let ic=coord[4][t],page=0;if(ic>5){page=1;ic-=6;}
@@ -541,13 +590,13 @@ function draw(s:GmInstance,rt:GmRuntime){
   d.color=C.gray;text(xx+500,yy+375,s.tempitemdescb[page*6+ic][t]);
  }
  if(m===9&&g.myfight===0){
-  const ac=coord[9][t],enemy=coord[11][t];
+  const ac=coord[9][t],enemy=coord[11][t],acts=g.chapter===2?actorActs(rt,enemy):null,costs=acts?acts.cost:g.actcost[enemy];
   const h=cursorAt(ac,240);rt.drawSprite('spr_heart',0,xx+h.x,yy+h.y);d.font='fnt_mainbig';
   for(let i=0;i<6;i++){
-   let cant=0,off=0;const who=g.actactor[enemy][i],xo=i%2===1?230:0,yo=i>3?60:i>1?30:0;let susblend=C.white,ralblend=C.white;
+   let cant=0,off=0;const who=g.chapter===2&&g.char[t]!==1?1:g.actactor[enemy][i],xo=i%2===1?230:0,yo=i>3?60:i>1?30:0;let susblend=C.white,ralblend=C.white;
    if(who===2||who===4){if(s.havechar[1]===0||g.hp[2]<=0){susblend=C.gray;cant=1;}off=36;}
    if(who===3||who===4){if(s.havechar[2]===0||g.hp[3]<=0){ralblend=C.gray;cant=1;}off=36;}
-   if(g.tension<g.actcost[enemy][i])cant=1;
+   if(g.tension<costs[i])cant=1;
    if(who===4)off=round(off*1.8);
    d.color=cant===1?C.gray:C.white;
    // The game tints Ralsei's head with Susie's blend.
@@ -555,10 +604,10 @@ function draw(s:GmInstance,rt:GmRuntime){
    if(who===3)rt.drawSprite('spr_headralsei',0,xx+30+xo,yy+375+yo,1,1,0,susblend,1);
    if(who===4){rt.drawSprite('spr_headsusie',0,xx+30+xo,yy+375+yo,1,1,0,susblend,1);rt.drawSprite('spr_headralsei',0,xx+60+xo,yy+375+yo,1,1,0,susblend,1);}
    void ralblend;
-   text(xx+30+off+xo,yy+375+yo,g.actname[enemy][i]);
+   text(xx+30+off+xo,yy+375+yo,acts?acts.name[i]:g.actname[enemy][i]);
   }
-  d.color=C.gray;text(xx+500,yy+375,g.actdesc[enemy][ac]);
-  if(g.tensionselect>0){d.color=C.orange;text(xx+500,yy+440,round(g.actcost[enemy][ac]/g.maxtension*100)+lang('obj_battlecontroller_slash_Draw_0_gml_280_0'));}
+  d.color=C.gray;text(xx+500,yy+375,acts?acts.desc[ac]:g.actdesc[enemy][ac]);
+  if(g.tensionselect>0){d.color=C.orange;text(xx+500,yy+440,round(costs[ac]/g.maxtension*100)+(g.chapter===2?'% TP':lang('obj_battlecontroller_slash_Draw_0_gml_280_0')));}
   flashOn(rt.byId(g.monsterinstance[enemy]));
  }
  if((m===7||m===8)&&g.myfight===0){
@@ -573,7 +622,19 @@ function draw(s:GmInstance,rt:GmRuntime){
  }
  d.color=C.white;d.alpha=1;
 }
-function alarm2(s:GmInstance,rt:GmRuntime){s.reset=0;mnEndTurn(s,rt);}
+function alarm2(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals;
+ if(g.chapter===2){
+  const neo=g.monstertype.findIndex((type:number,i:number)=>type===50&&rt.byId(g.monsterinstance[i]));
+  if(neo>=0&&g.mercymod[neo]>99){
+   // Chapter 2 Alarm 2 enters the enemy's ending, never generic victory or another command turn.
+   const end=g.onNeoMercyTurnEnd as ((enemy:GmInstance,rt:GmRuntime)=>void)|undefined;
+   if(!end)throw Error('Chapter 2 NEO needs onNeoMercyTurnEnd for source ending dispatch');
+   end(rt.byId(g.monsterinstance[neo])!,rt);return;
+  }
+ }
+ s.reset=0;mnEndTurn(s,rt);
+}
 
 /** The full controller; the battle host creates this one (enemy code finds it as obj_battlecontroller). */
 export const battleControllerFull:GmObjectDef={...controllerBase,parent:controllerBase,events:{create,step,draw,alarm2}};

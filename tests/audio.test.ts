@@ -2,10 +2,22 @@ import {afterEach,it,expect,vi} from 'vitest';
 import {AudioManager} from '../src/game/audio';
 afterEach(()=>vi.unstubAllGlobals());
 function setup(){
+ const gains:{value:number;setValueAtTime:ReturnType<typeof vi.fn>;linearRampToValueAtTime:ReturnType<typeof vi.fn>;cancelScheduledValues:ReturnType<typeof vi.fn>}[]=[];
  const voices:{playbackRate:{value:number};buffer:unknown;onended:(()=>void)|null;connect:()=>void;disconnect:()=>void;start:ReturnType<typeof vi.fn>;stop:ReturnType<typeof vi.fn>}[]=[];
- class Context{destination={};currentTime=0;resume=async()=>{};close=async()=>{};decodeAudioData=async()=>({duration:.5});createGain(){return {gain:{value:1},connect:()=>{},disconnect:()=>{}};}createBufferSource(){const s={playbackRate:{value:1},buffer:null as unknown,onended:null as (()=>void)|null,connect:()=>{},disconnect:()=>{},start:vi.fn(),stop:vi.fn()};voices.push(s);return s;}}
- const fetcher=vi.fn(async()=>new Response(new Uint8Array([1,2,3])));vi.stubGlobal('AudioContext',Context);vi.stubGlobal('fetch',fetcher);const audio=new AudioManager();audio.unlock();return {audio,voices,fetcher};
+ class Context{destination={};currentTime=0;resume=async()=>{};close=async()=>{};decodeAudioData=async()=>({duration:.5});createGain(){const gain={value:1,setValueAtTime:vi.fn(),linearRampToValueAtTime:vi.fn(),cancelScheduledValues:vi.fn()};gains.push(gain);return {gain,connect:()=>{},disconnect:()=>{}};}createBufferSource(){const s={playbackRate:{value:1},buffer:null as unknown,onended:null as (()=>void)|null,connect:()=>{},disconnect:()=>{},start:vi.fn(),stop:vi.fn()};voices.push(s);return s;}}
+ const fetcher=vi.fn(async()=>new Response(new Uint8Array([1,2,3])));vi.stubGlobal('AudioContext',Context);vi.stubGlobal('fetch',fetcher);const audio=new AudioManager();audio.unlock();return {audio,voices,fetcher,gains};
 }
+it('switches identically named chapter effects by source URL, and reuses decoded bytes when switching back',async()=>{
+ const {audio,fetcher,gains}=setup();await audio.prepareEffects({snd_hit:{url:'/ch1/hit.wav',volume:.5,pitch:1}});audio.sourceEffect('snd_hit');
+ await audio.prepareEffects({snd_hit:{url:'/ch2/hit.wav',volume:.8,pitch:1}});audio.sourceEffect('snd_hit');
+ await audio.prepareEffects({snd_hit:{url:'/ch1/hit.wav',volume:.5,pitch:1}});audio.sourceEffect('snd_hit');
+ expect(fetcher).toHaveBeenCalledTimes(2);expect(gains.map(g=>g.value)).toEqual([.5,.8,.5]);audio.dispose();
+});
+it('applies charge gain over native frames and stops only the requested shot handle',async()=>{
+ const {audio,gains,voices}=setup();await audio.prepareEffects({snd_charge:{url:'/charge.wav',volume:1,pitch:1}});
+ const a=audio.sourceEffect('snd_charge',1,false,.8)!,b=audio.sourceEffect('snd_charge')!;audio.sourceVolume(a,0);audio.sourceVolume(a,.3,20);
+ expect(a).not.toBe(b);expect(gains[0].linearRampToValueAtTime).toHaveBeenCalledWith(.3,20/30);expect(gains[1].value).toBe(1);audio.sourceStop(a);expect(voices[0].stop).toHaveBeenCalledOnce();expect(voices[1].stop).not.toHaveBeenCalled();expect(audio.sourcePlaying(a)).toBe(false);expect(audio.sourcePlaying(b)).toBe(true);audio.dispose();
+});
 it('plays a decoded original sample with source gain and per-character pitch, without synthesizing it',async()=>{
  const {audio,voices,fetcher}=setup();await audio.prepareEffects({snd_laz_c:{url:'/swing.wav',volume:.9,pitch:1}});audio.sourceEffect('snd_laz_c',1.15,true);
  expect(fetcher).toHaveBeenCalledTimes(1);expect(voices[0].buffer).toEqual({duration:.5});expect(voices[0].playbackRate.value).toBe(1.15);expect(voices[0].start).toHaveBeenCalledOnce();audio.dispose();

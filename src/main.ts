@@ -13,6 +13,7 @@ import {PreparationPanel} from './ui/preparation';
 import {loadoutIni,type EquipmentCatalog,type Loadout} from './game/loadout';
 import {assetUrl} from './game/url';
 import {loadRemakeAssets} from './remake/host/assets';
+import {setSourceText} from './remake/host/text';
 import {createJevilPractice,JEVIL_PATTERNS,type JevilPractice} from './remake/host/practice';
 import {EngineBattle} from './remake/host/engine';
 import {sourceEncounter,developmentEncounter,availabilityLabel,availableEncounters} from './remake/host/encounters';
@@ -30,7 +31,8 @@ const canvas=element<HTMLCanvasElement>('screen'),ctx=canvas.getContext('2d')!;
 const overlay=element('interactions'),status=element('status'),loading=element('loading'),error=element('error');
 const input=new Input(),clock=new FixedClock(),storage=browserStore(),prefs=loadPrefs(storage);
 const publicMode=import.meta.env.MODE==='pages'||new URLSearchParams(location.search).has('demo');
-let remake:JevilPractice|EngineBattle|null=null,remakeAssets:Awaited<ReturnType<typeof loadRemakeAssets>>|null=null,publicLoadout:Loadout|null=null,remakeTick=0,publicPractice=false,remakeView:BattleView|null=null;
+const remakeCache=new Map<number,Awaited<ReturnType<typeof loadRemakeAssets>>>();
+let remake:JevilPractice|EngineBattle|null=null,publicLoadout:Loadout|null=null,remakeTick=0,publicPractice=false,remakeView:BattleView|null=null;
 let remakeMenu=false;
 // Engine battles read key presses like the game: every press since the last game frame reaches its next frame.
 const remakePressed=new Set<number>();
@@ -66,13 +68,16 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
  if(busy)return;busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* CONNECTING '+record.name.toUpperCase()+'...';const token=++sessionToken;
  const pattern=Number(element<HTMLSelectElement>('attack-select').value)||0;
  const controller=new AbortController();remakeLoad?.abort();remakeLoad=controller;
- try{remakeAssets??=await loadRemakeAssets();if(token!==sessionToken)return;await audio.prepareEffects(remakeAssets.sounds,controller.signal);if(token!==sessionToken)return;closeBattle();publicLoadout=structuredClone(loadout);
+ try{const remakeAssets=remakeCache.get(record.chapter)??await loadRemakeAssets(record.chapter);if(token!==sessionToken)return;remakeCache.set(record.chapter,remakeAssets);await audio.prepareEffects(remakeAssets.sounds,controller.signal);const neoHost=record.id==='ch2-61'?(await import('./remake/host/neo')).installNeoHost:undefined;if(token!==sessionToken)return;closeBattle();setSourceText(remakeAssets.text);publicLoadout=structuredClone(loadout);
   // The game calls randomize() when it starts: every battle gets its own random seed (tests and comparisons fix it).
   // ?seed=N repeats a run exactly (comparisons with the original's recordings).
   const fixedSeed=new URLSearchParams(location.search).get('seed'),seed=fixedSeed!==null?Number(fixedSeed)>>>0:crypto.getRandomValues(new Uint32Array(1))[0];
-  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[1],loadout,record.id,seed,{development:devUnlock});{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();
+  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost});{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();
   remakeView=new BattleView(remakeCtx,remakeAssets.draw);remakeMenu=false;
-  remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.stopAllSounds=()=>audio.stop();renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(encounter.music);
+  remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.stopAllSounds=()=>audio.stop();
+  remake.rt.sourceAudio={effect:(name,pitch,volume)=>audio.sourceEffect(name,pitch,false,volume),volume:(handle,value,frames)=>audio.sourceVolume(handle,value,frames),free:handle=>audio.sourceFree(handle),music:name=>{audio.play(name);return name;},loop:handle=>audio.sourceSetLoop(handle),pause:handle=>audio.sourceTrackPause(handle),resume:handle=>audio.sourceTrackResume(handle),position:(handle,seconds)=>audio.sourcePosition(handle,seconds),playing:handle=>audio.sourcePlaying(handle)};
+  remake.rt.globals.onChapter2TensionItemSound=(name:string,pitch:number,volume:number)=>audio.sourceEffect(name,pitch,false,volume);
+  renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(encounter.music);
  }catch(e){if(token===sessionToken)throw e;}finally{if(remakeLoad===controller)remakeLoad=null;if(token===sessionToken){busy=false;loading.hidden=true;input.clear();clock.reset();}}
 }
 async function launchNative(record:EncounterRecord,ini:string){

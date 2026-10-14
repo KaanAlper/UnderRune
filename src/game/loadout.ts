@@ -4,7 +4,7 @@ export const CHARACTERS = [
  {id:3,name:'Ralsei',color:'#82e4a3',sprite:'spr_ralseib_idle'},
  {id:4,name:'Noelle',color:'#ffd57d',sprite:'spr_noelleb_idle'},
 ] as const;
-export type Gear={id:number;name:string;description:string;attack:number;defense:number;magic:number;allowed:number[];ability?:string};
+export type Gear={id:number;name:string;description:string;attack:number;defense:number;magic:number;allowed:number[];ability?:string;element?:number;elementAmount?:number};
 export type SourceItem={id:number;name:string;description:string;usable:boolean;target:number;replaceable?:number};
 export type EquipmentSource={armors:Gear[];weapons:Gear[];items:SourceItem[];bagCapacity:number};
 export type Loadout={version:1;characters:Record<number,{weapon:number;armor:[number,number]}>;items:number[]};

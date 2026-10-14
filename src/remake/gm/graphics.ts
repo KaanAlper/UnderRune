@@ -3,12 +3,21 @@ export type HAlign=0|1|2;
 /** colorBottom: draw_text_color's vertical gradient (top colour, bottom colour). */
 export interface TextStyle{font:string;color:number;alpha:number;halign:HAlign;valign:HAlign;xscale:number;yscale:number;angle:number;colorBottom?:number}
 export interface GmGraphics{
+ surfaceCreate?(id:number,width:number,height:number):void;
+ surfaceTarget?(id:number|null):void;
+ surfaceClear?(color:number,alpha:number):void;
+ surfaceSprite?(id:number,name:string,left:number,top:number,width:number,height:number,originX:number,originY:number):void;
+ surfaceFree?(id:number):void;
+ spriteDelete?(name:string):void;
  sprite(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,blend:number,alpha:number):void;
+ /** draw_sprite_part_ext: origin-independent crop in untrimmed sprite coordinates. */
+ spritePart?(name:string,frame:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;
  spriteFog?(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,color:number,alpha:number):void;
  /** draw_background_tiled_ext: frame 0 repeated over the whole view from (x, y). */
  spriteTiled?(name:string,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;
  rect(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,outline:boolean):void;
  line?(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,width?:number):void;
+ triangle?(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,color:number,alpha:number,outline:boolean):void;
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean):void;
  text(x:number,y:number,text:string,style:TextStyle):void;
 }

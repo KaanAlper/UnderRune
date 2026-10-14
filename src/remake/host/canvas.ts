@@ -15,9 +15,28 @@ export const css=(c:number)=>`rgb(${c&255},${(c>>8)&255},${(c>>16)&255})`;
 const frameAt=(s:SpriteFrames,frame:number)=>{const n=s.frames.length;return n?s.frames[((Math.floor(frame)%n)+n)%n]:null;};
 
 export class CanvasGraphics implements GmGraphics{
+ private surfaces=new Map<number,HTMLCanvasElement>();
+ private targetSurface:number|null=null;
+ private generated=new Map<string,SpriteFrames>();
+ private generatedPages=new Map<string,number>();
+ private pages:CanvasImageSource[];
+ private screen:CanvasRenderingContext2D;
+ readonly assets:DrawAssets;
  private tints=new Map<string,HTMLCanvasElement>();
  private fogs=new Map<string,HTMLCanvasElement>();
- constructor(readonly ctx:CanvasRenderingContext2D,readonly assets:DrawAssets,readonly view:{x:number;y:number}){}
+ constructor(ctx:CanvasRenderingContext2D,assets:DrawAssets,readonly view:{x:number;y:number}){this.screen=ctx;this.pages=[...assets.pages];this.assets={...assets,pages:this.pages,sprite:name=>this.generated.get(name)??assets.sprite(name)};}
+ get ctx(){return this.targetSurface===null?this.screen:this.surfaces.get(this.targetSurface)!.getContext('2d')!;}
+ private get vx(){return this.targetSurface===null?this.view.x:0;}
+ private get vy(){return this.targetSurface===null?this.view.y:0;}
+ surfaceCreate(id:number,width:number,height:number){const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d')!.imageSmoothingEnabled=false;this.surfaces.set(id,canvas);}
+ surfaceTarget(id:number|null){if(id!==null&&!this.surfaces.has(id))throw Error('Missing surface');this.targetSurface=id;}
+ surfaceClear(color:number,alpha:number){const ctx=this.ctx;ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=css(color);ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.restore();}
+ surfaceSprite(id:number,name:string,left:number,top:number,width:number,height:number,originX:number,originY:number){
+  const surface=this.surfaces.get(id);if(!surface)throw Error('Missing sprite surface');const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d')!.drawImage(surface,left,top,width,height,0,0,width,height);
+  const page=this.pages.length;this.pages.push(canvas);this.generatedPages.set(name,page);this.generated.set(name,{originX,originY,width,height,frames:[{page,sx:0,sy:0,sw:width,sh:height,tx:0,ty:0,tw:width,th:height}]});
+ }
+ surfaceFree(id:number){this.surfaces.delete(id);}
+ spriteDelete(name:string){const page=this.generatedPages.get(name);if(page!==undefined){const canvas=this.pages[page] as HTMLCanvasElement;canvas.width=canvas.height=0;}this.generatedPages.delete(name);this.generated.delete(name);this.tints.clear();this.fogs.clear();}
  private tinted(f:FrameRef,blend:number,bottom=blend){
   const key=`${f.page}:${f.sx},${f.sy}:${blend}:${bottom}`;let c=this.tints.get(key);if(c)return c;
   if(this.tints.size>4000)this.tints.clear();
@@ -31,7 +50,7 @@ export class CanvasGraphics implements GmGraphics{
  }
  private place(x:number,y:number,xscale:number,yscale:number,angle:number,alpha:number){
   const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));
-  c.translate(x-this.view.x,y-this.view.y);if(angle)c.rotate(-angle*Math.PI/180);c.scale(xscale,yscale);
+  c.translate(x-this.vx,y-this.vy);if(angle)c.rotate(-angle*Math.PI/180);c.scale(xscale,yscale);
  }
  private blit(f:FrameRef,dx:number,dy:number,blend:number,bottom=blend){
   const tw=f.tw||f.sw,th=f.th||f.sh;
@@ -41,6 +60,15 @@ export class CanvasGraphics implements GmGraphics{
  sprite(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,blend:number,alpha:number){
   const s=this.assets.sprite(name);if(!s||alpha<=0)return;const f=frameAt(s,frame);if(!f)return;
   this.place(x,y,xscale,yscale,angle,alpha);this.blit(f,-s.originX,-s.originY,blend);this.ctx.restore();
+ }
+ spritePart(name:string,frame:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number){
+  const s=this.assets.sprite(name);if(!s||alpha<=0||width<=0||height<=0)return;const f=frameAt(s,frame);if(!f)return;
+  const tw=f.tw||f.sw,th=f.th||f.sh,l=Math.max(left,f.tx),t=Math.max(top,f.ty),r=Math.min(left+width,f.tx+tw),b=Math.min(top+height,f.ty+th);
+  if(r<=l||b<=t)return;
+  const sx=(l-f.tx)*f.sw/tw,sy=(t-f.ty)*f.sh/th,sw=(r-l)*f.sw/tw,sh=(b-t)*f.sh/th;
+  const page=blend===0xffffff?this.assets.pages[f.page]:this.tinted(f,blend);
+  this.place(x,y,xscale,yscale,0,alpha);
+  this.ctx.drawImage(page,sx+(blend===0xffffff?f.sx:0),sy+(blend===0xffffff?f.sy:0),sw,sh,l-left,t-top,r-l,b-t);this.ctx.restore();
  }
  spriteFog(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,color:number,alpha:number){
   const s=this.assets.sprite(name);if(!s||alpha<=0)return;const f=frameAt(s,frame);if(!f)return;
@@ -68,6 +96,7 @@ export class CanvasGraphics implements GmGraphics{
   if(outline){c.strokeStyle=css(color);c.stroke();}else{c.fillStyle=css(color);c.fill();}
   c.restore();
  }
+ triangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,color:number,alpha:number,outline:boolean){const ctx=this.ctx;ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));ctx.beginPath();ctx.moveTo(x1-this.vx,y1-this.vy);ctx.lineTo(x2-this.vx,y2-this.vy);ctx.lineTo(x3-this.vx,y3-this.vy);ctx.closePath();if(outline){ctx.strokeStyle=css(color);ctx.stroke();}else {ctx.fillStyle=css(color);ctx.fill();}ctx.restore();}
  /** string_width: the widest line in the font, in pixels. */
  textWidth(fontName:string,text:string){
   const font=this.assets.font(fontName);if(!font)return 0;

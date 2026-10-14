@@ -17,9 +17,12 @@ import {lancerEnemy} from '../bosses/lancer/enemy';
 import {jokerBackground,jokerEnemy} from '../bosses/jevil/enemy';
 import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
+import {chapter2StartStats} from '../deltarune/chapter2';
+import type {installNeoHost} from './neo';
 
 /** The encounters whose enemies run on the engine, with their scr_encountersetup number and room. */
 const ENGINE:Record<string,{n:number;room:string;backdrop:boolean}>={
+ 'ch2-61':{n:61,room:'room_dw_mansion_b_east',backdrop:false},
  'ch1-2':{n:2,room:'room_field_start',backdrop:true},
  'ch1-8':{n:8,room:'room_forest_area3',backdrop:true},
  'ch1-12':{n:12,room:'room_field_checkersboss',backdrop:true},
@@ -79,12 +82,16 @@ function kroundHosts(rt:GmRuntime,room:string){
 export class EngineBattle{
  readonly rt:GmRuntime;readonly name:string;readonly party:readonly number[];
  paused=false;outcome:'victory'|'defeat'|null=null;turn=0;
- constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean}={}){
+ constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
   if(!encounter||!setup)throw Error('This battle is not available yet.');
+  if(id==='ch2-61'&&!options.neoHost)throw Error('Load the Chapter 2 source host before starting NEO.');
   validateLoadout(loadout,equipment);
   this.rt=new GmRuntime(bank,{seed});this.name=encounter.name;this.party=encounter.party;
   const rt=this.rt,gear=(list:typeof equipment.weapons,id:number)=>list.find(g=>g.id===id);
+  rt.globals.chapter=encounter.chapter;
+  const neo=id==='ch2-61'?options.neoHost!(rt):undefined;
+  if(neo){rt.view.x=1640;rt.room.width=2400;}
   const equipped:Record<number,EquippedStats>={};
   for(const c of [1,2,3]){
    const slot=loadout.characters[c],w=gear(equipment.weapons,slot.weapon),a1=gear(equipment.armors,slot.armor[0]),a2=gear(equipment.armors,slot.armor[1]);
@@ -92,12 +99,21 @@ export class EngineBattle{
    equipped[c]={weapon:slot.weapon||c,itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
   }
   const char=[...encounter.party,0,0,0].slice(0,3);
-  partyGlobals(rt,{char,hp:BASE.hp,maxhp:BASE.hp,at:BASE.at,df:BASE.df,mag:BASE.mag,equipped,items:loadout.items,auto:encounter.auto});
-  installEngineHosts(rt,id);encounterSetup(rt,setup.n,engineEnemies(id));
+  partyGlobals(rt,{char,...(neo?chapter2StartStats():{...BASE,maxhp:BASE.hp}),equipped,items:loadout.items,auto:encounter.auto});
+  if(neo){
+   const g=rt.globals;g.fighting=0;g.sp=4;g.currentsong=[-1,-1];g.batmusic=['spamton_neo_mix_ex_wip','spamton_neo_mix_ex_wip'];
+   g.chararmor1=[0,...[1,2,3].map(c=>loadout.characters[c].armor[0])];g.chararmor2=[0,...[1,2,3].map(c=>loadout.characters[c].armor[1])];
+   for(const name of ['smalarm','smyy','smxx','smdir','smspeed','smtype','smimage','smimagespeed','smsprite','smcolor','smstring','sminstance'])g[name]=Array(20).fill(0);
+   g.itemelement=Array.from({length:4},()=>[0,0,0]);g.itemelementamount=Array.from({length:4},()=>[0,0,0]);
+   for(const c of [1,2,3])for(let j=0;j<2;j++){const armor=gear(equipment.armors,loadout.characters[c].armor[j]);g.itemelement[c][j+1]=armor?.element??0;g.itemelementamount[c][j+1]=armor?.elementAmount??0;}
+   g.chemg_sprite_map=Object.fromEntries([...(bank.names?.()??[])].map(name=>[name,name]));
+  }
+  installEngineHosts(rt,id);encounterSetup(rt,setup.n,neo?{'obj_spamton_neo_enemy':neo.objects.obj_spamton_neo_enemy}:engineEnemies(id));
   if(setup.backdrop)rt.create(b.battleBack,0,0);
   // Jevil's room has its own spinning background (drawn by the host view).
   if(id==='ch1-25')rt.create(jokerBackground,0,0);
   rt.create(battleControllerFull,0,0);
+  if(neo){rt.globals.fighting=1;neo.enter(this.enemy!);}
  }
  get enemy():GmInstance|undefined{return this.rt.byId(this.rt.globals.monsterinstance[0]);}
  /** A short label for the status line: whose turn it is. */

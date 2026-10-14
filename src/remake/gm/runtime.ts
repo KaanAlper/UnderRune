@@ -4,7 +4,7 @@
 import {f32,clamp6} from './math';
 import {GmRandom} from './random';
 import {instancesMeet} from './collision';
-import type {SpriteBank} from './sprites';
+import type {SpriteBank,SpriteData} from './sprites';
 import type {DrawState,GmGraphics} from './graphics';
 
 export type GmEvent='create'|'destroy'|'beginStep'|'step'|'endStep'|'draw'|`alarm${number}`|`user${number}`|'animationEnd';
@@ -120,6 +120,22 @@ export class GmRuntime{
  instances:GmInstance[]=[];frame=0;nextId:number;random:GmRandom;
  /** Engine lifetime must not share a name with GML variables such as NEO wireheart's `destroyed`. */
  private destroyedInstances=new WeakSet<GmInstance>();
+ private objectAliases=new Map<GmObjectDef,GmObjectDef>();
+ private collisionAliases=new WeakMap<GmObjectDef,GmCollision[]>();
+ /** Chapter-specific definitions preserve shared source references while using native indices/parents. */
+ installObjectAliases(entries:Iterable<readonly [GmObjectDef,GmObjectDef]>){
+  if(this.instances.length)throw Error('Object aliases must be installed before creating instances');
+  const aliases=new Map(entries);
+  for(const [original,canonical] of aliases)if(original.name!==canonical.name)throw Error('Object alias identity mismatch');
+  this.objectAliases=aliases;this.collisionAliases=new WeakMap();
+ }
+ private object(def:GmObjectDef){return this.objectAliases.get(def)??def;}
+ private collisions(def:GmObjectDef){
+  if(!this.objectAliases.size)return flatCollisions(def);
+  let rows=this.collisionAliases.get(def);
+  if(!rows){rows=flatCollisions(def).map(c=>({...c,target:this.object(c.target)})).sort((a,b)=>a.target.index-b.target.index);this.collisionAliases.set(def,rows);}
+  return rows;
+ }
  private frameCount:(name:string)=>number|undefined;
  view={x:0,y:0,width:640,height:480};
  room={width:640,height:480};
@@ -142,9 +158,14 @@ export class GmRuntime{
  }
  /** draw_self: the instance's sprite with its own frame, scale, angle, blend and alpha. */
  drawSelf(i:GmInstance){this.drawSprite(i.sprite,i.imageIndex,i.x,i.y,i.imageXscale,i.imageYscale,i.imageAngle,i.imageBlend,i.imageAlpha);}
+ drawSpritePart(name:string,frame:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale=1,yscale=1,blend=0xffffff,alpha=1){
+  if(!this.gfx)return;if(!this.gfx.spritePart)throw Error('Graphics backend does not support sprite parts');
+  this.gfx.spritePart(name,frame,left,top,width,height,x,y,xscale,yscale,blend,alpha);
+ }
  drawRect(x1:number,y1:number,x2:number,y2:number,outline=false){this.gfx?.rect(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,outline);}
  drawLine(x1:number,y1:number,x2:number,y2:number,width?:number){if(!this.gfx)return;if(!this.gfx.line)throw Error('Graphics backend does not support line drawing');if(width===undefined)this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha);else this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,width);}
  drawCircle(x:number,y:number,r:number,outline=false){this.gfx?.circle(x,y,r,this.drawState.color,this.drawState.alpha,outline);}
+ drawTriangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,outline=false){if(!this.gfx)return;if(!this.gfx.triangle)throw Error('Renderer lacks source triangles');this.gfx.triangle(x1,y1,x2,y2,x3,y3,this.drawState.color,this.drawState.alpha,outline);}
  drawText(x:number,y:number,text:string,xscale=1,yscale=1,angle=0){
   const d=this.drawState;this.gfx?.text(x,y,text,{font:d.font,color:d.color,alpha:d.alpha,halign:d.halign,valign:d.valign,xscale,yscale,angle});
  }
@@ -158,26 +179,32 @@ export class GmRuntime{
  soundLoop?:(name:string)=>number|undefined;
  soundStop?:(handle:number|string)=>void;
  soundPitch?:(handle:number|string,pitch:number)=>void;
+ readonly dynamicSprites=new Map<string,SpriteData>();
+ sourceSurfaces?:{create:(width:number,height:number)=>number;target:(id:number|null)=>void;clear:(color:number,alpha:number)=>void;capture:(id:number,left:number,top:number,width:number,height:number,originX:number,originY:number)=>string;free:(id:number)=>void;deleteSprite:(name:string)=>void};
+ sourceAudio?:{effect:(name:string,pitch?:number,volume?:number)=>number|undefined;volume:(handle:number|string,value:number,frames:number)=>void;free:(handle:number|string)=>void;music:(name:string)=>number|string;loop:(handle:number|string)=>void;pause:(handle:number|string)=>void;resume:(handle:number|string)=>void;position:(handle:number|string,seconds?:number)=>number|void;playing:(handle:number|string)=>boolean};
  /** Set by room_goto; the host decides what the room change means (game over, battle end). */
  pendingRoom:string|null=null;
  constructor(readonly bank:SpriteBank,options:{seed?:number;rng?:readonly number[];firstId?:number}={}){
+  const sourceBank=bank;this.bank={...bank,get:name=>this.dynamicSprites.get(name)??sourceBank.get(name)};
   this.random=options.rng?GmRandom.restore(options.rng):new GmRandom(options.seed??0);this.nextId=options.firstId??100000;
   this.frameCount=name=>this.bank.get(name)?.frames;
  }
  create(object:GmObjectDef,x:number,y:number,id=this.nextId++):GmInstance{
+  object=this.object(object);
   const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;this.instances.push(inst);
   resolveEvent(object,'create')?.(inst,this);return inst;
  }
  /** Recreate an instance from a reference snapshot without running its Create event (ids keep creation order). */
  restore(object:GmObjectDef,id:number,x:number,y:number,vars:Record<string,unknown>={}):GmInstance{
+  object=this.object(object);
   const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;Object.assign(inst,vars);
   this.instances.push(inst);this.instances.sort((a,b)=>a.id-b.id);return inst;
  }
  destroy(inst:GmInstance){if(this.destroyedInstances.has(inst))return;this.destroyedInstances.add(inst);resolveEvent(inst.object,'destroy')?.(inst,this);inst.live=false;}
  /** `with (object)`: every active instance of the object or its children, in creation order. */
- all(object:GmObjectDef){return this.instances.filter(i=>i.live&&isA(i.object,object));}
- exists(object:GmObjectDef){return this.instances.some(i=>i.live&&isA(i.object,object));}
- first(object:GmObjectDef){return this.instances.find(i=>i.live&&isA(i.object,object));}
+ all(object:GmObjectDef){object=this.object(object);return this.instances.filter(i=>i.live&&isA(i.object,object));}
+ exists(object:GmObjectDef){object=this.object(object);return this.instances.some(i=>i.live&&isA(i.object,object));}
+ first(object:GmObjectDef){object=this.object(object);return this.instances.find(i=>i.live&&isA(i.object,object));}
  count(object:GmObjectDef){return this.all(object).length;}
  /** An instance by id (GML instance ids stored in variables), if it is still active. */
  byId(id:number){return this.instances.find(i=>i.id===id&&i.live);}
@@ -187,6 +214,7 @@ export class GmRuntime{
  userEvent(inst:GmInstance,n:number){resolveEvent(inst.object,`user${n}`)?.(inst,this);}
  /** place_meeting: would `inst` at (x, y) touch any instance of `target`? */
  placeMeeting(inst:GmInstance,x:number,y:number,target:GmObjectDef){
+  target=this.object(target);
   const sx=inst.x,sy=inst.y;inst.x=x;inst.y=y;
   let found=false;
   for(const o of this.instances)if(o.live&&o!==inst&&isA(o.object,target)&&instancesMeet(this.bank,inst,o)){found=true;break;}
@@ -213,10 +241,10 @@ export class GmRuntime{
  }
  /** runner.c dispatchCollisionEvents: objects by first target then index; each pair fires its most specific event. */
  private collide(){
-  const objects=[...new Set(this.instances.filter(i=>i.live).map(i=>i.object))].filter(o=>flatCollisions(o).length)
-   .sort((a,b)=>flatCollisions(a)[0].target.index-flatCollisions(b)[0].target.index||a.index-b.index);
+  const objects=[...new Set(this.instances.filter(i=>i.live).map(i=>i.object))].filter(o=>this.collisions(o).length)
+   .sort((a,b)=>this.collisions(a)[0].target.index-this.collisions(b)[0].target.index||a.index-b.index);
   for(const obj of objects){
-   const flat=flatCollisions(obj);
+   const flat=this.collisions(obj);
    for(const self of this.instances.filter(i=>i.object===obj)){
     if(!self.live)continue;
     for(const evt of flat){

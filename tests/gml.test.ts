@@ -10,8 +10,33 @@ test('GML loops, compound assignment, postfix updates and short circuit retain s
  const self={total:0};executeGml(parseGml('for (var i=0; i<5; i++) { total += i; } if (false && missing()) total=100;'),self,{});expect(self.total).toBe(10);
 });
 test('unsupported syntax and unknown calls fail explicitly',()=>{
- expect(()=>parseGml('repeat (3) {}')).toThrow(/Unsupported/);
+ expect(()=>parseGml('try {}')).toThrow(/Unsupported/);
  expect(()=>executeGml(parseGml('unknown_builtin();'),{},{})).toThrow(/unknown_builtin/);
+});
+
+test('repeat evaluates the count once and preserves nested break/continue and budgets',()=>{
+ const self={count:0,calls:0};
+ executeGml(parseGml('repeat (counted()) { count++; if (count==3) continue; repeat(8) { count++; break; } }'),self,{}, {calls:{counted:s=>{s.calls++;return 3;}}});
+ expect(self).toEqual({count:5,calls:1});
+ expect(()=>executeGml(parseGml('repeat (1000) {}'),{},{},{budget:50})).toThrow(/budget/);
+});
+
+test('native call argument order preserves positions while evaluating right to left',()=>{
+ const order:number[]=[];const self={result:''};
+ const calls={mark:(_s:any,n:number)=>{order.push(n);return n;},join:(_s:any,...a:number[])=>a.join(',')};
+ executeGml(parseGml('result=join(mark(1),mark(2),mark(3));'),self,{}, {calls,argumentOrder:'right-to-left'});
+ expect(order).toEqual([3,2,1]);expect(self.result).toBe('1,2,3');
+});
+
+test('explicit event other and numeric instance members remain distinct inside with',()=>{
+ const self={value:7,child:{value:0},target:42,result:0},collision={damage:3},instances=new Map([[42,{x:10}]]);
+ executeGml(parseGml('with(child) { value=other.value; } target.x+=5; result=other.damage;'),self,{}, {other:collision,member:v=>typeof v==='number'?instances.get(v)!:v});
+ expect(self.child.value).toBe(7);expect(self.result).toBe(3);expect(instances.get(42)!.x).toBe(15);
+});
+
+test('source colour literals retain BGR values and comma-index arrays are real nested arrays',()=>{
+ const self={grid:[[0,0]],value:0,hex:0};executeGml(parseGml('grid[0,1]=#00A2E8; value=grid[0,1]; hex=$E8A200;'),self,{});
+ expect(self.value).toBe(0xe8a200);expect(self.hex).toBe(self.value);expect(self.grid[0][1]).toBe(self.value);
 });
 
 test('switch preserves fallthrough, shared cases, default and nested loop control',()=>{

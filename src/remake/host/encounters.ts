@@ -7,6 +7,7 @@ export interface SourceEncounter{
  heroes?:readonly (readonly [number,number])[];
 }
 const playable:readonly SourceEncounter[]=[
+ {id:'ch2-61',chapter:2,name:'Spamton NEO',party:[1,2,3],hp:4809,attack:13,defense:0,music:'spamton_neo_mix_ex_wip',practice:false},
  {id:'ch1-2',chapter:1,name:'Lancer',party:[1,2],auto:[2],hp:540,attack:5,defense:1,music:'lancerfight',practice:false},
  {id:'ch1-8',chapter:1,name:'Clover',party:[1,3],hp:270,attack:6,defense:1,music:'battle',practice:false},
  // getsusieevent rejoins Ralsei, then Susie. Her gamestart charauto remains set until prisonevent.

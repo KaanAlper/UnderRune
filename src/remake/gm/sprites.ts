@@ -8,7 +8,7 @@ export interface SpriteData{
  /** Precise masks: one bit per pixel, MSB first, rows padded to whole bytes, full sprite size. */
  masks?:Uint8Array[]|null;
 }
-export interface SpriteBank{get(name:string):SpriteData|undefined;collisionCompat:boolean;roomSpeed:number}
+export interface SpriteBank{get(name:string):SpriteData|undefined;names?():Iterable<string>;collisionCompat:boolean;roomSpeed:number}
 export type RawSprite=Omit<SpriteData,'masks'>&{masks?:string[]|null};
 export interface RawSpriteFile{atLeast2022_1:boolean;optionsInfo:number;sprites:RawSprite[]}
 
@@ -17,6 +17,7 @@ const decode=(b64:string)=>{const s=atob(b64);const out=new Uint8Array(s.length)
 export function spriteBank(file:RawSpriteFile,roomSpeed=30):SpriteBank{
  const raw=new Map(file.sprites.map(s=>[s.name,s]));const ready=new Map<string,SpriteData>();
  return {
+  names:()=>raw.keys(),
   // Pre-2022.1 games, and later ones with options bit 27 set, use the old collision rules.
   collisionCompat:!file.atLeast2022_1||((file.optionsInfo>>>27)&1)===1,roomSpeed,
   get(name){
