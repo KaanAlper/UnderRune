@@ -1,6 +1,6 @@
 import {describe,it,expect} from 'vitest';
 import fs from 'node:fs';
-import {loadSprites,runParity,type Dump,type TraceLine,type Replay} from './parity/reference';
+import {compareState,loadResources,loadSprites,runParity,type Dump,type TraceLine,type Replay} from './parity/reference';
 import {GmRuntime} from '../src/remake/gm/runtime';
 import {installNeoHost} from '../src/remake/host/neo';
 import {setSourceText} from '../src/remake/host/text';
@@ -9,7 +9,8 @@ import {localizationDefaults} from '../tools/source-localization.mjs';
 // Spamton NEO (Chapter 2, encounter 61) against the original game, frame by frame, from the battle's first frames
 // to the end of a long local recording (party HP raised for the recording only, so it runs through many turns).
 // Two runs: FIGHT every turn with tapped shots (z), and the menu script (ACTs, spells, charged BIG SHOTs; see
-// tools/oracle-scripts.mjs).
+// tools/oracle-scripts.mjs). Where the recording has full dumps (every 20 frames), every variable of the hand-written
+// objects is compared too (PARITY_STATE=all: every restored object, archived ones included).
 const START=40;
 for(const RUN of ['.tools/oracle/ch2-61-s11-god','.tools/oracle/ch2-61-s11-god-menu']){
 const ready=fs.existsSync(`${RUN}-f${START}.json`)&&fs.existsSync(RUN+'.ndjson')&&fs.existsSync('extracted/chapter2_windows/sprites.json')&&fs.existsSync('extracted/chapter2_windows/code');
@@ -51,8 +52,26 @@ describe.skipIf(!ready)(`Spamton NEO against the original (local recording ${RUN
    const [from,to]=process.env.PARITY_RNG.split(',').map(Number),next=rt.random.next.bind(rt.random);
    rt.random.next=()=>{if(rt.frame>=from-START&&rt.frame<=to-START)console.log('rng@',rt.frame+START,new Error().stack!.split('\n').slice(2,5).map(l=>l.trim().replace(/\(.*[\\/]/,'(')).join(' < '));return next();};
   }
-  const result=runParity(rt,trace,START,end,tracked,['hp','tension','turntimer','myfight','mnfight','inv'],skippedIds,replay);
+  const res=loadResources(2);
+  // Sound instance numbers come from the reference runtime's audio backend (100000 plus two per sound played); the
+  // remake's audio hooks do not number sounds that way, so variables holding them are not compared.
+  const SOUND_HANDLES={obj_heart:['chargeshot_sound'],obj_spamton_neo_enemy:['chargeshot_sound'],obj_herokris:['ls'],obj_herosusie:['ls'],obj_heroralsei:['ls']};
+  // Still to be matched variable for variable: Chapter 2's battle controller and writer differ from Chapter 1's in
+  // hundreds of lines (the merged ACT menus, the button highlight, the text sounds); they become Chapter 2 parts next.
+  const STATE_PENDING=new Set(['obj_battlecontroller','obj_writer']);
+  const stateChecked=new Set([...tracked].filter(n=>process.env.PARITY_STATE==='all'||!(objects[n] as {archived?:boolean}).archived&&(process.env.PARITY_SURVEY||!STATE_PENDING.has(n))));
+  const afterFrame=(f:number)=>{
+   const file=`${RUN}-f${f}.json`;if(!fs.existsSync(file))return undefined;
+   const problems=compareState(rt,JSON.parse(fs.readFileSync(file,'utf8')) as Dump,stateChecked,res,skippedIds,SOUND_HANDLES);
+   // PARITY_SURVEY=1: run on, listing each differing object variable once with the frame it first differs at.
+   if(process.env.PARITY_SURVEY){for(const p of problems){const key=p.replace(/ \d+ /,' ').split(':')[0];if(!survey.has(key))survey.set(key,`${f}: ${p}`);}return undefined;}
+   const shown=problems.slice(0,40).join('\n ')+(problems.length>40?`\n (${problems.length-40} more)`:'');
+   return problems.length?{frame:f,what:'state differs:\n '+shown}:undefined;
+  };
+  const survey=new Map<string,string>();
+  const result=runParity(rt,trace,START,end,tracked,['hp','tension','turntimer','myfight','mnfight','inv'],skippedIds,replay,afterFrame);
   console.log(`${RUN.split('/').pop()} ${START}-${end}`,result,'not restored:',[...skipped].join(' '));
+  if(survey.size)console.log(`state survey (${survey.size}):\n`+[...survey.values()].join('\n'));
   expect(result.mismatch).toBeUndefined();
  },300000);
 });

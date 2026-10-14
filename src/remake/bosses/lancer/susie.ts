@@ -90,11 +90,11 @@ function susieActs(s:GmInstance,rt:GmRuntime){
   s.actcon=1;
   const df=g.itemdf[2][0]+g.itemdf[2][1]+g.itemdf[2][2],at=g.itemat[2][0]+g.itemat[2][1]+g.itemat[2][2];
   g.msg[0]=subst(LS(df>0?162:159),String(g.at[2]+at),String(g.df[2]+df),String(g.maxhp[2]));
-  battleTextDefault(rt);
+  battleTextDefault(rt,s);
  }
  if(s.acting===2&&s.actcon===0){
   const c=s.anythingcounter;g.msg[0]=LS(c===0?170:[171,172,173,174][Math.min(c,4)-1]);g.msg[1]=LS(c>=1?176:175);
-  battleTextDefault(rt);s.anythingcounter+=1;s.actcon=1;
+  battleTextDefault(rt,s);s.anythingcounter+=1;s.actcon=1;
  }
  if(s.acting===3&&s.actcon===0){
   for(const m of rt.all(monsterParent))m.susie_act=3;
@@ -104,7 +104,7 @@ function susieActs(s:GmInstance,rt:GmRuntime){
   g.msg[0]=LS(197);
   for(const h of rt.all(heroRalsei))h.visible=false;
   const r=rt.first(heroRalsei);const sing=darkMarker(rt,r?.x??0,r?.y??0,'spr_ralseib_sing');sing.imageSpeed=0.2;s.ralsing=sing.id;
-  s.lullatimer=0;battleTextDefault(rt);s.actcon=10;
+  s.lullatimer=0;battleTextDefault(rt,s);s.actcon=10;
  }
  if(s.actcon===10){s.lullatimer+=1;if(s.lullatimer>=30)s.actcon=11;}
  if(s.actcon===11&&!rt.exists(writer)){
@@ -113,7 +113,7 @@ function susieActs(s:GmInstance,rt:GmRuntime){
   rt.soundStop?.(s.singy);music(rt,true);
   g.msg[0]=LS(s.sleeping===1?224:223);
   s.idlesprite='spr_susie_enemy_defeat';s.sleepcounter=0;s.sleeping=1;g.monstercomment[me]=LS(228);g.monsterstatus[me]=1;
-  battleTextDefault(rt);s.actcon=1;
+  battleTextDefault(rt,s);s.actcon=1;
  }
 }
 /** Pacify on a sleeping Susie: Lancer rides in to protect her (castSpell sets pacifycon for this enemy type). */
@@ -137,7 +137,7 @@ function susiePacified(s:GmInstance,rt:GmRuntime){
    g.msg[0]=LS(283);lanFace(rt,1,3);g.msg[2]=LS(285);noFace(rt,3);g.msg[4]=LS(287);
    if(s.tirespare===1){g.msg[0]=LS(290);g.msg[1]=LS(291);g.msg[2]=LS(292);g.msg[3]=LS(293);g.msg[4]=LS(294);}
    if(s.tirespare>=2){g.msg[0]=LS(298);g.msg[1]=LS(299);}
-   battleTextDefault(rt);s.pacifycon=5;s.tirespare+=1;
+   battleTextDefault(rt,s);s.pacifycon=5;s.tirespare+=1;
   }
  }
  if(s.pacifycon===5&&!rt.exists(writer)){g.spelldelay=20;for(const p of rt.all(spellPhase))p.spelltimer=18;s.pacifycon=0;}
@@ -240,14 +240,14 @@ function lancerAttack(s:GmInstance,rt:GmRuntime){
  * checked between them and the blocked-ears scene, as in the original. */
 function lancerActs(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;
- if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=LL(167);battleTextDefault(rt);}
+ if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=LL(167);battleTextDefault(rt,s);}
  if(s.acting===2&&s.actcon===0){
   s.actcon=1;g.msg[0]=LL(176);g.msg[1]=LL(177);const c=s.anythingcounter;
   if(c===1){g.msg[0]=LL(181);g.msg[1]=LL(182);}
   if(c===2){g.msg[0]=LL(187);g.msg[1]=LL(188);}
   if(c>=3){g.msg[0]=LL(193);g.msg[1]=LL(194);if(s.ears_blocked>=2){g.msg[0]=LL(197);g.msg[1]=LL(198);}anythingEnd(s,rt);}
   if(s.anythingcounter<4)s.anythingcounter+=1;
-  battleTextDefault(rt);
+  battleTextDefault(rt,s);
  }
  if(s.acting===3&&s.actcon===0){
   s.actcon=1;g.msg[0]=LL(222);ralFace(rt,1,8);g.msg[2]=LL(224);noFace(rt,3);g.msg[4]=LL(226);
@@ -261,7 +261,7 @@ function lancerActs(s:GmInstance,rt:GmRuntime){
   }
   if(s.anythingcounter<4)s.anythingcounter+=1;
   const su=rt.first(susieEnemy);if(su){su.anythingxcounter=s.anythingcounter;su.lancer_act=3;}
-  battleTextDefault(rt);
+  battleTextDefault(rt,s);
  }
  if(s.actcon===1&&!rt.exists(writer)){
   s.actcon=0;
@@ -271,7 +271,7 @@ function lancerActs(s:GmInstance,rt:GmRuntime){
  if(s.actcon===20&&!rt.exists(writer)){
   s.visible=false;for(const su of rt.all(susieEnemy))su.visible=false;
   const block=darkMarker(rt,s.x,s.y,'spr_lancerbike_earcover');block.depth=s.depth;s.blocklan=block.id;
-  rt.sound?.('snd_bell');g.msg[0]=LL(314);susFace(rt,1,2);g.msg[2]=LL(316);battleTextDefault(rt);s.actcon=21;
+  rt.sound?.('snd_bell');g.msg[0]=LL(314);susFace(rt,1,2);g.msg[2]=LL(316);battleTextDefault(rt,s);s.actcon=21;
  }
  if(s.actcon===21&&!rt.exists(writer)){
   const block=rt.byId(s.blocklan);if(block)rt.destroy(block);
@@ -290,7 +290,7 @@ function lancerEnding(s:GmInstance,rt:GmRuntime){
    g.msg[0]=LL(363);susFace(rt,1,0);g.msg[2]=LL(365);lanFace(rt,3,4);g.msg[4]=LL(367);g.msg[5]=LL(368);g.msg[6]=LL(369);susFace(rt,7,0);
    g.msg[8]=LL(371);g.msg[9]=LL(372);g.msg[10]=LL(373);g.msg[11]=LL(374);
   }
-  s.con=4;battleText(rt);
+  s.con=4;battleText(rt,s);
  }
  if(s.con===4&&!rt.exists(writer)){s.con=5;s.alarm[4]=2;const c=findController(rt);if(c){c.noreturn=0;c.alarm[2]=4;}}
  if(s.con===6){for(const m of rt.all(monsterParent))monsterDefeat(m,rt);rt.destroy(s);s.con=7;}

@@ -39,18 +39,18 @@ function statusLine(s:GmInstance,rt:GmRuntime){
 }
 function acts(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself as number;
- if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(118);g.msg[1]=L(119);battleTextDefault(rt);}
+ if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(118);g.msg[1]=L(119);battleTextDefault(rt,s);}
  if(s.acting===2&&s.actcon===0){
   s.actcon=1;
   if(g.automiss[me]===0){g.msg[0]=L(130);g.automiss[me]=1;}else g.msg[0]=L(135);
-  battleTextDefault(rt);
+  battleTextDefault(rt,s);
  }
  if(s.acting===3&&s.actcon===0){
   if(s.compliment>=3)g.msg[0]=L(145);
-  if(s.compliment===2){g.msg[0]=L(150);g.msg[1]=L(151);mercyAdd(rt,me,20);}
-  if(s.compliment===1){g.msg[0]=L(157);g.msg[1]=L(158);mercyAdd(rt,me,20);g.monsterat[me]+=1;}
-  if(s.compliment===0){g.msg[0]=L(164);g.msg[1]=L(165);mercyAdd(rt,me,20);g.monsterat[me]-=1;}
-  s.compliment_just=1;s.compliment+=1;battleTextDefault(rt);s.actcon=1;
+  if(s.compliment===2){g.msg[0]=L(150);g.msg[1]=L(151);mercyAdd(s,rt,me,20);}
+  if(s.compliment===1){g.msg[0]=L(157);g.msg[1]=L(158);mercyAdd(s,rt,me,20);g.monsterat[me]+=1;}
+  if(s.compliment===0){g.msg[0]=L(164);g.msg[1]=L(165);mercyAdd(s,rt,me,20);g.monsterat[me]-=1;}
+  s.compliment_just=1;s.compliment+=1;battleTextDefault(rt,s);s.actcon=1;
  }
 }
 /** Spared: his parting lines, then he rides off. */

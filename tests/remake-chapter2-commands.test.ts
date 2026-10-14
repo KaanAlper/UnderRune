@@ -50,9 +50,9 @@ describe.skipIf(!hasChapter2Source)('Chapter 2 source command foundation',()=>{
  });
  it('dispatches actor ACTs even when Kris defended, then advances to Ralsei and attack phase',()=>{
   const {rt,g,c,m}=make();g.charturn=1;actSelectChapter2(c,rt,0,1);g.charturn=2;actSelectChapter2(c,rt,0,0);
-  nextAct(rt);expect(g.currentactingchar).toBe(1);expect(m.actconsus).toBe(1);expect(m.actconral??0).toBe(0);
-  nextAct(rt);expect(g.currentactingchar).toBe(2);expect(m.actconsus).toBe(0);expect(m.actconral).toBe(1);
-  nextAct(rt);expect(g.currentactingchar).toBe(0);expect(m.actingsus).toBe(0);expect(m.actingral).toBe(0);expect(g.myfight).toBe(1);
+  nextAct(rt,m);expect(g.currentactingchar).toBe(1);expect(m.actconsus).toBe(1);expect(m.actconral??0).toBe(0);
+  nextAct(rt,m);expect(g.currentactingchar).toBe(2);expect(m.actconsus).toBe(0);expect(m.actconral).toBe(1);
+  nextAct(rt,m);expect(g.currentactingchar).toBe(0);expect(m.actingsus).toBe(0);expect(m.actingral).toBe(0);expect(g.myfight).toBe(1);
  });
  it('SnapAll reserves the whole party while actor-specific ACTs reserve only their own slot',()=>{
   const {rt,g,c,m}=make();actSelectChapter2(c,rt,0,2);
@@ -80,7 +80,7 @@ describe.skipIf(!hasChapter2Source)('Chapter 2 source command foundation',()=>{
   press(rt,KEY.right);press(rt,KEY.z);press(rt,KEY.z);press(rt,KEY.z);
   for(let i=0;i<4;i++)press(rt,KEY.right);press(rt,KEY.z);
   expect(g.myfight).toBe(3);expect(g.currentactingchar).toBe(1);expect(m.actconsus).toBe(1);
-  nextAct(rt);expect(g.myfight).toBe(1);
+  nextAct(rt,m);expect(g.myfight).toBe(1);
   const other=make();other.g.charturn=1;other.g.tension=250;
   press(other.rt,KEY.right);press(other.rt,KEY.z);press(other.rt,KEY.down);press(other.rt,KEY.z);expect(other.g.bmenuno).toBe(3);
   press(other.rt,KEY.z);expect(other.g.charspecial[1]).toBe(4);expect(other.g.tension).toBe(125);

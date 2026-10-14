@@ -122,13 +122,13 @@ function leave(s:GmInstance,rt:GmRuntime){
 /** Check, Pirouette (one of nine outcomes in turn) and Hypnosis. */
 function acts(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself as number;
- if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(237);battleTextDefault(rt);}
+ if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(237);battleTextDefault(rt,s);}
  if(s.acting===2&&s.actcon===0){
   s.actcon=5;g.msg[0]=L(247);rt.sound?.('snd_pirouette');
   const kris=rt.first(heroKris)!;for(const k of rt.all(heroKris))k.visible=false;
   const dk=darkMarker(rt,kris.x,kris.y,'spr_krisb_pirouette');s.dancekris=dk.id;dk.imageSpeed=0.3334;dk.depth=kris.depth;
   const fx=rt.create(afterimageGrow,dk.x+28,dk.y+40);fx.sprite='spr_pirouette_fx';fx.imageXscale=2;fx.imageYscale=2;
-  battleTextDefault(rt);
+  battleTextDefault(rt,s);
  }
  if(s.actcon===5&&!rt.exists(writer))pirouette(s,rt);
  if(s.acting===3&&s.actcon===0){
@@ -138,7 +138,7 @@ function acts(s:GmInstance,rt:GmRuntime){
   if(s.hypnosiscounter===0)part3=L(405);
   if(s.hypnosiscounter>=9){part3=L(406);g.monsterstatus[me]=1;}
   g.msg[0]=part1+part2+part3+L(407);
-  s.pfactor=0.7;s.hypnosis=1;s.hypnosiscounter+=1;battleTextDefault(rt);
+  s.pfactor=0.7;s.hypnosis=1;s.hypnosiscounter+=1;battleTextDefault(rt,s);
  }
 }
 /** He runs off when beaten; the bomb attacks' sounds are played here, at most every five frames. */
@@ -177,8 +177,8 @@ function pirouette(s:GmInstance,rt:GmRuntime){
   rt.sound?.('snd_weirdeffect');
  }
  if(c===7){rt.sound?.('snd_boost');g.msg[0]=L(373);s.pfactor=1.25;}
- if(c===8){rt.sound?.('snd_applause');g.msg[0]=L(379);healAllItem(rt,36+Math.floor(rt.random.random(15)));}
- battleTextDefault(rt);
+ if(c===8){rt.sound?.('snd_applause');g.msg[0]=L(379);healAllItem(s,rt,36+Math.floor(rt.random.random(15)));}
+ battleTextDefault(rt,s);
  s.hypnosiscounter+=0.5;
  if(s.hypnosiscounter>=9){s.txtpart3=L(387);g.monsterstatus[me]=1;}
  s.pirouette=c;s.pirouettecounter+=1;s.actcon=1;

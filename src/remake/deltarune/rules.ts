@@ -27,9 +27,11 @@ export interface ChapterRules{
  readonly tensionBarFollowsView:boolean;
  /** The tension bar is drawn through a surface (its cutout rounds the fill), with the TP logo and percentage last. */
  readonly tensionBarSurface:boolean;
+ /** Enemies ask the battle phase through scr_isphase, which leaves its answer in the asking instance's __isphase. */
+ readonly phaseScript:boolean;
 }
-const CHAPTER1:ChapterRules={chapter:1,soulHasModes:false,slowSoulSetting:false,heroesCanBePoisoned:false,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false};
-const CHAPTER2:ChapterRules={chapter:2,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true};
+const CHAPTER1:ChapterRules={chapter:1,soulHasModes:false,slowSoulSetting:false,heroesCanBePoisoned:false,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false,phaseScript:false};
+const CHAPTER2:ChapterRules={chapter:2,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
 /** A component's part for the running battle's chapter, from the table of its versions next to it. */
 export function forChapter<T>(rt:GmRuntime,versions:Readonly<Record<number,T>>,what:string):T{
  const v=versions[rt.globals.chapter??1];
@@ -74,6 +76,13 @@ export interface BattleHooks{
  catchesKnockout?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** Where the soul flies back to after the enemy's turn, when not to Kris (GIGA Queen's boxing ring). */
  soulReturnsTo?(enemy:GmInstance,rt:GmRuntime):[number,number];
+ /** The FIGHT bar's hit goes to this object instead of the hero: true when it takes it (GIGA Queen's boxing
+  * controller turns Kris's points into a punch). */
+ takesFightBar?(obj:GmInstance,bar:GmInstance,rt:GmRuntime):boolean;
+ /** Item heals sparkle on this object instead of the hero: true when it shows them (GIGA Queen's boxing controller). */
+ showsHeals?(obj:GmInstance,rt:GmRuntime):boolean;
+ /** Susie's UltimatHeal was cast (Omawaroid prompts its own heal then). */
+ onUltimatHeal?(obj:GmInstance,rt:GmRuntime):void;
 }
 export interface HookedDef extends GmObjectDef{readonly hooks?:BattleHooks}
 /** The hooks an instance's object (or its nearest parent) declares. */

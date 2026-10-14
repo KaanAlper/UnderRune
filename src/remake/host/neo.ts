@@ -23,11 +23,12 @@ import * as pending from '../bosses/spamton-neo/pending';
 import {battleBalloon2,battleCleanup,growtangle2} from '../deltarune/chapter2-objects';
 import {moveToPoint,scriptDelayed} from '../deltarune/chapter2-battle';
 import {shotAfterimage,shotHit,soulSpark,superchargeEnd,yellowShot} from '../deltarune/yellow-soul';
+import {vineCut,vineTransition,vineWeak} from '../bosses/spamton-neo/vines';
 import type {BattleHooks,HookedDef} from '../deltarune/rules';
 
 /** Chapter 2 objects that run as hand-written code (the rest still run from the local source archive). */
 const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed,
- yellowShot,shotAfterimage,shotHit,superchargeEnd,soulSpark];
+ yellowShot,shotAfterimage,shotHit,superchargeEnd,soulSpark,vineCut,vineTransition,vineWeak];
 /** Shared engine objects whose Chapter 2 source versions are replaced by the engine's own (with its chapter rules). */
 const ENGINE_PORTED=new Set(['obj_heart','obj_grazebox','obj_moveheart','obj_collidebullet','obj_regularbullet']);
 
@@ -53,12 +54,12 @@ export function installNeoHost(rt:GmRuntime){
     case 'string_hash_to_newline':return String(args[0]).replace(/#/g,'\n');
     case 'scr_84_set_draw_font':r.drawState.font='fnt_'+args[0];return;
     case 'scr_monstersetup':return monsterSetup(s,r);
-    case 'scr_nextact':return controller.nextAct(r);
+    case 'scr_nextact':return controller.nextAct(r,s);
     case 'scr_attackphase':return controller.attackPhase(r);
     case 'scr_spellmenu_setup':return spellMenuSetupChapter2(r);
     case 'scr_randomtarget':return controller.randomTarget(s,r);
-    case 'scr_battletext_default':return writer.battleTextDefault(r).id;
-    case 'scr_battletext':return writer.battleText(r).id;
+    case 'scr_battletext_default':return writer.battleTextDefault(r,s).id;
+    case 'scr_battletext':return writer.battleText(r,s).id;
     case 'scr_damage_enemy':return party.damageEnemy(s,r,args[0],args[1]);
     case 'scr_gameover':return battle.gameOver(r);
     case 'scr_wincombat':return controller.winCombat(r);

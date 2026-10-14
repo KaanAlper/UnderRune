@@ -72,7 +72,9 @@ export function compareFrame(rt:GmRuntime,line:TraceLine,tracked:Set<string>,glo
 }
 
 /** Runs the remake from `start` (a snapshot frame: after its step, before its draw) to `end`, stopping at the first mismatch. */
-export function runParity(rt:GmRuntime,trace:Map<number,TraceLine>,start:number,end:number,tracked:Set<string>,globals:string[],skippedIds=new Set<number>(),replay?:Replay){
+/** afterFrame: runs after each matching frame (for checks that need more than the trace, like full dumps); a
+ * mismatch it returns stops the run there. */
+export function runParity(rt:GmRuntime,trace:Map<number,TraceLine>,start:number,end:number,tracked:Set<string>,globals:string[],skippedIds=new Set<number>(),replay?:Replay,afterFrame?:(frame:number)=>Mismatch|undefined){
  if(replay){for(let n=0;n<start;n++)replayInput(rt,replay,n);rt.input.pressed.clear();rt.input.released.clear();}
  let frame=start;
  for(;frame<end;frame++){
@@ -81,9 +83,69 @@ export function runParity(rt:GmRuntime,trace:Map<number,TraceLine>,start:number,
   const line=trace.get(frame+1);if(!line)return {matched:frame-start,mismatch:{frame:frame+1,what:'Missing reference frame '+(frame+1)}};
   // scr_endcombat: the game hands over to obj_endbattle (the walk back to the room); the remake ends the battle there.
   if(rt.pendingRoom==='battle_end')return line.o.some(o=>o[1]==='obj_endbattle')?{matched:frame+1-start,mismatch:undefined,room:rt.pendingRoom}:{matched:frame-start,mismatch:{frame:frame+1,what:'the battle ended early'}};
-  const bad=compareFrame(rt,line,tracked,globals,skippedIds);
+  const bad=compareFrame(rt,line,tracked,globals,skippedIds)??afterFrame?.(frame+1);
   if(bad)return {matched:frame-start,mismatch:bad};
   if(rt.pendingRoom)return {matched:frame+1-start,mismatch:undefined,room:rt.pendingRoom};
  }
  return {matched:frame-start,mismatch:undefined};
+}
+
+/** The resource numbers the original keeps where the remake keeps names (sprites, sounds, fonts, objects, and
+ * functions in the reference runtime's numbering: tools/extract-script-index.mjs). */
+export type ResourceIndex={sprites:string[];sounds:string[];fonts:string[];objects:string[];functions:string[]};
+export function loadResources(chapter:number):ResourceIndex{
+ const i=JSON.parse(fs.readFileSync(`extracted/chapter${chapter}_windows/index.json`,'utf8'));
+ const names=(a:any[])=>a.map(x=>typeof x==='string'?x:x.name as string);
+ const functions=`extracted/chapter${chapter}_windows/functions.json`;
+ return {sprites:names(i.sprites),sounds:names(i.sounds),fonts:names(i.fonts),objects:names(i.objects),functions:fs.existsSync(functions)?JSON.parse(fs.readFileSync(functions,'utf8')):[]};
+}
+/** The runtime's own fields on an instance (its built-ins are stored under names starting with $); every other own
+ * property is a GML instance variable. */
+const RUNTIME_FIELDS=new Set(['xprevious','yprevious','xstart','ystart','imageAngle','imageBlend','mask','visible','live','frameCount','layerEntry','alarm','id','object']);
+/** Whether a remake value stands for the reference's value: numbers within GML's tolerance, booleans as 0/1,
+ * resource names as their numbers, objects and instances as their indices and ids, arrays element by element. */
+function sameValue(ours:unknown,ref:unknown,res:ResourceIndex):boolean{
+ if(Array.isArray(ref)){const a=ours;return Array.isArray(a)&&a.length===ref.length&&ref.every((v,k)=>sameValue(a[k],v,res));}
+ if(typeof ref==='number'){
+  if(typeof ours==='boolean')ours=ours?1:0;
+  if(typeof ours==='number')return ours===ref||Math.abs(ours-ref)<=1e-5*Math.max(1,Math.abs(ref));
+  if(typeof ours==='string'){
+   // Sprites made from surfaces are named after the sprite number they take (host/surfaces.ts).
+   const made=/^__newsprite(\d+)$/.exec(ours);if(made)return Number(made[1])===ref;
+   return [res.sprites,res.sounds,res.fonts,res.objects,res.functions].some(list=>list.indexOf(ours as string)===ref);
+  }
+  if(ours&&typeof ours==='object'){const o=ours as {index?:number;id?:number};return o.index===ref||o.id===ref;}
+  return false;
+ }
+ if(ref===null||ref===undefined)return ours===null||ours===undefined;
+ return ours===ref;
+}
+const show=(v:unknown)=>{const s=v&&typeof v==='object'&&!Array.isArray(v)?`<${(v as any).name??(v as any).id??'object'}>`:JSON.stringify(v);return (s??String(v)).slice(0,80);};
+/** Compares every variable of the checked objects' instances with a full reference dump (taken after the same frame's
+ * step): built-ins, alarms and instance variables, missing and extra ones included. Instances are paired in creation
+ * order per object, as in compareFrame. Returns one line per difference. */
+export function compareState(rt:GmRuntime,dump:Dump,checked:Set<string>,res:ResourceIndex,skippedIds=new Set<number>(),ignore:Readonly<Record<string,readonly string[]>>={}):string[]{
+ const problems:string[]=[];
+ for(const name of checked){
+  const ref=dump.instances.filter(d=>d.objectName===name&&!skippedIds.has(d.instanceId)),ours=rt.instances.filter(i=>i.live&&i.object.name===name);
+  if(ref.length!==ours.length){problems.push(`${name}: ${ours.length} instances, reference has ${ref.length}`);continue;}
+  ref.forEach((d,k)=>{
+   const o=ours[k],at=`${name} ${d.instanceId}`,diff=(what:string,a:unknown,b:unknown)=>{if(!sameValue(a,b,res))problems.push(`${at} ${what}: ${show(a)} vs ${show(b)}`);};
+   if(o.id!==d.instanceId)problems.push(`${at}: id ${o.id}`);
+   diff('depth',o.depth,d.depth);diff('sprite',o.sprite??null,d.sprite.name);diff('image_index',o.imageIndex,d.sprite.imageIndex);diff('image_speed',o.imageSpeed,d.sprite.imageSpeed);
+   diff('image_xscale',o.imageXscale,d.scale.x);diff('image_yscale',o.imageYscale,d.scale.y);diff('image_angle',o.imageAngle,d.angle);
+   diff('image_alpha',o.imageAlpha,d.alpha);diff('image_blend',o.imageBlend,d.blend);diff('visible',o.visible,d.visible);
+   for(let a=0;a<12;a++)diff(`alarm[${a}]`,o.alarm[a],d.alarms[a]??-1);
+   for(const [key,value] of Object.entries(d.selfVariables)){
+    if(typeof value==='string'&&value.startsWith('<method:'))continue;
+    // The reference runtime writes creator (the calling instance) on every instance_create; GameMaker does not, and
+    // the game sets it itself where it reads it. Only compared where the remake sets it.
+    if(key==='creator'&&!('creator' in o))continue;
+    if(ignore[name]?.includes(key))continue;
+    if(!(key in o))problems.push(`${at} ${key}: unset, reference has ${show(value)}`);else diff(key,o[key],value);
+   }
+   for(const key of Object.keys(o))if(!RUNTIME_FIELDS.has(key)&&!key.startsWith('$')&&!(key in d.selfVariables))problems.push(`${at} ${key}: ${show(o[key])}, not set in the reference`);
+  });
+ }
+ return problems;
 }

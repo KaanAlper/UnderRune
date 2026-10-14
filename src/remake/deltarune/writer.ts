@@ -244,14 +244,17 @@ export function enemyBalloon(rt:GmRuntime,x:number,y:number,kind:number):GmInsta
 }
 /** with (obj_writer) instance_destroy(). */
 export function destroyWriters(rt:GmRuntime){for(const w of rt.all(writer))rt.destroy(w);}
-/** scr_battletext: the battle box writer at (30, 376) with its portrait at (26, 380). */
-export function battleText(rt:GmRuntime):GmInstance{
- const w=rt.create(writer,rt.view.x+30,rt.view.y+376);rt.create(face,rt.view.x+26,rt.view.y+380);
+/** scr_battletext: the battle box writer at (30, 376) with its portrait at (26, 380). The script works in its caller's
+ * variables (the view corner, the writer and the face it makes), so the caller is required. */
+export function battleText(rt:GmRuntime,caller:GmInstance):GmInstance{
+ caller.xx=rt.view.x;caller.yy=rt.view.y;
+ const w=rt.create(writer,caller.xx+30,caller.yy+376);caller.battlewriter=w.id;
+ caller.myface=rt.create(face,caller.xx+26,caller.yy+380).id;
  w.dialoguer=1;w.facer=1;if(rt.globals.fc===0&&w.originalcharline===33)w.charline=26;
  return w;
 }
 /** scr_battletext_default: the plain battle voice and no portrait. */
-export function battleTextDefault(rt:GmRuntime):GmInstance{rt.globals.fc=0;rt.globals.typer=4;return battleText(rt);}
+export function battleTextDefault(rt:GmRuntime,caller:GmInstance):GmInstance{rt.globals.fc=0;rt.globals.typer=4;return battleText(rt,caller);}
 /** scr_susface, scr_ralface, scr_lanface, scr_noface: a page that switches the battle text's portrait (and emotion). */
 const FACE_SCRIPTS={susie:'scr_susface_slash_scr_susface_gml_1_0',ralsei:'scr_ralface_slash_scr_ralface_gml_1_0',lancer:'scr_lanface_slash_scr_lanface_gml_1_0'} as const;
 export function msgFace(rt:GmRuntime,slot:number,who:keyof typeof FACE_SCRIPTS|'none',emotion:number|string=0){

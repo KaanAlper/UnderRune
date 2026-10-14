@@ -63,14 +63,14 @@ export interface EnemyStrategy{
 
 /** obj_baseenemy's talk end: the words can be skipped after 15 frames; then the soul flies in and the box opens. */
 function defaultEndTalk(s:GmInstance,rt:GmRuntime){
- if(s.talked!==1||!isPhase(rt,'enemytalk'))return;
+ if(s.talked!==1||!isPhase(rt,'enemytalk',s))return;
  s.rtimer=0;blconSkip(s,rt,15);
- if(isPhase(rt,'bullets')){
+ if(isPhase(rt,'bullets',s)){
   if(!rt.exists(moveHeart))moveHeartIn(rt);
   if(!rt.exists(growtangle))rt.create(growtangle,rt.view.x+320,rt.view.y+170);
  }
 }
-function defaultActsDone(s:GmInstance,rt:GmRuntime){if(s.actcon===1&&!rt.exists(writer))nextAct(rt);}
+function defaultActsDone(s:GmInstance,rt:GmRuntime){if(s.actcon===1&&!rt.exists(writer))nextAct(rt,s);}
 
 function templateStep(st:EnemyStrategy):Step{
  const startTalk:Step=st.startTalk??((s,rt)=>{
@@ -87,10 +87,10 @@ function templateStep(st:EnemyStrategy):Step{
   if(st.onlyWhileFighting&&g.fighting!==1)return;
   if(isAlive(s,rt)){
    st.beforeTalk?.(s,rt);
-   if(isPhase(rt,'enemytalk')&&s.talked===0)startTalk(s,rt);
+   if(isPhase(rt,'enemytalk',s)&&s.talked===0)startTalk(s,rt);
    st.duringTalk?.(s,rt);
    endTalk(s,rt);
-   if(isPhase(rt,'bullets')&&s.attacked===0){
+   if(isPhase(rt,'bullets',s)&&s.attacked===0){
     if(delay>0)s.rtimer+=1;
     if(delay===0||s.rtimer===delay){st.attack(s,rt);if(st.countTurn!==false)s.turns+=1;g.typer=6;g.fc=0;st.statusLine?.(s,rt);s.attacked=1;}
     else attackWait(s,rt);

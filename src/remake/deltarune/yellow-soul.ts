@@ -128,8 +128,8 @@ export const yellowSoul={
   }
   if(s.z_hold>=15){
    s.z_charge=Math.min(s.z_hold-15,35);
-   for(let i=0;i<4;i++){
-    s.rotx=i*90+s.z_charge*5;s.xx=Math.sin(s.rotx*Math.PI/180)*(35-s.z_charge);s.yy=Math.cos(s.rotx*Math.PI/180)*(35-s.z_charge);
+   for(s.i=0;s.i<4;s.i+=1){
+    s.rotx=s.i*90+s.z_charge*5;s.xx=Math.sin(s.rotx*Math.PI/180)*(35-s.z_charge);s.yy=Math.cos(s.rotx*Math.PI/180)*(35-s.z_charge);
     rt.drawSprite('spr_yheart_charge',0,s.x+9-s.xx,s.y+10-s.yy,4-s.z_charge*2/35,4-s.z_charge*2/35,0,C.white,s.z_charge/5);
    }
   }

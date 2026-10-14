@@ -3,7 +3,7 @@
 // dispatch order depends on them.
 import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {eq,ge,gt,le,lt,pointDistance,round} from '../gm/math';
-import {C} from '../gm/graphics';
+import {C,mergeColor} from '../gm/graphics';
 import {forChapter,rules,withHook} from './rules';
 import {yellowSoul} from './yellow-soul';
 
@@ -23,9 +23,14 @@ export const heroKris:GmObjectDef={name:'obj_herokris',index:213,depth:100,paren
 export const heroSusie:GmObjectDef={name:'obj_herosusie',index:214,depth:100,parent:heroParent,sprite:'spr_krisplace'};
 export const heroRalsei:GmObjectDef={name:'obj_heroralsei',index:215,depth:100,parent:heroParent,sprite:'spr_krisplace'};
 /** The enemy turn's darkness: it fades the screen and the heroes in; with darken = 0 it closes the box and fades out. */
+/** Per chapter: from Chapter 2 the darkener sets its own depth when made. */
+const DARKENER:Record<number,{depth?:number}>={1:{},2:{depth:205}};
 export const darkener:GmObjectDef={name:'obj_darkener',index:205,depth:200,events:{
- // From Chapter 2 it sets its own depth (205) when made.
- create:(s,rt)=>{if(rules(rt).chapter>=2)s.depth=205;if(rt.count(darkener)>1){rt.destroy(s);return;}s.darken=1;s.darkamt=0;},
+ create:(s,rt)=>{
+  const depth=forChapter(rt,DARKENER,'obj_darkener').depth;if(depth!==undefined)s.depth=depth;
+  if(rt.count(darkener)>1){rt.destroy(s);return;}
+  s.darken=1;s.darkamt=0;
+ },
  draw:(s,rt)=>{
   if(s.darken===1){for(const h of rt.all(heroParent))h.darkify=1;if(s.darkamt<15)s.darkamt+=1;}
   if(s.darken===0){
@@ -91,11 +96,20 @@ export const astream:GmObjectDef={name:'obj_astream',index:134,depth:-200,sprite
  draw:(s,rt)=>{const m=rt.first(mainchara);if(m){s.x=m.x+rt.random.random(20);s.y=m.y+rt.random.random(20);}},
 }};
 
-/** Fades out and goes. From Chapter 2 its fading speed is its own variable (fadeSpeed). */
+/** Per chapter: from Chapter 2 an afterimage's fading speed is its own variable (fadeSpeed), so makers can change it. */
+const AFTERIMAGE:Record<number,{ownSpeed:boolean}>={1:{ownSpeed:false},2:{ownSpeed:true}};
+/** Fades out and goes. */
 export const afterimage:GmObjectDef={name:'obj_afterimage',index:192,events:{
- create:(s,rt)=>{if(rules(rt).chapter>=2)s.fadeSpeed=0.04;},
- step:(s,rt)=>{s.imageAlpha=s.imageAlpha-(rules(rt).chapter>=2?s.fadeSpeed:0.04);if(lt(s.imageAlpha,0))rt.destroy(s);},
+ create:(s,rt)=>{if(forChapter(rt,AFTERIMAGE,'obj_afterimage').ownSpeed)s.fadeSpeed=0.04;},
+ step:(s,rt)=>{s.imageAlpha=s.imageAlpha-(forChapter(rt,AFTERIMAGE,'obj_afterimage').ownSpeed?s.fadeSpeed:0.04);if(lt(s.imageAlpha,0))rt.destroy(s);},
 }};
+/** scr_afterimage, run by `s`: a still copy of it that fades out, kept in its afterimage variable. */
+export function afterImage(s:GmInstance,rt:GmRuntime){
+ const a=rt.create(afterimage,s.x,s.y);s.afterimage=a.id;
+ a.sprite=s.sprite;a.imageIndex=s.imageIndex;a.imageBlend=s.imageBlend;a.imageSpeed=0;a.depth=s.depth;
+ a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;a.imageAngle=s.imageAngle;
+ return a;
+}
 export const afterimageGrow:GmObjectDef={name:'obj_afterimage_grow',index:193,events:{
  create:s=>{s.xrate=.2;s.yrate=.2;s.fade=.1;},
  step:(s,rt)=>{s.imageAlpha-=s.fade;s.imageXscale+=s.xrate;s.imageYscale+=s.yrate;if(lt(s.imageAlpha,0))rt.destroy(s);},
@@ -131,10 +145,6 @@ export const shake:GmObjectDef={name:'obj_shake',index:147,events:{
  },
 }};
 
-const mergeColor=(a:number,b:number,t:number)=>{
- const ch=(c:number,sh:number)=>(c>>sh)&255,mix=(sh:number)=>Math.trunc(ch(a,sh)+(ch(b,sh)-ch(a,sh))*t);
- return mix(0)|(mix(8)<<8)|(mix(16)<<16);
-};
 export {mergeColor};
 
 /** Damage numbers: they pop, bounce twice, then fade upward. The motion runs in the Draw event. */
@@ -378,33 +388,36 @@ function heartStep(s:GmInstance,rt:GmRuntime){
  if(r.soulHasModes&&s.color===0)s.remove_slow_z_buffer+=0.5;
  s.xmeet=0;s.ymeet=0;s.xymeet=0;
  if(meet(s.x+px,s.y+py))s.xymeet=1;
+ // The loop counters (g, i, j) and mvd are the soul's own variables, as in the original.
  if(meet(s.x+px,s.y)){
   // Blocked sideways: slip around a corner by up to wspeed pixels, then move as far as possible.
-  for(let g=w;g>0;g-=1){
-   if(s.press_d===0&&!meet(s.x+px,s.y-g)){s.y=s.y-g;py=0;break;}
-   if(s.press_u===0&&!meet(s.x+px,s.y+g)){s.y=s.y+g;py=0;break;}
+  for(s.g=w;s.g>0;s.g-=1){
+   s.mvd=0;
+   if(s.press_d===0&&!meet(s.x+px,s.y-s.g)){s.y=s.y-s.g;py=0;break;}
+   if(s.press_u===0&&s.mvd===0&&!meet(s.x+px,s.y+s.g)){s.y=s.y+s.g;py=0;break;}
   }
   s.xmeet=1;s.bkx=0;
-  if(px>0)for(let i=px;i>=0;i-=1)if(!meet(s.x+i,s.y)){px=i;s.bkx=1;break;}
-  if(px<0)for(let i=px;i<=0;i+=1)if(!meet(s.x+i,s.y)){px=i;s.bkx=1;break;}
+  if(px>0)for(s.i=px;s.i>=0;s.i-=1)if(!meet(s.x+s.i,s.y)){px=s.i;s.bkx=1;break;}
+  if(px<0)for(s.i=px;s.i<=0;s.i+=1)if(!meet(s.x+s.i,s.y)){px=s.i;s.bkx=1;break;}
   if(s.bkx===0)px=0;
  }
  if(meet(s.x,s.y+py)){
   s.ymeet=1;s.bky=0;
-  for(let g=w;g>0;g-=1){
-   if(s.press_r===0&&!meet(s.x-g,s.y+py)){s.x=s.x-g;px=0;break;}
-   if(s.press_l===0&&!meet(s.x+g,s.y+py)){s.x=s.x+g;px=0;break;}
+  for(s.g=w;s.g>0;s.g-=1){
+   s.mvd=0;
+   if(s.press_r===0&&!meet(s.x-s.g,s.y+py)){s.x=s.x-s.g;px=0;break;}
+   if(s.mvd===0&&s.press_l===0&&!meet(s.x+s.g,s.y+py)){s.x=s.x+s.g;px=0;break;}
   }
-  if(py>0)for(let i=py;i>=0;i-=1)if(!meet(s.x,s.y+i)){py=i;s.bky=1;break;}
-  if(py<0)for(let i=py;i<=0;i+=1)if(!meet(s.x,s.y+i)){py=i;s.bky=1;break;}
+  if(py>0)for(s.i=py;s.i>=0;s.i-=1)if(!meet(s.x,s.y+s.i)){py=s.i;s.bky=1;break;}
+  if(py<0)for(s.i=py;s.i<=0;s.i+=1)if(!meet(s.x,s.y+s.i)){py=s.i;s.bky=1;break;}
   if(s.bky===0)py=0;
  }
  if(meet(s.x+px,s.y+py)){
-  s.xymeet=1;s.bkxy=0;let i=px,j=py;
-  while(j!==0||i!==0){
-   if(!meet(s.x+i,s.y+j)){px=i;py=j;s.bkxy=1;break;}
-   if(Math.abs(j)>=1){if(j>0)j-=1;if(j<0)j+=1;}else j=0;
-   if(Math.abs(i)>=1){if(i>0)i-=1;if(i<0)i+=1;}else i=0;
+  s.xymeet=1;s.bkxy=0;s.i=px;s.j=py;
+  while(s.j!==0||s.i!==0){
+   if(!meet(s.x+s.i,s.y+s.j)){px=s.i;py=s.j;s.bkxy=1;break;}
+   if(Math.abs(s.j)>=1){if(s.j>0)s.j-=1;if(s.j<0)s.j+=1;}else s.j=0;
+   if(Math.abs(s.i)>=1){if(s.i>0)s.i-=1;if(s.i<0)s.i+=1;}else s.i=0;
   }
   if(s.bkxy===0){px=0;py=0;}
  }

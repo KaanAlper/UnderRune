@@ -105,11 +105,13 @@ export function actSimulChapter2(rt:GmRuntime){
   for(const m of monsters)m.simultotal=count;
  }
 }
-/** scr_nextact. Returns true when the caller must enter scr_attackphase. */
-export function nextActChapter2(rt:GmRuntime){
+/** scr_nextact. Returns true when the caller must enter scr_attackphase. The script keeps the enemy it works on in
+ * its caller's __minstance. */
+export function nextActChapter2(rt:GmRuntime,caller:GmInstance){
  const g=rt.globals;
  g.acting=[0,0,0];g.actingsingle[g.currentactingchar]=0;
- const previous=rt.byId(g.monsterinstance[g.actingtarget[g.currentactingchar]]);
+ caller.__minstance=g.monsterinstance[g.actingtarget[g.currentactingchar]];
+ const previous=rt.byId(caller.__minstance);
  if(previous){previous.acting=0;for(const suffix of ['','sus','ral','noe'])previous['actcon'+suffix]=0;}
  let singleComplete=false;
  while(g.currentactingchar<3){
@@ -117,7 +119,8 @@ export function nextActChapter2(rt:GmRuntime){
   if(g.currentactingchar>=3||g.actingsingle[g.currentactingchar]!==1)continue;
   const char=g.char[g.currentactingchar];
   if(char>=2&&char<=4){
-   const m=rt.byId(g.monsterinstance[g.actingtarget[g.currentactingchar]]),suffix=['','','sus','ral','noe'][char];
+   caller.__minstance=g.monsterinstance[g.actingtarget[g.currentactingchar]];
+   const m=rt.byId(caller.__minstance),suffix=['','','sus','ral','noe'][char];
    if(m)m['actcon'+suffix]=1;
    singleComplete=g.actingsimul[g.currentactingchar]===0;break;
   }

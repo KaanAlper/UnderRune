@@ -16,34 +16,35 @@ export interface GmObjectDef{
 }
 
 export class GmInstance{
- // Built-in fields stored the way the reference runtime stores them (32-bit floats).
- private _x=0;private _y=0;xprevious=0;yprevious=0;xstart=0;ystart=0;
- private _speed=0;private _direction=0;private _hspeed=0;private _vspeed=0;
- private _friction=0;private _gravity=0;private _gravityDirection=270;
- private _imageIndex=0;private _imageSpeed=1;imageAngle=0;private _imageXscale=1;private _imageYscale=1;private _imageAlpha=1;imageBlend=0xffffff;
+ // Built-in fields stored the way the reference runtime stores them (32-bit floats). Their storage names start with
+ // $, which no GML variable name can, so an instance variable like NEO's _sprite never overwrites them.
+ private $x=0;private $y=0;xprevious=0;yprevious=0;xstart=0;ystart=0;
+ private $speed=0;private $direction=0;private $hspeed=0;private $vspeed=0;
+ private $friction=0;private $gravity=0;private $gravityDirection=270;
+ private $imageIndex=0;private $imageSpeed=1;imageAngle=0;private $imageXscale=1;private $imageYscale=1;private $imageAlpha=1;imageBlend=0xffffff;
  mask:string|null;visible:boolean;live=true;
- private _sprite:string|null=null;
+ private $sprite:string|null=null;
  /** The runtime's frame counts, for sprite_index's rule below. */
  frameCount?:(sprite:string)=>number|undefined;
- get sprite(){return this._sprite;}
+ get sprite(){return this.$sprite;}
  /** Setting sprite_index to another sprite resets image_index to 0 when it is past the new sprite's last frame. */
  set sprite(v:string|null){
-  if(v===this._sprite)return;this._sprite=v;
+  if(v===this.$sprite)return;this.$sprite=v;
   const n=v&&this.frameCount?this.frameCount(v):undefined;
   if(n&&n>0&&Math.trunc(this.imageIndex)>=n)this.imageIndex=0;
  }
- private _depth=0;
+ private $depth=0;
  /** When the instance last entered its depth: the runner puts an instance at the front of its depth layer on creation
   * and on every depth change, so among equal depths the most recent arrival draws first (underneath). */
  layerEntry=0;
  static layerEntries=0;
- get depth(){return this._depth;}
- set depth(v:number){this._depth=v;this.layerEntry=++GmInstance.layerEntries;}
+ get depth(){return this.$depth;}
+ set depth(v:number){this.$depth=v;this.layerEntry=++GmInstance.layerEntries;}
  alarm:number[]=new Array(12).fill(-1);
  /** Object variables set by code (GML instance variables). */
  [name:string]:any;
  constructor(readonly id:number,public object:GmObjectDef,x:number,y:number){
-  this._x=f32(x);this._y=f32(y);this.xstart=this._x;this.ystart=this._y;this.xprevious=this._x;this.yprevious=this._y;
+  this.$x=f32(x);this.$y=f32(y);this.xstart=this.$x;this.ystart=this.$y;this.xprevious=this.$x;this.yprevious=this.$y;
   // Objects do not inherit their parent's sprite or mask.
   this.sprite=object.sprite??null;this.mask=object.mask??null;this.depth=object.depth??0;this.visible=object.visible??true;
   if(GmInstance.strict)return new Proxy(this,STRICT_READS);
@@ -52,54 +53,54 @@ export class GmInstance{
   * With strict on (tests and development), so does the runtime: a misspelt or forgotten variable fails where it is
   * read, naming the object and the variable, instead of reading as undefined and failing somewhere else later. */
  static strict=false;
- get x(){return this._x;}set x(v:number){this._x=f32(v);}
- get y(){return this._y;}set y(v:number){this._y=f32(v);}
- get speed(){return this._speed;}set speed(v:number){this._speed=f32(v);this.componentsFromSpeed();}
- get direction(){return this._direction;}
- set direction(v:number){let d=v%360;if(d<0)d+=360;this._direction=f32(d);this.componentsFromSpeed();}
- get hspeed(){return this._hspeed;}set hspeed(v:number){this._hspeed=f32(v);this.speedFromComponents();}
- get vspeed(){return this._vspeed;}set vspeed(v:number){this._vspeed=f32(v);this.speedFromComponents();}
- get friction(){return this._friction;}set friction(v:number){this._friction=f32(v);}
- get gravity(){return this._gravity;}set gravity(v:number){this._gravity=f32(v);}
- get gravityDirection(){return this._gravityDirection;}set gravityDirection(v:number){this._gravityDirection=f32(v);}
- get imageIndex(){return this._imageIndex;}set imageIndex(v:number){this._imageIndex=f32(v);}
- get imageSpeed(){return this._imageSpeed;}set imageSpeed(v:number){this._imageSpeed=f32(v);}
- get imageXscale(){return this._imageXscale;}set imageXscale(v:number){this._imageXscale=f32(v);}
- get imageYscale(){return this._imageYscale;}set imageYscale(v:number){this._imageYscale=f32(v);}
- get imageAlpha(){return this._imageAlpha;}set imageAlpha(v:number){this._imageAlpha=f32(v);}
+ get x(){return this.$x;}set x(v:number){this.$x=f32(v);}
+ get y(){return this.$y;}set y(v:number){this.$y=f32(v);}
+ get speed(){return this.$speed;}set speed(v:number){this.$speed=f32(v);this.componentsFromSpeed();}
+ get direction(){return this.$direction;}
+ set direction(v:number){let d=v%360;if(d<0)d+=360;this.$direction=f32(d);this.componentsFromSpeed();}
+ get hspeed(){return this.$hspeed;}set hspeed(v:number){this.$hspeed=f32(v);this.speedFromComponents();}
+ get vspeed(){return this.$vspeed;}set vspeed(v:number){this.$vspeed=f32(v);this.speedFromComponents();}
+ get friction(){return this.$friction;}set friction(v:number){this.$friction=f32(v);}
+ get gravity(){return this.$gravity;}set gravity(v:number){this.$gravity=f32(v);}
+ get gravityDirection(){return this.$gravityDirection;}set gravityDirection(v:number){this.$gravityDirection=f32(v);}
+ get imageIndex(){return this.$imageIndex;}set imageIndex(v:number){this.$imageIndex=f32(v);}
+ get imageSpeed(){return this.$imageSpeed;}set imageSpeed(v:number){this.$imageSpeed=f32(v);}
+ get imageXscale(){return this.$imageXscale;}set imageXscale(v:number){this.$imageXscale=f32(v);}
+ get imageYscale(){return this.$imageYscale;}set imageYscale(v:number){this.$imageYscale=f32(v);}
+ get imageAlpha(){return this.$imageAlpha;}set imageAlpha(v:number){this.$imageAlpha=f32(v);}
  /** Sets direction and speed as raw values, then the components (as move_towards_point does). */
- setMotion(direction:number,speed:number){this._direction=f32(direction);this._speed=f32(speed);this.componentsFromSpeed();}
+ setMotion(direction:number,speed:number){this.$direction=f32(direction);this.$speed=f32(speed);this.componentsFromSpeed();}
  // instance.c Instance_computeComponentsFromSpeed / Instance_computeSpeedFromComponents.
  componentsFromSpeed(){
-  let h=f32(this._speed*clamp6(Math.cos(this._direction*(Math.PI/180))));
-  let v=f32(-this._speed*clamp6(Math.sin(this._direction*(Math.PI/180))));
+  let h=f32(this.$speed*clamp6(Math.cos(this.$direction*(Math.PI/180))));
+  let v=f32(-this.$speed*clamp6(Math.sin(this.$direction*(Math.PI/180))));
   if(Math.abs(h-Math.round(h))<1e-4)h=f32(Math.round(h));
   if(Math.abs(v-Math.round(v))<1e-4)v=f32(Math.round(v));
-  this._hspeed=h;this._vspeed=v;
+  this.$hspeed=h;this.$vspeed=v;
  }
  speedFromComponents(){
-  if(this._hspeed===0){if(this._vspeed>0)this._direction=270;else if(this._vspeed<0)this._direction=90;}
-  else{const dd=clamp6(180*Math.atan2(this._vspeed,this._hspeed)/Math.PI);this._direction=f32(dd<=0?-dd:360-dd);}
-  if(Math.abs(this._direction-Math.round(this._direction))<1e-4)this._direction=f32(Math.round(this._direction));
-  this._direction=f32(this._direction%360);
-  let s=f32(Math.sqrt(this._hspeed*this._hspeed+this._vspeed*this._vspeed));
+  if(this.$hspeed===0){if(this.$vspeed>0)this.$direction=270;else if(this.$vspeed<0)this.$direction=90;}
+  else{const dd=clamp6(180*Math.atan2(this.$vspeed,this.$hspeed)/Math.PI);this.$direction=f32(dd<=0?-dd:360-dd);}
+  if(Math.abs(this.$direction-Math.round(this.$direction))<1e-4)this.$direction=f32(Math.round(this.$direction));
+  this.$direction=f32(this.$direction%360);
+  let s=f32(Math.sqrt(this.$hspeed*this.$hspeed+this.$vspeed*this.$vspeed));
   if(Math.abs(s-Math.round(s))<1e-4)s=f32(Math.round(s));
-  this._speed=s;
+  this.$speed=s;
  }
  /** runner.c motion step: friction, gravity, then position. */
  move(){
-  if(this._friction!==0){
-   const ns=f32(this._speed>0?this._speed-this._friction:this._speed+this._friction);
-   if((this._speed>0&&ns<0)||(this._speed<0&&ns>0))this._speed=0;else if(this._speed!==0)this._speed=ns;
+  if(this.$friction!==0){
+   const ns=f32(this.$speed>0?this.$speed-this.$friction:this.$speed+this.$friction);
+   if((this.$speed>0&&ns<0)||(this.$speed<0&&ns>0))this.$speed=0;else if(this.$speed!==0)this.$speed=ns;
    this.componentsFromSpeed();
   }
-  if(this._gravity!==0){
-   const rad=this._gravityDirection*(Math.PI/180);
-   this._hspeed=f32(this._hspeed+f32(this._gravity*clamp6(Math.cos(rad))));
-   this._vspeed=f32(this._vspeed-f32(this._gravity*clamp6(Math.sin(rad))));
+  if(this.$gravity!==0){
+   const rad=this.$gravityDirection*(Math.PI/180);
+   this.$hspeed=f32(this.$hspeed+f32(this.$gravity*clamp6(Math.cos(rad))));
+   this.$vspeed=f32(this.$vspeed-f32(this.$gravity*clamp6(Math.sin(rad))));
    this.speedFromComponents();
   }
-  if(this._hspeed!==0||this._vspeed!==0){this._x=f32(this._x+this._hspeed);this._y=f32(this._y+this._vspeed);}
+  if(this.$hspeed!==0||this.$vspeed!==0){this.$x=f32(this.$x+this.$hspeed);this.$y=f32(this.$y+this.$vspeed);}
  }
 }
 /** GML creates an array variable by writing an element to it (a[i] = v on an unset a): the instance's array, created

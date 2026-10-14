@@ -4,15 +4,16 @@
 // spell phase are their own objects (party.ts); each enemy is its boss module's object.
 import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
-import {round,le} from '../gm/math';
+import {eq,gt,le,lt,round} from '../gm/math';
 import {KEY,battleController as controllerBase,bulletGenParent,bulletParent,darkener,dmgWriter,heart,heroParent,mergeColor,monsterParent,returnHeart,tensionHeal} from './battle';
 import {battleText,face,faceParent,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
 import {HERO_DEFS,attackPress,spellPhase,heal,spellText,healAnim} from './party';
-import {rules,withHook} from './rules';
+import {forChapter,rules,withHook} from './rules';
 import {actorActs,actSelectChapter2,actSimulChapter2,initChapter2ActTables,itemInfoChapter2,nextActChapter2,resetChapter2Actors,spellMenuSetupChapter2} from './chapter2';
 
 import {pressed} from './keys';
+import {mercyAdd2} from './chapter2-battle';
 export const left_p=(rt:GmRuntime)=>pressed(rt,KEY.left);
 export const right_p=(rt:GmRuntime)=>pressed(rt,KEY.right);
 export const up_p=(rt:GmRuntime)=>pressed(rt,KEY.up);
@@ -41,8 +42,13 @@ export function randomTarget(s:GmInstance,rt:GmRuntime){
  g.targeted[s.mytarget]=1;
  if(rules(rt).enemiesTargetWholeParty&&s.mytarget!==3){for(let i=0;i<3;i++)if(g.charcantarget[i])g.targeted[i]=1;s.mytarget=4;}
 }
-/** scr_mercyadd. */
-export function mercyAdd(rt:GmRuntime,enemy:number,amount:number){const g=rt.globals;g.mercymod[enemy]+=amount;if(g.mercymod[enemy]<0)g.mercymod[enemy]=0;}
+/** scr_mercyadd per chapter, run by `caller`: Chapter 1 only adds (not below 0); Chapter 2's also caps at 100, rings,
+ * and shows the amount over the enemy (mercyAdd2). */
+const MERCY_ADD:Record<number,(caller:GmInstance,rt:GmRuntime,enemy:number,amount:number)=>void>={
+ 1:(_caller,rt,enemy,amount)=>{const g=rt.globals;g.mercymod[enemy]+=amount;if(g.mercymod[enemy]<0)g.mercymod[enemy]=0;},
+ 2:mercyAdd2,
+};
+export function mercyAdd(caller:GmInstance,rt:GmRuntime,enemy:number,amount:number){forChapter(rt,MERCY_ADD,'scr_mercyadd')(caller,rt,enemy,amount);}
 /** scr_charcan: can this party slot still choose a command? */
 function charCan(rt:GmRuntime,slot:number){
  const g=rt.globals;let can=1;
@@ -164,14 +170,17 @@ function endTurn(s:GmInstance,rt:GmRuntime){
   if(g.acting[0]===0&&!g.actingsingle.includes(1))attackPhase(rt);
   else{
    g.charturn=3;g.myfight=3;g.currentactingchar=0;
-   if(g.acting[0]===0)nextAct(rt);
+   if(g.acting[0]===0)nextAct(rt,s);
    if(g.acting[0]===1&&g.actingsimul[0]===1)actSimulChapter2(rt);
   }
   s.messagepriority=-1;s.attackpriority=-1;
  }else if(g.acting[0]===0)attackPhase(rt);else{g.charturn=3;g.myfight=3;}
 }
 /** scr_nextact: enemies call this after the current ACT's writer/animation completes. */
-export function nextAct(rt:GmRuntime){if(rt.globals.chapter===2){if(nextActChapter2(rt))attackPhase(rt);}else attackPhase(rt);}
+/** After an ACT, per chapter: Chapter 1 goes on to the attack phase; Chapter 2's scr_nextact first hands over to the
+ * next hero's single ACT and says whether the attack phase starts. */
+const NEXT_ACT:Record<number,(rt:GmRuntime,caller:GmInstance)=>boolean>={1:()=>true,2:nextActChapter2};
+export function nextAct(rt:GmRuntime,caller:GmInstance){if(forChapter(rt,NEXT_ACT,'scr_nextact')(rt,caller))attackPhase(rt);}
 /** scr_attackphase: spells and items first (obj_spellphase), then the FIGHT bar (obj_attackpress). */
 export function attackPhase(rt:GmRuntime){
  const g=rt.globals,c=findController(rt);if(!c)return;
@@ -219,7 +228,7 @@ function mnEndTurn(s:GmInstance,rt:GmRuntime){
   if(t!==0&&g.hp[t]<=0){
    const amount=Math.ceil(g.maxhp[t]/8),h=rt.byId(g.charinstance[i])!;
    const w=rt.create(dmgWriter,h.x,h.y+h.myheight-24);w.delay=1;w.type=3;
-   w.damage=heal(rt,i,amount);
+   w.damage=heal(s,rt,i,amount);
    if(g.hp[t]>=1)w.specialmessage=4;
   }
  }
@@ -297,7 +306,7 @@ function step(s:GmInstance,rt:GmRuntime){
    g.monstergold[3]+=Math.floor(g.tension/10);if(g.charweapon[1]===8)g.monstergold[3]+=Math.floor(g.monstergold[3]/20);
    g.gold=(g.gold??0)+g.monstergold[3];g.xp=(g.xp??0)+g.monsterexp[3];g.fc=0;g.fe=0;
    g.battlemsg[0]=subst(g.chapter===2?sourceText('obj_battlecontroller_slash_Step_0_gml_42_0'):lang('obj_battlecontroller_slash_Step_0_gml_40_0'),g.monsterexp[3],g.monstergold[3]);
-   g.msg[0]=g.battlemsg[0];g.typer=g.battletyper;s.lastbattlewriter=battleText(rt).id;
+   g.msg[0]=g.battlemsg[0];g.typer=g.battletyper;s.lastbattlewriter=battleText(rt,s).id;
    for(let i=0;i<3;i++)withId(rt,g.charinstance[i],h=>{h.state=7;h.hurt=0;h.hurttimer=0;});
   }
   s.victoried=1;s.victortimer=0;if(s.skipvictory===1)s.victortimer=-20;
@@ -307,7 +316,7 @@ function step(s:GmInstance,rt:GmRuntime){
  if(g.myfight===0){
   const coord=g.bmenucoord;
   if(g.bmenuno===0){
-   if(!rt.byId(s.battlewriter)){g.msg[0]=g.battlemsg[0];g.typer=g.battletyper;s.battlewriter=battleText(rt).id;}
+   if(!rt.byId(s.battlewriter)){g.msg[0]=g.battlemsg[0];g.typer=g.battletyper;s.battlewriter=battleText(rt,s).id;}
    if(left_p(rt)&&s.lbuffer<0){if(coord[0][t()]===0)coord[0][t()]=4;else coord[0][t()]-=1;s.movenoise=1;s.rbuffer=1;}
    if(right_p(rt)&&s.rbuffer<0){if(coord[0][t()]===4)coord[0][t()]=0;else coord[0][t()]+=1;s.movenoise=1;s.lbuffer=1;}
    if(button1_p(rt)&&s.twobuffer<0){
@@ -659,24 +668,25 @@ export const tensionBar:GmObjectDef={name:'obj_tensionbar',index:333,depth:1,spr
   };
   if(!r.tensionBarSurface)percent();
   rt.drawSprite('spr_tensionbar',1,x,y);
-  if(Math.abs(s.apparent-g.tension)<20)s.apparent=g.tension;
-  if(s.apparent<g.tension)s.apparent+=20;
-  if(s.apparent>g.tension)s.apparent-=20;
-  if(s.apparent!==s.current){
+  // GML compares numbers within 1e-5 (tension has fractions from grazing).
+  if(lt(Math.abs(s.apparent-g.tension),20))s.apparent=g.tension;
+  if(lt(s.apparent,g.tension))s.apparent+=20;
+  if(gt(s.apparent,g.tension))s.apparent-=20;
+  if(!eq(s.apparent,s.current)){
    s.changetimer+=1;
    if(s.changetimer>15){
     const diff=()=>s.apparent-s.current;
-    if(diff()>0)s.current+=2;if(diff()>10)s.current+=2;if(diff()>25)s.current+=3;if(diff()>50)s.current+=4;if(diff()>100)s.current+=5;
-    if(diff()<0)s.current-=2;if(diff()<-10)s.current-=2;if(diff()<-25)s.current-=3;if(diff()<-50)s.current-=4;if(diff()<-100)s.current-=5;
-    if(Math.abs(s.apparent-s.current)<3)s.current=s.apparent;
+    if(gt(diff(),0))s.current+=2;if(gt(diff(),10))s.current+=2;if(gt(diff(),25))s.current+=3;if(gt(diff(),50))s.current+=4;if(gt(diff(),100))s.current+=5;
+    if(lt(diff(),0))s.current-=2;if(lt(diff(),-10))s.current-=2;if(lt(diff(),-25))s.current-=3;if(lt(diff(),-50))s.current-=4;if(lt(diff(),-100))s.current-=5;
+    if(lt(Math.abs(s.apparent-s.current),3))s.current=s.apparent;
    }
   }
   const fill=(v:number,color:number)=>{d.color=color;rt.drawRect(x+3,y+sh-1,x+sw-1,y+sh-v/max*sh);};
   const orange=s.maxed===1?mergeColor(C.yellow,C.orange,0.5):C.orange;
-  if(s.current>0){
-   if(s.apparent<s.current){fill(s.current,C.red);fill(s.apparent,C.orange);}
-   if(s.apparent>s.current){fill(s.apparent,C.white);fill(s.current,orange);}
-   if(s.apparent===s.current)fill(s.current,orange);
+  if(gt(s.current,0)){
+   if(lt(s.apparent,s.current)){fill(s.current,C.red);fill(s.apparent,C.orange);}
+   if(gt(s.apparent,s.current)){fill(s.apparent,C.white);fill(s.current,orange);}
+   if(eq(s.apparent,s.current))fill(s.current,orange);
   }
   if(g.tensionselect>0){
    s.tsiner+=1;d.color=C.white;d.alpha=Math.abs(Math.sin(s.tsiner/8)*0.5)+0.2;
@@ -684,7 +694,7 @@ export const tensionBar:GmObjectDef={name:'obj_tensionbar',index:333,depth:1,spr
    if(s.theight2>sh-1){s.theight2=sh-1;d.color=0x404040;d.alpha=0.7;}
    rt.drawRect(x+3,y+s.theight2,x+sw-1,y+s.theight);d.alpha=1;
   }
-  if(s.apparent>20&&s.apparent<max)rt.drawSprite('spr_tensionmarker',0,x+3,y+sh-s.current/max*sh);
+  if(gt(s.apparent,20)&&lt(s.apparent,max))rt.drawSprite('spr_tensionmarker',0,x+3,y+sh-s.current/max*sh);
   rt.drawSprite('spr_tensionbar',0,x,y);
   if(r.tensionBarSurface)percent();
  },

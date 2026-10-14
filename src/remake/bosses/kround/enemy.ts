@@ -66,9 +66,9 @@ function afterAttack(s:GmInstance,rt:GmRuntime){
 /** The milk: a carton appears, shrinks into him, and he heals 300 (700 later); Ralsei and Susie comment the first time. */
 function milk(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;
- if(s.scon===1){if(s.milk_counter>0)s.scon=1.5;else{destroyWriters(rt);msg(rt,119);battleTextDefault(rt);s.scon=1.5;}}
+ if(s.scon===1){if(s.milk_counter>0)s.scon=1.5;else{destroyWriters(rt);msg(rt,119);battleTextDefault(rt,s);s.scon=1.5;}}
  if(s.scon===1.5&&!rt.exists(writer)){
-  rt.sound?.('snd_magicsprinkle');destroyWriters(rt);msg(rt,129);g.turntimer=999;battleTextDefault(rt);
+  rt.sound?.('snd_magicsprinkle');destroyWriters(rt);msg(rt,129);g.turntimer=999;battleTextDefault(rt,s);
   const m=darkMarker(rt,s.x-100,s.y+60,'spr_checkers_milk');s.milk=m.id;m.imageSpeed=0;m.imageXscale=4;m.imageYscale=4;m.imageAlpha=0;m.depth=s.depth-1;s.scon=2;s.milktimer=0;
  }
  if(s.scon===2){const m=rt.byId(s.milk)!;m.imageXscale-=.2;m.imageYscale-=.2;m.imageAlpha+=.1;s.milktimer+=1;if(s.milktimer>=10){s.scon=3;s.milktimer=0;m.imageAlpha=1.4;}}
@@ -85,7 +85,7 @@ function milk(s:GmInstance,rt:GmRuntime){
  if(s.scon===5){s.milktimer+=1;if(s.milktimer>=30){
   destroyWriters(rt);
   if(s.milk_counter>0){s.scon=0;s.milktimer=0;g.turntimer=0;}
-  else{s.scon=6;msg(rt,226);msgFace(rt,1,'ralsei',3);msg(rt,228,2);msgFace(rt,3,'susie',3);msg(rt,230,4);battleTextDefault(rt);}
+  else{s.scon=6;msg(rt,226);msgFace(rt,1,'ralsei',3);msg(rt,228,2);msgFace(rt,3,'susie',3);msg(rt,230,4);battleTextDefault(rt,s);}
   s.milk_counter+=1;
  }}
  if(s.scon===6){if(!rt.exists(writer)){g.fc=0;s.scon=0;s.milktimer=0;g.turntimer=0;}else g.turntimer=999;}
@@ -105,9 +105,9 @@ function acts(s:GmInstance,rt:GmRuntime){
   s.actcon=1;
   if(s.secondtime===0){msg(rt,s.checked===1?268:263);g.actname[s.myself][0]=lang(264);g.flag[246]=1;s.checked=1;}
   else{msg(rt,g.flag[246]===1?277:282);msg(rt,g.flag[246]===1?278:283,1);s.checked=1;}
-  battleTextDefault(rt);
+  battleTextDefault(rt,s);
  }
- if(s.acting===2&&s.actcon===0){bowCrown(s,false);msg(rt,296);s.bowkris=heroBow(rt,heroKris,'spr_krisb_bow',0);rt.sound?.('snd_item');battleTextDefault(rt);s.actcon=20;}
+ if(s.acting===2&&s.actcon===0){bowCrown(s,false);msg(rt,296);s.bowkris=heroBow(rt,heroKris,'spr_krisb_bow',0);rt.sound?.('snd_item');battleTextDefault(rt,s);s.actcon=20;}
  if(s.actcon===20&&!rt.exists(writer)){
   s.visible=false;const b=darkMarker(rt,s.x,s.y,'spr_checkers_bow');s.bowcheck=b.id;b.imageSpeed=.334;g.fc=0;g.typer=4;msg(rt,327);
   if(s.ralsei_lecture===0&&s.secondtime===0)lecture(s,rt);
@@ -115,34 +115,34 @@ function acts(s:GmInstance,rt:GmRuntime){
    g.fc=2;g.fe=s.bowcounter===2?8:3;g.typer=45;
    const lines=[[349,350,352],[359,360,362],[369,370,372]][s.bowcounter];msg(rt,lines[0]);msg(rt,lines[1],1);msgFace(rt,2,'susie',s.bowcounter===2?7:s.bowcounter+1);msg(rt,lines[2],3);
   }
-  s.bowcounter+=1;battleText(rt);s.actcon=21;
+  s.bowcounter+=1;battleText(rt,s);s.actcon=21;
  }
  if(s.actcon===21&&!rt.exists(writer)){kill(rt,s.bowkris,s.bowcheck);s.visible=true;for(const k of rt.all(heroKris))k.visible=true;s.actcon=1;}
  if(s.secondtime===0&&s.acting===3&&s.actcon===0){
-  bowCrown(s,true);msg(rt,398);s.bowkris=heroBow(rt,heroKris,'spr_krisb_bow',0);s.bowral=heroBow(rt,heroRalsei,'spr_ralseib_bow',1);rt.sound?.('snd_item');battleTextDefault(rt);s.actcon=30;
+  bowCrown(s,true);msg(rt,398);s.bowkris=heroBow(rt,heroKris,'spr_krisb_bow',0);s.bowral=heroBow(rt,heroRalsei,'spr_ralseib_bow',1);rt.sound?.('snd_item');battleTextDefault(rt,s);s.actcon=30;
  }
  if(s.actcon===30&&!rt.exists(writer)){
-  s.visible=false;const b=darkMarker(rt,s.x,s.y,'spr_checkers_bow');s.bowcheck=b.id;b.imageSpeed=.5;msg(rt,442);if(s.ralsei_lecture===0&&s.secondtime===0)lecture(s,rt);battleTextDefault(rt);s.actcon=31;
+  s.visible=false;const b=darkMarker(rt,s.x,s.y,'spr_checkers_bow');s.bowcheck=b.id;b.imageSpeed=.5;msg(rt,442);if(s.ralsei_lecture===0&&s.secondtime===0)lecture(s,rt);battleTextDefault(rt,s);s.actcon=31;
  }
  if(s.actcon===31&&!rt.exists(writer)){kill(rt,s.bowral,s.bowkris,s.bowcheck);s.visible=true;for(const k of rt.all(heroKris))k.visible=true;for(const r of rt.all(heroRalsei))r.visible=true;s.actcon=1;}
  if(s.secondtime===1&&s.acting===3&&s.actcon===0){
   if(s.thrown===1){kill(rt,s.trsus);s.thrown=2;}
   if(s.thrown>0){
-   g.actname[s.myself][2]=lang(487);g.msg[0]=lang(489)+inputName(6)+lang(489,1);s.flash=0;s.becomeflash=0;battleTextDefault(rt);s.actcon=90;
+   g.actname[s.myself][2]=lang(487);g.msg[0]=lang(489)+inputName(6)+lang(489,1);s.flash=0;s.becomeflash=0;battleTextDefault(rt,s);s.actcon=90;
    rt.create(throwTarget,s.x,s.y);const sus=rt.first(heroSusie)!;s.throwsus=rt.create(throwRalsei,sus.x,sus.y).id;s.visible=false;g.faceaction[1]=0;g.charaction[1]=0;g.faceaction[2]=0;g.charaction[2]=0;
    for(const h of rt.all(heroSusie))h.visible=false;for(const h of rt.all(heroRalsei))h.visible=false;rt.sound?.('snd_grab');
   }else{
    g.typer=31;g.fc=2;g.fe=6;msg(rt,510);msgFace(rt,1,'susie',0);msg(rt,512,2);msg(rt,513,3);msgFace(rt,4,'ralsei',8);msg(rt,515,5);msg(rt,516,6);msgFace(rt,7,'susie',2);msg(rt,518,8);
-   s.actcon=10;battleText(rt);
+   s.actcon=10;battleText(rt,s);
   }
  }
- if(s.acting===4&&s.actcon===0){s.actcon=1;msg(rt,531);msg(rt,532,1);if(s.warned===1){msg(rt,535);msg(rt,536,1);}if(s.warned===2){msg(rt,540);msg(rt,541,1);msg(rt,542,2);g.battleat[2]*=1.5;}s.warned+=1;battleTextDefault(rt);}
+ if(s.acting===4&&s.actcon===0){s.actcon=1;msg(rt,531);msg(rt,532,1);if(s.warned===1){msg(rt,535);msg(rt,536,1);}if(s.warned===2){msg(rt,540);msg(rt,541,1);msg(rt,542,2);g.battleat[2]*=1.5;}s.warned+=1;battleTextDefault(rt,s);}
  if(s.actcon===1&&!rt.exists(writer)){s.actcon=0;if(s.crown>=100){g.mercymod[s.myself]=999;s.actcon=50;}else attackPhase(rt);}
  if(s.actcon===10&&!rt.exists(writer)){
   s.actcon=11;s.alarm[4]=30;for(const h of rt.all(heroSusie))h.visible=false;for(const h of rt.all(heroRalsei))h.visible=false;
   s.thrown=1;const sus=rt.first(heroSusie)!;s.trsus=darkMarker(rt,sus.x,sus.y,'spr_susieb_throwralseiready').id;rt.sound?.('snd_grab');
  }
- if(s.actcon===12){g.fe=7;msg(rt,578);msg(rt,579,1);battleText(rt);s.actcon=13;}
+ if(s.actcon===12){g.fe=7;msg(rt,578);msg(rt,579,1);battleText(rt,s);s.actcon=13;}
  if(s.actcon===13&&!rt.exists(writer))s.actcon=0;
  if(s.actcon===50){s.visible=false;sndFreeAll(rt);const anim=rt.create(checkerTransform,s.x,s.y);s.animtest=anim.id;anim.sprite='spr_smallchecker_transform3';anim.imageXscale=2;anim.imageYscale=2;anim.type=1;s.actcon=51;}
 }

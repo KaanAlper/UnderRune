@@ -8,7 +8,8 @@ import {lengthdirX,lengthdirY,pointDirection} from '../../gm/math';
 import {afterimage,afterimageGrow,darkMarker,heart,marker} from '../../deltarune/battle';
 import {findController} from '../../deltarune/controller';
 import {drawBodyPart,mergeColor,scriptDelayedOn,setVar,snd} from '../../deltarune/chapter2-battle';
-import {bigLaser,dbulletController,heartAttack,pipisDestroyFx,sneoBulletController,sneoPhonecall,sneoVineCut,sneoVineTransition,spamtonShot,wireheart} from './pending';
+import {bigLaser,dbulletController,heartAttack,pipisDestroyFx,sneoBulletController,sneoPhonecall,spamtonShot,wireheart} from './pending';
+import {vineCut as sneoVineCut,vineTransition as sneoVineTransition} from './vines';
 
 const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
 const DARK_WIRE=0x003300;
@@ -56,14 +57,14 @@ function drawWires(s:GmInstance,rt:GmRuntime){
  }
  // At 90 mercy the background wires go; the cut ones fade away.
  if(findController(rt)&&g.mercymod[me]>89&&bgvinecount>0&&!rt.exists(sneoVineTransition)&&!rt.exists(sneoVineCut))
-  for(let i=0;i<6;i++)if(s.partvisible[i]===0){s.vineid=i;rt.create(sneoVineTransition,s.x,s.y);}
+  for(let i=0;i<6;i++)if(s.partvisible[i]===0){s.vineid=i;s.vine=rt.create(sneoVineTransition,s.x,s.y).id;}
 }
 
 /** partmode 34, the heart attack: he leans back, holds his heart out, and makes the wire hearts. */
 function makeWireHearts(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,at=g.monsterat[s.myself];
  const make=(type:number,extra?:(w:GmInstance)=>void)=>{
-  const w=rt.create(wireheart,s.x+10,s.y+80);w.boss=s.id;w.bossx=s.x+10;w.bossy=s.y+80;w.type=type;w.target=3;
+  const w=rt.create(wireheart,s.x+10,s.y+80);s.wireheart=w.id;w.boss=s.id;w.bossx=s.x+10;w.bossy=s.y+80;w.type=type;w.target=3;
   extra?.(w);w.damage=Math.floor(at*5*0.6);return w;
  };
  const hellish=(w:GmInstance)=>{w.special=s.hellmode;};
@@ -305,12 +306,12 @@ function shootyDance(s:GmInstance,rt:GmRuntime,i:number){
  if(i===0&&s.endcon===0){
   s.siner+=1.3;s.dance_timer+=1;
   if(s.dance_timer===17-fastshot*10||s.dance_timer===52-fastshot*10){
-   const l=rt.create(bigLaser,s.x,s.y);l.depth+=1;l._type=1;
+   const l=rt.create(bigLaser,s.x,s.y);s.d=l.id;l.depth+=1;l._type=1;
    s.chargeshot_sound=rt.soundLoop?.('snd_chargeshot_charge');s.chargesfxtimer=1;
   }
   const fire=(turn:number)=>{
    for(const l of rt.all(bigLaser))rt.destroy(l);
-   const shot=rt.create(spamtonShot,s.armendx,s.armendy);shot.target=s.mytarget;shot.damage=s.damage;
+   const shot=rt.create(spamtonShot,s.armendx,s.armendy);s.shot=shot.id;shot.target=s.mytarget;shot.damage=s.damage;
    s.armaim+=turn;s.head_recoil_amount=-170;rt.soundStop?.(s.chargeshot_sound);snd(rt,'snd_chargeshot_fire',0.5,0.6);
   };
   if(s.dance_timer===42-fastshot*10)fire(360);

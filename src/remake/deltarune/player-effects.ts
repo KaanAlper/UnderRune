@@ -3,7 +3,7 @@ import type {GmObjectDef} from '../gm/runtime';
 import {ge,lt} from '../gm/math';
 import {battleController} from './battle';
 export const burstBolt:GmObjectDef={name:'obj_burstbolt',index:200,sprite:'spr_attackspot',events:{
- create:s=>{s.mag=.1;s.imageSpeed=0;},
+ create:s=>{s.mag=.1;},
  step:(s,rt)=>{s.imageAlpha-=.1;s.imageXscale+=s.mag;s.imageYscale+=s.mag;s.x+=((1-rt.spriteWidth(s))*s.mag)/2.7;s.y+=((1-rt.spriteHeight(s))*s.mag)/2.5;if(lt(s.imageAlpha,0))rt.destroy(s);},
 }};
 export const basicAttack:GmObjectDef={name:'obj_basicattack',index:195,depth:-100,sprite:'spr_attack_cut1',events:{

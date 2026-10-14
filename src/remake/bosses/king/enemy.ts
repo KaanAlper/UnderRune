@@ -71,7 +71,7 @@ function battleEnd(s:GmInstance,rt:GmRuntime){
 }
 function acts(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself;
- if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(169);g.msg[1]=L(170);battleTextDefault(rt);}
+ if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(169);g.msg[1]=L(170);battleTextDefault(rt,s);}
  if(s.acting===2&&s.actcon===0){
   if(g.tempflag[5]===0){
    g.msg[0]=L(180);kingFace(rt,1,5);g.msg[2]=L(182);g.msg[3]=L(183);g.msg[4]=L(184);noFace(rt,5);g.msg[6]=L(186);
@@ -81,7 +81,7 @@ function acts(s:GmInstance,rt:GmRuntime){
    for(const h of rt.all(heroParent)){const f=oflashOf(h,rt);f.flashcolor=C.orange;}
    g.msg[0]=L(201);s.tempattack=0.8;
   }
-  battleTextDefault(rt);s.actcon=1;
+  battleTextDefault(rt,s);s.actcon=1;
  }
  if(s.acting===3&&s.actcon===0){
   if(g.tempflag[6]===0){
@@ -89,14 +89,14 @@ function acts(s:GmInstance,rt:GmRuntime){
    susFace(rt,8,'C');g.msg[9]=L(223);g.msg[10]=L(224);noFace(rt,11);g.msg[12]=L(226);
    g.tempflag[6]=1;g.canact[me][2]=1;g.actactor[me][2]=2;g.actname[me][2]=L(232);g.actdesc[me][2]=L(233);g.actcost[me][2]=150;s.actcon=1;
   }else{g.msg[0]=L(241);s.actcon=10;}
-  battleTextDefault(rt);s.acttimer=0;
+  battleTextDefault(rt,s);s.acttimer=0;
  }
  if(s.acting===4&&s.actcon===0){
   if(g.tempflag[7]===0){
    g.msg[0]=L(254);ralFace(rt,1,'B');g.msg[2]=L(256);g.msg[3]=L(257);g.msg[4]=L(258);kingFace(rt,5,6);g.msg[6]=L(260);g.msg[7]=L(261);g.msg[8]=L(262);
-   ralFace(rt,9,8);g.msg[10]=L(264);noFace(rt,11);g.msg[12]=L(266);battleTextDefault(rt);
+   ralFace(rt,9,8);g.msg[10]=L(264);noFace(rt,11);g.msg[12]=L(266);battleTextDefault(rt,s);
    g.tempflag[7]=1;g.canact[me][3]=1;g.actactor[me][3]=3;g.actname[me][3]=L(273);g.actdesc[me][3]=L(274);g.actcost[me][3]=125;s.actcon=1;
-  }else{g.msg[0]=L(282);battleTextDefault(rt);s.actcon=20;}
+  }else{g.msg[0]=L(282);battleTextDefault(rt,s);s.actcon=20;}
   s.acttimer=0;
  }
  // Red Buster (Susie, spell 5) and Dual Heal (Ralsei, spell 6) join the turn as spells.

@@ -17,7 +17,8 @@ import type {HookedDef} from '../../deltarune/rules';
 import {defineEnemy} from '../../deltarune/enemy';
 import {soulSpark,superchargeEnd} from '../../deltarune/yellow-soul';
 import {neoBodyDraw} from './body';
-import {bigLaser,choicerNeo,dbulletController,phoneBullet,sceneEx2,sneoBulletController,sneoPhonecall,sneoSusieAct,sneoVineCut,sneoVineTransition,sneoVineWeak,spamtonCherub,throwKris,throwKrisVineController,tinyRalsei} from './pending';
+import {vineCut as sneoVineCut,vineTransition as sneoVineTransition,vineWeak as sneoVineWeak} from './vines';
+import {bigLaser,choicerNeo,dbulletController,phoneBullet,sceneEx2,sneoBulletController,sneoPhonecall,sneoSusieAct,spamtonCherub,throwKris,throwKrisVineController,tinyRalsei} from './pending';
 
 const T=(k:string)=>sourceText('obj_spamton_neo_enemy_slash_Step_0_gml_'+k);
 const first=(rt:GmRuntime,def:GmObjectDef)=>rt.first(def);
@@ -162,7 +163,7 @@ function startAttack(s:GmInstance,rt:GmRuntime){
   if(rr===9)dc.target=3;
  }
  s.dc=dc.id;
- heartColor(rt,'yellow');
+ heartColor(s,rt,'yellow');
  for(const h of rt.all(heart))h.wspeed=g.sp;
  turnTimer(rt,260);
  if(rr===1)turnTimer(rt,300);
@@ -194,7 +195,7 @@ function statusText(s:GmInstance,rt:GmRuntime){
 function snapMercy(s:GmInstance,rt:GmRuntime,amount:number,failKey:string,okKey?:string){
  const g=rt.globals,me=s.myself;
  let set=amount;if(g.mercymod[me]+set>100)set=100-g.mercymod[me];
- mercyAdd2(rt,me,set);
+ mercyAdd2(s,rt,me,set);
  if(set===0){for(const w of rt.all(dmgWriter))if(w.type===5)rt.destroy(w);msgSet(rt,0,T(failKey));return false;}
  if(okKey)msgSet(rt,0,T(okKey));
  return true;
@@ -216,7 +217,7 @@ function acts(s:GmInstance,rt:GmRuntime){
   s.actcon=1;
   if(s.checkcount===0){msgSet(rt,0,T('375_0'));msgNext(rt,T('376_0'));msgNext(rt,T('377_0'));}
   else msgSet(rt,0,T('381_0'));
-  battleTextDefault(rt);s.checkcount+=1;
+  battleTextDefault(rt,s);s.checkcount+=1;
  }
  if((s.acting===2&&s.actcon===0)||(s.acting===3&&s.actcon===0)){
   let maxv=0;for(let i=0;i<6;i++)if(s.partvisible[i]===1)maxv+=1;
@@ -230,7 +231,7 @@ function acts(s:GmInstance,rt:GmRuntime){
    const text=T(s.simultotal===1?'275_0':'275_1');
    if(snapMercy(s,rt,2,'973_0'))msgSet(rt,0,text);
   }
-  battleTextDefault(rt);
+  battleTextDefault(rt,s);
   if(s.acting===2)s.alarm[4]=30;else s.actcon=1;
   s.acting=0;
  }
@@ -244,7 +245,7 @@ function acts(s:GmInstance,rt:GmRuntime){
   for(const h of rt.all(heroKris))h.visible=false;
   for(const h of rt.all(heroSusie))h.visible=false;
   const sus=rt.first(heroSusie)!;s.throwsus=rt.create(throwKris,sus.x,sus.y).id;
-  battleTextDefault(rt);s.actcon=14;
+  battleTextDefault(rt,s);s.actcon=14;
  }
  if(s.actcon===15){
   for(const v of rt.all(throwKrisVineController))v.con=2;
@@ -256,15 +257,15 @@ function acts(s:GmInstance,rt:GmRuntime){
   scanWires(s,rt);
   if(g.hp[1]<=0&&g.hp[other]<=0){if(snapMercy(s,rt,4,fail2)){msgSet(rt,0,T(ok2a));msgNext(rt,T(ok2b));}}
   else snapMercy(s,rt,2,fail,ok);
-  battleTextDefault(rt);s['actcon'+who]=0;s['acting'+who]=0;
+  battleTextDefault(rt,s);s['actcon'+who]=0;s['acting'+who]=0;
  };
  if(s.actingsus===1&&s.actconsus===1){helperSnap('sus',3,'1127_0','1130_0','1131_0','1140_0','1141_0');s.alarm[4]=30;}
- if(s.actingsus===2&&s.actconsus===1){s.actingsus=0;s.actcon=1;s.bigshotcount=20;msgSet(rt,0,T('898_0'));battleTextDefault(rt);}
+ if(s.actingsus===2&&s.actconsus===1){s.actingsus=0;s.actcon=1;s.bigshotcount=20;msgSet(rt,0,T('898_0'));battleTextDefault(rt,s);}
  if(s.actingral===1&&s.actconral===1){helperSnap('ral',2,'1273_0','1276_0','1277_0','1285_0','1288_0');s.actcon=1;}
  if(s.actingral===2&&s.actconral===1){
   s.actconral=0;s.actingral=0;s.actcon=1;
   if(rt.count(tinyRalsei)<4){
-   msgSet(rt,0,T(s.simultotal===1?'643_0':'643_1'));battleTextDefault(rt);
+   msgSet(rt,0,T(s.simultotal===1?'643_0':'643_1'));battleTextDefault(rt,s);
    rt.all(tinyRalsei).forEach((f,i)=>{f.place=i*90;});
    for(let n=0;n<2;n++){
     rt.create(tinyRalsei,s.x,s.y);
@@ -272,7 +273,7 @@ function acts(s:GmInstance,rt:GmRuntime){
     if(gap!==undefined)all.forEach((f,i)=>{f.place=i*gap;});
    }
   }else{
-   msgSet(rt,0,T('679_0'));battleTextDefault(rt);
+   msgSet(rt,0,T('679_0'));battleTextDefault(rt,s);
    let a=2;
    if(g.hp[2]<g.hp[3])a=2;if(g.hp[2]<g.hp[4])a=2;if(g.hp[3]<g.hp[2])a=3;if(g.hp[3]<g.hp[4])a=3;if(g.hp[4]<g.hp[2])a=4;if(g.hp[4]<g.hp[3])a=4;
    g.hp[a]+=10;snd(rt,'snd_boost');
@@ -284,7 +285,7 @@ function actsDone(s:GmInstance,rt:GmRuntime){
  if((s.actcon===1&&!rt.exists(writer))||s.actconsus===20||s.actconral===20){
   s.usedact=1;
   if(rt.globals.mercymod[s.myself]>99&&s.endcon===0)s.endcon=1;
-  else if(s.endcon===0)nextAct(rt);
+  else if(s.endcon===0)nextAct(rt,s);
  }
 }
 
@@ -401,10 +402,10 @@ function sparedEnding(s:GmInstance,rt:GmRuntime){
    if(t===1){
     rt.sourceAudio?.free(g.currentsong[0]);snd(rt,'snd_noise');snd(rt,'snd_damage');
     const b4=darkMarker(rt,-10,-10,'spr_pixel_white');b4.imageXscale=999;b4.imageYscale=999;b4.depth=(sceneOf(rt)?.depth??0)-1;b4.imageAlpha=0.5;b4.imageBlend=0;
-    const vine=rt.create(sneoVineCut,s.x,s.y);
+    const vine=rt.create(sneoVineCut,s.x,s.y);s.vine=vine.id;
     vine.x1=s.x+s.partx[4]+s.partxoff[4]/1.2+20+Math.sin(s.partsiner[4]/25)*1.8;vine.x2=s.x+s.partx[4]+s.partxoff[4]/1.5+32;
     vine.y1=s.y+s.party[4]-10+s.partyoff[4];vine.y2=-400;vine.depth=s.depth+1;vine.vineid=4;
-    const fx=rt.create(sneoVineWeak,s.x+s.partx[4]+s.partxoff[4]/1.2+16,s.y-35);fx.depth=s.depth-5;
+    const fx=rt.create(sneoVineWeak,s.x+s.partx[4]+s.partxoff[4]/1.2+16,s.y-35);s.vfx=fx.id;fx.depth=s.depth-5;
     s.lastwirecon=3;s.partmode=99;
     const sc=sceneOf(rt);if(sc){sc.cityscape_speed_max=0;sc.cityscape_speed=0;sc.trackspeed=0;}
    }
@@ -421,7 +422,7 @@ function sparedEnding(s:GmInstance,rt:GmRuntime){
 
 /** At zero HP during his talk (or once mercy is full) the ending starts instead of a turn. */
 function beforeTalk(s:GmInstance,rt:GmRuntime){
- if((isPhase(rt,'enemytalk')&&s.talked===0&&rt.globals.monsterhp[s.myself]<=0)||s.endcon===1){s.talked=-1;s.endcon=1;}
+ if((isPhase(rt,'enemytalk',s)&&s.talked===0&&rt.globals.monsterhp[s.myself]<=0)||s.endcon===1){s.talked=-1;s.endcon=1;}
 }
 /** His follow-up balloons (talked 0.6), each after the previous one is read or skipped with C. */
 function duringTalk(s:GmInstance,rt:GmRuntime){
@@ -439,14 +440,14 @@ function duringTalk(s:GmInstance,rt:GmRuntime){
 }
 /** His last balloon is read (or skipped with C): the box takes the attack's shape, then the soul comes in. */
 function endTalk(s:GmInstance,rt:GmRuntime){
- if(s.talked!==1||!isPhase(rt,'enemytalk')||rt.exists(choicerNeo))return;
+ if(s.talked!==1||!isPhase(rt,'enemytalk',s)||rt.exists(choicerNeo))return;
  s.talktimer+=1;
  if((button3_p(rt)&&s.talktimer>15)||!rt.exists(writer)){destroyWriters(rt);s.talkedcon=1;}
  if(s.talkedcon!==1)return;
  if(s.partmode===40){s.partmode=1;s.shockthreshold=0;s.hurttimer2=0;}
  s.rtimer=0;
  if(!rt.exists(spamtonCherub))blconSkip(s,rt,-1);else s.talktimer+=1;
- if(isPhase(rt,'bullets')){
+ if(isPhase(rt,'bullets',s)){
   if(!rt.exists(growtangle))placeBox(s,rt);
   if(!rt.exists(moveHeart)&&!rt.exists(heart))moveHeartIn(rt);
  }
@@ -484,7 +485,7 @@ function endStep(s:GmInstance,rt:GmRuntime){
   const dc=rt.first(sneoBulletController);
   if(dc&&dc.type===1.5){
    dc.mercyaccumulated+=1;const w=rt.create(dmgWriter,g.monsterx[me],g.monstery[me]+20-g.hittarget[me]*20);w.damage=1;w.type=5;g.hittarget[me]+=1;
-  }else mercyAdd2(rt,me,1);
+  }else mercyAdd2(s,rt,me,1);
   s.singleshotmercy=0;
  }
  if(!rt.exists(sneoBulletController)){
@@ -502,10 +503,10 @@ function endStep(s:GmInstance,rt:GmRuntime){
    while(!done){
     if(s.partvisible[c]===1){
      s.partvisible[c]=0;
-     const vine=rt.create(sneoVineCut,s.x,s.y);
+     const vine=rt.create(sneoVineCut,s.x,s.y);s.vine=vine.id;
      vine.x1=s.x+s.partx[c]+s.partxoff[c]/1.2+c*5+Math.sin(s.partsiner[c]/30)*2;vine.x2=s.x+s.partx[c]+s.partxoff[c]/1.5+c*8;
      vine.y1=s.y+s.party[c]-10+s.partyoff[c];vine.y2=-400;vine.depth=s.depth+1;vine.vineid=c;
-     const fx=rt.create(sneoVineWeak,s.x+s.partx[c]+s.partxoff[c]/1.2+c*5,s.y-20);fx.depth=s.depth-5;
+     const fx=rt.create(sneoVineWeak,s.x+s.partx[c]+s.partxoff[c]/1.2+c*5,s.y-20);s.vfx=fx.id;fx.depth=s.depth-5;
      if(!(rt.sourceAudio?.playing('snd_damage')??false))snd(rt,'snd_damage');
      c=rt.random.irandom(5);cut+=1;if(cut>=multicut)done=true;
      s.vinebgcount-=1;
@@ -514,7 +515,7 @@ function endStep(s:GmInstance,rt:GmRuntime){
    }
   }
   if(s.vinebgcount>-2&&!rt.exists(throwKrisVineController))
-   for(let i=0;i<6;i++)if(s.partvisible[i]===0){s.vineid=i;rt.create(sneoVineTransition,s.x,s.y);}
+   for(let i=0;i<6;i++)if(s.partvisible[i]===0){s.vineid=i;s.vine=rt.create(sneoVineTransition,s.x,s.y).id;}
   s.weakentimer=1;s.weakenshakeamount=10;
  }
  if(g.fighting===1)s.prevmercy=g.mercymod[me];

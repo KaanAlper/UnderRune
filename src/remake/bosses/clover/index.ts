@@ -80,15 +80,15 @@ function statusLine(s:GmInstance,rt:GmRuntime){
 }
 function acts(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;s.xx=rt.view.x;s.yy=rt.view.y;
- if(s.acting===1&&s.actcon===0){s.actcon=1;message(rt,163);battleTextDefault(rt);}
+ if(s.acting===1&&s.actcon===0){s.actcon=1;message(rt,163);battleTextDefault(rt,s);}
  // Each stage is a separate source if: a synchronously completed writer can advance again this frame.
  for(const [act,start,line,reply,end,topic] of [[2,20,187,196,210,-1],[3,22,223,233,247,2],[4,24,258,268,282,3]] as const){
-  if(s.acting===act&&s.actcon===0){g.typer=45;g.fc=2;g.fe=0;message(rt,line);s.argue++;battleText(rt);s.actcon=start;}
+  if(s.acting===act&&s.actcon===0){g.typer=45;g.fc=2;g.fe=0;message(rt,line);s.argue++;battleText(rt,s);s.actcon=start;}
   if(s.actcon===start&&!rt.exists(writer)){g.typer=50;if(topic>=0&&s.acted[topic]===0){g.mercymod[s.myself]+=40;s.acted[topic]=1;}speech(s,rt,reply);s.actcon=start+1;}
-  if(s.actcon===start+1&&!rt.exists(writer)){message(rt,end);battleTextDefault(rt);s.actcon=1;}
+  if(s.actcon===start+1&&!rt.exists(writer)){message(rt,end);battleTextDefault(rt,s);s.actcon=1;}
  }
- if(s.acting===5&&s.actcon===0){message(rt,290);g.msg[1]=text(291);s.argue++;battleTextDefault(rt);s.actcon=1;}
- if(s.acting===6&&s.actcon===0){if(s.acted[5]===0){g.mercymod[s.myself]+=40;s.acted[5]=1;}message(rt,301);s.argue++;battleTextDefault(rt);s.actcon=1;}
+ if(s.acting===5&&s.actcon===0){message(rt,290);g.msg[1]=text(291);s.argue++;battleTextDefault(rt,s);s.actcon=1;}
+ if(s.acting===6&&s.actcon===0){if(s.acted[5]===0){g.mercymod[s.myself]+=40;s.acted[5]=1;}message(rt,301);s.argue++;battleTextDefault(rt,s);s.actcon=1;}
 }
 /** After three disagreements Clover is tired (can be pacified). */
 function actsDone(s:GmInstance,rt:GmRuntime){

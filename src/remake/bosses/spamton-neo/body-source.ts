@@ -2,7 +2,7 @@
  * absent scripts/objects/fields throw at the source operation that requires them. */
 import {executeGml,parseGml,type GmlProgram} from '../../../source-runtime/gml';
 import {GmInstance,resolveEvent,moveTowardsPoint,type GmEvent,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
-import {C} from '../../gm/graphics';
+import {C,mergeColor} from '../../gm/graphics';
 import {eq,ge,gt,le,lt,round,lengthdirX,lengthdirY,pointDirection,pointDistance} from '../../gm/math';
 import {rectangleMeets,instancesMeet} from '../../gm/collision';
 
@@ -86,7 +86,7 @@ export function executeNeoSource(source:string,s:GmInstance,rt:GmRuntime,host:Ne
   move_towards_point:(p,x,y,speed)=>moveTowardsPoint(instance(p),x,y,speed),
   arcsin:(_s,v)=>Math.asin(v),
   string:(_s,v)=>String(native(v)),ord:(_s,v)=>String(v).charCodeAt(0),make_colour_rgb:(_s,r,g,b)=>(r&255)|((g&255)<<8)|((b&255)<<16),make_color_rgb:(_s,r,g,b)=>(r&255)|((g&255)<<8)|((b&255)<<16),
-  merge_color:(_s,a,b,t)=>{let c=0;for(let n=0;n<3;n++)c|=Math.trunc(((a>>>(8*n))&255)*(1-t)+((b>>>(8*n))&255)*t)<<(8*n);return c;},
+  merge_color:(_s,a,b,t)=>mergeColor(a,b,t),
   sprite_get_xoffset:(_s,n)=>sprite(n).originX,sprite_get_yoffset:(_s,n)=>sprite(n).originY,sprite_get_width:(_s,n)=>sprite(n).width,sprite_get_height:(_s,n)=>sprite(n).height,sprite_get_number:(_s,n)=>sprite(n).frames,
   sprite_exists:(_s,n)=>!!rt.bank.get(n),
   ds_map_find_value:(_s,map,key)=>{if(map instanceof Map){if(!map.has(key))throw Error(`Missing source resource map key ${key}`);return map.get(key);}if(!(key in map))throw Error(`Missing source resource map key ${key}`);return map[key];},
