@@ -59,10 +59,12 @@ export function encounterSetup(rt:GmRuntime,n:number,enemies:Record<string,GmObj
   case 2:one('obj_lancerboss',2,540,200);break;
   case 8:one('obj_clubsenemy',16,400,120,139);break;
   case 12:one('obj_checkers_enemy',10,480,120,172);break;
+  case 20:one('obj_lancerboss2',12,480,160,292);g.heromakex[0]=xx+120;break;
   case 25:
    g.heromakex=[xx+80,xx+90,xx+100];g.heromakey=[yy+100,yy+150,yy+210];
    one('obj_joker',20,500,160,384);break;
   case 27:one('obj_checkers_enemy',21,480,120,397);g.heromakey[0]=yy+65;break;
+  case 40:one('obj_king_boss',25,460,70,517);break;
   default:throw Error(`Encounter ${n} is not set up in the remake`);
  }
 }
@@ -102,5 +104,14 @@ export function monsterSetup(s:GmInstance,rt:GmRuntime){
    stats(562,3500,10,5,0,0,999);act(0,574);act(1,579,1);g.actdesc[i][1]=L(580);g.actcost[i][1]=50;act(2,585,4);g.actdesc[i][2]=L(586);g.actcost[i][2]=125;break;
   case 21:
    stats(594,1300,8,3,100,0,100);act(0,g.flag[246]===1?607:606);act(1,609);act(2,611,4);break;
+  case 12:stats(346,2400,4,-40,0,0,100);act(0,358);break;
+  case 25:{
+   stats(665,2800,8,0,0,0,999);act(0,677);
+   const special=(slot:number,actor:number,flag:number,name:number,desc:number,cost:number,first:number)=>{
+    act(slot,first,actor);g.actdesc[i][slot]=' ';g.actcost[i][slot]=0;
+    if(g.tempflag[flag]===1){act(slot,name,actor);g.actdesc[i][slot]=L(desc);g.actcost[i][slot]=cost;}
+   };
+   special(1,1,5,704,705,62,682);special(2,2,6,714,715,150,688);special(3,3,7,724,725,125,694);break;
+  }
  }
 }

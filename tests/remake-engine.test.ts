@@ -190,3 +190,21 @@ describe.skipIf(!hasSourceText())('the battle engine (Jevil)',()=>{
   expect(b.turn).toBe(1);expect(b.outcome).toBeNull();
  });
 });
+
+describe.skipIf(!hasSourceText())('the battle engine (King)',()=>{
+ it('King talks, attacks, and Talk unlocks Courage for the next turn',()=>{
+  const b=create('ch1-40');frame(b,2);const g=b.rt.globals;
+  expect(b.rt.count(heroParent)).toBe(3);expect(g.monstername[0]).toBeTruthy();
+  // Kris: ACT, King, Talk (the second ACT); Susie and Ralsei DEFEND.
+  press(b,KEY.right);press(b,KEY.z);press(b,KEY.z);press(b,KEY.right);press(b,KEY.z);
+  for(let slot=1;slot<3;slot++){for(let i=0;i<4;i++)press(b,KEY.right);press(b,KEY.z);}
+  expect(g.myfight).toBe(3);
+  for(let i=0;i<2000&&g.mnfight!==1;i++){if(b.rt.all(writer).some(w=>w.halt!==0))b.rt.input.pressed.add(KEY.z);frame(b);}
+  expect(g.tempflag[5]).toBe(1);expect(g.actcost[0][1]).toBe(62);
+  // King's words wait for Z (scr_blconskip(-1)).
+  const talk=(done:()=>boolean,max:number)=>{for(let i=0;i<max&&!done();i++){if(b.rt.all(writer).some(w=>w.halt!==0))b.rt.input.pressed.add(KEY.z);frame(b);}expect(done()).toBe(true);};
+  talk(()=>g.mnfight===2,600);
+  talk(()=>g.myfight===0&&g.mnfight===0,3000);
+  expect(b.turn).toBe(1);expect(b.outcome).toBeNull();
+ });
+});

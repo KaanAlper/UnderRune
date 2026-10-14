@@ -14,7 +14,9 @@ import {createCloverEnemy} from '../bosses/clover';
 import {checkersEnemy,checkerTransform,type KRoundHost,type KRoundThrowHost,type KRoundThrowMessage} from '../bosses/kround';
 import {checkersHealAnim,flashCheckers} from '../bosses/kround/effects';
 import {lancerEnemy} from '../bosses/lancer/enemy';
+import {lancerEnemy2} from '../bosses/lancer/enemy2';
 import {jokerBackground,jokerEnemy} from '../bosses/jevil/enemy';
+import {kingEnemy} from '../bosses/king/enemy';
 import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
 import {chapter2StartStats} from '../deltarune/chapter2';
@@ -25,9 +27,11 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean}>={
  'ch2-61':{n:61,room:'room_dw_mansion_b_east',backdrop:false},
  'ch1-2':{n:2,room:'room_field_start',backdrop:true},
  'ch1-8':{n:8,room:'room_forest_area3',backdrop:true},
+ 'ch1-20':{n:20,room:'room_field_puzzletutorial',backdrop:true},
  'ch1-12':{n:12,room:'room_field_checkersboss',backdrop:true},
  'ch1-25':{n:25,room:'room_cc_joker',backdrop:false},
  'ch1-27':{n:27,room:'room_cc_6f',backdrop:false},
+ 'ch1-40':{n:40,room:'room_castle_throneroom',backdrop:true},
 };
 export const runsOnEngine=(id:string)=>id in ENGINE;
 /** Party base stats (HP, AT, DF, MAGIC for Kris, Susie, Ralsei) at this point of Chapter 1. */
@@ -53,7 +57,9 @@ export function engineEnemies(id:string):Record<string,GmObjectDef>{
  if(!ENGINE[id])throw Error(`${id} does not run on the engine`);
  if(id==='ch1-2')return {obj_lancerboss:lancerEnemy};
  if(id==='ch1-8')return {obj_clubsenemy:cloverEnemy};
+ if(id==='ch1-20')return {obj_lancerboss2:lancerEnemy2};
  if(id==='ch1-25')return {obj_joker:jokerEnemy};
+ if(id==='ch1-40')return {obj_king_boss:kingEnemy};
  return {obj_checkers_enemy:checkersEnemy};
 }
 /** Callbacks some enemies read from globals (K.Round's), installed on the battle's runtime. */

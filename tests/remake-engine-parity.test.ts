@@ -37,6 +37,7 @@ const RUNS:{id:string;run:string;start:number;enemies:GmObjectDef[]}[]=[
  {id:'ch1-8',run:'ch1-8-s11-god',start:40,enemies:defsOf(clover)},
  {id:'ch1-12',run:'ch1-12-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundEffects,kroundThrow,kroundTransform,kroundController)},
  {id:'ch1-27',run:'ch1-27-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundEffects,kroundThrow,kroundTransform,kroundController)},
+ {id:'ch1-20',run:'ch1-20-s11-god',start:40,enemies:defsOf(jevilController)},
  // Jevil's room plays an intro first: the battle controller appears at frame 119.
  {id:'ch1-25',run:'ch1-25-s11-god',start:135,enemies:defsOf(jevilBody,jevilController,jevilBullets,jevilSpadering,jevilEnemy)},
 ];

@@ -18,7 +18,10 @@ const playable:readonly SourceEncounter[]=[
 export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);
 /** Explicit local verification entry points. Public launches always use sourceEncounter. */
 /** Reserved for EngineBattle fixtures that still need end-to-end verification before public launch. */
-const development:readonly SourceEncounter[]=[];
+const development:readonly SourceEncounter[]=[
+ {id:'ch1-20',chapter:1,name:'Lancer',party:[1,3],hp:2400,attack:4,defense:-40,music:'lancerfight',practice:false},
+ {id:'ch1-40',chapter:1,name:'King',party:[1,2,3],hp:2800,attack:8,defense:0,music:'kingboss',practice:false},
+];
 export const developmentEncounter=(id:string)=>sourceEncounter(id)??development.find(p=>p.id===id);
 export const availableEncounters=(chapter:number)=>playable.filter(p=>p.chapter===chapter);
 export function availabilityLabel(chapter:number){const rows=availableEncounters(chapter);return rows.length?[...new Set(rows.map(p=>p.name.toUpperCase()))].join(' + ')+' AVAILABLE':'NO PLAYABLE BATTLES YET';}

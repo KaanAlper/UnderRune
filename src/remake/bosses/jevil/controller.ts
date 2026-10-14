@@ -13,12 +13,47 @@ export const bulletController:GmObjectDef={name:'obj_dbulletcontroller',index:24
   const box=rt.first(growtangle);if(box){s.miny=box.y-rt.spriteHeight(box)/2;s.maxy=box.y+rt.spriteHeight(box)/2;}
   s.ratio=1;const m=rt.globals.monster,pop=m[0]+m[1]+m[2];if(pop===2)s.ratio=1.6;if(pop===3)s.ratio=2.3;
  },
- step:(s,rt)=>{s.btimer+=1;sideSpades(s,rt);if(s.joker===1)jevilAttack(s,rt);},
+ step:(s,rt)=>{s.btimer+=1;fallingSpades(s,rt);sideSpades(s,rt);spadeRain(s,rt);if(s.joker===1)jevilAttack(s,rt);},
 }};
 
 const solid=(rt:GmRuntime)=>rt.first(battleSolid)!;
 const soul=(rt:GmRuntime)=>rt.first(heart)!;
 
+/** Instances of an object (or its children) by name, for enemies defined in other boss modules. */
+const named=(rt:GmRuntime,name:string)=>rt.instances.filter(i=>{if(!i.live)return false;for(let o:GmObjectDef|undefined=i.object;o;o=o.parent)if(o.name===name)return true;return false;});
+/** A spade dropping from above around x: it falls under gravity, drifting a little sideways. */
+function dropSpade(s:GmInstance,rt:GmRuntime,y:number){
+ s.radius=-80+rt.random.random(160)+8;
+ const b=rt.create(regularBullet,soul(rt).x+s.radius,y);s.fallspade=b.id;b.damage=s.damage;b.target=s.target;
+ b.sprite='spr_spadebullet';b.imageAngle=270;b.gravity=0.3;b.speed=0;b.vspeed=3;b.hspeed=-0.6+rt.random.random(1.2);
+ s.side=s.side===1?-1:1;s.btimer=0;
+}
+/** Types 20/22: Lancer whistles and spades rain down around the soul. */
+function fallingSpades(s:GmInstance,rt:GmRuntime){
+ if(s.type!==20&&s.type!==22)return;
+ const lancers=named(rt,'obj_lancerboss3');
+ if(lancers.length){
+  if(s.made===0){rt.sound?.('snd_lancerwhistle');s.whistletimer=0;s.made=1;for(const l of lancers)l.idlesprite='spr_lancerbike_l';}
+  if(s.made===1){s.whistletimer+=1;if(s.whistletimer>=30){for(const l of named(rt,'obj_lancerboss3'))l.idlesprite='spr_lancerbike';s.made=2;}}
+ }
+ s.bmax=s.type===20?8:6;
+ if(s.btimer>=s.bmax)dropSpade(s,rt,rt.view.y-20);
+}
+/** Type 24: falling spades that swerve aside when they come near the soul, faster with difficulty. */
+function spadeRain(s:GmInstance,rt:GmRuntime){
+ if(s.type!==24)return;
+ s.bmax=s.difficulty+5;
+ for(const b of rt.all(regularBullet)){
+  const h=rt.first(heart);if(!h)continue;
+  b.xdiff=b.x-(h.x+8);const xd=b.xdiff;
+  if(b.y>=h.y-240&&Math.abs(xd)<=30){if(xd>=0&&b.hspeed<5)b.hspeed+=0.4;if(xd<0&&b.hspeed>-5)b.hspeed-=0.4;}
+  if(b.y>=h.y-100&&Math.abs(xd)<=60){
+   if(xd>=0){if(b.hspeed<2)b.hspeed+=0.25;if(xd<10)b.x+=3;if(xd<20)b.x+=3;if(xd<30)b.x+=3;if(xd<40)b.x+=2;if(xd<60)b.x+=1;}
+   else{if(b.hspeed>-2)b.hspeed-=0.25;if(xd>-10)b.x-=3;if(xd>-20)b.x-=3;if(xd>-30)b.x-=3;if(xd>-40)b.x-=2;if(xd>-60)b.x-=1;}
+  }
+ }
+ if(s.btimer>=s.bmax)dropSpade(s,rt,-20);
+}
 /** Types 21/23/25: spades slide in from alternating sides of the screen, speeding up. */
 function sideSpades(s:GmInstance,rt:GmRuntime){
  if(s.type!==21&&s.type!==23&&s.type!==25)return;
