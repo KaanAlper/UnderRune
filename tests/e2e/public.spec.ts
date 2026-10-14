@@ -33,8 +33,8 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  expect(failures).toEqual([]);expect(native).toEqual([]);
 });
 test('unavailable encounters still open equipment previews without launching a fake fight',async({page})=>{
- await menu(page);await boss(page,"ch1-40","King");
- const prep=page.getByRole('dialog',{name:'King',exact:true});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
+ await menu(page);await boss(page,"ch1-31","Susie & Lancer");
+ const prep=page.getByRole('dialog',{name:'Susie & Lancer',exact:true});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
  await prep.getByRole('button',{name:'Close preparation'}).click();await expect(page.locator('#practice')).toBeDisabled();
 });
 test('mobile preparation fits the viewport and retains touch controls',async({page})=>{
@@ -100,5 +100,20 @@ test('Clover launches with Kris and Ralsei, runs a Check turn and her own attack
  for(let i=0;i<40&&!(await page.locator('#status').textContent())?.includes('Clover / enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
  await expect(page.locator('#status')).toContainText('Clover / enemy attack');await page.locator('#screen').screenshot({path:'test-results/public-clover.png'});
  await expect(page.locator('#status')).toContainText('Clover / command / TURN 2',{timeout:16000});await expect(page.locator('#outcome')).toBeHidden();
+ expect(failures).toEqual([]);
+});
+
+test('King and the second Lancer battle launch and play a turn',async({page})=>{
+ const failures:string[]=[];page.on('pageerror',e=>failures.push(e.message));
+ // King: everyone DEFENDs; his words wait for Z, then his attack runs and the menus return.
+ await menu(page);await boss(page,'ch1-40','King');await page.getByRole('button',{name:'START BATTLE'}).click();
+ await expect(page.locator('#status')).toContainText('King / command');await page.waitForTimeout(600);
+ for(let i=0;i<3;i++)await defend(page);
+ for(let i=0;i<60&&!(await page.locator('#status').textContent())?.includes('King / enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
+ await expect(page.locator('#status')).toContainText('King / command / TURN 2',{timeout:16000});
+ // Lancer with Susie on his side: Kris's first turn is a talk with Susie.
+ await page.getByRole('button',{name:'Device menu',exact:true}).click();await boss(page,'ch1-20','Lancer');await page.getByRole('button',{name:'START BATTLE'}).click();
+ for(let i=0;i<60&&!(await page.locator('#status').textContent())?.includes('enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
+ await expect(page.locator('#status')).toContainText('Lancer / enemy attack');
  expect(failures).toEqual([]);
 });
