@@ -130,7 +130,9 @@ const show=(v:unknown)=>{const s=v&&typeof v==='object'&&!Array.isArray(v)?`<${(
  * step): built-ins, alarms and instance variables, missing and extra ones included. Instances are paired in creation
  * order per object, as in compareFrame. Returns one line per difference. */
 export function compareState(rt:GmRuntime,dump:Dump,checked:Set<string>,res:ResourceIndex,skippedIds=new Set<number>(),ignore:Readonly<Record<string,readonly string[]>>={}):string[]{
- const problems:string[]=[],gone=(id:number)=>!rt.byId(id);
+ // A missing number is not automatically an instance reference: only integer ids in the allocated range can
+ // represent a destroyed instance. Future ids and fractional values must still report a mismatch.
+ const problems:string[]=[],gone=(id:number)=>Number.isSafeInteger(id)&&id>=100000&&id<rt.nextId&&!rt.byId(id);
  for(const name of checked){
   const ref=dump.instances.filter(d=>d.objectName===name&&!skippedIds.has(d.instanceId)),ours=rt.instances.filter(i=>i.live&&i.object.name===name);
   if(ref.length!==ours.length){problems.push(`${name}: ${ours.length} instances, reference has ${ref.length}`);continue;}

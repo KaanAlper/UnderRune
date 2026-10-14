@@ -3,13 +3,15 @@
 This file explains how to continue the work: the rules that must hold, how the work is verified, what is done and
 what is left, in order. Read it fully before changing code.
 
-Current checkpoint after `7a140af`: the Chapter 2 writer and battle controller have chapter parts and participate
-in full-state comparison. NEO's normal-route bullet controller and three flying-head objects now have explicit
-TypeScript events. The full 377-test suite (43 files) passes, including all 8 Chapter 1 parity runs and both freshly
-recorded NEO runs: 9920 compared frames after their starting snapshots. Typecheck, the Pages build and both
-production-browser battle checks (NEO and JEVIL) pass. Acceptance covers the current recordings and English
-normal-route NEO paths; remaining dependencies and recordings below are still required. Source is pushed
-separately from Pages publication.
+Current checkpoint after `2babcf9`: writer/controller chapter parts and the NEO attack controller, flying heads,
+support objects, walls, wire-heart family and phone/Pipis family are hand-ported. Claude's latest session is
+`c019f36b-10fd-4c4e-913d-4d3a490ec7ea` (local `.claude/projects/C--Users-halis-flybrain-boss/`). It stopped at
+2026-10-14 17:19 Istanbul while reading phone-hand sources after the weekly limit was reached; no phone-hand port
+was written. The earlier 750843b checkpoint is on Pages; source main also includes the four later attack families.
+The fresh review reran all 377 existing tests and typecheck successfully, then reproduced a comparison false
+positive for never-allocated/fractional instance ids and narrowed that rule with two regression tests. Updated
+acceptance: 379 tests across 43 files and typecheck pass; both NEO recordings still match (3960 + 5960 frames).
+The current recordings do not prove whole-game or every-route parity.
 
 ## 1. Project in one paragraph
 
@@ -284,24 +286,27 @@ Port them in the order they first appear in the recordings:
 1. **Done:** `obj_sneo_bulletcontroller` (`bullet-controller.ts`), normal types 0/1/1.5/6/8.5/9/12.
 2. **Done:** the flying heads: `obj_sneo_guymaker`, `obj_sneo_lilguy`, `obj_sneo_lilguy_bullet`
    (`flying-heads.ts`). Create, Step, alarms, Draw, animation/path end and shot handling are ported. The head
-   projectile still inherits archived `obj_basicbullet_sneo` events. Cut effects and doom also remain archived.
+   projectile now inherits the hand-ported `obj_basicbullet_sneo` events from `support.ts`. Cut effects and doom
+   have also been ported since the original flying-head checkpoint.
    The canonical host aliases both old registry definitions and factory references so archived children find
    the migrated controller and preserve party targeting. Fourteen focused tests cover rare paths and aliasing;
    a fresh source review found no material issues. Developer difficulty 7 retains its named unported boundary.
-3. **Next:** `obj_afterimage_cut`, `obj_lerpvar`, `obj_basicbullet_sneo`, `obj_doom`
-4. the walls: `obj_sneo_wall_controller_new`, `obj_sneo_wallbullet_new`, `obj_sneo_rotatingwall_bomb`,
+3. **Done:** `obj_afterimage_cut`, `obj_lerpvar`, `obj_basicbullet_sneo`, `obj_doom` (`support.ts`).
+4. **Done:** the walls (`walls.ts`): `obj_sneo_wall_controller_new`, `obj_sneo_wallbullet_new`, `obj_sneo_rotatingwall_bomb`,
    `obj_mettaton_bomb_hitbox`
-5. `obj_sneo_wireheart` and its pieces
-6. the phone call and pipis objects
-7. the phone hands and `obj_sneo_mmx_spreadshot`
+5. **Done:** `obj_sneo_wireheart` and its pieces (`wireheart.ts`).
+6. **Done:** the phone call and Pipis objects (`phonecall.ts`, 13 definitions). Difficulty 4 egg bursts retain a
+   named unported boundary; the hard phone stream is ported but still needs a dedicated acceptance recording.
+7. **Next:** the phone hands and `obj_sneo_mmx_spreadshot`. Claude only read their source events; no new file or
+   registration exists for this family yet.
 8. the face attack (move its `ringsShots` hook from `host/neo.ts` into its definition)
-9. `obj_sneo_biglaser`, `obj_spamtonshot`, `obj_rouxls_power_up_orb`
+9. `obj_sneo_biglaser`, `obj_spamtonshot` (the power-up orb is already in `wireheart.ts`)
 10. the finale and final form (move the `pullsShots` hook into its definition)
 11. the scene objects
 
 For each port:
 - verify with both NEO runs (trace plus full state);
-- move the object from the pending stubs into `NEO_PORTED`;
+- remove any pending stub and register the definition through the canonical host's ordered factory list;
 - `bosses/spamton-neo/shot.ts` (Codex's collision handlers) can go once the targets are ported.
 
 ### 4. More NEO recordings
@@ -339,6 +344,30 @@ New scripts go in `tools/oracle-scripts.mjs`.
 - Redeploy.
 - Ask the owner whether to purge the old sources from git history. This needs their decision.
 
+### 8. Review of Claude's continuation (2026-10-14)
+
+- Claude accepted the writer, controller, bullet controller, flying heads and creator-VM correction. Commit
+  `750843b` preserves Codex attribution. The main edits to existing ports replaced flying-head helper duplication
+  with shared support scripts and registered factories sequentially so children receive migrated parents.
+- `obj_script_delayed` now preserves Create's `script = -1` and `i`, plus the target's source fields `__scipt` and
+  `__scipt_arg` before invocation. `gmlScript` supplies resource identity for full-state comparison; `gmField`
+  resolves variable names such as `image_xscale`. These corrections match the local original script.
+- The Queen tea special case moved from a boss-name check into `BattleHooks.teaHeals`, following the architecture.
+- The new noone equivalence is grounded in Butterscotch's `clearDestroyedInstanceReferences`: only tagged direct
+  instance references are cleared by that VM. Our numeric representation loses that tag. The original comparison
+  accepted ANY missing number >= 100000, including never-allocated/fractional values. A failing regression test
+  reproduced this; the rule now requires a safe integer within the runtime's allocated id range and absent from
+  live instances. This narrows the artifact allowance; it does not establish typed-reference identity from
+  untyped dumps. Future reference metadata should preserve the distinction rather than add broad exemptions.
+- The 377-test count remained unchanged across Claude's four new families: the recordings provide strong coverage
+  of exercised routes, but there are no new focused tests for their unrecorded variants. Add those before claiming
+  full route coverage. Finale/spare endings and sound parity remain outstanding.
+- The public-browser change waits for commands before sending keys, avoiding input during loading; it changes
+  the test timing, not the game.
+- Final review checks: all 379 tests pass (43 files, 76.13 seconds); typecheck and source whitespace checks pass.
+  Only test comparison and handoff files changed in this review, so no new production build or Pages deployment
+  was performed.
+
 ## 6. Where things are
 
 | What | Where |
@@ -355,6 +384,7 @@ New scripts go in `tools/oracle-scripts.mjs`.
 | Chapter 2 helpers and objects | `deltarune/chapter2*.ts`, `yellow-soul.ts` |
 | NEO | `src/remake/bosses/spamton-neo/neo.ts` (enemy), `body.ts` (Draw), `chooser.ts`, `vines.ts` |
 | NEO attack controller and flying heads | `src/remake/bosses/spamton-neo/bullet-controller.ts`, `flying-heads.ts` |
+| NEO support and later attacks | `src/remake/bosses/spamton-neo/support.ts`, `walls.ts`, `wireheart.ts`, `phonecall.ts` |
 | Hosts | `src/remake/host/engine.ts` (Chapter 1), `src/remake/host/neo.ts` (Chapter 2) |
 | Parity helpers | `tests/parity/reference.ts` |
 
