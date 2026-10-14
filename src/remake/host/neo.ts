@@ -29,7 +29,7 @@ import type {BattleHooks,HookedDef} from '../deltarune/rules';
 const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed,
  yellowShot,shotAfterimage,shotHit,superchargeEnd,soulSpark];
 /** Shared engine objects whose Chapter 2 source versions are replaced by the engine's own (with its chapter rules). */
-const ENGINE_PORTED=new Set(['obj_heart']);
+const ENGINE_PORTED=new Set(['obj_heart','obj_grazebox']);
 
 export function installNeoHost(rt:GmRuntime){
  const objects:Record<string,GmObjectDef>={};
@@ -109,7 +109,7 @@ export function installNeoHost(rt:GmRuntime){
   while(chain?.name===old.name){layers.unshift(chain);chain=chain.parent;}
   def.events={};for(const layer of layers)Object.assign(def.events,layer.events);
  }
- Object.assign(objects,createNeoPlayerObjects(host));
+ for(const [name,def] of Object.entries(createNeoPlayerObjects(host)))if(!ENGINE_PORTED.has(name))objects[name]=def;
  objects.obj_spamton_neo_enemy=createNeoEnemy(host);Object.assign(objects,createNeoEnemyEffects(host));
  Object.assign(objects,createNeoAttackObjects(host));
  Object.assign(objects,createNeoSceneObjects(host));

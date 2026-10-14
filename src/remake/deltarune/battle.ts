@@ -4,7 +4,7 @@
 import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {eq,ge,gt,le,lt,pointDistance,round} from '../gm/math';
 import {C} from '../gm/graphics';
-import {rules} from './rules';
+import {forChapter,rules} from './rules';
 import {yellowSoul} from './yellow-soul';
 
 import {KEY,held} from './keys';
@@ -347,26 +347,59 @@ function heartStep(s:GmInstance,rt:GmRuntime){
  if(r.soulHasModes)soulMode(s).step?.(s,rt);
 }
 
+/** How grazing works per chapter: what a repeated graze gives (a fraction of the bullet's points), whether inactive
+ * bullets count, and (Chapter 2) the armors that raise the TP, the time and the box size (scr_armorcheck_equipped_party). */
+const GRAZE:Record<number,{repeat:number;inactiveCount:boolean;armor?:{tp:number;time:number;size:[number,number][]}}>={
+ 1:{repeat:20,inactiveCount:true},
+ 2:{repeat:30,inactiveCount:false,armor:{tp:15,time:14,size:[[3,0.2],[9,0.25]]}},
+};
+/** scr_armorcheck_equipped_party: how many of this armor the party wears. */
+function partyWears(rt:GmRuntime,armor:number){
+ const g=rt.globals;let n=0;
+ for(let i=0;i<3;i++)if(g.char[i]!==0){const c=g.char[i];if(g.chararmor1[c]===armor)n+=1;if(g.chararmor2[c]===armor)n+=1;}
+ return n;
+}
 /** The graze box around the soul: bullets passing through it give TP and shorten the turn. */
 export const grazebox:GmObjectDef={name:'obj_grazebox',index:206,depth:2,sprite:'spr_grazeappear',mask:'spr_grazemask',
  events:{
-  create:(s,rt)=>{const h=rt.first(heart);if(h){s.x=h.x+10;s.y=h.y+10;}s.grazetimer=0;},
-  endStep:(s,rt)=>{const h=rt.first(heart);if(h){s.x=h.x+10;s.y=h.y+10;}else rt.destroy(s);},
+  create:(s,rt)=>{
+   const armor=forChapter(rt,GRAZE,'obj_grazebox').armor;
+   if(armor){
+    s.grazetimer=0;s.grazetpfactor=1;s.grazetimefactor=1;s.grazesizefactor=1;
+    s.grazetpfactor+=partyWears(rt,armor.tp)*0.1;s.grazetimefactor+=partyWears(rt,armor.time)*0.1;
+    for(const [id,add] of armor.size)s.grazesizefactor+=partyWears(rt,id)*add;
+    s.grazetimefactor=Math.min(s.grazetimefactor,3);s.grazetpfactor=Math.min(s.grazetpfactor,3);s.grazesizefactor=Math.min(s.grazesizefactor,3);
+    s.imageXscale=s.grazesizefactor;s.imageYscale=s.grazesizefactor;
+    const h=rt.first(heart);if(h){s.sizexoff=0;s.sizeyoff=0;s.x=h.x+10+s.sizexoff;s.y=h.y+10+s.sizeyoff;}
+   }else{const h=rt.first(heart);if(h){s.x=h.x+10;s.y=h.y+10;}s.grazetimer=0;}
+  },
+  endStep:(s,rt)=>{
+   const h=rt.first(heart);
+   if(!h){rt.destroy(s);return;}
+   if(forChapter(rt,GRAZE,'obj_grazebox').armor){s.sizexoff=0;s.sizeyoff=0;s.x=h.x+10+s.sizexoff;s.y=h.y+10+s.sizeyoff;}
+   else{s.x=h.x+10;s.y=h.y+10;}
+  },
   draw:(s,rt)=>{
-   if(s.grazetimer>0){rt.drawSprite(s.sprite,0,s.x,s.y,1,1,0,C.white,s.grazetimer/6);rt.drawSprite(s.sprite,3,s.x,s.y,1,1,0,C.white,s.grazetimer/6-0.2);}
+   if(s.grazetimer>0){
+    rt.drawSprite(s.sprite,0,s.x,s.y,1,1,0,C.white,s.grazetimer/6);rt.drawSprite(s.sprite,3,s.x,s.y,1,1,0,C.white,s.grazetimer/6-0.2);
+    if(s.imageXscale>1){rt.drawSprite(s.sprite,0,s.x,s.y,s.imageXscale,s.imageYscale,0,C.white,s.grazetimer/6);rt.drawSprite(s.sprite,3,s.x,s.y,s.imageXscale,s.imageYscale,0,C.white,s.grazetimer/6-0.2);}
+   }
    s.grazetimer-=1;
   },
  },
- collisions:[{target:collideBullet,run:(_s,b,rt)=>{
-  const g=rt.globals;if(g.inv>=0)return;
+ collisions:[{target:collideBullet,run:(s,b,rt)=>{
+  const g=rt.globals,graze=forChapter(rt,GRAZE,'obj_grazebox');
+  if(!graze.inactiveCount&&!b.active)return;
+  const tp=graze.armor?s.grazetpfactor:1,time=graze.armor?s.grazetimefactor:1;
+  if(g.inv>=0)return;
   if(b.grazed===1){
-   tensionHeal(rt,b.grazepoints/20);
-   if(ge(g.turntimer,10))g.turntimer-=b.timepoints/20;
+   tensionHeal(rt,b.grazepoints/graze.repeat*tp);
+   if(ge(g.turntimer,10))g.turntimer-=b.timepoints/graze.repeat*time;
    for(const gb of rt.all(grazebox)){if(gb.grazetimer>=0&&gb.grazetimer<4)gb.grazetimer=3;if(gb.grazetimer<2)gb.grazetimer=2;}
   }
   if(b.grazed===0){
-   b.grazed=1;tensionHeal(rt,b.grazepoints);
-   if(ge(g.turntimer,10))g.turntimer-=b.timepoints;
+   b.grazed=1;tensionHeal(rt,b.grazepoints*tp);
+   if(ge(g.turntimer,10))g.turntimer-=b.timepoints*time;
    for(const c of rt.all(battleController))c.grazenoise=1;
    for(const gb of rt.all(grazebox))gb.grazetimer=10;
   }

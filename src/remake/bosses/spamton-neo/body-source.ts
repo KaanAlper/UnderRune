@@ -146,6 +146,8 @@ export function executeNeoSource(source:string,s:GmInstance,rt:GmRuntime,host:Ne
 
 export function createNeoSourceObject(host:NeoSourceHost,meta:NeoSourceMetadata,sources:Readonly<Record<string,string>>):GmObjectDef{
  const def:GmObjectDef={name:meta.name,index:meta.index,depth:meta.depth,visible:meta.visible,sprite:meta.sprite??undefined,mask:meta.mask??undefined,events:{}};
+ // Marks a definition that still runs archived source (until it is hand-ported).
+ Object.defineProperty(def,'archived',{value:Object.keys(sources).length>0});
  if(meta.parent)Object.defineProperty(def,'parent',{get:()=>host.object(meta.parent!),configurable:true});
  const eventName=(key:string):GmEvent|undefined=>key==='Create_0'?'create':key==='Step_0'?'step':key==='Step_1'?'beginStep':key==='Step_2'?'endStep':key==='Draw_0'?'draw':key==='Other_7'?'animationEnd':key.startsWith('Alarm_')?`alarm${Number(key.slice(6))}`:key.startsWith('Other_')&&Number(key.slice(6))>=10?`user${Number(key.slice(6))-10}`:undefined;
  for(const [key,source] of Object.entries(sources)){const ev=eventName(key);if(ev)def.events![ev]=(s,rt)=>executeNeoSource(source,s,rt,host,undefined,ev);}
