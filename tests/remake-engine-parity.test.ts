@@ -8,10 +8,9 @@ import {writer,face,battleBalloon} from '../src/remake/deltarune/writer';
 import {burstBolt,basicAttack} from '../src/remake/deltarune/player-effects';
 import * as clover from '../src/remake/bosses/clover';
 import * as kroundAttacks from '../src/remake/bosses/kround/attacks';
-import * as kroundEffects from '../src/remake/bosses/kround/effects';
 import * as kroundThrow from '../src/remake/bosses/kround/throw';
 import * as kroundTransform from '../src/remake/bosses/kround/transform';
-import * as kroundController from '../src/remake/bosses/kround/controller';
+import * as kroundEnemy from '../src/remake/bosses/kround/enemy';
 import * as lancerBike from '../src/remake/bosses/lancer/bike';
 import * as lancerSusie from '../src/remake/bosses/lancer/susie';
 import * as lancerAxe from '../src/remake/bosses/lancer/axe';
@@ -23,7 +22,7 @@ import * as jevilEnemy from '../src/remake/bosses/jevil/enemy';
 import * as king from '../src/remake/bosses/king';
 import * as kingEnemy from '../src/remake/bosses/king/enemy';
 import type {GmObjectDef} from '../src/remake/gm/runtime';
-import {engineEnemies,installEngineHosts} from '../src/remake/host/engine';
+import {engineEnemies,engineRoom} from '../src/remake/host/engine';
 import {hasSourceText} from '../src/remake/host/text';
 
 // Whole battles on the engine against the original game, frame by frame: from the frame the battle controller
@@ -39,8 +38,8 @@ const defsOf=(...modules:Record<string,unknown>[])=>modules.flatMap(m=>Object.va
 const RUNS:{id:string;run:string;start:number;enemies:GmObjectDef[]}[]=[
  {id:'ch1-2',run:'ch1-2-s11-god',start:40,enemies:defsOf(lancerBike)},
  {id:'ch1-8',run:'ch1-8-s11-god',start:40,enemies:defsOf(clover)},
- {id:'ch1-12',run:'ch1-12-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundEffects,kroundThrow,kroundTransform,kroundController)},
- {id:'ch1-27',run:'ch1-27-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundEffects,kroundThrow,kroundTransform,kroundController)},
+ {id:'ch1-12',run:'ch1-12-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundThrow,kroundTransform,kroundEnemy)},
+ {id:'ch1-27',run:'ch1-27-s11-god',start:40,enemies:defsOf(kroundAttacks,kroundThrow,kroundTransform,kroundEnemy)},
  {id:'ch1-20',run:'ch1-20-s11-god',start:40,enemies:defsOf(jevilController)},
  {id:'ch1-40',run:'ch1-40-s11-god',start:40,enemies:defsOf(king,kingEnemy)},
  {id:'ch1-31',run:'ch1-31-s11-god',start:40,enemies:defsOf(lancerBike,lancerSusie,lancerAxe,jevilController)},
@@ -64,7 +63,7 @@ for(const {id,run,start,enemies} of RUNS){
    const {rt,skipped,skippedIds}=restoreScene(loadSprites(1),dump,trace.get(start)!,restoredObjects);
    // The snapshot keeps sprite variables (idlesprite, hurtsprite...) as the game's sprite numbers; the remake uses names.
    for(const i of rt.instances)for(const k of Object.keys(i))if(/sprite$/.test(k)&&k!=='sprite'&&typeof i[k]==='number'&&SPRITE_NAMES[i[k]])i[k]=SPRITE_NAMES[i[k]];
-   installEngineHosts(rt,id);
+   rt.room.name=engineRoom(id);
    // The snapshot keeps global.monsterinstancetype as object numbers; the engine creates enemies from their definitions.
    rt.globals.monsterinstancetype=(rt.globals.monsterinstancetype??[]).map((v:unknown)=>typeof v==='number'?defs.find(d=>d.index===v)??v:v);
    const end=process.env.PARITY_END?Number(process.env.PARITY_END):Math.max(...trace.keys());

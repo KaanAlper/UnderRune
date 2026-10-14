@@ -4,7 +4,7 @@
 import type {GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {eq,ge} from '../../gm/math';
 import {marker,monsterParent} from '../../deltarune/battle';
-import {requireKRoundHost} from './controller';
+import {attackPhase} from '../../deltarune/controller';
 
 /** The crown left on the floor becomes an (invisible) interactable that drifts along with it. */
 export const readableCrown:GmObjectDef={name:'obj_readable_room1',index:88,sprite:'spr_interactable',visible:false};
@@ -12,7 +12,7 @@ export const readableCrown:GmObjectDef={name:'obj_readable_room1',index:88,sprit
 export const checkerTransform:GmObjectDef={name:'obj_checker_animtest',index:262,sprite:'spr_smallchecker_idle',events:{
  create:(s,rt)=>{
   s.type=0;s.con=0;s.subcon=0;s.secondtime=0;
-  const room=requireKRoundHost(rt).roomName();
+  const room=rt.room.name;
   if(room==='room_field_checkersboss'){if((rt.globals.plot??0)<60){s.con=1;s.imageXscale=2;s.imageYscale=2;s.subcon=0;}else rt.destroy(s);}
   if(room==='room_cc_6f'){s.secondtime=1;s.con=1;s.imageXscale=2;s.imageYscale=2;s.subcon=0;}
  },
@@ -68,7 +68,7 @@ function shrinkAway(s:ReturnType<GmRuntime['create']>,rt:GmRuntime){
   if(second){s.hspeed=6;s.imageAngle-=5;}
   if(ge(s.x,rt.view.x+720)){
    s.con=8;const g=rt.globals;g.monster[0]=0;g.monster[1]=0;g.monster[2]=0;
-   requireKRoundHost(rt).attackPhase();
+   attackPhase(rt);
    for(const m of rt.all(monsterParent))rt.destroy(m);
    rt.destroy(s);
   }

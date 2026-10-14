@@ -6,7 +6,7 @@ import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {C} from '../../gm/graphics';
 import {afterimageGrow,darkener,darkMarker,growtangle,heroKris,marker,monsterParent,moveHeart,spareAnim,sndFreeAll} from '../../deltarune/battle';
 import {attackPhase,button1_p,findController,monsterDefeat,randomTarget} from '../../deltarune/controller';
-import {monsterSetup} from '../../deltarune/encounter';
+import {actsDoneAttackPhase,defineEnemy} from '../../deltarune/enemy';
 import {healAllItem,healItem} from '../../deltarune/party';
 import {battleTextDefault,enemyBalloon,writer} from '../../deltarune/writer';
 import {optionalSourceText} from '../../host/text';
@@ -54,101 +54,96 @@ const condition=(s:GmInstance,rt:GmRuntime,c:number)=>{const b=body(s,rt);if(b)b
 /** scr_targetall. */
 function targetAll(s:GmInstance,rt:GmRuntime){const g=rt.globals;for(let i=0;i<3;i++)if(g.charcantarget[i]===1)g.targeted[i]=1;s.mytarget=3;s.target=3;}
 
-function step(s:GmInstance,rt:GmRuntime){
+/** His line for this turn (by jturn, which also follows his HP and the hypnosis count), the attack it leads to, and
+ * its targets. */
+function startTalk(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself as number;
- if(g.monster[me]===1){
-  g.flag[51+me]=4;
-  if(g.mnfight===1&&s.talked===0){
-   if(s.pirouette!==2)g.invc=s.reminvc;
-   const ratio=g.monsterhp[me]/g.monstermaxhp[me],h=s.hypnosiscounter;s.mhpratio=ratio;
-   if(ratio<=0.8&&s.jturn===4){s.jturn=5;dance(s,rt,1);}
-   if(ratio<=0.6&&s.jturn===9)s.jturn=10;
-   if(ratio<=0.4&&s.jturn===14){s.jturn=15;dance(s,rt,3);}
-   if(ratio<=0.15&&s.jturn<17){s.jturn=17;dance(s,rt,2);}
-   if(s.jturn>=18)dance(s,rt,3);
-   if(h>=2&&s.jturn===4&&s.turns>=5-h){s.jturn=5;dance(s,rt,1);}
-   if(h>=4&&s.jturn===9&&s.turns>=11-h){s.jturn=10;dance(s,rt,1);}
-   if(h>=6&&s.jturn===14&&s.turns>=17-h){s.jturn=15;dance(s,rt,1);}
-   if(s.jturn>=19&&s.turns>=29-h){s.tired=1;g.monsterstatus[me]=1;dance(s,rt,2);}
-   if(!rt.exists(darkener))rt.create(darkener,0,0);
-   g.typer=50;
-   const lines:Record<number,number>={0:35,1:36,2:37,3:38,5:39,6:40,7:41,8:42,10:43,11:44,12:45,13:46,15:47,16:48,17:49,18:50};
-   if(lines[s.jturn]!==undefined)g.msg[0]=L(lines[s.jturn]);
-   if(s.jturn===0||s.jturn===7)rt.sound?.(s.jturn===0?'snd_joker_chaos':'snd_joker_anything');
-   if(s.jturn===3||s.jturn===13||s.jturn===18)condition(s,rt,5);
-   if(s.jturn===17)dance(s,rt,2);
-   if([4,9,14,19].includes(s.jturn)){
-    s.rr=rt.random.choose(0,1,2,3);
-    if(s.rr===0){g.msg[0]=rt.random.choose(L('56_0'),L('56_1'));rt.sound?.('snd_joker_chaos');}
-    if(s.rr===1){g.msg[0]=L(57);rt.sound?.('snd_joker_anything');}
-    if(s.rr===2)g.msg[0]=rt.random.choose(L('58_0'),L('58_1'));
-    if(s.rr===3)g.msg[0]=L(59);
-   }
-   enemyBalloon(rt,s.x-160,s.y-20,3);s.talked=1;s.talktimer=0;
-   if(s.jturn>=19){if(g.monsterdf[me]>-10)g.monsterdf[me]-=3;if(g.monsterat[me]<11)g.monsterat[me]+=0.5;s.jattack=rt.random.choose(0,4,7,8,10,11,12,13,13,13);}
-   if(s.jturn>=15&&s.jturn<=18){s.jattack=s.jturn-3;s.jturn+=1;}
-   if(s.jturn===14)s.jattack=rt.random.choose(8,9,10,11);
-   if(s.jturn>=10&&s.jturn<=13){s.jattack=s.jturn-2;s.jturn+=1;}
-   if(s.jturn===9)s.jattack=rt.random.choose(4,5,6,7);
-   if(s.jturn>=5&&s.jturn<=8){s.jattack=s.jturn-1;s.jturn+=1;}
-   if(s.jturn===4)s.jattack=rt.random.choose(0,1,2,3);
-   if(s.jturn<=3){s.jattack=s.jturn;s.jturn+=1;}
-   if([2,5,9,13,15].includes(s.jattack))targetAll(s,rt);else randomTarget(s,rt);
-  }
-  if(s.talked===1&&g.mnfight===1){
-   s.rtimer=0;
-   // scr_blconskip(15)
-   if(button1_p(rt)&&s.talktimer>15)s.talktimer=s.talkmax;
-   s.talktimer+=1;
-   if(s.talktimer>=s.talkmax){for(const w of rt.all(writer))rt.destroy(w);g.mnfight=2;}
-   if(g.mnfight===2){
-    if(!rt.exists(moveHeart)){const k=rt.first(heroKris);if(k)rt.create(moveHeart,k.x+10,k.y+40);}
-    if(!rt.exists(growtangle))rt.create(growtangle,rt.view.x+320,rt.view.y+170);
-   }
-  }
-  if(g.mnfight===2&&s.attacked===0){
-   s.rtimer+=1;
-   if(s.rtimer===12){
-    g.turntimer=240;rt.userEvent(s,5);s.attacked=1;g.typer=6;g.fc=0;
-    s.rr=rt.random.choose(0,1,2,3,4);g.battlemsg[0]=L([158,159,160,161,162][s.rr]);
-    if(body(s,rt)?.dancelv===2)g.battlemsg[0]=L(163);
-    if(s.jturn===16)g.battlemsg[0]=L(164);
-    if(s.jturn===18)g.battlemsg[0]=L(165);
-    if(s.jturn>=19)g.battlemsg[0]=L(166);
-    if(g.monsterstatus[me]===1)g.battlemsg[0]=L(167);
-   }else g.turntimer=120;
-  }
-  if(g.mnfight===2&&g.turntimer<=1){
-   if(s.battlecancel===1)g.mercymod[me]=999;
-   if(s.battlecancel===2){const c=findController(rt);if(c)c.noreturn=1;s.con=1;s.battlecancel=3;}
-  }
+ if(s.pirouette!==2)g.invc=s.reminvc;
+ const ratio=g.monsterhp[me]/g.monstermaxhp[me],h=s.hypnosiscounter;s.mhpratio=ratio;
+ if(ratio<=0.8&&s.jturn===4){s.jturn=5;dance(s,rt,1);}
+ if(ratio<=0.6&&s.jturn===9)s.jturn=10;
+ if(ratio<=0.4&&s.jturn===14){s.jturn=15;dance(s,rt,3);}
+ if(ratio<=0.15&&s.jturn<17){s.jturn=17;dance(s,rt,2);}
+ if(s.jturn>=18)dance(s,rt,3);
+ if(h>=2&&s.jturn===4&&s.turns>=5-h){s.jturn=5;dance(s,rt,1);}
+ if(h>=4&&s.jturn===9&&s.turns>=11-h){s.jturn=10;dance(s,rt,1);}
+ if(h>=6&&s.jturn===14&&s.turns>=17-h){s.jturn=15;dance(s,rt,1);}
+ if(s.jturn>=19&&s.turns>=29-h){s.tired=1;g.monsterstatus[me]=1;dance(s,rt,2);}
+ if(!rt.exists(darkener))rt.create(darkener,0,0);
+ g.typer=50;
+ const lines:Record<number,number>={0:35,1:36,2:37,3:38,5:39,6:40,7:41,8:42,10:43,11:44,12:45,13:46,15:47,16:48,17:49,18:50};
+ if(lines[s.jturn]!==undefined)g.msg[0]=L(lines[s.jturn]);
+ if(s.jturn===0||s.jturn===7)rt.sound?.(s.jturn===0?'snd_joker_chaos':'snd_joker_anything');
+ if(s.jturn===3||s.jturn===13||s.jturn===18)condition(s,rt,5);
+ if(s.jturn===17)dance(s,rt,2);
+ if([4,9,14,19].includes(s.jturn)){
+  s.rr=rt.random.choose(0,1,2,3);
+  if(s.rr===0){g.msg[0]=rt.random.choose(L('56_0'),L('56_1'));rt.sound?.('snd_joker_chaos');}
+  if(s.rr===1){g.msg[0]=L(57);rt.sound?.('snd_joker_anything');}
+  if(s.rr===2)g.msg[0]=rt.random.choose(L('58_0'),L('58_1'));
+  if(s.rr===3)g.msg[0]=L(59);
  }
+ enemyBalloon(rt,s.x-160,s.y-20,3);s.talked=1;s.talktimer=0;
+ if(s.jturn>=19){if(g.monsterdf[me]>-10)g.monsterdf[me]-=3;if(g.monsterat[me]<11)g.monsterat[me]+=0.5;s.jattack=rt.random.choose(0,4,7,8,10,11,12,13,13,13);}
+ if(s.jturn>=15&&s.jturn<=18){s.jattack=s.jturn-3;s.jturn+=1;}
+ if(s.jturn===14)s.jattack=rt.random.choose(8,9,10,11);
+ if(s.jturn>=10&&s.jturn<=13){s.jattack=s.jturn-2;s.jturn+=1;}
+ if(s.jturn===9)s.jattack=rt.random.choose(4,5,6,7);
+ if(s.jturn>=5&&s.jturn<=8){s.jattack=s.jturn-1;s.jturn+=1;}
+ if(s.jturn===4)s.jattack=rt.random.choose(0,1,2,3);
+ if(s.jturn<=3){s.jattack=s.jturn;s.jturn+=1;}
+ if([2,5,9,13,15].includes(s.jattack))targetAll(s,rt);else randomTarget(s,rt);
+ 
+}
+function statusLine(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself as number;
+ s.rr=rt.random.choose(0,1,2,3,4);g.battlemsg[0]=L([158,159,160,161,162][s.rr]);
+ if(body(s,rt)?.dancelv===2)g.battlemsg[0]=L(163);
+ if(s.jturn===16)g.battlemsg[0]=L(164);
+ if(s.jturn===18)g.battlemsg[0]=L(165);
+ if(s.jturn>=19)g.battlemsg[0]=L(166);
+ if(g.monsterstatus[me]===1)g.battlemsg[0]=L(167);
+}
+function afterAttack(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals;
+ if(g.mnfight===2&&g.turntimer<=1){
+  if(s.battlecancel===1)g.mercymod[s.myself]=999;
+  if(s.battlecancel===2){const c=findController(rt);if(c)c.noreturn=1;s.con=1;s.battlecancel=3;}
+ }
+}
+/** Tired out: his last line, and he leaves. */
+function leave(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself as number;
  if(s.con===1){s.con=2;s.alarm[4]=10;}
  if(s.con===3){g.typer=50;g.mercymod[me]=999;g.msg[0]=L(201);enemyBalloon(rt,s.x-160,s.y,3);s.con=4;}
  if(s.con===4&&!rt.exists(writer)){s.hspeed=15;s.con=5;s.alarm[4]=15;const c=findController(rt);if(c)c.alarm[2]=17;}
  if(s.con===6){const c=findController(rt);if(c)c.noreturn=0;monsterDefeat(s,rt);rt.destroy(s);s.con=7;}
- if(g.myfight===3){
-  if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(237);battleTextDefault(rt);}
-  if(s.acting===2&&s.actcon===0){
-   s.actcon=5;g.msg[0]=L(247);rt.sound?.('snd_pirouette');
-   const kris=rt.first(heroKris)!;for(const k of rt.all(heroKris))k.visible=false;
-   const dk=darkMarker(rt,kris.x,kris.y,'spr_krisb_pirouette');s.dancekris=dk.id;dk.imageSpeed=0.3334;dk.depth=kris.depth;
-   const fx=rt.create(afterimageGrow,dk.x+28,dk.y+40);fx.sprite='spr_pirouette_fx';fx.imageXscale=2;fx.imageYscale=2;
-   battleTextDefault(rt);
-  }
-  if(s.actcon===5&&!rt.exists(writer))pirouette(s,rt);
-  if(s.acting===3&&s.actcon===0){
-   if(g.monsterat[me]>10)g.monsterat[me]-=0.5;
-   rt.create(hypnoFx,g.monsterx[me],g.monstery[me]);rt.sound?.('snd_hypnosis');s.actcon=1;
-   s.aaa=rt.random.choose(0,1,2);const part1=L([400,401,402][s.aaa]),part2=L(403);let part3=L(404);
-   if(s.hypnosiscounter===0)part3=L(405);
-   if(s.hypnosiscounter>=9){part3=L(406);g.monsterstatus[me]=1;}
-   g.msg[0]=part1+part2+part3+L(407);
-   s.pfactor=0.7;s.hypnosis=1;s.hypnosiscounter+=1;battleTextDefault(rt);
-  }
-  if(s.actcon===1&&!rt.exists(writer)){s.actcon=0;attackPhase(rt);}
+}
+/** Check, Pirouette (one of nine outcomes in turn) and Hypnosis. */
+function acts(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself as number;
+ if(s.acting===1&&s.actcon===0){s.actcon=1;g.msg[0]=L(237);battleTextDefault(rt);}
+ if(s.acting===2&&s.actcon===0){
+  s.actcon=5;g.msg[0]=L(247);rt.sound?.('snd_pirouette');
+  const kris=rt.first(heroKris)!;for(const k of rt.all(heroKris))k.visible=false;
+  const dk=darkMarker(rt,kris.x,kris.y,'spr_krisb_pirouette');s.dancekris=dk.id;dk.imageSpeed=0.3334;dk.depth=kris.depth;
+  const fx=rt.create(afterimageGrow,dk.x+28,dk.y+40);fx.sprite='spr_pirouette_fx';fx.imageXscale=2;fx.imageYscale=2;
+  battleTextDefault(rt);
  }
- if(g.myfight===7)s.hspeed=15;
+ if(s.actcon===5&&!rt.exists(writer))pirouette(s,rt);
+ if(s.acting===3&&s.actcon===0){
+  if(g.monsterat[me]>10)g.monsterat[me]-=0.5;
+  rt.create(hypnoFx,g.monsterx[me],g.monstery[me]);rt.sound?.('snd_hypnosis');s.actcon=1;
+  s.aaa=rt.random.choose(0,1,2);const part1=L([400,401,402][s.aaa]),part2=L(403);let part3=L(404);
+  if(s.hypnosiscounter===0)part3=L(405);
+  if(s.hypnosiscounter>=9){part3=L(406);g.monsterstatus[me]=1;}
+  g.msg[0]=part1+part2+part3+L(407);
+  s.pfactor=0.7;s.hypnosis=1;s.hypnosiscounter+=1;battleTextDefault(rt);
+ }
+}
+/** He runs off when beaten; the bomb attacks' sounds are played here, at most every five frames. */
+function afterStep(s:GmInstance,rt:GmRuntime){
+ if(rt.globals.myfight===7)s.hspeed=15;
  s.beepbuffer-=1;
  if(s.beepnoise===4&&s.beepbuffer<0){rt.sound?.('snd_bombfall',1,true);s.beepnoise=0;s.beepbuffer=5;}
  if(s.burstnoise===1){rt.sound?.('snd_bomb',1,true);s.burstnoise=0;}
@@ -264,9 +259,16 @@ function defeated(s:GmInstance,rt:GmRuntime){
  monsterDefeat(s,rt);g.invc=s.reminvc;rt.destroy(s);
 }
 /** The engine's Jevil. */
-export const jokerEnemy:GmObjectDef={name:'obj_joker',index:292,depth:10,parent:monsterParent,sprite:'spr_joker_main',events:{
- create,step,draw,user5:attack,user10:defeated,user11:()=>{},
- alarm4:s=>{s.con+=1;},
- // Event 12: where damage numbers appear, then scr_monstersetup.
- user12:(s,rt)=>{rt.globals.monsterx[s.myself]=s.x+20;rt.globals.monstery[s.myself]=s.y+20;monsterSetup(s,rt);},
-}};
+/** Jevil: the standard enemy (deltarune/enemy.ts) with these steps of his own. He counts his turns in his attack
+ * event (5). */
+export const jokerEnemy:GmObjectDef=defineEnemy({name:'obj_joker',index:292,depth:10,sprite:'spr_joker_main'},{
+ create,
+ beforeTalk:(s,rt)=>{rt.globals.flag[51+s.myself]=4;},
+ startTalk,
+ attack:(s,rt)=>{rt.globals.turntimer=240;rt.userEvent(s,5);},countTurn:false,
+ attackWait:(_s,rt)=>{rt.globals.turntimer=120;},
+ statusLine,afterAttack,afterEnemyTurn:leave,
+ acts,actsDone:actsDoneAttackPhase,afterStep,
+ monsterPosition:(s)=>[s.x+20,s.y+20],
+ events:{draw,user5:attack,user10:defeated,user11:()=>{}},
+});

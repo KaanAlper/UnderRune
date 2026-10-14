@@ -31,7 +31,7 @@ export const oflash:GmObjectDef={name:'obj_oflash',index:302,events:{
 }};
 /** scr_oflash, run by the instance that flashes. */
 export function oflashOf(s:GmInstance,rt:GmRuntime){
- const o=rt.create(oflash,s.x,s.y);o.imageXscale=s.imageXscale;o.imageSpeed=0;o.imageIndex=s.imageIndex;o.imageYscale=s.imageYscale;o.sprite=s.sprite;o.depth=s.depth-1;o.target=s.id;return o;
+ const o=rt.create(oflash,s.x,s.y);s._oflash=o.id;o.imageXscale=s.imageXscale;o.imageSpeed=0;o.imageIndex=s.imageIndex;o.imageYscale=s.imageYscale;o.sprite=s.sprite;o.depth=s.depth-1;o.target=s.id;return o;
 }
 
 // ---- Heroes ----
@@ -534,7 +534,7 @@ export const spellPhase:GmObjectDef={name:'obj_spellphase',index:308,events:{
 }};
 
 // ---- Spell effects ----
-export const healAnim:GmObjectDef={name:'obj_healanim',index:301,sprite:'spr_sparestar_anim',events:{
+export const healAnim:GmObjectDef={name:'obj_healanim',index:301,sprite:'spr_sparestar_anim',visible:false,events:{
  create:s=>{s.target=42894289;s.starcount=0;s.t=0;s.particlesprite='spr_sparestar_anim';s.particlecolor=C.lime;s.star=[];},
  step:(s,rt)=>{
   s.t+=1;const target=rt.byId(s.target);
@@ -557,7 +557,6 @@ export const healAnim:GmObjectDef={name:'obj_healanim',index:301,sprite:'spr_spa
    if(s.t>=30)rt.destroy(s);
   }
  },
- draw:()=>{},
 }};
 export const pacifySpell:GmObjectDef={name:'obj_pacifyspell',index:298,events:{
  create:(s,rt)=>{s.target=439493;s.con=1;s.siner=0;s.xx=rt.view.x;s.yy=rt.view.y;s.alarm[4]=50;s.fail=0;s.flashcolor=0xff0000;},

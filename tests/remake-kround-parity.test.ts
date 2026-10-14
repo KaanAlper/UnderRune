@@ -2,7 +2,9 @@ import {describe,it,expect} from 'vitest';
 import fs from 'node:fs';
 import {loadSprites,restoreScene,runParity,type TraceLine} from './parity/reference';
 import * as b from '../src/remake/deltarune/battle';
-import {checkersEnemy,checkersLeap} from '../src/remake/bosses/kround/attacks';
+import {checkersLeap} from '../src/remake/bosses/kround/attacks';
+import {checkersEnemy} from '../src/remake/bosses/kround/enemy';
+import {setSourceText} from '../src/remake/host/text';
 
 // Maintainer-local oracle data never ships with the browser build. A skipped
 // local replay is no evidence for public encounter availability.
@@ -24,7 +26,8 @@ for(const run of runs){
    let end=start+1;while(trace.get(end)?.o.some(x=>x[1]==='obj_checkers_leap'))end++;
    expect(trace.has(end)).toBe(true);
    const {rt,skippedIds}=restoreScene(loadSprites(1),dump,trace.get(start)!,objects);
-   rt.globals.kroundHost={lang:(id:string)=>id}; // Text is outside attack-window parity coverage.
+   // Text is outside attack-window parity coverage: each line reads as its own key.
+   setSourceText(new Proxy({},{get:(_t,key)=>String(key)}) as Record<string,string>);
    const result=runParity(rt,trace,start,end,tracked,['hp','tension','turntimer','inv'],skippedIds);
    expect(result.mismatch).toBeUndefined();expect(result.matched).toBe(end-start);
   });

@@ -1,22 +1,23 @@
-// Encounter 27's Ralsei throw minigame. Dialogue callbacks must be supplied by
-// the battle host; missing callbacks fail explicitly instead of skipping text.
+// Encounter 27's Ralsei throw minigame: Susie aims, sets the power, and throws Ralsei at K.Round's crown.
 import type {GmObjectDef,GmInstance,GmRuntime} from '../../gm/runtime';
 import {ge,le,lt,gt,lengthdirX,lengthdirY} from '../../gm/math';
 import {heroRalsei,heroSusie,KEY} from '../../deltarune/battle';
-import {checkersEnemy} from './attacks';
+import {checkersEnemy} from './enemy';
+import {inputName} from '../../deltarune/controller';
+import {battleTextDefault,destroyWriters} from '../../deltarune/writer';
+import {sourceText} from '../../host/text';
 
-export type KRoundThrowMessage='power-instructions'|'crown-hit'|'body-hit'|'miss';
-export interface KRoundThrowHost{
- /** Replaces the current writer and invokes the original battle-text phase. */
- text:(message:KRoundThrowMessage)=>void;
- /** Removes every dialogue writer (with (obj_writer) instance_destroy()). */
- clearWriters:()=>void;
+/** The throw game's lines: the power instructions, the hits and the miss. */
+const LINES={
+ 'crown-hit':'obj_ralseithrown_slash_Collision_154b9139_8c0d_44d5_b8de_0f03c1a8096c_gml_6_0',
+ 'body-hit':'obj_ralseithrown_slash_Collision_154b9139_8c0d_44d5_b8de_0f03c1a8096c_gml_29_0',
+ 'miss':'obj_ralseithrown_slash_Step_0_gml_23_0',
+} as const;
+function text(rt:GmRuntime,message:keyof typeof LINES|'power-instructions'){
+ destroyWriters(rt);
+ rt.globals.msg[0]=message==='power-instructions'?sourceText('obj_throwralsei_slash_Step_0_gml_26_0')+inputName(6)+sourceText('obj_throwralsei_slash_Step_0_gml_26_1'):sourceText(LINES[message]);
+ battleTextDefault(rt);
 }
-const throwHost=(rt:GmRuntime)=>{
- const host=rt.globals.kroundThrowHost as KRoundThrowHost|undefined;
- if(!host)throw new Error('K.Round throw requires kroundThrowHost dialogue callbacks');return host;
-};
-const text=(rt:GmRuntime,message:KRoundThrowMessage)=>throwHost(rt).text(message);
 const press=(rt:GmRuntime)=>rt.input.pressed.has(KEY.c)||rt.input.pressed.has(KEY.ctrl);
 
 export const throwTarget:GmObjectDef={name:'obj_throwtarget',index:263,depth:4,sprite:'spr_checkers_crown',events:{
@@ -59,7 +60,7 @@ export const throwRalsei:GmObjectDef={name:'obj_throwralsei',index:265,sprite:'s
  step:(s,rt)=>{
   if(s.throwcon===1){
    if(s.throwready===0)s.angle+=s.anglespeed;if(s.angle>=30)s.anglespeed=-2;if(s.angle<=-15)s.anglespeed=2;
-   if(press(rt)&&ge(s.throwalpha,.9)&&s.throwready===1){s.activatethrow=1;throwHost(rt).clearWriters();}
+   if(press(rt)&&ge(s.throwalpha,.9)&&s.throwready===1){s.activatethrow=1;destroyWriters(rt);}
    if(press(rt)&&s.throwready===0){s.throwready=1;text(rt,'power-instructions');}
    if(s.activatethrow===1){s.activatethrow=0;s.throwready=0;s.imageIndex=0;s.imageSpeed=.5;s.sprite='spr_susieb_attack_unarmed';s.angledraw=0;s.throwcon=2;rt.sound?.('snd_ultraswing');
     const ral=rt.create(ralseiThrown,s.rx,s.ry);s.ral=ral.id;ral.speed=s.mypower;ral.mypower=s.mypower;ral.imageXscale=2;ral.imageYscale=2;ral.direction=s.angle;ral.imageAngle=s.angle;ral.gravity=s.ralgrav;

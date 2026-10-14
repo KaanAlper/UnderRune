@@ -1,29 +1,8 @@
-// Chapter 1 K.Round's source enemy and independent attacks. Dialogue writers,
-// actor flashes, healing particles and the transformation object are supplied
-// through mandatory source adapters, so this is not a certified encounter.
+// K.Round's attacks: his leaps (obj_checkers_leap, four modes) and their shockwave bullets.
 import {moveTowardsPoint,type GmObjectDef,type GmInstance,type GmRuntime} from '../../gm/runtime';
 import {eq,ge,lt,pointDirection} from '../../gm/math';
 import {monsterParent,collideBullet,regularBullet,heart,growtangle,shake,afterimage,damage} from '../../deltarune/battle';
-import {checkersStep,requireKRoundHost} from './controller';
-
-export const checkersEnemy:GmObjectDef={name:'obj_checkers_enemy',index:261,depth:90,parent:monsterParent,sprite:'spr_checkers_idle',events:{
- create:s=>{Object.assign(s,{bikeflip:0,becomeflash:0,turnt:0,turns:0,talktimer:0,talkmax:5,state:0,flash:0,siner:0,fsiner:0,talked:0,attacked:0,hurt:0,hurttimer:0,hurtshake:0,shakex:0,mywriter:343249823,acting:0,actcon:0,acttimer:0,mercymod:0,maxmercy:9999,warned:0,compliment:0,tired:0,attacks:0,dodgetimer:0,candodge:0,con:0,battlecancel:0,nexttry:0,mytarget:3,imageSpeed:0,imageXscale:2,imageYscale:2,checked:0,crown:0,attacktype:0,thrown:0,thissprite:'spr_checkers_idle',scon:0,secondtime:0,bowcounter:0,ralsei_lecture:0,milk_counter:0});},
- alarm4:s=>{s.actcon+=1;},
- step:checkersStep,
- user11:(_s,rt)=>{const room=requireKRoundHost(rt).roomName();if(room==='room_field1')rt.globals.flag[500]+=1;if(room==='room_field2'&&rt.globals.flag[50]!==0)rt.globals.flag[501]=rt.globals.flag[50];},
- user12:(s,rt)=>{rt.globals.monsterx[s.myself]=s.x+rt.spriteWidth(s)/4;rt.globals.monstery[s.myself]=s.y+rt.spriteHeight(s)/4;requireKRoundHost(rt).monsterSetup(s);},
- draw:(s,rt)=>{
-  if(s.state===3){s.hurttimer-=1;if(s.hurttimer<0)s.state=0;else{
-   if(rt.globals.monster?.[s.myself]===0){s.hspeed=12;s.turnt-=8;s.vspeed=-4;}
-   s.hurtshake+=1;if(s.hurtshake>1){if(s.shakex>0)s.shakex-=1;if(s.shakex<0)s.shakex+=1;s.shakex=-s.shakex;s.hurtshake=0;}
-   s.siner=0;rt.drawSprite('spr_checkers_idle',0,s.x+s.shakex,s.y,2,2,0,s.imageBlend,1);
-  }}
-  if(s.state===0){s.siner+=1;s.thissprite='spr_checkers_idle';rt.drawSprite(s.thissprite,s.siner/3,s.x,s.y,2,2,0,s.imageBlend,1);
-   if(s.flash===1){s.fsiner+=1;rt.drawSpriteFog(s.thissprite,s.siner/3,s.x,s.y,2,2,0,0xffffff,-Math.cos(s.fsiner/5)*.4+.6);}
-  }
-  if(s.becomeflash===0)s.flash=0;s.becomeflash=0;s.sprite=s.thissprite;s.imageIndex=s.siner/3;
- },
-}};
+import {checkersEnemy} from './enemy';
 
 /** scr_afterimage copies the current sprite frame and motion-independent appearance. */
 export function checkersAfterimage(s:GmInstance,rt:GmRuntime){
@@ -111,11 +90,16 @@ export const checkersLeap:GmObjectDef={name:'obj_checkers_leap',index:266,depth:
 }};
 
 /** Enemy Step's attack creation branch; call only after its twelve-frame preparation. */
+/** His leap for this turn (the four modes in turn), unless one is still under way; either way he leaves his place and
+ * the turn counts. */
 export function startCheckersAttack(s:GmInstance,rt:GmRuntime):GmInstance|undefined{
- if(rt.exists(checkersLeap))return undefined;
- if(!Number.isInteger(s.attacktype)||s.attacktype<0||s.attacktype>3)throw new Error('Unsupported K.Round attacktype');
- const a=rt.create(checkersLeap,s.x,s.y);a.leapmode=[0,3,1,2][s.attacktype];a.target=s.mytarget;a.damage=rt.globals.monsterat[s.myself]*5;
- s.attacktype=(s.attacktype+1)%4;s.siner=0;s.visible=false;s.turns+=1;return a;
+ let a:GmInstance|undefined;
+ if(!rt.exists(checkersLeap)){
+  if(!Number.isInteger(s.attacktype)||s.attacktype<0||s.attacktype>3)throw new Error('Unsupported K.Round attacktype');
+  a=rt.create(checkersLeap,s.x,s.y);a.leapmode=[0,3,1,2][s.attacktype];a.target=s.mytarget;a.damage=rt.globals.monsterat[s.myself]*5;
+  s.attacktype=(s.attacktype+1)%4;
+ }
+ s.siner=0;s.visible=false;s.turns+=1;return a;
 }
 /** The source crown arithmetic. Encounter 27's third ACT must launch the throw game. */
 export function bowCrown(s:GmInstance,deep:boolean):number{

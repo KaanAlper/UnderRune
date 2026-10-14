@@ -12,8 +12,6 @@ export function snd(rt:GmRuntime,name:string,pitch=1,volume?:number){
  if(rt.sourceAudio)return rt.sourceAudio.effect(name,pitch,volume);
  rt.sound?.(name,pitch);return undefined;
 }
-/** scr_get_input_name on a keyboard: the key's letter in brackets (4 confirm, 5 cancel, 6 menu). */
-export const inputName=(n:number)=>'['+['DOWN','RIGHT','UP','LEFT','Z','X','C'][n]+']';
 /** scr_isphase. */
 export function isPhase(rt:GmRuntime,phase:'menu'|'acting'|'victory'|'attack'|'fight'|'spell'|'item'|'enemytalk'|'balloon'|'enemyattack'|'bullets'){
  const g=rt.globals;

@@ -10,9 +10,8 @@ import {attackPhase} from '../deltarune/controller';
 import {encounterSetup,monsterSetup,partyGlobals,type EquippedStats} from '../deltarune/encounter';
 import {battleText,battleTextDefault,destroyWriters,enemyBalloon,writer} from '../deltarune/writer';
 import {defeatRun} from '../deltarune/party';
-import {createCloverEnemy} from '../bosses/clover';
-import {checkersEnemy,checkerTransform,type KRoundHost,type KRoundThrowHost,type KRoundThrowMessage} from '../bosses/kround';
-import {checkersHealAnim,flashCheckers} from '../bosses/kround/effects';
+import {cloverEnemy} from '../bosses/clover';
+import {checkersEnemy} from '../bosses/kround';
 import {lancerEnemy} from '../bosses/lancer/enemy';
 import {lancerEnemy2} from '../bosses/lancer/enemy2';
 import {susieEnemy,lancerEnemy3} from '../bosses/lancer/susie';
@@ -38,22 +37,7 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean}>={
 export const runsOnEngine=(id:string)=>id in ENGINE;
 /** Party base stats (HP, AT, DF, MAGIC for Kris, Susie, Ralsei) at this point of Chapter 1. */
 const BASE={hp:[0,90,110,70],at:[0,10,14,8],df:[0,2,2,2],mag:[0,0,1,7]};
-const THROW_TEXT:Record<Exclude<KRoundThrowMessage,'power-instructions'>,string>={
- 'crown-hit':'obj_ralseithrown_slash_Collision_154b9139_8c0d_44d5_b8de_0f03c1a8096c_gml_6_0',
- 'body-hit':'obj_ralseithrown_slash_Collision_154b9139_8c0d_44d5_b8de_0f03c1a8096c_gml_29_0',
- 'miss':'obj_ralseithrown_slash_Step_0_gml_23_0',
-};
 
-/** Clover on the engine: her events call the game's writers, attack phase and monster setup. */
-const cloverEnemy=createCloverEnemy({
- text:sourceText,writerExists:rt=>rt.exists(writer),dismissWriters:rt=>destroyWriters(rt),
- enemySpeech:(rt,x,y,kind)=>{enemyBalloon(rt,x,y,kind);},
- battleText:(rt,useDefault)=>{if(useDefault)battleTextDefault(rt);else battleText(rt);},
- attackPhase:rt=>attackPhase(rt),
- // scr_defeatrun: the enemy runs off as its hurt sprite.
- defeat:(s,rt)=>{defeatRun(s,rt);},
- monsterSetup:(s,rt)=>monsterSetup(s,rt),
-});
 /** The enemy objects an encounter's setup creates. */
 export function engineEnemies(id:string):Record<string,GmObjectDef>{
  if(!ENGINE[id])throw Error(`${id} does not run on the engine`);
@@ -65,29 +49,8 @@ export function engineEnemies(id:string):Record<string,GmObjectDef>{
  if(id==='ch1-31')return {obj_susieenemy:susieEnemy,obj_lancerboss3:lancerEnemy3};
  return {obj_checkers_enemy:checkersEnemy};
 }
-/** Callbacks some enemies read from globals (K.Round's), installed on the battle's runtime. */
-export function installEngineHosts(rt:GmRuntime,id:string){if(id==='ch1-12'||id==='ch1-27')kroundHosts(rt,ENGINE[id].room);}
-function kroundHosts(rt:GmRuntime,room:string){
-  const host:KRoundHost={
-   lang:sourceText,writerExists:()=>rt.exists(writer),clearWriters:()=>destroyWriters(rt),
-   battleText:useDefault=>{if(useDefault)battleTextDefault(rt);else battleText(rt);},
-   face:(slot,hero,emotion)=>{rt.globals.msg[slot]=sourceText(hero==='ralsei'?'scr_ralface_slash_scr_ralface_gml_1_0':'scr_susface_slash_scr_susface_gml_1_0').replace('~1',String(emotion));},
-   // scr_get_input_name(6) on a keyboard: the C key.
-   inputName:()=>'C',attackPhase:()=>attackPhase(rt),
-   flash:actor=>{flashCheckers(actor,rt);},
-   healAnimation:checkersHealAnim,checkerTransform,
-   monsterSetup:s=>monsterSetup(s,rt),roomName:()=>room,
-  };
-  const throwHost:KRoundThrowHost={
-   text:message=>{
-    destroyWriters(rt);
-    rt.globals.msg[0]=message==='power-instructions'?sourceText('obj_throwralsei_slash_Step_0_gml_26_0')+'C'+sourceText('obj_throwralsei_slash_Step_0_gml_26_1'):sourceText(THROW_TEXT[message]);
-    battleTextDefault(rt);
-   },
-   clearWriters:()=>destroyWriters(rt),
-  };
-  rt.globals.kroundHost=host;rt.globals.kroundThrowHost=throwHost;
-}
+/** The original room an engine battle stands for (GML room): some enemies check it (K.Round's story flags). */
+export const engineRoom=(id:string)=>ENGINE[id]?.room??'';
 export class EngineBattle{
  readonly rt:GmRuntime;readonly name:string;readonly party:readonly number[];
  paused=false;outcome:'victory'|'defeat'|null=null;turn=0;
@@ -100,6 +63,7 @@ export class EngineBattle{
   const rt=this.rt,gear=(list:typeof equipment.weapons,id:number)=>list.find(g=>g.id===id);
   rt.globals.chapter=encounter.chapter;
   const neo=id==='ch2-61'?options.neoHost!(rt):undefined;
+  rt.room.name=setup.room;
   if(neo){rt.view.x=1640;rt.room.width=2400;}
   const equipped:Record<number,EquippedStats>={};
   for(const c of [1,2,3]){
@@ -119,7 +83,7 @@ export class EngineBattle{
    for(const c of [1,2,3])for(let j=0;j<2;j++){const armor=gear(equipment.armors,loadout.characters[c].armor[j]);g.itemelement[c][j+1]=armor?.element??0;g.itemelementamount[c][j+1]=armor?.elementAmount??0;}
    g.chemg_sprite_map=Object.fromEntries([...(bank.names?.()??[])].map(name=>[name,name]));
   }
-  installEngineHosts(rt,id);encounterSetup(rt,setup.n,neo?{'obj_spamton_neo_enemy':neo.objects.obj_spamton_neo_enemy}:engineEnemies(id));
+  encounterSetup(rt,setup.n,neo?{'obj_spamton_neo_enemy':neo.objects.obj_spamton_neo_enemy}:engineEnemies(id));
   if(setup.backdrop)rt.create(b.battleBack,0,0);
   // Jevil's room has its own spinning background (drawn by the host view).
   if(id==='ch1-25')rt.create(jokerBackground,0,0);

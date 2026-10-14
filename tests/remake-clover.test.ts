@@ -2,10 +2,13 @@ import {describe,it,expect} from 'vitest';
 import {GmRuntime,resolveEvent} from '../src/remake/gm/runtime';
 import {spriteBank} from '../src/remake/gm/sprites';
 import {heart,growtangle,regularBullet,afterimage,battleSolid,heroKris,heroSusie,heroRalsei} from '../src/remake/deltarune/battle';
-import {cloverBulletController,clubsBullet,clubsBulletDark,createCloverEnemy,type CloverHooks} from '../src/remake/bosses/clover';
+import {cloverBulletController,clubsBullet,clubsBulletDark,cloverEnemy} from '../src/remake/bosses/clover';
+import {writer} from '../src/remake/deltarune/writer';
+import {setSourceText} from '../src/remake/host/text';
+// Game lines are not in the repository: each line reads as its own key.
+setSourceText(new Proxy({},{get:(_t,key)=>String(key)}) as Record<string,string>);
 const bank=spriteBank({atLeast2022_1:false,optionsInfo:0,sprites:[]});
 function scene(){const rt=new GmRuntime(bank,{seed:11});rt.globals={monster:[1,0,0],monsterat:[6],monsterhp:[200],monstermaxhp:[270],monsterstatus:[0],monstercomment:[' '],mercymod:[0],mercymax:[100],mnfight:2,myfight:0,msg:[],battlemsg:[],flag:[],charcantarget:[1,1,1],targeted:[]};rt.restore(heart,999,312,162);return rt;}
-const hooks=(overrides:Partial<CloverHooks>={}):CloverHooks=>({text:key=>key,writerExists:()=>false,enemySpeech:()=>{},battleText:()=>{},attackPhase:()=>{},defeat:()=>{},monsterSetup:()=>{},...overrides});
 const step=(rt:GmRuntime,s:ReturnType<GmRuntime['create']>)=>resolveEvent(s.object,'step')!(s,rt);
 describe('Clover original attack objects',()=>{
  it('captures box bounds once and scales spawn pacing with living enemy population',()=>{
@@ -33,7 +36,7 @@ describe('Clover original attack objects',()=>{
   for(let i=0;i<30;i++)step(rt,c);expect(rt.first(clubsBulletDark)?.direction).toBe(45);
  });
  it('selects its own controller on frame 12, then consumes the battle-message roll',()=>{
-  const rt=scene(),expected=scene().random,type=expected.choose(0,1)===0?2:4,message=expected.choose(0,1,2,3,4,5);const enemy=rt.create(createCloverEnemy(hooks()),480,90);enemy.myself=0;enemy.rtimer=0;enemy.mytarget=2;
+  const rt=scene(),expected=scene().random,type=expected.choose(0,1)===0?2:4,message=expected.choose(0,1,2,3,4,5);const enemy=rt.create(cloverEnemy,480,90);enemy.myself=0;enemy.rtimer=0;enemy.mytarget=2;
   for(let i=0;i<11;i++)step(rt,enemy);expect(rt.count(cloverBulletController)).toBe(0);expect(rt.globals.turntimer).toBe(150);step(rt,enemy);
   expect([rt.first(cloverBulletController)?.type,rt.first(cloverBulletController)?.damage,enemy.turns,enemy.attacked]).toEqual([type,30,1,1]);expect(rt.globals.battlemsg[0]).toContain(`_${134+message}_0`);expect(rt.random.snapshot()).toEqual(expected.snapshot());
  });
@@ -51,15 +54,20 @@ describe('Clover original attack objects',()=>{
   rt.userEvent(split,5);expect(rt.globals.hp).toEqual([0,90,110,49]);expect(rt.globals.inv).toBe(40);expect(split.live).toBe(false);
  });
  it('draw advances hurt state and selects the spared sprite while preserving flash timing',()=>{
-  const rt=scene(),enemy=rt.create(createCloverEnemy(hooks()),400,120);enemy.myself=0;enemy.state=3;enemy.hurttimer=0;rt.globals.monsterhp[0]=130;
+  const rt=scene(),enemy=rt.create(cloverEnemy,400,120);enemy.myself=0;enemy.state=3;enemy.hurttimer=0;rt.globals.monsterhp[0]=130;
   resolveEvent(enemy.object,'draw')!(enemy,rt);expect(enemy.state).toBe(0);expect(rt.globals.monsterstatus[0]).toBe(1);expect(enemy.siner).toBe(1);
   rt.globals.mercymod[0]=100;enemy.flash=1;enemy.becomeflash=1;resolveEvent(enemy.object,'draw')!(enemy,rt);
   expect([enemy.thissprite,enemy.flash,enemy.becomeflash,enemy.fsiner]).toEqual(['spr_clubs_spared',1,0,1]);
   resolveEvent(enemy.object,'draw')!(enemy,rt);expect(enemy.flash).toBe(0);expect(enemy.fsiner).toBe(2);
  });
  it('awards each successful topic once and makes Clover tired after three disagreements',()=>{
-  let writer=false,completed=0;const rt=scene(),enemy=rt.create(createCloverEnemy(hooks({writerExists:()=>writer,battleText:()=>{writer=true;},enemySpeech:()=>{writer=true;},attackPhase:()=>{completed++;rt.globals.myfight=0;}})),480,90);enemy.myself=0;
-  for(const act of [3,4,6,6]){rt.globals.myfight=3;enemy.acting=act;step(rt,enemy);writer=false;step(rt,enemy);writer=false;step(rt,enemy);writer=false;step(rt,enemy);}
+  // Each ACT runs until its last text is read (the writers are closed here by hand) and the turn moves on.
+  let completed=0;const rt=scene(),enemy=rt.create(cloverEnemy,480,90);enemy.myself=0;
+  for(const act of [3,4,6,6]){
+   rt.globals.myfight=3;enemy.acting=act;enemy.actcon=0;
+   for(let i=0;i<10;i++){step(rt,enemy);for(const w of rt.all(writer))rt.destroy(w);if(i>0&&enemy.actcon===0){completed++;break;}}
+   rt.globals.myfight=0;enemy.acting=0;
+  }
   expect(rt.globals.mercymod[0]).toBe(120);expect(rt.globals.monsterstatus[0]).toBe(1);expect(completed).toBe(4);
  });
  it('rejects unrelated controller types instead of silently substituting an attack',()=>{const rt=scene(),c=rt.create(cloverBulletController,0,0);c.type=77;expect(()=>step(rt,c)).toThrow(/unsupported.*77/i);});

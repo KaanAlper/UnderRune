@@ -156,7 +156,8 @@ export class GmRuntime{
  }
  private frameCount:(name:string)=>number|undefined;
  view={x:0,y:0,width:640,height:480};
- room={width:640,height:480};
+ /** The current room (GML room, room_width, room_height). */
+ room={name:'',width:640,height:480};
  globals:Record<string,any>={};
  input:GmInput={held:new Set(),pressed:new Set(),released:new Set()};
  /** Where draw calls go (absent in tests); `drawState` holds the GML draw state. */

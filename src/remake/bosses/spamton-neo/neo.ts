@@ -5,10 +5,10 @@
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {pointDistance} from '../../gm/math';
 import {afterimage,afterimageGrow,darkener,darkMarker,dmgWriter,growtangle,heart,heroKris,heroSusie,monsterParent,moveHeart,moveHeartIn,returnHeart} from '../../deltarune/battle';
-import {button3_p,findController,nextAct,randomTarget,winCombat} from '../../deltarune/controller';
+import {button3_p,findController,inputName,nextAct,randomTarget,winCombat} from '../../deltarune/controller';
 import {monsterSetup} from '../../deltarune/encounter';
 import {spellMenuSetupChapter2} from '../../deltarune/chapter2';
-import {blconSkip,bulletSpawner,heartColor,inputName,isPhase,mercyAdd2,mergeColor,moveToPointOverTime,moveToRememberXY,msgNext,msgSet,rememberXY,scriptDelayedOn,setVar,snd,turnTimer} from '../../deltarune/chapter2-battle';
+import {blconSkip,bulletSpawner,heartColor,isPhase,mercyAdd2,mergeColor,moveToPointOverTime,moveToRememberXY,msgNext,msgSet,rememberXY,scriptDelayedOn,setVar,snd,turnTimer} from '../../deltarune/chapter2-battle';
 import {battleTextDefault,destroyWriters,writer} from '../../deltarune/writer';
 import {enemyBlcon2} from '../../deltarune/chapter2-objects';
 import {sourceText} from '../../host/text';

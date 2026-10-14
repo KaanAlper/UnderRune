@@ -20,6 +20,8 @@ export const down_p=(rt:GmRuntime)=>pressed(rt,KEY.down);
 export const button1_p=(rt:GmRuntime)=>pressed(rt,KEY.z,KEY.enter);
 export const button2_p=(rt:GmRuntime)=>pressed(rt,KEY.x,KEY.shift);
 export const button3_p=(rt:GmRuntime)=>pressed(rt,KEY.c,KEY.ctrl);
+/** scr_get_input_name on a keyboard: the key's name in brackets (4 confirm, 5 cancel, 6 menu). */
+export const inputName=(n:number)=>'['+['DOWN','RIGHT','UP','LEFT','Z','X','C'][n]+']';
 const grid=(rows:number,cols:number,v:unknown)=>Array.from({length:rows},()=>new Array(cols).fill(v));
 /** scr_84_get_subst_string: ~1, ~2 ... replaced by the arguments. */
 export function subst(str:string,...args:(string|number)[]){args.forEach((a,i)=>{str=str.split('~'+(i+1)).join(String(a));});return str;}

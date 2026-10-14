@@ -2,12 +2,10 @@ import {describe,it,expect} from 'vitest';
 import fs from 'node:fs';
 import {loadSprites,restoreScene,runParity,type TraceLine,type Replay} from './parity/reference';
 import * as b from '../src/remake/deltarune/battle';
-import {cloverAttackObjects,createCloverEnemy,type CloverHooks} from '../src/remake/bosses/clover';
+import {cloverAttackObjects,cloverEnemy} from '../src/remake/bosses/clover';
 const run='ch1-8-s11-god',base='.tools/oracle/'+run,starts=[154,434,714,994];
 const ready=starts.every(f=>fs.existsSync(`${base}-f${f}.json`))&&fs.existsSync(base+'.ndjson')&&fs.existsSync('extracted/chapter1_windows/sprites.json');
-const unsupported=()=>{throw Error('Attack-only Clover parity reached unsupported host choreography');};
-const hooks:CloverHooks={text:unsupported,writerExists:unsupported,enemySpeech:unsupported,battleText:unsupported,attackPhase:unsupported,defeat:unsupported,monsterSetup:unsupported,dismissWriters:unsupported};
-const enemy=createCloverEnemy(hooks);
+const enemy=cloverEnemy;
 const objects=[b.mainchara,b.astream,b.eventManager,b.heroKris,b.heroSusie,b.heroRalsei,b.battleController,b.darkener,b.heart,b.grazebox,b.growtangle,b.afterimage,b.afterimageGrow,b.regularBullet,b.moveHeart,b.returnHeart,b.heartBurst,b.dmgWriter,b.shake,enemy,...cloverAttackObjects];
 const tracked=new Set(['obj_clubsenemy','obj_dbulletcontroller','obj_clubsbullet','obj_clubsbullet_dark','obj_regularbullet','obj_afterimage','obj_growtangle','obj_heart','obj_grazebox']);
 describe.skipIf(!ready)('Clover original attack frame parity (local recordings)',()=>{
