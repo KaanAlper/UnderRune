@@ -9,3 +9,17 @@ test('resume does not simulate hidden time',()=>{const c=new FixedClock();let n=
 test('input clears held keys and only confirms on edges',()=>{
  const i=new Input();i.press('z');expect(i.read().confirm).toBe(true);expect(i.read().confirm).toBe(false);i.press('ArrowLeft');expect(i.read().x).toBe(-1);i.clear();expect(i.read().x).toBe(0);
 });
+
+test('confirm release reaches a frame once even when the tap ends between reads',()=>{
+ const input=new Input();input.press('z');input.release('z');
+ const tap=input.read();expect(tap.confirm).toBe(true);expect(tap.shoot).toBe(false);expect(tap.shootReleased).toBe(true);
+ expect(input.read().shootReleased).toBe(false);
+});
+test('confirm aliases keep charging until the final held alias is released',()=>{
+ const input=new Input();input.press('z');input.press('Enter');input.read();input.release('z');
+ expect(input.read().shootReleased).toBe(false);input.release('Enter');expect(input.read().shootReleased).toBe(true);
+ input.release('Enter');expect(input.read().shootReleased).toBe(false);
+});
+test('clearing input drops pending release edges on focus and scene changes',()=>{
+ const input=new Input();input.press('z');input.release('z');input.clear();expect(input.read().shootReleased).toBe(false);
+});

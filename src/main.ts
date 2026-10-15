@@ -39,6 +39,7 @@ let remake:JevilPractice|EngineBattle|null=null,publicLoadout:Loadout|null=null,
 let remakeMenu=false;
 // Engine battles read key presses like the game: every press since the last game frame reaches its next frame.
 const remakePressed=new Set<number>();
+const remakeReleased=new Set<number>();
 const remakeCanvas=document.createElement('canvas');remakeCanvas.width=640;remakeCanvas.height=480;const remakeCtx=remakeCanvas.getContext('2d')!;
 let assets:AssetStore,renderer:Renderer,audio:AudioManager;
 // Local original-bytecode battles run in an iframe; source ports also work without a native install.
@@ -53,7 +54,7 @@ const menuRecords=()=>catalog.filter(r=>r.chapter===chapter);
 let bossDeck:BossDeck|null=null;
 function updatePreferences(){document.body.classList.toggle('reduced',prefs.reducedEffects);element('mute').textContent=prefs.muted?'SOUND OFF':'SOUND ON';element('mute').setAttribute('aria-pressed',String(prefs.muted));element('effects').textContent=prefs.reducedEffects?'CRT OFF':'CRT ON';element('effects').setAttribute('aria-pressed',String(prefs.reducedEffects));savePrefs(storage,prefs);}
 function cancelLoad(){sessionToken++;remakeLoad?.abort();remakeLoad=null;failedChapter=null;loading.hidden=true;error.hidden=true;busy=false;}
-function closeBattle(){native?.dispose();native=null;nativeRecord=null;remake=null;remakeView=null;remakePressed.clear();remakeMenu=false;element('outcome').hidden=true;element('stage').classList.remove('battle-over');audio?.stop();input.clear();clock.reset();}
+function closeBattle(){native?.dispose();native=null;nativeRecord=null;remake=null;remakeView=null;remakePressed.clear();remakeReleased.clear();remakeMenu=false;element('outcome').hidden=true;element('stage').classList.remove('battle-over');audio?.stop();input.clear();clock.reset();}
 function goMenu(){cancelLoad();closeBattle();scene='menu';sceneKey='';selection=Math.min(selection,menuRecords().length-1);}
 function openTheater(){cancelLoad();closeBattle();theater=new TheaterState(reducedMotion());scene='theater';sceneKey='';input.clear();}
 function showError(cause:unknown){loading.hidden=true;busy=false;element('error-text').textContent=cause instanceof Error?cause.message:String(cause);error.hidden=false;}
@@ -75,7 +76,7 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
   // The game calls randomize() when it starts: every battle gets its own random seed (tests and comparisons fix it).
   // ?seed=N repeats a run exactly (comparisons with the original's recordings).
   const fixedSeed=new URLSearchParams(location.search).get('seed'),seed=fixedSeed!==null?Number(fixedSeed)>>>0:crypto.getRandomValues(new Uint32Array(1))[0];
-  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost});{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();
+  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost});{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();remakeReleased.clear();
   remakeView=new BattleView(remakeCtx,remakeAssets.draw);remakeMenu=false;
   remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.soundGetPitch=handle=>audio.sourceGetPitch(handle);remake.rt.stopAllSounds=()=>audio.stop();
   remake.rt.sourceAudio={effect:(name,pitch,volume)=>audio.sourceEffect(name,pitch,false,volume),volume:(handle,value,frames)=>audio.sourceVolume(handle,value,frames),free:handle=>audio.sourceFree(handle),music:name=>{audio.play(name);return name;},loop:handle=>audio.sourceSetLoop(handle),pause:handle=>audio.sourceTrackPause(handle),resume:handle=>audio.sourceTrackResume(handle),position:(handle,seconds)=>audio.sourcePosition(handle,seconds),playing:handle=>audio.sourcePlaying(handle)};
@@ -163,10 +164,11 @@ function step(){
   if(keys.pause){remake.paused=!remake.paused;audio.pause(remake.paused);sceneKey='';}
   if(keys.restart&&publicLoadout){void launchRemake(menuRecords()[selection],publicLoadout).catch(showError);return;}
   const held=remake.rt.input.held;held.clear();if(keys.x<0)held.add(KEY.left);if(keys.x>0)held.add(KEY.right);if(keys.y<0)held.add(KEY.up);if(keys.y>0)held.add(KEY.down);if(keys.slow)held.add(KEY.shift);
-  if(remake.paused){remakeMenu=false;remakePressed.clear();}else{remakeMenu||=keys.menu;
+  if(remake.paused){remakeMenu=false;remakePressed.clear();remakeReleased.clear();}else{remakeMenu||=keys.menu;
+   if(keys.shootReleased)remakeReleased.add(KEY.z);
    if(keys.confirm)remakePressed.add(KEY.z);if(keys.cancel)remakePressed.add(KEY.x);if(keys.menu)remakePressed.add(KEY.c);for(const a of keys.arrows??[])remakePressed.add(KEY[a]);}
   if(!remake.paused&&!remake.outcome&&++remakeTick%2===0){
-   if(remake instanceof EngineBattle){if(keys.shoot)held.add(KEY.z);for(const k of remakePressed)remake.rt.input.pressed.add(k);remakePressed.clear();remakeMenu=false;}
+   if(remake instanceof EngineBattle){if(keys.shoot)held.add(KEY.z);for(const k of remakePressed)remake.rt.input.pressed.add(k);for(const k of remakeReleased)remake.rt.input.released.add(k);remakePressed.clear();remakeReleased.clear();remakeMenu=false;}
    // C reaches the game code as a key press on its next frame (button3_p), as the original reads it.
    if(remakeMenu)remake.rt.input.pressed.add(KEY.c);
    remakeMenu=false;remake.step();renderRemakeFrame();

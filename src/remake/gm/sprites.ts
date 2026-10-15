@@ -1,4 +1,5 @@
 // Sprite facts the runtime needs: frame count, playback speed, origin, bounding box and precise masks.
+export interface NineSlice{enabled:boolean;left:number;top:number;right:number;bottom:number;tileModes:number[]}
 export interface SpriteData{
  name:string;width:number;height:number;originX:number;originY:number;
  /** 0 automatic, 1 full image, 2 manual. */
@@ -7,6 +8,7 @@ export interface SpriteData{
  sepMasks:number;frames:number;special:boolean;playbackSpeed:number;playbackType:number;
  /** Precise masks: one bit per pixel, MSB first, rows padded to whole bytes, full sprite size. */
  masks?:Uint8Array[]|null;
+ nineSlice?:NineSlice|null;
 }
 export interface SpriteBank{get(name:string):SpriteData|undefined;names?():Iterable<string>;collisionCompat:boolean;roomSpeed:number}
 export type RawSprite=Omit<SpriteData,'masks'>&{masks?:string[]|null};

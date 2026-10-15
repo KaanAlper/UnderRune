@@ -5,7 +5,7 @@ what is left, in order. Read it fully before changing code.
 
 Current checkpoint: writer/controller chapter parts and the NEO attack controller, flying heads, support,
 walls, wire heart, phone/Pipis, phone hands, face, lasers, finale and battle-scene families are hand-ported.
-The release ledger in section 5.10 records verification and publication. Source-backed world-intro and Room End
+The release ledgers in sections 5.10–11 record verification and publication. Source-backed world-intro and Room End
 bridges are retained; this is not an archive-free or whole-game implementation. Difficulty-specific variants,
 mercy-ending acceptance and comprehensive sound traces still need additional recordings.
 
@@ -413,6 +413,34 @@ New scripts go in `tools/oracle-scripts.mjs`.
 - Every-ending acceptance, Chapter 1 full-state re-recordings, global sound traces, other Chapter 2 bosses and
   Undertale remain separate work. Original package SHA256 is unchanged:
   `047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68`.
+
+### 11. Browser release edges and nine-slice boxes (2026-10-16)
+
+- The owner reported stretched box borders, missing BIG SHOT and a suspected circling defensive effect problem.
+  Two browser defects were reproduced: Input discarded confirm-key release events, and sprite extraction dropped
+  V3NineSlice metadata. Direct-runtime shot tests had manually injected release events and could not detect the
+  public input bridge defect.
+- Input now reports one-shot logical confirm release across Z/Enter/Space aliases. The existing 60 Hz browser
+  sampler buffers it until the 30 Hz battle step, clearing it on pause, scene exit and new battles. Press/hold and
+  release responsibilities remain distinct. Real browser keydown/keyup now draws the BIG SHOT atlas frames.
+- Original Chapter 2 has two enabled nine-slice sprites, `spr_battlebg_stretch` (2-pixel corners) and its hitbox
+  (4-pixel corners). Extraction retains their metadata; the generic Canvas renderer handles stretch mode with
+  fixed-size corners, atlas trimming, tint/alpha, transforms and source undersize clipping. Captured sprites remain
+  ordinary sprites. Other tile modes throw a named unsupported error; current Chapter 2 has none enabled.
+- Both possible circling effects were investigated. Susie's Supercharge Draw output matches the original at six
+  charge levels; fast-shot release, sparks and final-shot cleanup work. Ralsei's guard follows the soul and
+  intercepts full-size regular, wall and flying-head projectiles before exposed-soul damage. An unprotected control
+  takes damage. Original generic `obj_basicbullet_sneo`, laser and Spamton-shot guard handlers do not destroy their
+  projectile; these can continue through. The generic basic projectile was reproduced hitting guard HP30→20 and
+  then soul HP120→110, matching the original handler. Guard mechanics were not changed speculatively. A reported
+  failure on another projectile needs the exact attack/trajectory, not an assumption that all shots are blocked.
+- Acceptance: 506 tests / 53 files, no skips (147.88 seconds), 18 tool tests, typecheck and Pages build pass. Four
+  graphics-browser tests pass; both production-browser battle tests pass (37.2 seconds). The final production NEO
+  test additionally checks the shipped nine-slice metadata and observes a real BIG SHOT after browser keyup
+  (18.6 seconds). All three NEO reference comparisons remain green (27880 frames total).
+- Tested artifact: `index-DwOLy-rD.js`, `neo-CI9oUwF6.js`, and the updated Chapter 2 sprite bundle. Original installed
+  package hash is unchanged. Publish these accepted files together; changing only the JavaScript would leave the
+  required nine-slice metadata absent. The guard uncertainty remains separate from the two reproduced browser bugs.
 
 ## 6. Where things are
 

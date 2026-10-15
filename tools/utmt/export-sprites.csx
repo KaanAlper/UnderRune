@@ -17,6 +17,7 @@ var info=new{
   bboxMode=s.BBoxMode,left=s.MarginLeft,right=s.MarginRight,top=s.MarginTop,bottom=s.MarginBottom,
   sepMasks=(int)s.SepMasks,frames=s.Textures.Count,
   special=s.IsSpecialType,playbackSpeed=s.GMS2PlaybackSpeed,playbackType=(int)s.GMS2PlaybackSpeedType,
+  nineSlice=s.V3NineSlice==null?null:new{enabled=s.V3NineSlice.Enabled,left=s.V3NineSlice.Left,top=s.V3NineSlice.Top,right=s.V3NineSlice.Right,bottom=s.V3NineSlice.Bottom,tileModes=s.V3NineSlice.TileModes.Select(mode=>(int)mode).ToArray()},
   masks=(int)s.SepMasks==1?s.CollisionMasks.Select(m=>Convert.ToBase64String(m.Data)).ToArray():null
  })
 };

@@ -2,9 +2,10 @@
 // colour blend (multiply), rotation (counter-clockwise degrees), scale and alpha, rectangles, circles and
 // bitmap or sprite fonts. Coordinates are room coordinates; the view offset is applied here.
 import type {GmGraphics,TextStyle} from '../gm/graphics';
+import type {NineSlice} from '../gm/sprites';
 
 export interface FrameRef{page:number;sx:number;sy:number;sw:number;sh:number;tx:number;ty:number;tw:number;th:number}
-export interface SpriteFrames{originX:number;originY:number;width:number;height:number;frames:(FrameRef|null)[]}
+export interface SpriteFrames{originX:number;originY:number;width:number;height:number;frames:(FrameRef|null)[];nineSlice?:NineSlice|null}
 export interface Glyph{x:number;y:number;w:number;h:number;shift:number;offset:number}
 export type FontData={kind:'bitmap';page:number;sx:number;sy:number;size:number;glyphs:Record<number,Glyph>}
  |{kind:'sprite';sprite:string;map:string;proportional:boolean;sep:number};
@@ -59,7 +60,32 @@ export class CanvasGraphics implements GmGraphics{
  }
  sprite(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,blend:number,alpha:number){
   const s=this.assets.sprite(name);if(!s||alpha<=0)return;const f=frameAt(s,frame);if(!f)return;
+  if(s.nineSlice?.enabled){
+   if(s.nineSlice.tileModes.some(mode=>mode!==0))throw Error(`Unsupported nine-slice tile mode: ${name}`);
+   if(xscale===0||yscale===0)return;
+   this.place(x,y,Math.sign(xscale),Math.sign(yscale),angle,alpha);
+   this.blitNineSlice(s,f,Math.abs(xscale),Math.abs(yscale),blend);this.ctx.restore();return;
+  }
   this.place(x,y,xscale,yscale,angle,alpha);this.blit(f,-s.originX,-s.originY,blend);this.ctx.restore();
+ }
+ /** Nine-slice corners retain their source size; only the centre spans scale. Atlas trimming still applies. */
+ private blitNineSlice(s:SpriteFrames,f:FrameRef,xscale:number,yscale:number,blend:number){
+  const n=s.nineSlice!,w=s.width*xscale,h=s.height*yscale;
+  const axis=(size:number,target:number,start:number,end:number)=>{
+   const middle=size-start-end,left=Math.min(start,target),right=Math.min(end,Math.max(0,target-left));
+   return {source:[0,left,left+middle,left+middle+right],dest:[0,left,target-right,target]};
+  };
+  const xs=axis(s.width,w,n.left,n.right),ys=axis(s.height,h,n.top,n.bottom);
+  const tw=f.tw||f.sw,th=f.th||f.sh,page=blend===0xffffff?this.assets.pages[f.page]:this.tinted(f,blend);
+  for(let row=0;row<3;row++)for(let col=0;col<3;col++){
+   const sl=xs.source[col],st=ys.source[row],sw=xs.source[col+1]-sl,sh=ys.source[row+1]-st;
+   const dw=xs.dest[col+1]-xs.dest[col],dh=ys.dest[row+1]-ys.dest[row];
+   if(sw<=0||sh<=0||dw<=0||dh<=0)continue;
+   const l=Math.max(sl,f.tx),t=Math.max(st,f.ty),r=Math.min(sl+sw,f.tx+tw),b=Math.min(st+sh,f.ty+th);
+   if(r<=l||b<=t)continue;
+   this.ctx.drawImage(page,(l-f.tx)*f.sw/tw+(blend===0xffffff?f.sx:0),(t-f.ty)*f.sh/th+(blend===0xffffff?f.sy:0),(r-l)*f.sw/tw,(b-t)*f.sh/th,
+    xs.dest[col]+(l-sl)*dw/sw-s.originX*xscale,ys.dest[row]+(t-st)*dh/sh-s.originY*yscale,(r-l)*dw/sw,(b-t)*dh/sh);
+  }
  }
  spritePart(name:string,frame:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number){
   const s=this.assets.sprite(name);if(!s||alpha<=0||width<=0||height<=0)return;const f=frameAt(s,frame);if(!f)return;
