@@ -222,7 +222,7 @@ function finalChaos(s:GmInstance,rt:GmRuntime){
  if(s.special===0){
   rt.sound?.('snd_joker_byebye');
   s.prevmake=0;s.special=1;s.rank=16;s.realtimer=0;s.chase=0;s.made=0;s.amount=0;s.jokertimer=0;
-  const f=darkMarker(rt,vx+320,vy-10,'spr_tallpx');s.darkfader=f.id;
+  const f=darkMarker(rt,s,vx+320,vy-10,'spr_tallpx');s.darkfader=f.id;
   f.depth=2;f.imageAlpha=0;f.imageBlend=0;f.imageXscale=200;f.imageYscale=2;
  }
  if(s.realtimer>=0&&s.realtimer<10){

@@ -3,14 +3,11 @@
 This file explains how to continue the work: the rules that must hold, how the work is verified, what is done and
 what is left, in order. Read it fully before changing code.
 
-Current checkpoint (phone-hand migration after `0442f22`): writer/controller chapter parts and the NEO attack
-controller, flying heads, support, walls, wire heart, phone/Pipis and phone-hand families are hand-ported.
-Claude's last session (`c019f36b-10fd-4c4e-913d-4d3a490ec7ea`) stopped while reading phone-hand sources; that
-continuation is now accepted. All 391 tests across 44 files, typecheck, Pages build and both production-browser
-battle checks pass. Both NEO recordings match 3960 + 5960 frames, including full state for the migrated objects.
-The face attack is next. Difficulty-99 developer bursts have source review but no dedicated focused regression.
-The earlier 750843b checkpoint is on Pages; later source milestones have not been republished. These recordings
-do not prove whole-game or every-route parity.
+Current checkpoint: writer/controller chapter parts and the NEO attack controller, flying heads, support,
+walls, wire heart, phone/Pipis, phone hands, face, lasers, finale and battle-scene families are hand-ported.
+The release ledger in section 5.10 records verification and publication. Source-backed world-intro and Room End
+bridges are retained; this is not an archive-free or whole-game implementation. Difficulty-specific variants,
+mercy-ending acceptance and comprehensive sound traces still need additional recordings.
 
 ## 1. Project in one paragraph
 
@@ -276,7 +273,8 @@ or new recording exercises them; do not silently ignore their control codes.
 
 ### 3. NEO's archived objects
 
-The remaining attack objects run from decompiled source through the interpreter (`src/source-runtime/gml.ts`):
+The battle families below now use TypeScript. Retained world and Room End bridges still use the interpreter
+(`src/source-runtime/gml.ts`); audit their dependencies before deleting any archived source:
 - the transitional host is `src/remake/host/neo.ts` (`NEO_PORTED`, `ENGINE_PORTED`, pending stubs in
   `bosses/spamton-neo/pending.ts`);
 - archived objects are marked `archived` by `createNeoSourceObject`.
@@ -302,10 +300,11 @@ Port them in the order they first appear in the recordings:
    Twelve focused tests cover mirrored joints, firing, caller loop fields, head push/HP and charged-shot
    consumption, hurtbox damage, Draw fades/flashes, and continuation after Destroy. Both NEO recordings match
    with the new objects' full state. The hurtbox is tested synthetically; it does not appear in these recordings.
-8. **Next:** the face attack (move its `ringsShots` hook from `host/neo.ts` into its definition)
-9. `obj_sneo_biglaser`, `obj_spamtonshot` (the power-up orb is already in `wireheart.ts`)
-10. the finale and final form (move the `pullsShots` hook into its definition)
-11. the scene objects
+8. **Done:** face, target, crescent and circle/square laser actors (`face.ts`, five definitions). The face owns `ringsShots`.
+9. **Done:** large laser, friendly hitbox, arm telegraph and Spamton shot (`lasers.ts`, four definitions).
+10. **Done:** finale and final form (`finale.ts`, fourteen definitions). The final form owns `pullsShots`.
+11. **Done for battle:** six scene/coaster/smoke definitions and the documented battle snapshot (`battle-scene.ts`).
+    World Create/Step and true Room End remain explicit source-backed bridges.
 
 For each port:
 - verify with both NEO runs (trace plus full state);
@@ -315,7 +314,7 @@ For each port:
 ### 4. More NEO recordings
 
 Record runs that reach:
-- the finale and final form;
+- additional finale paths (the long FIGHT recording now reaches the final form, last volley and HP-defeat sequence);
 - the spared ending;
 - Susie's Super Charge, Ralsei's fluff, the Kris throw;
 - items.
@@ -336,7 +335,7 @@ New scripts go in `tools/oracle-scripts.mjs`.
 
 ### 7. Finish NEO
 
-- Delete the archived sources:
+- After the retained world and Room End dependencies have been migrated and verified, delete the archived sources:
   - `bosses/spamton-neo/*source*`, `attack-*.ts`, `host-source.ts`, `player-source.ts`,
     `source-scene-data.ts`, `enemy-source-data.ts`, `coverage*.ts`, `body-source.ts`;
   - `tools/build-neo-host-source.mjs`, `tools/build-neo-player-source.mjs`.
@@ -389,6 +388,29 @@ New scripts go in `tools/oracle-scripts.mjs`.
   `docs/superpowers/plans/2026-10-15-neo-phonehands.md`.
 - The face attack, large laser/shot, finale, scene objects and extra route/sound recordings remain outstanding.
 
+### 10. Remaining battle families and release (2026-10-15)
+
+- Fresh original events were exported read-only to `.tools/neo-release-original-20261015/code`; the installed
+  Chapter 2 package was not modified. Audits and the release plan are under `docs/superpowers/plans/2026-10-15-neo-*`.
+- Factory order preserves migrated parents. Face and final-form hooks moved to their owning definitions. Six
+  presentation objects and battle snapshot initialization moved to `battle-scene.ts`; world callbacks remain in
+  `scene.ts`. True warped-box Room End still uses the existing dispatcher; Other 5 is not Animation End.
+- Shared additions: proportional/unmitigated damage, pitch tween and logical pitch reads, source fade-out,
+  source-owned stream cleanup and caller-required dark-marker bookkeeping. Existing damage strategies retain
+  their previous defense and knockout rules. Named/virtual browser stream handles resolve at the audio host.
+- The long FIGHT recording exposed reversed object `with` ordering for three or more instances. `withInstances`
+  preserves this snapshot rule without changing ordinary creation-order queries. It fixes finale damage-writer
+  depth/RNG ordering. Defeat-event working fields and marker return fields now persist on their source callers.
+- Acceptance: all 480 tests / 51 files pass (150.23 seconds, no skips), 18 tool tests pass, typecheck and Pages build
+  pass, and both production-browser checks pass (36.4 seconds). Three NEO recordings match 3960 + 5960 + 17960
+  frames, including migrated-object state at available dumps; the last covers frames 40–18000. Snapshots are
+  sparse early in that long run, then every 40 frames; trace positions/entities/RNG/globals are checked each frame.
+- The accepted Pages build references `index-DCPnJU8s.js` and `neo-22KN4LRH.js`. Publish that same artifact using
+  section 7; the gh-pages deployment commit records its source commit. Do not rebuild between acceptance and copy.
+- Every-ending acceptance, Chapter 1 full-state re-recordings, global sound traces, other Chapter 2 bosses and
+  Undertale remain separate work. Original package SHA256 is unchanged:
+  `047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68`.
+
 ## 6. Where things are
 
 | What | Where |
@@ -407,6 +429,7 @@ New scripts go in `tools/oracle-scripts.mjs`.
 | NEO attack controller and flying heads | `src/remake/bosses/spamton-neo/bullet-controller.ts`, `flying-heads.ts` |
 | NEO support and later attacks | `src/remake/bosses/spamton-neo/support.ts`, `walls.ts`, `wireheart.ts`, `phonecall.ts` |
 | NEO phone hands and spread shot | `src/remake/bosses/spamton-neo/phonehands.ts` |
+| NEO face, lasers, finale and battle presentation | `src/remake/bosses/spamton-neo/face.ts`, `lasers.ts`, `finale.ts`, `battle-scene.ts` |
 | Hosts | `src/remake/host/engine.ts` (Chapter 1), `src/remake/host/neo.ts` (Chapter 2) |
 | Parity helpers | `tests/parity/reference.ts` |
 

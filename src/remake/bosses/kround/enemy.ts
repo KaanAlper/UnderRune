@@ -18,9 +18,9 @@ const lang=(line:number,variant=0)=>sourceText(`obj_checkers_enemy_slash_Step_0_
 const msg=(rt:GmRuntime,line:number,index=0)=>{rt.globals.msg[index]=lang(line);};
 const kill=(rt:GmRuntime,...ids:number[])=>{for(const id of ids){const a=rt.byId(id);if(a)rt.destroy(a);}};
 /** A hero bows: hidden, replaced by a flashing bowing marker that leaves an afterimage. */
-function heroBow(rt:GmRuntime,def:GmObjectDef,sprite:string,slot:number){
+function heroBow(rt:GmRuntime,s:GmInstance,def:GmObjectDef,sprite:string,slot:number){
  const g=rt.globals,actor=rt.first(def)!;actor.visible=false;g.faceaction[slot]=0;g.charaction[slot]=0;
- const b=darkMarker(rt,actor.x,actor.y,sprite);oflashOf(b,rt);const a=checkersAfterimage(b,rt);a.hspeed=5;a.depth=b.depth+1;return b.id;
+ const b=darkMarker(rt,s,actor.x,actor.y,sprite);oflashOf(b,rt);const a=checkersAfterimage(b,rt);a.hspeed=5;a.depth=b.depth+1;return b.id;
 }
 
 function create(s:GmInstance){
@@ -69,7 +69,7 @@ function milk(s:GmInstance,rt:GmRuntime){
  if(s.scon===1){if(s.milk_counter>0)s.scon=1.5;else{destroyWriters(rt);msg(rt,119);battleTextDefault(rt,s);s.scon=1.5;}}
  if(s.scon===1.5&&!rt.exists(writer)){
   rt.sound?.('snd_magicsprinkle');destroyWriters(rt);msg(rt,129);g.turntimer=999;battleTextDefault(rt,s);
-  const m=darkMarker(rt,s.x-100,s.y+60,'spr_checkers_milk');s.milk=m.id;m.imageSpeed=0;m.imageXscale=4;m.imageYscale=4;m.imageAlpha=0;m.depth=s.depth-1;s.scon=2;s.milktimer=0;
+  const m=darkMarker(rt,s,s.x-100,s.y+60,'spr_checkers_milk');s.milk=m.id;m.imageSpeed=0;m.imageXscale=4;m.imageYscale=4;m.imageAlpha=0;m.depth=s.depth-1;s.scon=2;s.milktimer=0;
  }
  if(s.scon===2){const m=rt.byId(s.milk)!;m.imageXscale-=.2;m.imageYscale-=.2;m.imageAlpha+=.1;s.milktimer+=1;if(s.milktimer>=10){s.scon=3;s.milktimer=0;m.imageAlpha=1.4;}}
  if(s.scon===3){s.milktimer+=1;if(s.milktimer>=25){s.scon=4;s.milktimer=0;}}
@@ -107,9 +107,9 @@ function acts(s:GmInstance,rt:GmRuntime){
   else{msg(rt,g.flag[246]===1?277:282);msg(rt,g.flag[246]===1?278:283,1);s.checked=1;}
   battleTextDefault(rt,s);
  }
- if(s.acting===2&&s.actcon===0){bowCrown(s,false);msg(rt,296);s.bowkris=heroBow(rt,heroKris,'spr_krisb_bow',0);rt.sound?.('snd_item');battleTextDefault(rt,s);s.actcon=20;}
+ if(s.acting===2&&s.actcon===0){bowCrown(s,false);msg(rt,296);s.bowkris=heroBow(rt,s,heroKris,'spr_krisb_bow',0);rt.sound?.('snd_item');battleTextDefault(rt,s);s.actcon=20;}
  if(s.actcon===20&&!rt.exists(writer)){
-  s.visible=false;const b=darkMarker(rt,s.x,s.y,'spr_checkers_bow');s.bowcheck=b.id;b.imageSpeed=.334;g.fc=0;g.typer=4;msg(rt,327);
+  s.visible=false;const b=darkMarker(rt,s,s.x,s.y,'spr_checkers_bow');s.bowcheck=b.id;b.imageSpeed=.334;g.fc=0;g.typer=4;msg(rt,327);
   if(s.ralsei_lecture===0&&s.secondtime===0)lecture(s,rt);
   if(s.thrown===0&&s.secondtime===1&&s.bowcounter>=0&&s.bowcounter<=2){
    g.fc=2;g.fe=s.bowcounter===2?8:3;g.typer=45;
@@ -119,10 +119,10 @@ function acts(s:GmInstance,rt:GmRuntime){
  }
  if(s.actcon===21&&!rt.exists(writer)){kill(rt,s.bowkris,s.bowcheck);s.visible=true;for(const k of rt.all(heroKris))k.visible=true;s.actcon=1;}
  if(s.secondtime===0&&s.acting===3&&s.actcon===0){
-  bowCrown(s,true);msg(rt,398);s.bowkris=heroBow(rt,heroKris,'spr_krisb_bow',0);s.bowral=heroBow(rt,heroRalsei,'spr_ralseib_bow',1);rt.sound?.('snd_item');battleTextDefault(rt,s);s.actcon=30;
+  bowCrown(s,true);msg(rt,398);s.bowkris=heroBow(rt,s,heroKris,'spr_krisb_bow',0);s.bowral=heroBow(rt,s,heroRalsei,'spr_ralseib_bow',1);rt.sound?.('snd_item');battleTextDefault(rt,s);s.actcon=30;
  }
  if(s.actcon===30&&!rt.exists(writer)){
-  s.visible=false;const b=darkMarker(rt,s.x,s.y,'spr_checkers_bow');s.bowcheck=b.id;b.imageSpeed=.5;msg(rt,442);if(s.ralsei_lecture===0&&s.secondtime===0)lecture(s,rt);battleTextDefault(rt,s);s.actcon=31;
+  s.visible=false;const b=darkMarker(rt,s,s.x,s.y,'spr_checkers_bow');s.bowcheck=b.id;b.imageSpeed=.5;msg(rt,442);if(s.ralsei_lecture===0&&s.secondtime===0)lecture(s,rt);battleTextDefault(rt,s);s.actcon=31;
  }
  if(s.actcon===31&&!rt.exists(writer)){kill(rt,s.bowral,s.bowkris,s.bowcheck);s.visible=true;for(const k of rt.all(heroKris))k.visible=true;for(const r of rt.all(heroRalsei))r.visible=true;s.actcon=1;}
  if(s.secondtime===1&&s.acting===3&&s.actcon===0){
@@ -140,7 +140,7 @@ function acts(s:GmInstance,rt:GmRuntime){
  if(s.actcon===1&&!rt.exists(writer)){s.actcon=0;if(s.crown>=100){g.mercymod[s.myself]=999;s.actcon=50;}else attackPhase(rt);}
  if(s.actcon===10&&!rt.exists(writer)){
   s.actcon=11;s.alarm[4]=30;for(const h of rt.all(heroSusie))h.visible=false;for(const h of rt.all(heroRalsei))h.visible=false;
-  s.thrown=1;const sus=rt.first(heroSusie)!;s.trsus=darkMarker(rt,sus.x,sus.y,'spr_susieb_throwralseiready').id;rt.sound?.('snd_grab');
+  s.thrown=1;const sus=rt.first(heroSusie)!;s.trsus=darkMarker(rt,s,sus.x,sus.y,'spr_susieb_throwralseiready').id;rt.sound?.('snd_grab');
  }
  if(s.actcon===12){g.fe=7;msg(rt,578);msg(rt,579,1);battleText(rt,s);s.actcon=13;}
  if(s.actcon===13&&!rt.exists(writer))s.actcon=0;

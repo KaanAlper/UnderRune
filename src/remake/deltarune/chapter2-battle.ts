@@ -132,6 +132,20 @@ export function bulletInherit2(caller:GmInstance,recipient:GmInstance){
  if(!eq(caller.grazetimer,-1))recipient.grazetimer=0;
  recipient.element=caller.element;
 }
+/** obj_lerppitch interpolates the live sound's logical pitch in the game frame loop. */
+export const lerpPitch:GmObjectDef={name:'obj_lerppitch',index:933,depth:0,events:{
+ create:s=>{Object.assign(s,{sndtarget:-1,targetpitch:1,frames:0,maxframes:10});},
+ user0:(s,rt)=>{s.initpitch=rt.soundGetPitch?.(s.sndtarget)??1;},
+ step:(s,rt)=>{
+  s.frames+=1;const pitch=s.initpitch+(s.targetpitch-s.initpitch)*(s.frames/s.maxframes);
+  rt.soundPitch?.(s.sndtarget,pitch);if(s.frames>=s.maxframes)rt.destroy(s);
+ },
+}};
+/** snd_pitch_time replaces every prior tween for that sound, then samples its current pitch. */
+export function sndPitchTime(rt:GmRuntime,handle:number|string,pitch:number,frames:number){
+ for(const t of rt.all(lerpPitch))if(t.sndtarget===handle)rt.destroy(t);
+ const t=rt.create(lerpPitch,0,0);t.sndtarget=handle;t.targetpitch=pitch;t.maxframes=frames;rt.userEvent(t,0);return t;
+}
 /** draw_monster_body_part_ext: a body part, with the enemy's white flash over it. */
 export function drawBodyPart(s:GmInstance,rt:GmRuntime,sprite:string,frame:number,x:number,y:number,xs:number,ys:number,angle:number,blend:number,alpha:number){
  rt.drawSprite(sprite,frame,x,y,xs,ys,angle,blend,alpha);

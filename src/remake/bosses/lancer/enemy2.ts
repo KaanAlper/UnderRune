@@ -72,7 +72,7 @@ function actsDone(s:GmInstance,rt:GmRuntime){
  if(s.actcon===1&&!rt.exists(writer)){s.actcon=0;attackPhase(rt);}
  if(s.actcon===2&&!rt.exists(writer)){
   sndFreeAll(rt);rt.sound?.('snd_laz_c');
-  const black=darkMarker(rt,rt.view.x-20,rt.view.y-20,'spr_pixel_white');black.imageBlend=C.black;black.depth=-10000;black.imageXscale=900;black.imageYscale=900;
+  const black=darkMarker(rt,s,rt.view.x-20,rt.view.y-20,'spr_pixel_white');black.imageBlend=C.black;black.depth=-10000;black.imageXscale=900;black.imageYscale=900;
   s.actcon=3;s.acttimer=0;
   // The game hands over to obj_lancerbattle2_event's scene; the remake ends the battle here.
   rt.pendingRoom='battle_end';

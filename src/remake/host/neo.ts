@@ -21,10 +21,9 @@ import {installSourceSurfaces} from './surfaces';
 import {spamtonNeo,hitDetector} from '../bosses/spamton-neo/neo';
 import * as pending from '../bosses/spamton-neo/pending';
 import {battleBalloon2,battleCleanup,growtangle2} from '../deltarune/chapter2-objects';
-import {moveToPoint,scriptDelayed} from '../deltarune/chapter2-battle';
+import {lerpPitch,moveToPoint,scriptDelayed} from '../deltarune/chapter2-battle';
 import {shotAfterimage,shotHit,soulSpark,superchargeEnd,yellowShot} from '../deltarune/yellow-soul';
 import {vineCut,vineTransition,vineWeak} from '../bosses/spamton-neo/vines';
-import type {BattleHooks,HookedDef} from '../deltarune/rules';
 import {createSneoBulletController,sneoBulletController} from '../bosses/spamton-neo/bullet-controller';
 import {createFlyingHeads} from '../bosses/spamton-neo/flying-heads';
 import {createNeoSupport} from '../bosses/spamton-neo/support';
@@ -32,9 +31,13 @@ import {createNeoWalls} from '../bosses/spamton-neo/walls';
 import {createNeoWireHeart} from '../bosses/spamton-neo/wireheart';
 import {createNeoPhonecall} from '../bosses/spamton-neo/phonecall';
 import {createNeoPhonehands} from '../bosses/spamton-neo/phonehands';
+import {createNeoFace} from '../bosses/spamton-neo/face';
+import {createNeoLasers} from '../bosses/spamton-neo/lasers';
+import {createNeoFinale} from '../bosses/spamton-neo/finale';
+import {fadeOut} from '../deltarune/fades';
 
 /** Chapter 2 objects that run as hand-written code (the rest still run from the local source archive). */
-const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed,
+const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle2,battleCleanup,moveToPoint,scriptDelayed,lerpPitch,fadeOut,
  yellowShot,shotAfterimage,shotHit,superchargeEnd,soulSpark,vineCut,vineTransition,vineWeak];
 /** Shared engine objects whose Chapter 2 source versions are replaced by the engine's own (with its chapter rules). */
 const ENGINE_PORTED=new Set(['obj_heart','obj_grazebox','obj_moveheart','obj_collidebullet','obj_regularbullet']);
@@ -46,6 +49,9 @@ export function installNeoHost(rt:GmRuntime){
  const object=(name:string)=>{const def=objects[name];if(!def)throw Error(`Chapter 2 resource not registered: ${name}`);return def;};
  const streamNames=new Map<number,string>(),pitches=new Map<number|string,number>();let nextStream=-100;
  const audioHandle=(value:number|string)=>streamNames.get(Number(value))??value;
+ rt.soundPitch??=(handle,pitch)=>{pitches.set(audioHandle(handle),pitch);};
+ rt.soundGetPitch??=handle=>pitches.get(audioHandle(handle))??1;
+ rt.soundFree??=handle=>{rt.sourceAudio?.free(audioHandle(handle));};
  installSourceSurfaces(rt);
  const host:NeoSceneHost={object,objectIndex:index=>{const name=namesByIndex.get(index);return name?objects[name]:undefined;},text:sourceText,scripts:{...neoEnemyUtilityScriptSources,...neoHostScripts,...attackScriptSources},room:'room_dw_mansion_b_east',
   battleBoundary:(_s,r)=>{r.pendingRoom='battle_end';},
@@ -84,7 +90,7 @@ export function installNeoHost(rt:GmRuntime){
     case 'snd_pitch':pitches.set(args[0],args[1]);return r.soundPitch?.(audioHandle(args[0]),args[1]);
     case 'audio_sound_get_pitch':return pitches.get(args[0])??1;
     case 'snd_volume':case 'mus_volume':return r.sourceAudio?.volume(audioHandle(args[0]),args[1],args[2]??0);
-    case 'snd_free':r.sourceAudio?.free(audioHandle(args[0]));streamNames.delete(args[0]);return;
+    case 'snd_free':{const freed=battle.sndFree(r,s,args[0]);if(!freed&&streamNames.has(args[0]))r.soundFree?.(args[0]);streamNames.delete(args[0]);return;}
     case 'mus_play':return r.sourceAudio?.music(streamNames.get(args[0])??args[0])??args[0];
     case 'mus_loop':return r.sourceAudio?.loop(audioHandle(args[0]));
     case 'snd_pause':return r.sourceAudio?.pause(audioHandle(args[0]));
@@ -122,9 +128,6 @@ export function installNeoHost(rt:GmRuntime){
  Object.assign(objects,createNeoAttackObjects(host));
  Object.assign(objects,createNeoSceneObjects(host));
  for(const [name,record] of Object.entries(neoHostObjectSources))if(!ENGINE_PORTED.has(name))objects[name]=createNeoSourceObject(host,record.metadata,record.sources);
- // Until NEO's face attack and final form are ported, their yellow-soul hooks are attached here.
- (objects.obj_sneo_faceattack as HookedDef&{hooks?:BattleHooks}).hooks={ringsShots:o=>o.init===1};
- (objects.obj_sneo_final_forme as HookedDef&{hooks?:BattleHooks}).hooks={pullsShots:o=>[o.x+122,o.y+146]};
  // Hand-ported Chapter 2 objects replace their source versions; their Chapter 1 parents become the Chapter 2 ones.
  const portedAliases:(readonly [GmObjectDef,GmObjectDef])[]=[];
  const canonical=(def:GmObjectDef):GmObjectDef=>{
@@ -133,7 +136,7 @@ export function installNeoHost(rt:GmRuntime){
  };
  // Each factory runs after the ones before it are registered, so the parents and objects it looks up are the
  // hand-written ones.
- const factories:(()=>GmObjectDef[])[]=[()=>NEO_PORTED,()=>createNeoSupport(object),()=>[createSneoBulletController(object)],()=>createFlyingHeads(object),()=>createNeoWalls(object),()=>createNeoWireHeart(object),()=>createNeoPhonecall(object),()=>createNeoPhonehands(object)];
+ const factories:(()=>GmObjectDef[])[]=[()=>NEO_PORTED,()=>createNeoSupport(object),()=>[createSneoBulletController(object)],()=>createFlyingHeads(object),()=>createNeoWalls(object),()=>createNeoWireHeart(object),()=>createNeoPhonecall(object),()=>createNeoPhonehands(object),()=>createNeoFace(object),()=>createNeoLasers(object),()=>createNeoFinale(object)];
  for(const make of factories)for(const def of make()){
   const previous=objects[def.name],c=canonical(def);objects[def.name]=c;
   // Archived attack closures may retain their own registry's old definition. Their object selectors must

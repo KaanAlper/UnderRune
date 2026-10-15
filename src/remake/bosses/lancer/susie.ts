@@ -103,7 +103,7 @@ function susieActs(s:GmInstance,rt:GmRuntime){
   for(const o of rt.all(susieEnemy))o.lullabied=s.lullabied===0?1:0;
   g.msg[0]=LS(197);
   for(const h of rt.all(heroRalsei))h.visible=false;
-  const r=rt.first(heroRalsei);const sing=darkMarker(rt,r?.x??0,r?.y??0,'spr_ralseib_sing');sing.imageSpeed=0.2;s.ralsing=sing.id;
+  const r=rt.first(heroRalsei);const sing=darkMarker(rt,s,r?.x??0,r?.y??0,'spr_ralseib_sing');sing.imageSpeed=0.2;s.ralsing=sing.id;
   s.lullatimer=0;battleTextDefault(rt,s);s.actcon=10;
  }
  if(s.actcon===10){s.lullatimer+=1;if(s.lullatimer>=30)s.actcon=11;}
@@ -124,7 +124,7 @@ function susiePacified(s:GmInstance,rt:GmRuntime){
   const p=rt.first(spellPhase);
   if(p&&p.spelltimer>=15){
    s.pacifytimer=0;s.pacifycon=2;for(const l of rt.all(lancerEnemy3))l.visible=false;
-   const t=darkMarker(rt,s.x-40,s.y+rt.spriteHeight(s),'spr_lancerbike');t.depth=s.depth-2;s.temp_l=t.id;
+   const t=darkMarker(rt,s,s.x-40,s.y+rt.spriteHeight(s),'spr_lancerbike');t.depth=s.depth-2;s.temp_l=t.id;
   }
  }
  if(s.pacifycon===2){rt.sound?.('snd_lancerwhistle');const t=rt.byId(s.temp_l);if(t){const o=oflashOf(t,rt);o.flashcolor=0xff0000;}s.pacifycon=3;}
@@ -271,7 +271,7 @@ function lancerActs(s:GmInstance,rt:GmRuntime){
  }
  if(s.actcon===20&&!rt.exists(writer)){
   s.visible=false;for(const su of rt.all(susieEnemy))su.visible=false;
-  const block=darkMarker(rt,s.x,s.y,'spr_lancerbike_earcover');block.depth=s.depth;s.blocklan=block.id;
+  const block=darkMarker(rt,s,s.x,s.y,'spr_lancerbike_earcover');block.depth=s.depth;s.blocklan=block.id;
   rt.sound?.('snd_bell');g.msg[0]=LL(314);susFace(rt,1,2);g.msg[2]=LL(316);battleTextDefault(rt,s);s.actcon=21;
  }
  if(s.actcon===21&&!rt.exists(writer)){

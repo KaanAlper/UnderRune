@@ -93,8 +93,23 @@ export function moveHeartIn(rt:GmRuntime){
  const k=rt.first(heroKris)!;return rt.create(moveHeart,k.x+10,k.y+40);
 }
 export const astream:GmObjectDef={name:'obj_astream',index:134,depth:-200,sprite:'spr_heart',events:{
+ create:s=>{s.mystream=999;s.bstream=0;s.songname='nosong.ogg';},
+ destroy:(s,rt)=>{freeStream(rt,s.mystream);},
  draw:(s,rt)=>{const m=rt.first(mainchara);if(m){s.x=m.x+rt.random.random(20);s.y=m.y+rt.random.random(20);}},
 }};
+/** snd_free keeps stream ownership in obj_astream; its Destroy event releases the backend stream. */
+export function sndFree(rt:GmRuntime,caller:GmInstance,handle:number|string){
+ const holders=rt.all(astream);let freed=0;
+ if(holders.length){
+ caller._xstream=handle;
+ for(const a of holders)a.bstream=handle;
+ for(const a of rt.withInstances(astream))if(a.live&&(a.bstream===a.mystream||eq(a.bstream,a.mystream))){rt.destroy(a);freed+=1;}
+ }
+ // Browser music starts with named backend handles rather than source numeric stream holders.
+ if(!freed&&typeof handle==='string'){freeStream(rt,handle);freed+=1;}
+ return freed;
+}
+function freeStream(rt:GmRuntime,handle:number|string){if(rt.soundFree)rt.soundFree(handle);else rt.sourceAudio?.free(handle);}
 
 /** Per chapter: from Chapter 2 an afterimage's fading speed is its own variable (fadeSpeed), so makers can change it. */
 const AFTERIMAGE:Record<number,{ownSpeed:boolean}>={1:{ownSpeed:false},2:{ownSpeed:true}};
@@ -255,9 +270,9 @@ export function bulletInit(s:GmInstance){
 export const collideBullet:GmObjectDef={name:'obj_collidebullet',index:201,parent:bulletParent,events:{
  // Event 15 (user 5): it hits the soul.
  user5:(s,rt)=>{
-  if(s.active!==1)return;
-  if(s.target!==3)damage(s,rt);else damageAll(s,rt);
-  if(!forChapter(rt,BULLETS,'obj_collidebullet').v2||s.destroyonhit===1)rt.destroy(s);
+  if(!eq(s.active,1))return;
+  if(!eq(s.target,3))damage(s,rt);else damageAll(s,rt);
+  if(!forChapter(rt,BULLETS,'obj_collidebullet').v2||eq(s.destroyonhit,1))rt.destroy(s);
  },
 }};
 /** The usual bullet: default damage values, removed once well outside the view. */
@@ -304,8 +319,8 @@ export const battleBack:GmObjectDef={name:'obj_battleback',index:307,depth:10000
 }};
 /** A plain sprite holder (scr_marker). */
 export const marker:GmObjectDef={name:'obj_marker',index:86};
-export function darkMarker(rt:GmRuntime,x:number,y:number,sprite:string){
- const m=rt.create(marker,x,y);m.sprite=sprite;m.imageSpeed=0;m.imageXscale=2;m.imageYscale=2;return m;
+export function darkMarker(rt:GmRuntime,caller:GmInstance,x:number,y:number,sprite:string){
+ const m=rt.create(marker,x,y);caller.thismarker=m.id;m.sprite=sprite;m.imageSpeed=0;m.imageXscale=2;m.imageYscale=2;return m;
 }
 /** A spared enemy: it flashes white, slides away as fading afterimages and sheds spare stars. All of it runs in Draw. */
 export const spareAnim:GmObjectDef={name:'obj_spareanim',index:306,events:{
@@ -578,6 +593,15 @@ function partyHpAverage(rt:GmRuntime){
 }
 /** scr_damage: a bullet hits its target (a party slot, 3 for everyone, from Chapter 2 also 4 for "someone"). */
 export function damage(s:GmInstance,rt:GmRuntime){
+ damageContact(s,rt,{defense:true,defendDenominator:3,knockoutHook:true});
+}
+/** Contact which keeps elemental resistance but skips defense and defending reduction. */
+export function damageUnmitigated(s:GmInstance,rt:GmRuntime){
+ if(!lt(rt.globals.inv,0))return;
+ rt.globals.damage_cache=hpOf(rt);
+ damageContact(s,rt,{defense:false,defendDenominator:2,knockoutHook:false});
+}
+function damageContact(s:GmInstance,rt:GmRuntime,contact:{defense:boolean;defendDenominator:number;knockoutHook:boolean}){
  const g=rt.globals,r=forChapter(rt,DAMAGE,'scr_damage');
  if(g.inv>=0||(r.godSwitch&&g.chemg_god_mode))return;
  const before=hpOf(rt);
@@ -598,8 +622,8 @@ export function damage(s:GmInstance,rt:GmRuntime){
  }
  s.chartarget=3;let td=s.damage;
  if(s.target<3){
-  td=r.defense(rt,td,s.target);s.chartarget=g.char[s.target];
-  if(g.charaction[s.target]===10)td=Math.ceil(2*td/3);
+  if(contact.defense)td=r.defense(rt,td,s.target);s.chartarget=g.char[s.target];
+  if(g.charaction[s.target]===10)td=Math.ceil(2*td/contact.defendDenominator);
   if(r.elements)td=Math.ceil(td*elementReduction(rt,element,g.char[s.target]));
   if(lt(td,1))td=1;
  }
@@ -615,7 +639,7 @@ export function damage(s:GmInstance,rt:GmRuntime){
   if(le(g.hp[ct],0)){s.doomtype=4;g.hp[ct]-=round(td/4);s.hpdiff=round(td/4);}
   else{
    g.hp[ct]-=td;
-   if(le(g.hp[ct],0)&&withHook(rt,'catchesKnockout').some(([e,h])=>h(e,rt)))g.hp[ct]=1;
+   if(contact.knockoutHook&&le(g.hp[ct],0)&&withHook(rt,'catchesKnockout').some(([e,h])=>h(e,rt)))g.hp[ct]=1;
    if(le(g.hp[ct],0)){s.hpdiff=Math.abs(g.hp[ct]-g.maxhp[ct]/2);s.doomtype=4;g.hp[ct]=round(-g.maxhp[ct]/2);dead(rt,s.target);}
   }
   const ci=rt.byId(g.charinstance[s.target])!;
@@ -644,6 +668,57 @@ export function damageAll(s:GmInstance,rt:GmRuntime){
  const before=hpOf(rt);s.remdamage=s.damage;s._temptarget=s.target;
  for(s.ti=0;s.ti<3;s.ti+=1){g.inv=-1;s.damage=s.remdamage;s.target=s.ti;if(gt(g.hp[g.char[s.ti]],0)&&g.char[s.ti]!==0)damage(s,rt);}
  g.inv=g.invc*40;s.target=s._temptarget;damageCheck(rt,before);
+}
+/** scr_damage_proportional: late attack contact uses current HP bands, then the old defense calculation.
+ * It leaves the old selector's chosen target and source working fields on its caller. */
+export function damageProportional(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals;if(!lt(g.inv,0))return;
+ const before=hpOf(rt);g.damage_cache=[...before];
+ if(eq(s.target,4)){randomTarget(s,rt);s.target=s.mytarget;}
+ if(lt(s.target,3)&&le(g.hp[g.char[s.target]],0)){
+  randomTarget(s,rt);s.target=s.mytarget;
+  const h=rt.byId(g.charinstance[s.target]);if(h){h.imageBlend=C.white;h.darkify=0;}
+ }
+ s.chartarget=3;
+ const targetChar=g.char[s.target],hp=g.hp[targetChar],max=g.maxhp[targetChar];
+ if(gt(hp,max/2))s.tdamage=Math.ceil(max/5);
+ else if(gt(hp,max/5))s.tdamage=Math.ceil(max/10);
+ else if(gt(hp,max/20))s.tdamage=Math.ceil(max/25);
+ else if(gt(hp,1))s.tdamage=hp-1;
+ else s.tdamage=25;
+ if(lt(s.target,3)){
+  s.tdamage=Math.ceil(s.tdamage-g.battledf[s.target]*3);s.chartarget=g.char[s.target];
+  if(g.charaction[s.target]===10)s.tdamage=Math.ceil(2*s.tdamage/3);
+  if(lt(s.tdamage,1))s.tdamage=1;
+ }
+ if(!rt.exists(shake))rt.create(shake,0,0);
+ const hero=rt.byId(g.charinstance[s.target]);if(hero){hero.hurt=1;hero.hurttimer=0;}
+ s.hpdiff=s.tdamage;
+ for(const w of rt.all(dmgWriter))if(ge(w.delaytimer,1))w.killactive=1;
+ s.doomtype=-1;for(const h of rt.all(heart))h.dmgnoise=1;
+ if(lt(s.target,3)){
+  if(le(g.hp[s.chartarget],0)){
+   s.doomtype=4;g.hp[s.chartarget]-=round(s.tdamage/4);s.hpdiff=round(s.tdamage/4);
+  }else{
+   g.hp[s.chartarget]-=s.tdamage;
+   if(le(g.hp[s.chartarget],0)){
+    s.hpdiff=Math.abs(g.hp[s.chartarget]-g.maxhp[s.chartarget]/2);s.doomtype=4;
+    g.hp[s.chartarget]=round(-g.maxhp[s.chartarget]/2);dead(rt,s.target);
+   }
+  }
+  const h=rt.byId(g.charinstance[s.target])!;
+  const w=rt.create(dmgWriter,h.x,h.y+h.myheight-24);s.dmgwriter=w.id;w.damage=s.hpdiff;w.type=s.doomtype;
+ }
+ if(eq(s.target,3))for(s.hpi=0;s.hpi<3;s.hpi+=1){
+  s.chartarget=g.char[s.hpi];
+  if(ge(g.hp[s.chartarget],0)){
+   g.hp[s.chartarget]-=g.charaction[s.hpi]===10?Math.ceil(s.tdamage/2):s.tdamage;
+   if(le(g.hp[s.chartarget],0))g.hp[s.chartarget]=round(-g.maxhp[0]/2);
+  }
+ }
+ g.inv=g.invc*40;damageCheck(rt,before);s.gameover=1;
+ for(let n=0;n<3;n++)if(g.char[n]!==0&&gt(g.hp[g.char[n]],0))s.gameover=0;
+ if(s.gameover===1)gameOver(rt);
 }
 /** snd_free_all: every sound stops, and the music stream object (obj_astream) goes with it. */
 export function sndFreeAll(rt:GmRuntime){rt.stopAllSounds?.();for(const a of rt.all(astream))rt.destroy(a);}

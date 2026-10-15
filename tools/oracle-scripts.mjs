@@ -35,4 +35,5 @@ export function menuScript(totalFrames){
  }
  return script;
 }
-export const SCRIPTS={z:zScript,menu:menuScript};
+// Separate filename for a longer FIGHT replay: existing short acceptance recordings remain intact.
+export const SCRIPTS={z:zScript,zlong:zScript,menu:menuScript};

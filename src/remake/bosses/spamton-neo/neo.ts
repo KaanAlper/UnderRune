@@ -3,8 +3,8 @@
 // Kris throw, the cut wires as mercy rises, and both endings (HP to zero, or every wire cut). The side-B route's
 // branches (scr_sideb_get_phase() > 2, which encounter 61 never reaches here) are left out. The body is in body.ts.
 import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
-import {pointDistance} from '../../gm/math';
-import {afterimage,afterimageGrow,darkener,darkMarker,dmgWriter,growtangle,heart,heroKris,heroSusie,monsterParent,moveHeart,moveHeartIn,returnHeart} from '../../deltarune/battle';
+import {ge,gt,lt,pointDistance} from '../../gm/math';
+import {afterimage,afterimageGrow,damageUnmitigated,darkener,darkMarker,dmgWriter,growtangle,heart,heroKris,heroSusie,monsterParent,moveHeart,moveHeartIn,returnHeart,sndFree} from '../../deltarune/battle';
 import {button3_p,findController,inputName,nextAct,randomTarget,winCombat} from '../../deltarune/controller';
 import {monsterSetup} from '../../deltarune/encounter';
 import {spellMenuSetupChapter2} from '../../deltarune/chapter2';
@@ -345,10 +345,10 @@ function lostEnding(s:GmInstance,rt:GmRuntime){
    if(t===120){s.violentendflash=1;s.endtimer=140;}
    if(t===151){
     rt.soundStop?.('snd_sneo_overpower');for(const a of rt.all(afterimageGrow))rt.destroy(a);snd(rt,'snd_explosion');
-    const w=darkMarker(rt,-10,-10,'spr_pixel_white');w.imageXscale=999;w.imageYscale=999;w.depth=0;w.imageAlpha=0;s.whiteall=w.id;
+    const w=darkMarker(rt,s,-10,-10,'spr_pixel_white');w.imageXscale=999;w.imageYscale=999;w.depth=0;w.imageAlpha=0;s.whiteall=w.id;
    }
    if(t>150&&t<162){const w=rt.byId(s.whiteall);if(w)w.imageAlpha=(t-150)/11;}
-   if(t===300){const b=darkMarker(rt,-10,-10,'spr_pixel_white');b.imageXscale=999;b.imageYscale=999;b.depth=-1;b.imageAlpha=0;b.imageBlend=0;s.blackall=b.id;}
+   if(t===300){const b=darkMarker(rt,s,-10,-10,'spr_pixel_white');b.imageXscale=999;b.imageYscale=999;b.depth=-1;b.imageAlpha=0;b.imageBlend=0;s.blackall=b.id;}
    if(t>300&&t<331){const b=rt.byId(s.blackall);if(b)b.imageAlpha=(t-300)/30;}
    if(t===331&&rt.byId(s.whiteall))partyHomeAndScene(rt);
   }
@@ -401,8 +401,8 @@ function sparedEnding(s:GmInstance,rt:GmRuntime){
   if((button3_p(rt)&&s.talktimer>15)||!rt.exists(writer)){
    s.endtimer+=1;const t=s.endtimer;
    if(t===1){
-    rt.sourceAudio?.free(g.currentsong[0]);snd(rt,'snd_noise');snd(rt,'snd_damage');
-    const b4=darkMarker(rt,-10,-10,'spr_pixel_white');b4.imageXscale=999;b4.imageYscale=999;b4.depth=(sceneOf(rt)?.depth??0)-1;b4.imageAlpha=0.5;b4.imageBlend=0;
+    sndFree(rt,s,g.currentsong[0]);snd(rt,'snd_noise');snd(rt,'snd_damage');
+    const b4=darkMarker(rt,s,-10,-10,'spr_pixel_white');b4.imageXscale=999;b4.imageYscale=999;b4.depth=(sceneOf(rt)?.depth??0)-1;b4.imageAlpha=0.5;b4.imageBlend=0;
     const vine=rt.create(sneoVineCut,s.x,s.y);s.vine=vine.id;
     vine.x1=s.x+s.partx[4]+s.partxoff[4]/1.2+20+Math.sin(s.partsiner[4]/25)*1.8;vine.x2=s.x+s.partx[4]+s.partxoff[4]/1.5+32;
     vine.y1=s.y+s.party[4]-10+s.partyoff[4];vine.y2=-400;vine.depth=s.depth+1;vine.vineid=4;
@@ -412,9 +412,9 @@ function sparedEnding(s:GmInstance,rt:GmRuntime){
    }
    if(t===91){
     s.depth=-99999;
-    const b=darkMarker(rt,-10,-10,'spr_pixel_white');b.imageXscale=999;b.imageYscale=999;b.depth=0;b.imageAlpha=1;b.imageBlend=0;s.blackall=b.id;s.partmode=43;
+    const b=darkMarker(rt,s,-10,-10,'spr_pixel_white');b.imageXscale=999;b.imageYscale=999;b.depth=0;b.imageAlpha=1;b.imageBlend=0;s.blackall=b.id;s.partmode=43;
    }
-   if(t===330){const b=darkMarker(rt,-10,-10,'spr_pixel_white');b.imageXscale=999;b.imageYscale=999;b.imageAlpha=1;b.imageBlend=0;b.depth=-999999;s.blackall2=b.id;}
+   if(t===330){const b=darkMarker(rt,s,-10,-10,'spr_pixel_white');b.imageXscale=999;b.imageYscale=999;b.imageAlpha=1;b.imageBlend=0;b.depth=-999999;s.blackall2=b.id;}
    if(t===450&&rt.byId(s.blackall2))partyHomeAndScene(rt);
   }
   if(s.ballooncon===0&&s.endtimer===0){s.siner+=3;for(let i=0;i<8;i++)s.partsiner[i]+=0.9;}
@@ -462,7 +462,7 @@ function endings(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself;
  if(s.endcon===1){
   s.endtimer+=1;
-  if(s.endtimer===1){rt.sourceAudio?.free(g.batmusic[0]);rt.userEvent(s,3);}
+  if(s.endtimer===1){sndFree(rt,s,g.batmusic[0]);rt.userEvent(s,3);}
   if(s.endtimer>0&&s.endtimer<91){const sc=sceneOf(rt);if(sc){sc.trackspeed=-15+15*(s.endtimer/90);sc.cityscape_speed_max=5-5*(s.endtimer/90);}}
   if(s.endtimer===91){
    s.didwejustdie=1;
@@ -533,18 +533,26 @@ function actSetup(s:GmInstance,rt:GmRuntime){
 /** Event 3: the battle's results flags (scr_monsterdefeat bookkeeping, NEO's own copy). */
 function defeatFlags(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself,f=g.flag;
+ const equal=(a:number,b:number)=>!lt(a,b)&&!gt(a,b);
  g.monstergold[3]+=g.monstergold[me];g.monsterexp[3]+=g.monsterexp[me];
- if(f[51+me]===0){f[51+me]=2;if(g.monsterhp[me]<=0)f[51+me]=1;}
- if(f[51+me]===1){f[40]+=1;if(s.fatal===1)f[44]+=1;}
- if(f[51+me]===2)f[41]+=1;
- if(f[51+me]===3)f[42]+=1;
- if(f[51+me]===5)f[43]+=1;
- if(f[51+me]===6){f[45]+=1;g.monstergold[3]+=24;}
- let frozen=0,violent=0,spared=0,pacified=0;
- for(let d=0;d<3;d++){const v=f[51+d];if(v===1)violent+=1;if(v===2)spared+=1;if(v===3)pacified+=1;if(v===6)frozen+=1;}
- if(frozen>0)f[50]=6;if(pacified>0)f[50]=3;if(spared>0)f[50]=2;if(violent>0)f[50]=1;
- if(f[50]===6)f[926]+=1;
- if(f[54]!==0){f[f[54]]=f[50];f[54]=0;}
+ if(equal(f[51+me],0)){f[51+me]=2;if(!gt(g.monsterhp[me],0))f[51+me]=1;}
+ if(equal(f[51+me],1)){f[40]+=1;if(equal(s.fatal,1))f[44]+=1;}
+ if(equal(f[51+me],2))f[41]+=1;
+ if(equal(f[51+me],3))f[42]+=1;
+ if(equal(f[51+me],5))f[43]+=1;
+ if(equal(f[51+me],6)){f[45]+=1;g.monstergold[3]+=24;}
+ s._amt_add=0;s._frozened=0;s._violenced=0;s._spared=0;s._pacified=0;
+ for(s.d_i=0;lt(s.d_i,3);s.d_i+=1){
+  const v=f[51+s.d_i];
+  if(!equal(v,0))s._amt_add+=1;
+  if(equal(v,1))s._violenced+=1;
+  if(equal(v,2))s._spared+=1;
+  if(equal(v,3))s._pacified+=1;
+  if(equal(v,6))s._frozened+=1;
+ }
+ if(gt(s._frozened,0))f[50]=6;if(gt(s._pacified,0))f[50]=3;if(gt(s._spared,0))f[50]=2;if(gt(s._violenced,0))f[50]=1;
+ if(equal(f[50],6))f[926]+=1;
+ if(!equal(f[54],0)){f[f[54]]=f[50];f[54]=0;}
 }
 /** Event 4: shooting him too fast ("funnycheat") raises his attack. */
 function funnyCheat(s:GmInstance,rt:GmRuntime){
@@ -623,7 +631,19 @@ export const spamtonNeo:HookedDef=defineEnemy({name:'obj_spamton_neo_enemy',inde
  events:{
   endStep,draw:neoBodyDraw,destroy:cleanUp,
   alarm4:s=>{s.actcon+=1;},alarm6,
-  user0:chooseNeoAttack,user1:actSetup,user3:defeatFlags,user4:funnyCheat,
+  user0:chooseNeoAttack,user1:actSetup,
+  user2:(s,rt)=>{
+   const g=rt.globals;if(!lt(g.inv,0))return;
+   s.remdamage=s.damage;s._temptarget=s.target;
+   for(s.ti=0;s.ti<3;s.ti+=1){
+    g.inv=-1;const hp=g.hp[g.char[s.ti]],max=g.maxhp[g.char[s.ti]];
+    if(gt(hp,max*0.5))s.damage=Math.floor(hp/5);
+    else if(ge(hp,max*0.15))s.damage=Math.floor(hp/10);
+    else if(lt(hp,max*0.15))s.damage=Math.floor(hp/20);
+    s.target=s.ti;if(gt(g.hp[g.char[s.ti]],0)&&g.char[s.ti]!==0)damageUnmitigated(s,rt);
+   }
+   g.inv=g.invc*40;s.target=s._temptarget;
+  },user3:defeatFlags,user4:funnyCheat,
   // Event 10 does nothing: NEO never runs the usual spare-and-leave defeat.
   user10:()=>{},
  },

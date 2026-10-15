@@ -126,7 +126,7 @@ function acts(s:GmInstance,rt:GmRuntime){
  if(s.acting===2&&s.actcon===0){
   s.actcon=5;g.msg[0]=L(247);rt.sound?.('snd_pirouette');
   const kris=rt.first(heroKris)!;for(const k of rt.all(heroKris))k.visible=false;
-  const dk=darkMarker(rt,kris.x,kris.y,'spr_krisb_pirouette');s.dancekris=dk.id;dk.imageSpeed=0.3334;dk.depth=kris.depth;
+  const dk=darkMarker(rt,s,kris.x,kris.y,'spr_krisb_pirouette');s.dancekris=dk.id;dk.imageSpeed=0.3334;dk.depth=kris.depth;
   const fx=rt.create(afterimageGrow,dk.x+28,dk.y+40);fx.sprite='spr_pirouette_fx';fx.imageXscale=2;fx.imageYscale=2;
   battleTextDefault(rt,s);
  }
@@ -161,7 +161,7 @@ function pirouette(s:GmInstance,rt:GmRuntime){
  if(c===3){g.msg[0]=L(296);s.pfactor=0.7;rt.sound?.('snd_shadowpendant');}
  if(c===4){
   for(const m of rt.all(marker))if(m.sprite==='spr_uselessbird')rt.destroy(m);
-  const bird=darkMarker(rt,rt.view.x-40,rt.view.y+60,'spr_uselessbird');bird.hspeed=12;bird.imageSpeed=0.334;
+  const bird=darkMarker(rt,s,rt.view.x-40,rt.view.y+60,'spr_uselessbird');bird.hspeed=12;bird.imageSpeed=0.334;
   rt.sound?.('snd_birdtweet');g.msg[0]=L(310);
  }
  if(c===5){g.msg[0]=L(314);s.star=rt.random.choose(0,1,2);s.caster=0;healItem(s,rt,Math.floor(rt.random.random(31)+25));}

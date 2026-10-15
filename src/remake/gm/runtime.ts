@@ -227,6 +227,8 @@ export class GmRuntime{
  soundLoop?:(name:string)=>number|undefined;
  soundStop?:(handle:number|string)=>void;
  soundPitch?:(handle:number|string,pitch:number)=>void;
+ soundGetPitch?:(handle:number|string)=>number;
+ soundFree?:(handle:number|string)=>void;
  readonly dynamicSprites=new Map<string,SpriteData>();
  sourceSurfaces?:{create:(width:number,height:number)=>number;target:(id:number|null)=>void;clear:(color:number,alpha:number)=>void;capture:(id:number,left:number,top:number,width:number,height:number,originX:number,originY:number)=>string;free:(id:number)=>void;deleteSprite:(name:string)=>void};
  sourceAudio?:{effect:(name:string,pitch?:number,volume?:number)=>number|undefined;volume:(handle:number|string,value:number,frames:number)=>void;free:(handle:number|string)=>void;music:(name:string)=>number|string;loop:(handle:number|string)=>void;pause:(handle:number|string)=>void;resume:(handle:number|string)=>void;position:(handle:number|string,seconds?:number)=>number|void;playing:(handle:number|string)=>boolean};
@@ -249,8 +251,11 @@ export class GmRuntime{
   this.instances.push(inst);this.instances.sort((a,b)=>a.id-b.id);return inst;
  }
  destroy(inst:GmInstance){if(this.destroyedInstances.has(inst))return;this.destroyedInstances.add(inst);this.run(inst,'destroy');inst.live=false;}
- /** `with (object)`: every active instance of the object or its children, in creation order. */
+ /** Every active instance of the object or its children, in creation order. */
  all(object:GmObjectDef){object=this.object(object);return this.instances.filter(i=>i.live&&isA(i.object,object));}
+ /** GML object `with` snapshots: the runner visits one/two forwards, three or more backwards (VM PushEnv).
+  * Keep this separate from creation-order queries and skip entries destroyed before their callback runs. */
+ withInstances(object:GmObjectDef){const list=this.all(object);return list.length>2?list.reverse():list;}
  exists(object:GmObjectDef){object=this.object(object);return this.instances.some(i=>i.live&&isA(i.object,object));}
  first(object:GmObjectDef){object=this.object(object);return this.instances.find(i=>i.live&&isA(i.object,object));}
  count(object:GmObjectDef){return this.all(object).length;}

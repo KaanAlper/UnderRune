@@ -1,6 +1,12 @@
 import {afterEach,it,expect,vi} from 'vitest';
 import {AudioManager} from '../src/game/audio';
 afterEach(()=>vi.unstubAllGlobals());
+it('reports logical source pitch for independent handles, including suspended loops',async()=>{
+ const {audio}=setup();await audio.prepareEffects({snd_inhale:{url:'/inhale.wav',volume:1,pitch:1.2}});
+ const a=audio.sourceLoop('snd_inhale')!,b=audio.sourceEffect('snd_inhale',1.7)!;
+ expect(audio.sourceGetPitch(a)).toBe(1);expect(audio.sourceGetPitch(b)).toBeCloseTo(1.7);
+ audio.sourcePitch(a,0.4);audio.pause(true);expect(audio.sourceGetPitch(a)).toBe(0.4);audio.dispose();
+});
 function setup(){
  const gains:{value:number;setValueAtTime:ReturnType<typeof vi.fn>;linearRampToValueAtTime:ReturnType<typeof vi.fn>;cancelScheduledValues:ReturnType<typeof vi.fn>}[]=[];
  const voices:{playbackRate:{value:number};buffer:unknown;onended:(()=>void)|null;connect:()=>void;disconnect:()=>void;start:ReturnType<typeof vi.fn>;stop:ReturnType<typeof vi.fn>}[]=[];

@@ -43,6 +43,13 @@ export class AudioManager{
   for(const [id,loop] of this.loops)if(typeof handle==='number'?id===handle:loop.name===handle)loop.pitch=pitch;
   for(const [voice,state] of this.voices)if(typeof handle==='number'?state.handle===handle:state.name===handle)voice.playbackRate.value=(this.samples.get(state.name)?.pitch??1)*pitch;
  }
+ /** The logical pitch multiplier, excluding the sample asset's base pitch. */
+ sourceGetPitch(handle:number|string){
+  if(handle===this.trackName&&this.track)return this.track.playbackRate;
+  for(const [id,loop] of this.loops)if(typeof handle==='number'?id===handle:loop.name===handle)return loop.pitch;
+  for(const [voice,state] of this.voices)if(typeof handle==='number'?state.handle===handle:state.name===handle)return voice.playbackRate.value/(this.samples.get(state.name)?.pitch??1);
+  return 1;
+ }
  sourceVolume(handle:number|string,volume:number,frames=0){
   if(typeof handle==='string'&&handle===this.trackName&&this.track){
    if(this.trackFade!==null){clearInterval(this.trackFade);this.trackFade=null;}const target=Math.max(0,Math.min(1,volume*.38));

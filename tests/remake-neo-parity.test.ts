@@ -9,11 +9,13 @@ import {setHudMeasure} from '../src/remake/deltarune/controller';
 
 // Spamton NEO (Chapter 2, encounter 61) against the original game, frame by frame, from the battle's first frames
 // to the end of a long local recording (party HP raised for the recording only, so it runs through many turns).
-// Two runs: FIGHT every turn with tapped shots (z), and the menu script (ACTs, spells, charged BIG SHOTs; see
+// Three runs: FIGHT every turn with tapped shots (z), the menu script, and a longer FIGHT recording through the finale.
+// The menu script exercises ACTs, spells, charged BIG SHOTs (see
 // tools/oracle-scripts.mjs). Where the recording has full dumps (every 20 frames), every variable of the hand-written
 // objects is compared too (PARITY_STATE=all: every restored object, archived ones included).
-const START=40;
-for(const RUN of ['.tools/oracle/ch2-61-s11-god','.tools/oracle/ch2-61-s11-god-menu']){
+// A later full snapshot can shorten local diagnosis; normal acceptance always starts at frame 40.
+const START=process.env.PARITY_START?Number(process.env.PARITY_START):40;
+for(const RUN of ['.tools/oracle/ch2-61-s11-god','.tools/oracle/ch2-61-s11-god-menu','.tools/oracle/ch2-61-s11-god-zlong']){
 const ready=fs.existsSync(`${RUN}-f${START}.json`)&&fs.existsSync(RUN+'.ndjson')&&fs.existsSync('extracted/chapter2_windows/sprites.json')&&fs.existsSync('extracted/chapter2_windows/code');
 describe.skipIf(!ready)(`Spamton NEO against the original (local recording ${RUN.split('/').pop()})`,()=>{
  it('matches every recorded frame',()=>{
@@ -38,6 +40,8 @@ describe.skipIf(!ready)(`Spamton NEO against the original (local recording ${RUN
    for(const [a,v] of Object.entries(d.alarms))i.alarm[Number(a)]=v;
   }
   rt.nextId=Math.max(...dump.instances.map(d=>d.instanceId))+1;
+  // Later snapshots omit the allocation counter (destroyed IDs still consume it). Diagnostic restarts must supply it.
+  if(process.env.PARITY_NEXT_ID)rt.nextId=Number(process.env.PARITY_NEXT_ID);
   // The snapshot keeps sprite variables (single or arrays, like NEO's partsprite) as sprite numbers; the remake uses names.
   const name=(v:unknown)=>typeof v==='number'&&SPRITES[v]?SPRITES[v]:v;
   for(const i of rt.instances)for(const k of Object.keys(i))if(/sprite/.test(k)&&k!=='sprite')i[k]=Array.isArray(i[k])?i[k].map(name):name(i[k]);

@@ -229,7 +229,7 @@ function previewPoses(s:GmInstance,rt:GmRuntime,i:number){
    shine.sprite='spr_sneo_head_preview';shine.imageIndex=0;shine.imageSpeed=0;shine.imageXscale=-2-n/5;shine.imageYscale=2+n/5;shine.xrate=0;shine.yrate=0;shine.imageAlpha=1+n;n+=0.2;
   }
   shine.imageAngle=s.partrot[5]*s.facing;
-  const mk=darkMarker(rt,s.x+s.partx[5]*s.facing+s.partxoff[5]*s.facing+s.lastxoff,s.y+s.party[5]+s.partyoff[5],'spr_sneo_head_preview');mk.imageXscale=-2;
+  const mk=darkMarker(rt,s,s.x+s.partx[5]*s.facing+s.partxoff[5]*s.facing+s.lastxoff,s.y+s.party[5]+s.partyoff[5],'spr_sneo_head_preview');mk.imageXscale=-2;
   s.partmode=32;
  }
  if(s.partmode===33){
