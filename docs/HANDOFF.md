@@ -405,8 +405,11 @@ New scripts go in `tools/oracle-scripts.mjs`.
   pass, and both production-browser checks pass (36.4 seconds). Three NEO recordings match 3960 + 5960 + 17960
   frames, including migrated-object state at available dumps; the last covers frames 40–18000. Snapshots are
   sparse early in that long run, then every 40 frames; trace positions/entities/RNG/globals are checked each frame.
-- The accepted Pages build references `index-DCPnJU8s.js` and `neo-22KN4LRH.js`. Publish that same artifact using
-  section 7; the gh-pages deployment commit records its source commit. Do not rebuild between acceptance and copy.
+- Published source: `c8aeab6`; Pages deployment: `8c2d121` (successful build/deploy). The live site references
+  `index-DCPnJU8s.js` and `neo-22KN4LRH.js`. The live NEO bundle SHA256 matches the accepted local artifact:
+  `745bd6fd918f5cf257c5d71d530da73379c62dccdd481a11aa04d9209dff50ca`.
+  Live-browser acceptance passed (23.4 seconds): preparation, NEO commands, complete yellow-soul turn, return to
+  commands and Chapter 1/Lancer switching, with no page errors or native-runtime requests.
 - Every-ending acceptance, Chapter 1 full-state re-recordings, global sound traces, other Chapter 2 bosses and
   Undertale remain separate work. Original package SHA256 is unchanged:
   `047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68`.
