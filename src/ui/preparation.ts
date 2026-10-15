@@ -23,6 +23,7 @@ export class PreparationPanel{
  constructor(private catalog:EquipmentCatalog,private assets:AssetStore,private storage:Pick<Storage,'getItem'|'setItem'>,private onLaunch:(record:EncounterRecord,loadout:Loadout)=>Promise<void>,private onDismiss:()=>void){
   this.dialog.setAttribute('aria-labelledby','prep-title');this.heading.id='prep-title';
   const top=node('div',undefined,'prep-top'),close=node('button','×','prep-close');close.type='button';close.setAttribute('aria-label','Close preparation');close.onclick=()=>this.close();
+  close.dataset.focus='close';this.launch.dataset.focus='launch';this.search.dataset.focus='search';
   const title=node('div');title.append(this.subtitle,this.heading);top.append(title,close);
   this.characterList.setAttribute('aria-label','Party equipment');
   const label=node('label','Search','prep-label');label.htmlFor='prep-search';this.search.id='prep-search';this.search.type='search';this.search.placeholder='Search inventory…';this.search.autocomplete='off';
@@ -30,12 +31,13 @@ export class PreparationPanel{
   const searchBox=node('div',undefined,'prep-searchbox');searchBox.append(label,this.search);
   const inventory=node('section',undefined,'prep-inventory');inventory.setAttribute('aria-label','Game inventory');inventory.append(this.context,searchBox,this.list);
   const bagHeader=node('div',undefined,'prep-baghead'),bagTitle=node('h2','Bag'),add=node('button','+ Add item','prep-add');
-  add.dataset.focus='add';add.onclick=()=>{this.slot='items';this.query='';this.search.value='';this.render();this.focusEntries();};bagHeader.append(bagTitle,this.counter,add);
+  add.dataset.focus='add';add.onclick=()=>this.openItems();bagHeader.append(bagTitle,this.counter,add);
   const bagSection=node('section',undefined,'prep-bagsection');bagSection.setAttribute('aria-label','Battle bag');bagSection.append(bagHeader,this.bag);
   const party=node('div',undefined,'prep-party');party.append(this.characterList,bagSection);
   const body=node('div',undefined,'prep-body');body.append(this.intro,party,inventory);
   this.feedback.setAttribute('role','status');
   const foot=node('footer',undefined,'prep-footer'),reset=node('button','Clear loadout','prep-reset');reset.onclick=()=>{for(const id of this.members)this.loadout.characters[id]={weapon:0,armor:[0,0]};this.loadout.items=[];this.persist();this.render();this.feedback.textContent='Party equipment and bag cleared.';};
+  reset.dataset.focus='reset';
   const keys=node('p',undefined,'prep-shortcuts');keys.innerHTML='<kbd>↑↓←→</kbd> Move <kbd>Z</kbd> Choose <kbd>X</kbd> Back';
   this.launch.onclick=()=>void this.start();foot.append(keys,this.feedback,reset,this.launch);
   this.dialog.append(top,body,foot);document.body.append(this.dialog);
@@ -55,36 +57,71 @@ export class PreparationPanel{
   this.character=this.members[0]??party.members[0];this.slot=this.members.length?'armor1':'items';this.query='';this.search.value='';this.feedback.textContent='';
   this.subtitle.textContent=`Chapter ${record.chapter}`;this.heading.textContent=record.name;
   const soul=this.assets.getSprite('spr_heart',1);if(soul)this.dialog.style.setProperty('--soul',`url("${assetUrl(soul.frames[0].url)}")`);
-  this.render();this.dialog.showModal();this.characterList.querySelector<HTMLButtonElement>('button')?.focus();
+  this.render();this.dialog.showModal();this.focus(this.members.length?`char:${this.character}`:'add');
  }
  private close(){if(!this.isLaunching)this.dialog.close();}
  private persist(){writeLoadout(this.storage,this.record.chapter,this.loadout,this.source);}
- private focus(key:string){this.dialog.querySelector<HTMLButtonElement>(`[data-focus="${key}"]`)?.focus();}
+ private focus(key:string){this.dialog.querySelector<HTMLElement>(`[data-focus="${key}"]:not(:disabled)`)?.focus();}
  private focusEntries(){(this.list.querySelector<HTMLButtonElement>('button:not(:disabled)')??this.search).focus();}
  private returnToSlot(){this.focus(this.slot==='items'?'add':`slot:${this.character}:${this.slot}`);}
+ private focusFooter(){this.focus(this.launch.disabled?'reset':'launch');}
+ private openItems(search=false){this.slot='items';this.query='';this.search.value='';this.render();if(search)this.search.focus();else this.focusEntries();}
+ private focusCharacter(column:number,row:number){
+  if(!this.members.length){this.focus('add');return;}
+  this.character=this.members[column];if(row>0)this.slot=(['weapon','armor1','armor2'] as const)[row-1];else if(this.slot==='items')this.slot='armor1';
+  this.query='';this.search.value='';this.render();this.focus(row===0?`char:${this.character}`:`slot:${this.character}:${this.slot}`);
+ }
  private keydown(event:KeyboardEvent){
   if(event.ctrlKey||event.metaKey||event.altKey)return;this.dialog.classList.add('using-keyboard');
   const target=event.target as HTMLElement,key=event.key.toLowerCase();
   if(this.isLaunching){event.preventDefault();event.stopPropagation();return;}
-  if(target instanceof HTMLInputElement){if(event.key==='ArrowDown'){event.preventDefault();this.focusEntries();}else if(event.key==='Escape'){event.preventDefault();event.stopPropagation();this.returnToSlot();}return;}
+  if(target instanceof HTMLInputElement){
+   if(event.key==='ArrowDown'){event.preventDefault();const entry=this.list.querySelector<HTMLButtonElement>('button:not(:disabled)');if(entry)entry.focus();else this.focusFooter();}
+   else if(event.key==='ArrowUp'||event.key==='Escape'){event.preventDefault();event.stopPropagation();this.returnToSlot();}return;
+  }
   if(key==='z'||key==='x'){
    event.preventDefault();event.stopPropagation();if(event.repeat)return;
    if(key==='z'){if(target instanceof HTMLButtonElement&&!target.disabled)target.click();}
    else if(target.closest('.prep-inventory'))this.returnToSlot();else this.close();return;
   }
   if(!event.key.startsWith('Arrow')&&!['Home','End'].includes(event.key))return;
+  event.preventDefault();event.stopPropagation();const direction=event.key;
   if(this.characterList.contains(target)){
-   event.preventDefault();const columns=this.members,id=Number(target.dataset.character),row=Number(target.dataset.row),index=columns.indexOf(id);
+   const columns=this.members,id=Number(target.dataset.character),row=Number(target.dataset.row),index=columns.indexOf(id);
+   if(direction==='ArrowDown'&&row===3){this.focus('add');return;}
+   if(direction==='ArrowUp'&&row===0){this.focus('close');return;}
+   if(direction==='ArrowRight'&&index===columns.length-1){this.focusEntries();return;}
    const col=event.key==='Home'?0:event.key==='End'?columns.length-1:(index+(event.key==='ArrowLeft'?-1:event.key==='ArrowRight'?1:0)+columns.length)%columns.length;
-   const nextRow=Math.max(0,Math.min(3,row+(event.key==='ArrowUp'?-1:event.key==='ArrowDown'?1:0))),slots=['weapon','armor1','armor2'] as const;
-   this.character=columns[col];if(nextRow>0)this.slot=slots[nextRow-1];else if(this.slot==='items')this.slot='armor1';this.query='';this.search.value='';this.render();
-   this.focus(nextRow===0?`char:${this.character}`:`slot:${this.character}:${this.slot}`);
-  }else{
-   const container=target.closest('.prep-list,.prep-bag');if(!container)return;event.preventDefault();
-   const buttons=Array.from(container.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')),index=buttons.indexOf(target as HTMLButtonElement);
-   const delta=container===this.bag&&(event.key==='ArrowUp'||event.key==='ArrowDown')?3:1;
-   const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:index+(event.key==='ArrowUp'||event.key==='ArrowLeft'?-delta:delta);
+   this.focusCharacter(col,Math.max(0,Math.min(3,row+(direction==='ArrowUp'?-1:direction==='ArrowDown'?1:0))));
+  }else if(target.closest('.prep-bag')){
+   const buttons=Array.from(this.bag.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')),index=buttons.indexOf(target as HTMLButtonElement);
+   const columns=Math.max(1,getComputedStyle(this.bag).gridTemplateColumns.split(/\s+/).length);
+   if(direction==='ArrowUp'&&index<columns||direction==='ArrowLeft'&&index===0){this.focus('add');return;}
+   if(direction==='ArrowDown'&&index+columns>=buttons.length){this.focusFooter();return;}
+   if(direction==='ArrowRight'&&index===buttons.length-1){this.openItems();return;}
+   const delta=direction==='ArrowUp'||direction==='ArrowDown'?columns:1;
+   const next=direction==='Home'?0:direction==='End'?buttons.length-1:index+(direction==='ArrowUp'||direction==='ArrowLeft'?-delta:delta);
    buttons[Math.max(0,Math.min(buttons.length-1,next))]?.focus();
+  }else if(target.closest('.prep-list')){
+   const buttons=Array.from(this.list.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')),index=buttons.indexOf(target as HTMLButtonElement);
+   if(direction==='ArrowLeft'){this.returnToSlot();return;}
+   if(direction==='ArrowRight'||direction==='ArrowDown'&&index===buttons.length-1){this.focusFooter();return;}
+   if(direction==='ArrowUp'&&index===0){this.search.focus();return;}
+   const next=direction==='Home'?0:direction==='End'?buttons.length-1:index+(direction==='ArrowUp'?-1:1);
+   buttons[Math.max(0,Math.min(buttons.length-1,next))]?.focus();
+  }else if(target.dataset.focus==='add'){
+   if(direction==='ArrowDown'){const first=this.bag.querySelector<HTMLButtonElement>('button');if(first)first.focus();else this.focusFooter();}
+   else if(direction==='ArrowRight')this.openItems(true);
+   else if(direction==='End')this.focusFooter();
+   else if(this.members.length)this.focusCharacter(Math.max(0,this.members.indexOf(this.character)),3);else this.focus('close');
+  }else if(target.closest('.prep-footer')){
+   if(direction==='ArrowUp'){const cells=this.bag.querySelectorAll<HTMLButtonElement>('button');if(cells.length)cells[cells.length-1].focus();else this.focus('add');}
+   else if(direction==='ArrowDown')this.focus('close');
+   else{const buttons=Array.from(this.dialog.querySelectorAll<HTMLButtonElement>('.prep-footer button:not(:disabled)')),index=buttons.indexOf(target as HTMLButtonElement);
+    const next=direction==='Home'?0:direction==='End'?buttons.length-1:(index+(direction==='ArrowLeft'?-1:1)+buttons.length)%buttons.length;buttons[next]?.focus();}
+  }else if(target.dataset.focus==='close'){
+   if(direction==='ArrowDown'||direction==='Home')this.focusCharacter(0,0);
+   else if(direction==='ArrowRight')this.search.focus();else this.focusFooter();
   }
  }
  private render(){

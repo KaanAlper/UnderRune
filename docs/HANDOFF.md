@@ -442,6 +442,19 @@ New scripts go in `tools/oracle-scripts.mjs`.
   package hash is unchanged. Publish these accepted files together; changing only the JavaScript would leave the
   required nine-slice metadata absent. The guard uncertainty remains separate from the two reproduced browser bugs.
 
+### 12. Preparation keyboard navigation (2026-10-16)
+
+- Input/box source `f66d450` and Pages `ffede02` were published successfully before this change. Live-browser
+  acceptance passed (23.7 seconds), including actual BIG SHOT key release and the shipped nine-slice metadata.
+- Preparation arrows now connect character headers/gear, the responsive bag, Add, inventory search/list,
+  Clear equipment, Start battle and Close. Bag row movement uses the actual CSS column count (6/4/3).
+  Z/Enter selection, X/Esc return, typed search, native Tab, focus restoration and launch lifecycle are preserved.
+- Nine preparation browser tests pass in development (31.7 seconds) and against the built Pages artifact
+  (22.5 seconds). Typecheck and Pages build pass. The new tests failed at the old trapped boundaries before the fix.
+- The owner also requested a shared leaderboard, damage-first/time tie-break ranking and equipment/item filters.
+  Design and execution plan: `docs/superpowers/{specs/2026-10-16-leaderboard-design,plans/2026-10-16-leaderboard}.md`.
+  The owner has no Supabase project yet and chose Supabase; activation needs real public project configuration.
+
 ## 6. Where things are
 
 | What | Where |

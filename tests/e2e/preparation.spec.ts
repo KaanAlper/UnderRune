@@ -39,3 +39,41 @@ test('preparation fits mobile and keeps the start button visible with reduced mo
  await expect(prep.getByRole('button',{name:'START BATTLE',exact:true})).toBeInViewport();
  await prep.screenshot({path:'test-results/preparation-mobile.png'});
 });
+
+test('arrows reach the bag, add/remove items, clear equipment and start battle without Tab or pointer input',async({page})=>{
+ const prep=await open(page);
+ for(let i=0;i<4;i++)await page.keyboard.press('ArrowDown');
+ const add=prep.getByRole('button',{name:'+ Add item',exact:true});await expect(add).toBeFocused();
+ await page.keyboard.press('z');await expect(prep.locator('.prep-entry:not(:disabled)').first()).toBeFocused();
+ await page.keyboard.press('z');await expect(prep.locator('.prep-bagitem:not(.is-empty)')).toHaveCount(1);
+ await page.keyboard.press('x');await expect(add).toBeFocused();await page.keyboard.press('ArrowDown');
+ await expect(prep.locator('.prep-bagitem').first()).toBeFocused();await page.keyboard.press('z');
+ await expect(prep.locator('.prep-bagitem:not(.is-empty)')).toHaveCount(0);
+ await page.keyboard.press('End');await page.keyboard.press('ArrowDown');
+ const launch=prep.getByRole('button',{name:'START BATTLE',exact:true});await expect(launch).toBeFocused();
+ await page.keyboard.press('ArrowLeft');await expect(prep.getByRole('button',{name:'Clear loadout'})).toBeFocused();
+ await page.keyboard.press('z');await expect(prep.locator('.prep-feedback')).toContainText('cleared');
+ await page.keyboard.press('ArrowRight');await expect(launch).toBeFocused();await page.keyboard.press('z');
+ await expect(prep).toBeHidden();await expect(page.locator('#status')).toContainText('JEVIL / command');
+});
+
+for(const [width,columns] of [[1280,6],[900,4],[390,3]])test(`bag arrow rows use the visible ${columns} columns at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});const prep=await open(page);
+ for(let i=0;i<5;i++)await page.keyboard.press('ArrowDown');
+ const cells=prep.locator('.prep-bagitem');await expect(cells.first()).toBeFocused();
+ await page.keyboard.press('ArrowDown');await expect(cells.nth(columns)).toBeFocused();
+ await page.keyboard.press('ArrowUp');await expect(cells.first()).toBeFocused();
+ await page.keyboard.press('ArrowUp');await expect(prep.getByRole('button',{name:'+ Add item'})).toBeFocused();
+ await page.keyboard.press('ArrowUp');await expect(prep.locator('.prep-slot[data-character="1"][data-slot="armor2"]')).toBeFocused();
+});
+
+test('arrows connect inventory, search, footer and close controls even with an empty search',async({page})=>{
+ const prep=await open(page);const count=await prep.locator('.prep-character').count();
+ for(let i=0;i<count;i++)await page.keyboard.press('ArrowRight');
+ await expect(prep.locator('.prep-entry:not(:disabled)').first()).toBeFocused();
+ await page.keyboard.press('ArrowUp');const search=prep.getByRole('searchbox');await expect(search).toBeFocused();
+ await search.fill('no-such-equipment');await page.keyboard.press('ArrowDown');
+ await expect(prep.getByRole('button',{name:'START BATTLE',exact:true})).toBeFocused();
+ await page.keyboard.press('ArrowDown');await expect(prep.getByRole('button',{name:'Close preparation'})).toBeFocused();
+ await page.keyboard.press('z');await expect(prep).toBeHidden();
+});
