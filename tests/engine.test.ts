@@ -15,9 +15,9 @@ test('confirm release reaches a frame once even when the tap ends between reads'
  const tap=input.read();expect(tap.confirm).toBe(true);expect(tap.shoot).toBe(false);expect(tap.shootReleased).toBe(true);
  expect(input.read().shootReleased).toBe(false);
 });
-test('confirm aliases keep charging until the final held alias is released',()=>{
+test('releasing either confirm alias produces an edge while the other keeps charging, as button1_r does',()=>{
  const input=new Input();input.press('z');input.press('Enter');input.read();input.release('z');
- expect(input.read().shootReleased).toBe(false);input.release('Enter');expect(input.read().shootReleased).toBe(true);
+ const edge=input.read();expect(edge.shootReleased).toBe(true);expect(edge.shoot).toBe(true);input.release('Enter');expect(input.read().shootReleased).toBe(true);
  input.release('Enter');expect(input.read().shootReleased).toBe(false);
 });
 test('clearing input drops pending release edges on focus and scene changes',()=>{

@@ -10,6 +10,8 @@ import {AudioManager} from './game/audio';
 import {loadPrefs,savePrefs,browserStore} from './game/storage';
 import {NativeBattle,fetchNativeProfiles,type NativeEvent} from './game/native';
 import {PreparationPanel} from './ui/preparation';
+import {LeaderboardPanel} from './ui/leaderboard';
+import {LeaderboardApi,loadLeaderboardConfig} from './game/leaderboard-api';
 import {loadoutIni,type EquipmentCatalog,type Loadout} from './game/loadout';
 import {assetUrl} from './game/url';
 import {loadRemakeAssets} from './remake/host/assets';
@@ -52,6 +54,7 @@ let remakeLoad:AbortController|null=null;
 let failedChapter:number|null=null;
 const menuRecords=()=>catalog.filter(r=>r.chapter===chapter);
 let bossDeck:BossDeck|null=null;
+let leaderboard:LeaderboardPanel|null=null;
 function updatePreferences(){document.body.classList.toggle('reduced',prefs.reducedEffects);element('mute').textContent=prefs.muted?'SOUND OFF':'SOUND ON';element('mute').setAttribute('aria-pressed',String(prefs.muted));element('effects').textContent=prefs.reducedEffects?'CRT OFF':'CRT ON';element('effects').setAttribute('aria-pressed',String(prefs.reducedEffects));savePrefs(storage,prefs);}
 function cancelLoad(){sessionToken++;remakeLoad?.abort();remakeLoad=null;failedChapter=null;loading.hidden=true;error.hidden=true;busy=false;}
 function closeBattle(){native?.dispose();native=null;nativeRecord=null;remake=null;remakeView=null;remakePressed.clear();remakeReleased.clear();remakeMenu=false;element('outcome').hidden=true;element('stage').classList.remove('battle-over');audio?.stop();input.clear();clock.reset();}
@@ -76,7 +79,7 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
   // The game calls randomize() when it starts: every battle gets its own random seed (tests and comparisons fix it).
   // ?seed=N repeats a run exactly (comparisons with the original's recordings).
   const fixedSeed=new URLSearchParams(location.search).get('seed'),seed=fixedSeed!==null?Number(fixedSeed)>>>0:crypto.getRandomValues(new Uint32Array(1))[0];
-  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost});{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();remakeReleased.clear();
+  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost,scoring:publicMode});{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();remakeReleased.clear();
   remakeView=new BattleView(remakeCtx,remakeAssets.draw);remakeMenu=false;
   remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.soundGetPitch=handle=>audio.sourceGetPitch(handle);remake.rt.stopAllSounds=()=>audio.stop();
   remake.rt.sourceAudio={effect:(name,pitch,volume)=>audio.sourceEffect(name,pitch,false,volume),volume:(handle,value,frames)=>audio.sourceVolume(handle,value,frames),free:handle=>audio.sourceFree(handle),music:name=>{audio.play(name);return name;},loop:handle=>audio.sourceSetLoop(handle),pause:handle=>audio.sourceTrackPause(handle),resume:handle=>audio.sourceTrackResume(handle),position:(handle,seconds)=>audio.sourcePosition(handle,seconds),playing:handle=>audio.sourcePlaying(handle)};
@@ -172,7 +175,7 @@ function step(){
    // C reaches the game code as a key press on its next frame (button3_p), as the original reads it.
    if(remakeMenu)remake.rt.input.pressed.add(KEY.c);
    remakeMenu=false;remake.step();renderRemakeFrame();
-   if(remake.outcome){element('outcome-text').textContent=remake.outcome==='survived'?'* Pattern survived.':remake.outcome==='victory'?'* YOU WON!':'* The party fell.';element('outcome-again').textContent=remake instanceof EngineBattle?'BATTLE AGAIN':'PRACTICE AGAIN';element('outcome').hidden=false;audio.pause(true);if(remake.outcome==='victory'&&!prefs.completed.includes(menuRecords()[selection].id)){prefs.completed.push(menuRecords()[selection].id);savePrefs(storage,prefs);}}
+   if(remake.outcome){element('outcome-text').textContent=remake.outcome==='survived'?'* Pattern survived.':remake.outcome==='victory'?'* YOU WON!':'* The party fell.';element('outcome-again').textContent=remake instanceof EngineBattle?'BATTLE AGAIN':'PRACTICE AGAIN';element('outcome-score').hidden=!(remake instanceof EngineBattle&&remake.result);element('outcome').hidden=false;audio.pause(true);if(remake.outcome==='victory'&&!prefs.completed.includes(menuRecords()[selection].id)){prefs.completed.push(menuRecords()[selection].id);savePrefs(storage,prefs);}}
   }
  }
  updateControls();
@@ -205,6 +208,7 @@ for(const button of document.querySelectorAll<HTMLButtonElement>('[data-key]')){
  const release=()=>{button.classList.remove('down');native?.key(key,false);input.release(key);};button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
 }
 element('outcome-menu').addEventListener('click',goMenu);
+element('outcome-score').addEventListener('click',()=>{if(remake instanceof EngineBattle&&remake.result)leaderboard?.offer(remake.result);});
 // The banner stays until a new battle actually launches (closeBattle), so dismissing preparation keeps a way back.
 element('outcome-again').addEventListener('click',()=>{if(remake&&publicLoadout)void launchRemake(menuRecords()[selection],publicLoadout).catch(showError);else void startBattle(false);});
 element('retry').addEventListener('click',()=>{error.hidden=true;if(failedChapter!==null)void openChapter(failedChapter);else if(renderer&&equipment)void startBattle(false);else void initialize();});
@@ -217,10 +221,11 @@ async function initialize(){
   if(!equipment?.chapters[1])throw Error('Equipment could not load. Please retry.');
   if(publicMode)await Promise.all([2,3,4,5].map(chapter=>assets.preload(chapter)));
   if(equipment&&!prep){const source=equipment;prep=new PreparationPanel(source,assets,storage,(record,loadout)=>!publicMode&&!publicPractice&&nativeIds.has(record.id)?launchNative(record,loadoutIni(loadout,source.chapters[record.chapter])):launchRemake(record,loadout),()=>{input.clear();if(native)setTimeout(()=>native?.focus());});}
+  if(!leaderboard)leaderboard=new LeaderboardPanel(new LeaderboardApi(null,fetch,storage,loadLeaderboardConfig),catalog,equipment,n=>{input.clear();void openChapter(n);});
   // Optional local reference art for the device room; the drawn room is used when it is absent.
   if(!publicMode)await Promise.all(['bg','console','tvglow','vessel_d_0'].map(n=>assets.loadImage('/device-room/'+n+'.png').catch(()=>null)));
   theaterView=new TheaterView(assets);await Promise.all(theaterView.urls().map(u=>assets.loadImage(u).catch(()=>null)));
-  renderer=new Renderer(ctx,assets,publicMode);bossDeck=new BossDeck(assets);audio=new AudioManager(prefs.muted,assets.manifest.music);if(publicMode){document.querySelector('.brand .dim')!.textContent='/ DEMO';dialog.querySelector('p')!.textContent='DELTARUNE browser boss battles, with a theater intro and equipment preparation.';}updatePreferences();loading.hidden=true;updateControls();if(!raf)raf=requestAnimationFrame(loop);
+  renderer=new Renderer(ctx,assets,publicMode);bossDeck=new BossDeck(assets,record=>{input.clear();leaderboard?.open(record.id);});audio=new AudioManager(prefs.muted,assets.manifest.music);if(publicMode){document.querySelector('.brand .dim')!.textContent='/ DEMO';dialog.querySelector('p')!.textContent='DELTARUNE browser boss battles, with a theater intro and equipment preparation.';}updatePreferences();loading.hidden=true;updateControls();if(!raf)raf=requestAnimationFrame(loop);
  }catch(e){showError(e);}
 }
 void initialize();

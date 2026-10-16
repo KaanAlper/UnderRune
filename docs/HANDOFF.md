@@ -455,6 +455,50 @@ New scripts go in `tools/oracle-scripts.mjs`.
   Design and execution plan: `docs/superpowers/{specs/2026-10-16-leaderboard-design,plans/2026-10-16-leaderboard}.md`.
   The owner has no Supabase project yet and chose Supabase; activation needs real public project configuration.
 
+### 13. Shared boss leaderboards and source presentation fixes (2026-10-16)
+
+- The owner clarified the location: retain the chapter hub and open the selected boss's leaderboard from the
+  card screen. The new modal has damage/time ordering and bounds, No item, No armor, weapon, armor, starting-bag
+  and used-item filters. Queries combine filters on the server before ordering and 25-row pages. Gear details use
+  the selected encounter's chapter catalog and preserve character slots and duplicate quantities.
+- Join leaderboard saves one browser-wide name; other bosses and reloads reuse it. Change name is explicit.
+  Only a completed full source battle offers Share score, with voluntary publication. Practice, native runs,
+  defeat and aborted battles do not publish. Victory capture and run IDs are one-shot/idempotent.
+- Passive scoring observes each HP write, including heal-and-hit in the same frame, with positive HP clamped to
+  max HP. Overheal corrections, knockout overflow and absent characters are excluded; healing never erases earlier
+  damage. Active 30 Hz frames determine time. Initial actual equipment, starting bag and executed item events are
+  recorded; changed party/gear or replaced HP arrays invalidate the run. Chapter 1 setup now carries the already
+  equipped armor IDs into the corresponding source globals, alongside unchanged numerical equipment stats.
+- Normal NEO uses ch2-61; an actual original funnycheat event that crosses the threshold and raises attack moves
+  the run to ch2-61-enraged. The filter cannot activate it. The owner chose Normal/Enraged, excluding Snowgrave.
+  Z and Enter release checks must remain independent while another confirm key is held: the prior browser alias
+  merge suppressed this original technique. Any released confirm now forwards a release edge while held confirm
+  continues charging. A real browser test fires BIG SHOT via Enter release while Z stays held, then rapid taps.
+- Defeated enemy Susie's original Draw reveals obj_susieandlancer_event.s before destroying the enemy. The source
+  callback was missing. The standalone host now installs this scene's hidden presentation marker; the boss-owned
+  Draw reveals its defeat sprite at depth100. Raw original-launcher recordings have no overworld scene owner, so
+  they still match without inventing extra markers. The downed marker regression and ch1-31 reference replay pass.
+- Rude Buster was checked against the installed Chapter 1/2 source: valid Z timing adds30 HP and the bonus sound,
+  not double damage. Three canonical-host tests verify early/valid input, flash/eight impact fragments, and the
+  original Jevil exception that suppresses the extra silhouette flash. No speculative damage multiplier was added.
+- Supabase public config is public/leaderboard-config.json. The owner applied the frozen migration
+  supabase/migrations/202610160001_leaderboard.sql and enabled anonymous sign-in; both were verified against the
+  real service. Private immutable rows, a public view excluding owner IDs, authenticated owner-only RPC, bounded
+  values, derived flags, throttling and idempotence are covered by seventeen PostgreSQL/PGlite assertions.
+  Runs remain explicitly client-reported, not server-replayed/verified. See docs/leaderboard-setup.md.
+- Fresh review found an availability bug: swallowing configuration fetch errors permanently disabled the board.
+  Configuration now loads on demand through a shared retryable connect promise, with project-scoped session
+  restoration; read/publication errors remain visible and retryable without blocking play. Fresh rereview passed.
+- Acceptance: full 531 tests /56files passed, no skips (143.67 seconds). After configuration recovery, all13 API
+  tests pass including its new regression. Eighteen tool tests, typecheck and sequential Pages build pass.
+  Eleven isolated leaderboard browser tests pass; thirteen production-browser tests pass (1.6 minutes), including
+  preparation, NEO key releases/complete turn, actual service reads, failed-config retry, persistent name and a real
+  Lancer victory publication visible from an independent anonymous browser. The genuine automated record is named
+  UnderRune QA, id c305497e-99a5-4050-a62d-5c2ca16ed050, damage109, active time46500ms. It is not a synthetic fixture.
+- Accepted artifact: index-D2zzGoN-.js, index-C9mWa0rd.css, neo-CuKd9mor.js plus public leaderboard config. Original
+  installed Chapter 2 package SHA256 remains 047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68.
+  Publication and live frontend verification are recorded after deployment.
+
 ## 6. Where things are
 
 | What | Where |

@@ -5,7 +5,7 @@ import {EngineBattle} from '../src/remake/host/engine';
 import {KEY,heart,heroParent,returnHeart} from '../src/remake/deltarune/battle';
 import {findController} from '../src/remake/deltarune/controller';
 import {writer} from '../src/remake/deltarune/writer';
-import {attackPress,spellPhase} from '../src/remake/deltarune/party';
+import {attackPress,spellPhase,castSpell,damageEnemy} from '../src/remake/deltarune/party';
 import {hasSourceText} from '../src/remake/host/text';
 import fs from 'node:fs';
 import {loadSprites} from './parity/reference';
@@ -23,6 +23,25 @@ const until=(b:EngineBattle,done:()=>boolean,max=3000)=>{for(let i=0;i<max&&!don
 const text=(b:EngineBattle)=>b.rt.all(writer).map(w=>w.nstring[0] as string);
 
 describe.skipIf(!hasSourceText())('the battle engine (Clover)',()=>{
+ it('retains the source scene marker of defeated Susie while Lancer remains alive',()=>{
+  const b=create('ch1-31');frame(b,2);const susie=b.enemy!,g=b.rt.globals;
+  const caster=b.rt.byId(g.charinstance[0])!;caster.caster=0;damageEnemy(caster,b.rt,0,9999);frame(b);
+  expect(b.rt.byId(susie.id)).toBeUndefined();expect(g.monster[1]).toBe(1);
+  const resting=b.rt.instances.filter(i=>i.live&&i.sprite==='spr_susie_enemy_defeat');expect(resting).toHaveLength(1);
+  expect([resting[0].visible,resting[0].depth,resting[0].x,resting[0].y,resting[0].imageXscale,resting[0].imageYscale]).toEqual([true,100,susie.x,susie.y,2,2]);
+  frame(b,40);expect(resting[0].live&&resting[0].visible).toBe(true);expect(b.rt.globals.monster[0]).toBe(0);
+ });
+ it('observes actual item execution, party-only gear, active time and victory through the shared host',()=>{
+  const loadout=defaultLoadout();loadout.items=[9,9];loadout.characters[1].armor=[5,0];loadout.characters[2].armor=[5,5];
+  const b=new EngineBattle(bank,equipment,loadout,'ch1-8',11,{scoring:true});frame(b,2);const g=b.rt.globals;
+  g.hp[1]-=12;g.hp[1]+=5;g.chartarget[0]=0;
+  castSpell(b.rt.byId(g.charinstance[0])!,b.rt,209,0);
+  const t=g.time;b.paused=true;frame(b,90);expect(g.time).toBe(t);b.paused=false;
+  b.rt.pendingRoom='battle_end';frame(b);const result=b.result!;
+  expect(result.damage).toBe(12);expect(result.duration_ms).toBe(100);expect(result.used_items).toEqual([9]);expect(result.bag).toEqual([9,9]);
+  expect(result.equipment.map(c=>c.character)).toEqual([1,3]);expect(result.equipment[0].armor).toEqual([5,0]);
+  frame(b);expect(b.result).toBe(result);
+ });
  it('opens with the battle line in the box, Kris choosing, and the TP bar',()=>{
   const b=create();frame(b,2);const g=b.rt.globals;
   expect(b.rt.count(heroParent)).toBe(2);expect([g.myfight,g.mnfight,g.bmenuno,g.charturn]).toEqual([0,0,0,0]);

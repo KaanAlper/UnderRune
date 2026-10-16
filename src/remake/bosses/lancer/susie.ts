@@ -23,6 +23,15 @@ const noFace=(rt:GmRuntime,slot:number)=>{rt.globals.msg[slot]=lang('scr_noface_
 /** The battle music (global.batmusic[1]) pauses for Ralsei's song. */
 const music=(rt:GmRuntime,play:boolean)=>{const m=rt.globals.batmusic?.[1];if(m!==undefined){if(play)rt.sourceAudio?.resume(m);else rt.sourceAudio?.pause(m);}};
 
+/** Standalone host bridge for the one world-scene marker the enemy's Draw reveals. The overworld cutscene and
+ * its progression remain outside this battle; the original callback still runs only when this owner is present. */
+export const susieLancerScene:GmObjectDef={name:'obj_susieandlancer_event',index:45,visible:false};
+export function installSusieLancerPresentation(rt:GmRuntime){
+ const enemy=rt.first(susieEnemy);if(!enemy)return;
+ const scene=rt.create(susieLancerScene,0,0),resting=darkMarker(rt,scene,enemy.x,enemy.y,'spr_susie_enemy');
+ scene.s=resting.id;resting.visible=false;resting.depth=100;
+}
+
 // ---- Susie ----
 function susieCreate(s:GmInstance,rt:GmRuntime){
  rt.globals.turntimer=0;
@@ -149,7 +158,13 @@ function susieDraw(s:GmInstance,rt:GmRuntime){
   s.hurttimer-=1;
   if(s.hurttimer<0)s.state=0;
   else{
-   if(g.monster[me]===0){rt.sound?.('snd_sussurprise');s.visible=false;rt.destroy(s);}
+   if(g.monster[me]===0){
+    rt.sound?.('snd_sussurprise');
+    for(const scene of rt.all(susieLancerScene)){
+     const resting=rt.byId(scene.s);if(resting){resting.visible=true;resting.sprite='spr_susie_enemy_defeat';resting.depth=100;}
+    }
+    s.visible=false;rt.destroy(s);
+   }
    s.hurtshake+=1;if(s.hurtshake>1){if(s.shakex>0)s.shakex-=1;if(s.shakex<0)s.shakex+=1;s.shakex=-s.shakex;s.hurtshake=0;}
    // The game still draws her this frame, after instance_destroy.
    rt.drawSprite(s.hurtsprite,0,s.x+s.shakex,s.y,2,2,0,s.imageBlend,1);

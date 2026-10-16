@@ -564,6 +564,7 @@ function funnyCheat(s:GmInstance,rt:GmRuntime){
  else if(t<4){cap(22,0.25);s.hellmode=1;}
  else if(t<6)cap(18,0.1);
  else if(t<10)cap(15,0.04);
+ if(t<10)rt.onBattleMode?.('enraged');
 }
 function cleanUp(_s:GmInstance,rt:GmRuntime){
  rt.soundStop?.('snd_sneo_overpower');rt.globals.sp=4;rt.soundStop?.('snd_rumble');rt.sourceAudio?.volume('snd_rumble',1,0);

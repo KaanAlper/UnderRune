@@ -375,7 +375,7 @@ export function castSpell(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
   }
   default:
    if(r.extra[spell])r.extra[spell](s,rt);
-   else if(spell>=201)forChapter(rt,ITEMS,'scr_spell (items)')(s,rt,spell);
+   else if(spell>=201){forChapter(rt,ITEMS,'scr_spell (items)')(s,rt,spell);rt.onItemUsed?.(spell-200);}
  }
 }
 // ---- Items: each chapter's item effects in scr_spell (spell = 200 + item) ----

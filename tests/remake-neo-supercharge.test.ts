@@ -34,6 +34,11 @@ function scene(shots=20){
 }
 
 describe.skipIf(!available)('Susie Supercharge through the installed Chapter 2 host',()=>{
+ it('records enrage only after the source rapid-shot threshold actually raises NEO attack',()=>{
+  const {rt,neo}=scene(0);neo.funnycheat=0;rt.globals.tempflag=Array(100).fill(0);rt.globals.monsterat=[13,0,0];const modes:string[]=[];rt.onBattleMode=mode=>modes.push(mode);
+  for(let i=0;i<5;i++)rt.userEvent(neo,4);expect(modes).toEqual([]);expect(rt.globals.monsterat[0]).toBe(13);
+  rt.userEvent(neo,4);expect(modes).toEqual(['enraged']);expect(rt.globals.monsterat[0]).toBe(13.5);expect(neo.hellmode).toBe(1);
+ });
  it.each([0,16,36,40,52,200])('draws the original charge rings and orange pulses at hold %i',hold=>{
   const current=scene(),reference=scene();
   current.soul.z_hold=reference.soul.z_hold=hold;

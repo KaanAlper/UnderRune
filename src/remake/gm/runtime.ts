@@ -188,6 +188,9 @@ export class GmRuntime{
  /** The current room (GML room, room_width, room_height). */
  room={name:'',width:640,height:480};
  globals:Record<string,any>={};
+ /** Optional host observation after an item actually executes; never part of source state or RNG. */
+ onItemUsed?:(item:number)=>void;
+ onBattleMode?:(mode:string)=>void;
  input:GmInput={held:new Set(),pressed:new Set(),released:new Set()};
  /** Where draw calls go (absent in tests); `drawState` holds the GML draw state. */
  gfx?:GmGraphics;

@@ -14,16 +14,17 @@ import {cloverEnemy} from '../bosses/clover';
 import {checkersEnemy} from '../bosses/kround';
 import {lancerEnemy} from '../bosses/lancer/enemy';
 import {lancerEnemy2} from '../bosses/lancer/enemy2';
-import {susieEnemy,lancerEnemy3} from '../bosses/lancer/susie';
+import {susieEnemy,lancerEnemy3,installSusieLancerPresentation} from '../bosses/lancer/susie';
 import {jokerBackground,jokerEnemy} from '../bosses/jevil/enemy';
 import {kingEnemy} from '../bosses/king/enemy';
 import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
 import {chapter2StartStats} from '../deltarune/chapter2';
 import type {installNeoHost} from './neo';
+import {BattleRunTracker,type RunRecord} from '../../game/battle-run';
 
 /** The encounters whose enemies run on the engine, with their scr_encountersetup number and room. */
-const ENGINE:Record<string,{n:number;room:string;backdrop:boolean}>={
+const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:(rt:GmRuntime)=>void}>={
  'ch2-61':{n:61,room:'room_dw_mansion_b_east',backdrop:false},
  'ch1-2':{n:2,room:'room_field_start',backdrop:true},
  'ch1-8':{n:8,room:'room_forest_area3',backdrop:true},
@@ -31,7 +32,7 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean}>={
  'ch1-12':{n:12,room:'room_field_checkersboss',backdrop:true},
  'ch1-25':{n:25,room:'room_cc_joker',backdrop:false},
  'ch1-27':{n:27,room:'room_cc_6f',backdrop:false},
- 'ch1-31':{n:31,room:'room_field_secret1',backdrop:true},
+ 'ch1-31':{n:31,room:'room_field_secret1',backdrop:true,presentation:installSusieLancerPresentation},
  'ch1-40':{n:40,room:'room_castle_throneroom',backdrop:true},
 };
 export const runsOnEngine=(id:string)=>id in ENGINE;
@@ -54,7 +55,8 @@ export const engineRoom=(id:string)=>ENGINE[id]?.room??'';
 export class EngineBattle{
  readonly rt:GmRuntime;readonly name:string;readonly party:readonly number[];
  paused=false;outcome:'victory'|'defeat'|null=null;turn=0;
- constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost}={}){
+ readonly scoring:BattleRunTracker|null;result:RunRecord|null=null;
+ constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;scoring?:boolean}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
   if(!encounter||!setup)throw Error('This battle is not available yet.');
   if(id==='ch2-61'&&!options.neoHost)throw Error('Load the Chapter 2 source host before starting NEO.');
@@ -69,7 +71,7 @@ export class EngineBattle{
   for(const c of [1,2,3]){
    const slot=loadout.characters[c],w=gear(equipment.weapons,slot.weapon),a1=gear(equipment.armors,slot.armor[0]),a2=gear(equipment.armors,slot.armor[1]);
    // Weapon 0 is "Game default": scr_gamestart's Wood Blade, Mane Ax and Red Scarf (ids 1, 2, 3; no stats).
-   equipped[c]={weapon:slot.weapon||c,itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
+   equipped[c]={weapon:slot.weapon||c,armor:[...slot.armor],itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
   }
   const char=[...encounter.party,0,0,0].slice(0,3);
   partyGlobals(rt,{char,...(neo?chapter2StartStats():{...BASE,maxhp:BASE.hp}),equipped,items:loadout.items,auto:encounter.auto});
@@ -88,7 +90,11 @@ export class EngineBattle{
   // Jevil's room has its own spinning background (drawn by the host view).
   if(id==='ch1-25')rt.create(jokerBackground,0,0);
   rt.create(battleControllerFull,0,0);
+  setup.presentation?.(rt);
   if(neo){rt.globals.fighting=1;neo.enter(this.enemy!);}
+  this.scoring=options.scoring&&!options.development?new BattleRunTracker(id,loadout,rt.globals):null;
+  if(this.scoring)rt.onItemUsed=item=>this.scoring!.itemUsed(item);
+  if(this.scoring)rt.onBattleMode=mode=>this.scoring!.mode(mode);
  }
  get enemy():GmInstance|undefined{return this.rt.byId(this.rt.globals.monsterinstance[0]);}
  /** A short label for the status line: whose turn it is. */
@@ -109,8 +115,10 @@ export class EngineBattle{
   if(this.paused||this.outcome)return;
   const rt=this.rt,g=rt.globals,before=g.mnfight;
   g.time+=1;rt.step();
+  this.scoring?.frame(g);
   if(before===2&&g.mnfight===0)this.turn+=1;
   if(rt.pendingRoom==='room_gameover')this.outcome='defeat';
   else if(rt.pendingRoom==='battle_end')this.outcome='victory';
+  if(this.outcome)this.result=this.scoring?.finish(this.outcome,g)??null;
  }
 }
