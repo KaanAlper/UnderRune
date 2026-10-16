@@ -292,8 +292,9 @@ Port them in the order they first appear in the recordings:
 4. **Done:** the walls (`walls.ts`): `obj_sneo_wall_controller_new`, `obj_sneo_wallbullet_new`, `obj_sneo_rotatingwall_bomb`,
    `obj_mettaton_bomb_hitbox`
 5. **Done:** `obj_sneo_wireheart` and its pieces (`wireheart.ts`).
-6. **Done:** the phone call and Pipis objects (`phonecall.ts`, 13 definitions). Difficulty 4 egg bursts retain a
-   named unported boundary; the hard phone stream is ported but still needs a dedicated acceptance recording.
+6. **Done:** the phone call and Pipis objects (`phonecall.ts`, 13 definitions). Difficulty 4 egg bursts are now
+   explicitly ported and checked against the local original event (section 15); the hard phone stream is ported
+   but still needs a dedicated acceptance recording.
 7. **Done:** the phone hands and `obj_sneo_mmx_spreadshot` (`phonehands.ts`, four definitions). Explicit source
    Create/Step/Draw/Alarm/Destroy/hit handlers and the canonical basic/regular-bullet parents are preserved.
    The shared Chapter 2 `bulletInherit2` keeps -1 defaults and copies element, with GML-tolerant comparisons.
@@ -538,6 +539,30 @@ New scripts go in `tools/oracle-scripts.mjs`.
   accepted entry. Five live-browser checks pass (40.1 seconds): the complete pointer-free keyboard journey,
   NEO charged shots and a complete enemy turn, route-before-equipment, single-route bypass, and mobile route
   sizing/cancel/confirm/focus restoration. Solo Weird remains disabled on the live site.
+
+### 15. Pipis difficulty-four burst (2026-10-16)
+
+- Replaced the named unsupported boundary in the egg's user event 0 with the original burst: fifteen radial
+  diamond bullets with independent angular jitter, then three aimed at the soul and its vertical offsets.
+  Each projectile uses the canonical heat-bullet definition, then repeats bullet initialization as the source
+  does. This second initialization matters: it resets graze points from 2 to 1 before applying egg damage/target.
+- Caller `i`, `radialshot`, final debris `fx`, Create/RNG ordering, depth insertion, three debris pieces and egg
+  destruction are preserved. Existing ring/cone variants retain their source behavior. No shared-engine,
+  input, route, leaderboard or public availability changes are required.
+- Added forty-two focused checks: six portable burst/motion/wall-collision cases and thirty-six comparisons
+  against the read-only local original event (three seeds, four egg types, three difficulty values). The latter
+  compare all stored instance fields, including the destroyed egg, and RNG state. They intentionally skip when
+  the maintainer's local extracted source is absent; no original GML or dialogue was added to the repository.
+- The original-event comparisons use the same runtime and canonical child factories. They establish fidelity
+  of this event port, not independent original-runner acceptance. A fresh read-only source/test review found no
+  actionable issues. All sixty-four focused Pipis/phone-hand/Supercharge checks pass.
+- This closes an internal attack-variant boundary. It does not enable the solo Weird route, change the Normal
+  team's rage policy or add a new public boss. Route-specific ACTs/endings, remaining difficulty/developer paths,
+  more complete sound/ending recordings and other Chapter 2 bosses are still separate work.
+- Acceptance: all 578 tests /58files passed with no skips (152.21 seconds), typecheck and Pages build passed.
+  Two production-browser checks passed (21.2 seconds): pointer-free launch and the real NEO charged-shot/enemy
+  turn/chapter-switch flow. Accepted JavaScript: `index-BtYCAm34.js` and `neo-KkY7X_rK.js`; CSS is unchanged.
+  The installed Chapter 2 package SHA256 remains `047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68`.
 
 ## 6. Where things are
 

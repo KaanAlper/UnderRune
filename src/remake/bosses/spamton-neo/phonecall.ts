@@ -364,7 +364,19 @@ export function createNeoPhonecall(object:(name:string)=>GmObjectDef):GmObjectDe
     }
    }else{const c=rt.create(pipisCenter,s.x,s.y);s.center=c.id;c.target=s.target;c.damage=s.damage;}
   }
-  if(n.difficulty===4)throw Error('obj_pipis_egg_bullet: difficulty 4 bursts are not ported');
+  if(n.difficulty===4){
+   const h=heart(rt)!;
+   for(s.i=0;s.i<15;s.i+=1){
+    const r=rt.create(object('obj_sneo_heatattack_bullet'),s.x,s.y);s.radialshot=r.id;bulletInit(r);
+    r.sprite='spr_diamondbullet';r.dir=s.i*24+R.random(14)-7;r.active=1;r.depth=s.depth-100;
+    r.target=s.target;r.damage=s.damage;r.grazed=0;r.element=6;
+   }
+   for(const offset of [0,-40,40]){
+    const r=rt.create(object('obj_sneo_heatattack_bullet'),s.x,s.y);s.radialshot=r.id;bulletInit(r);
+    r.sprite='spr_diamondbullet';r.dir=pointDirection(s.x,s.y,h.x+10,h.y+10+offset);r.active=1;r.depth=s.depth-100;
+    r.target=s.target;r.damage=s.damage;r.grazed=0;r.element=6;
+   }
+  }
   for(let k=0;k<3;k++){
    const p=rt.create(eggPiece,s.x,s.y);s.fx=p.id;p.imageIndex=R.random(3);p.imageXscale=2;p.imageYscale=2;p.direction=45+R.random(90);
   }
