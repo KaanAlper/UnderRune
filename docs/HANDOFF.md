@@ -497,7 +497,10 @@ New scripts go in `tools/oracle-scripts.mjs`.
   UnderRune QA, id c305497e-99a5-4050-a62d-5c2ca16ed050, damage109, active time46500ms. It is not a synthetic fixture.
 - Accepted artifact: index-D2zzGoN-.js, index-C9mWa0rd.css, neo-CuKd9mor.js plus public leaderboard config. Original
   installed Chapter 2 package SHA256 remains 047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68.
-  Publication and live frontend verification are recorded after deployment.
+  Published source: 3fb5993; Pages: 6e03aac (successful build/deploy). The live entry and public config match the
+  accepted artifact. Three live-browser checks passed (32.2 seconds): selected-boss board/remembered name/mode
+  queries, failed-configuration retry, and actual NEO Z-plus-Enter BIG SHOT/complete turn/chapter switching.
+  A combined real-service damage/time/no-item/no-armor/weapon/armor query returns the genuine QA run correctly.
 
 ## 6. Where things are
 
