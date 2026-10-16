@@ -534,6 +534,10 @@ New scripts go in `tools/oracle-scripts.mjs`.
   record. Typecheck, Pages build and whitespace checks pass. Mobile route selection was visually inspected.
 - Accepted assets: `index-CE5z8YJe.js`, `index-BjpURJwl.css`, `neo-C8w1U-Kx.js`. Installed Chapter 2 data.win SHA256
   remains `047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68`.
+- Published source: `6664dd8`; Pages: `e958737` (GitHub build/deploy succeeded). The public HTML references the
+  accepted entry. Five live-browser checks pass (40.1 seconds): the complete pointer-free keyboard journey,
+  NEO charged shots and a complete enemy turn, route-before-equipment, single-route bypass, and mobile route
+  sizing/cancel/confirm/focus restoration. Solo Weird remains disabled on the live site.
 
 ## 6. Where things are
 
