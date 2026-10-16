@@ -563,6 +563,9 @@ New scripts go in `tools/oracle-scripts.mjs`.
   Two production-browser checks passed (21.2 seconds): pointer-free launch and the real NEO charged-shot/enemy
   turn/chapter-switch flow. Accepted JavaScript: `index-BtYCAm34.js` and `neo-KkY7X_rK.js`; CSS is unchanged.
   The installed Chapter 2 package SHA256 remains `047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68`.
+- Publication: source `f31a135`, Pages `e77ded9`, successful GitHub build/deploy. The live entry matches the
+  accepted artifact. Both live-browser regressions passed (28.7 seconds): full keyboard launch flow and NEO
+  charged shots, enemy turn and chapter switching. No new public boss or solo route was enabled.
 
 ## 6. Where things are
 
