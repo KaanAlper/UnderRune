@@ -6,9 +6,11 @@ const confirmKeys=['z','Enter',' '];
 export class Input{
  private held=new Set<string>();private edges=new Set<string>();
  private confirmRelease=false;
+ private confirmReleaseMode:'logical'|'independent'='logical';
+ setConfirmReleaseMode(mode:'logical'|'independent'){this.clear();this.confirmReleaseMode=mode;}
  press(key:string){key=norm(key);if(!this.held.has(key))this.edges.add(key);this.held.add(key);}
- // button1_r checks either key's release independently of button1_h (Z + Enter can intentionally quick-fire).
- release(key:string){key=norm(key);if(this.held.delete(key)&&confirmKeys.includes(key))this.confirmRelease=true;}
+ // The owner reserves independent confirm-release quick-fire for the staged solo Weird route.
+ release(key:string){key=norm(key);if(this.held.delete(key)&&confirmKeys.includes(key)&&(this.confirmReleaseMode==='independent'||!confirmKeys.some(k=>this.held.has(k))))this.confirmRelease=true;}
  clear(){this.held.clear();this.edges.clear();this.confirmRelease=false;}
  read():InputFrame{
   const has=(...keys:string[])=>keys.some(k=>this.held.has(k)),edge=(...keys:string[])=>keys.some(k=>this.edges.has(k));

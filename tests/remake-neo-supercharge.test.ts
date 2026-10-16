@@ -13,10 +13,10 @@ let previousStrict:boolean;
 beforeEach(()=>{previousStrict=GmInstance.strict;GmInstance.strict=true;});
 afterEach(()=>{GmInstance.strict=previousStrict;});
 
-function scene(shots=20){
+function scene(shots=20,rage=true){
  const rt=new GmRuntime(loadSprites(2),{seed:11});
  rt.globals={chapter:2,fighting:0,flag:Array(1000).fill(0),inv:1000,turntimer:500};
- const {objects,host}=installNeoHost(rt);
+ const {objects,host}=installNeoHost(rt,{rage});
  const neo=rt.restore(objects.obj_spamton_neo_enemy,99998,460,80,{
   bigshot:0,upgrade:0,bigshotcount:shots,bigshotused:0,myself:0,singleshotmercy:0,
   partsiner:[],partrot:[],partx:[],party:[],partxoff:[],partyoff:[],partsprite:Array(8).fill('spr_sneo_example'),
@@ -34,6 +34,10 @@ function scene(shots=20){
 }
 
 describe.skipIf(!available)('Susie Supercharge through the installed Chapter 2 host',()=>{
+ it('normal team route policy suppresses rage without deleting its source handler for the staged solo route',()=>{
+  const {rt,neo}=scene(0,false);neo.funnycheat=0;neo.hellmode=0;rt.globals.tempflag=Array(100).fill(0);rt.globals.monsterat=[13,0,0];const modes:string[]=[];rt.onBattleMode=mode=>modes.push(mode);
+  for(let i=0;i<20;i++)rt.userEvent(neo,4);expect(neo.funnycheat).toBe(0);expect(neo.hellmode).toBe(0);expect(rt.globals.monsterat[0]).toBe(13);expect(modes).toEqual([]);
+ });
  it('records enrage only after the source rapid-shot threshold actually raises NEO attack',()=>{
   const {rt,neo}=scene(0);neo.funnycheat=0;rt.globals.tempflag=Array(100).fill(0);rt.globals.monsterat=[13,0,0];const modes:string[]=[];rt.onBattleMode=mode=>modes.push(mode);
   for(let i=0;i<5;i++)rt.userEvent(neo,4);expect(modes).toEqual([]);expect(rt.globals.monsterat[0]).toBe(13);

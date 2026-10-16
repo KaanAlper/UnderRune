@@ -18,7 +18,21 @@ export class BossDeck{
   this.element.addEventListener('pointerdown',e=>{startX=e.clientX;startY=e.clientY;suppressClick=false;});
   this.element.addEventListener('pointerup',e=>{const dx=e.clientX-startX,dy=e.clientY-startY;if(e.pointerType!=='mouse'&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.5){suppressClick=true;this.move(dx<0?1:-1);}});
   this.element.addEventListener('click',e=>{if(suppressClick&&e.detail>0){suppressClick=false;e.preventDefault();e.stopImmediatePropagation();}},true);
+  this.element.addEventListener('keydown',event=>{
+   if(event.ctrlKey||event.altKey||event.metaKey)return;
+   const target=event.target;if(!(target instanceof HTMLElement))return;
+   const key=event.key.toLowerCase(),card=target.classList.contains('boss-card');
+   if(key==='x'&&!card){event.preventDefault();event.stopPropagation();this.focusSelected();return;}
+   if(key==='z'){event.preventDefault();event.stopPropagation();if(!event.repeat){if(target===this.picker)this.launch();else if(target instanceof HTMLButtonElement)target.click();}return;}
+   // Native select up/down chooses a boss; left/right leaves the picker.
+   if(target===this.picker&&!['ArrowLeft','ArrowRight'].includes(event.key))return;
+   if(target!==this.picker&&!['ArrowUp','ArrowDown'].includes(event.key))return;
+   const stops=[this.cards[this.selected],...this.element.querySelectorAll<HTMLButtonElement>('.deck-actions button:not(:disabled)'),...this.element.querySelectorAll<HTMLButtonElement>('.deck-controls button:not(:disabled)'),this.picker];
+   const index=stops.indexOf(target as HTMLButtonElement|HTMLSelectElement);if(index<0)return;
+   event.preventDefault();event.stopPropagation();stops[(index+(['ArrowUp','ArrowLeft'].includes(event.key)?-1:1)+stops.length)%stops.length]?.focus();
+  });
  }
+ focusSelected(){this.cards[this.selected]?.focus({preventScroll:true});}
  private move(direction:number){if(this.records.length)this.choose((this.selected+direction+this.records.length)%this.records.length);}
  update(records:EncounterRecord[],selected:number,chapter:number,completed:string[],available:(id:string)=>boolean,choose:(index:number)=>void,launch:()=>void){
   const cardHadFocus=this.cards.some(card=>card===document.activeElement);

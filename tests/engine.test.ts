@@ -15,10 +15,15 @@ test('confirm release reaches a frame once even when the tap ends between reads'
  const tap=input.read();expect(tap.confirm).toBe(true);expect(tap.shoot).toBe(false);expect(tap.shootReleased).toBe(true);
  expect(input.read().shootReleased).toBe(false);
 });
-test('releasing either confirm alias produces an edge while the other keeps charging, as button1_r does',()=>{
+test('normal route confirms do not release a charged shot while another confirm stays held',()=>{
  const input=new Input();input.press('z');input.press('Enter');input.read();input.release('z');
- const edge=input.read();expect(edge.shootReleased).toBe(true);expect(edge.shoot).toBe(true);input.release('Enter');expect(input.read().shootReleased).toBe(true);
+ const edge=input.read();expect(edge.shootReleased).toBe(false);expect(edge.shoot).toBe(true);input.release('Enter');expect(input.read().shootReleased).toBe(true);
  input.release('Enter');expect(input.read().shootReleased).toBe(false);
+});
+test('the staged solo-route input policy retains independent release edges for rapid BIG SHOTs',()=>{
+ const input=new Input();input.setConfirmReleaseMode('independent');input.press('z');input.press('Enter');input.read();input.release('Enter');
+ const edge=input.read();expect(edge.shoot).toBe(true);expect(edge.shootReleased).toBe(true);
+ input.setConfirmReleaseMode('logical');expect(input.read().shootReleased).toBe(false);
 });
 test('clearing input drops pending release edges on focus and scene changes',()=>{
  const input=new Input();input.press('z');input.release('z');input.clear();expect(input.read().shootReleased).toBe(false);

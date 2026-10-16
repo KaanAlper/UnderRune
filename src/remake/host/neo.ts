@@ -42,7 +42,7 @@ const NEO_PORTED:GmObjectDef[]=[spamtonNeo,hitDetector,battleBalloon2,growtangle
 /** Shared engine objects whose Chapter 2 source versions are replaced by the engine's own (with its chapter rules). */
 const ENGINE_PORTED=new Set(['obj_heart','obj_grazebox','obj_moveheart','obj_collidebullet','obj_regularbullet']);
 
-export function installNeoHost(rt:GmRuntime){
+export function installNeoHost(rt:GmRuntime,options:{rage?:boolean}={}){
  const objects:Record<string,GmObjectDef>={};
  const metadata=new Map(neoResourceMetadata.map(m=>[m.name,m]));
  const namesByIndex=new Map(neoResourceMetadata.map(m=>[m.index,m.name]));
@@ -138,7 +138,10 @@ export function installNeoHost(rt:GmRuntime){
  // hand-written ones.
  const factories:(()=>GmObjectDef[])[]=[()=>NEO_PORTED,()=>createNeoSupport(object),()=>[createSneoBulletController(object)],()=>createFlyingHeads(object),()=>createNeoWalls(object),()=>createNeoWireHeart(object),()=>createNeoPhonecall(object),()=>createNeoPhonehands(object),()=>createNeoFace(object),()=>createNeoLasers(object),()=>createNeoFinale(object)];
  for(const make of factories)for(const def of make()){
-  const previous=objects[def.name],c=canonical(def);objects[def.name]=c;
+  const previous=objects[def.name],base=canonical(def);
+  // Product route policy: retain the original handler for solo-route work and parity fixtures, but disable its
+  // dispatch in the public team route. Copy the definition/events so another runtime keeps its own policy.
+  const c=def.name==='obj_spamton_neo_enemy'&&options.rage===false?{...base,events:{...base.events,user4:()=>{}}}:base;objects[def.name]=c;
   // Archived attack closures may retain their own registry's old definition. Their object selectors must
   // address the same live instances after migration, including Create-time target inheritance.
   if(previous&&previous!==c)portedAliases.push([previous,c]);

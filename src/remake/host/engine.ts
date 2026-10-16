@@ -56,7 +56,7 @@ export class EngineBattle{
  readonly rt:GmRuntime;readonly name:string;readonly party:readonly number[];
  paused=false;outcome:'victory'|'defeat'|null=null;turn=0;
  readonly scoring:BattleRunTracker|null;result:RunRecord|null=null;
- constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;scoring?:boolean}={}){
+ constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;scoring?:boolean;rage?:boolean}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
   if(!encounter||!setup)throw Error('This battle is not available yet.');
   if(id==='ch2-61'&&!options.neoHost)throw Error('Load the Chapter 2 source host before starting NEO.');
@@ -64,7 +64,7 @@ export class EngineBattle{
   this.rt=new GmRuntime(bank,{seed});this.name=encounter.name;this.party=encounter.party;
   const rt=this.rt,gear=(list:typeof equipment.weapons,id:number)=>list.find(g=>g.id===id);
   rt.globals.chapter=encounter.chapter;
-  const neo=id==='ch2-61'?options.neoHost!(rt):undefined;
+  const neo=id==='ch2-61'?options.neoHost!(rt,{rage:options.rage}):undefined;
   rt.room.name=setup.room;
   if(neo){rt.view.x=1640;rt.room.width=2400;}
   const equipped:Record<number,EquippedStats>={};

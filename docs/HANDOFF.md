@@ -502,6 +502,39 @@ New scripts go in `tools/oracle-scripts.mjs`.
   queries, failed-configuration retry, and actual NEO Z-plus-Enter BIG SHOT/complete turn/chapter switching.
   A combined real-service damage/time/no-item/no-armor/weapon/armor query returns the genuine QA run correctly.
 
+### 14. Route policy and full keyboard flow (2026-10-16)
+
+- `src/remake/host/routes.ts` owns browser route choices and input/rage policy. NEO opens a route dialog before
+  preparation; single-route encounters still open preparation directly. Normal NEO remains the three-member party.
+- At the owner's explicit request, public Normal NEO uses logical confirm release and suppresses the enemy's
+  rapid-shot `user4` handler. Holding Z and tapping Enter cannot release a BIG SHOT or raise attack in this route.
+  This is a deliberate product rule, different from the original team's available exploit. Releasing Z normally
+  still fires the charged shot. Canonical source handlers, attack/animation logic and the default host policy
+  remain intact for parity tests and future route work; per-runtime copies prevent cross-battle contamination.
+- Weird / Snowgrave is visibly disabled. Its staged setup reserves independent confirm release and the original
+  Rage / Hell Mode reaction for solo Kris. It is NOT a completed solo battle: route ACTs, attacks, ending and
+  dedicated engine setup still require a proper port. Do not enable it by swapping the normal party to Kris.
+- The team leaderboard no longer offers Enraged NEO. Future rage board selection is reserved for
+  `ch2-61-weird-enraged`; previously published records remain in storage. The applied SQL migration is unchanged.
+- Boss cards receive focus on entering the menu. Left/right changes cards; up/down visits enabled leaderboard,
+  preparation, previous/next controls and the boss picker. Z activates controls; X returns controls to the card,
+  then returns the card to chapter selection. Native picker up/down changes bosses; left/right leaves it.
+- Chapter navigation now consumes directional press edges as well as held keys, preserving rapid taps. The selected
+  chapter has `aria-current`. Route selection supports arrows, Z and X, skips unavailable routes and restores focus.
+- Leaderboard selectors retain native up/down choices and use left/right to leave the field. Other controls support
+  directional focus and Z activation, including filter summaries and checkboxes. Text inputs retain typed Z/X and
+  horizontal cursor movement; vertical arrows leave them. X closes the board from a selector too.
+- Regression acceptance includes a pointer-free and Tab-free journey from the theater through chapter/card/board/
+  route selection, bag add/remove and Start Battle into NEO's real command phase. Other browser checks cover mobile,
+  equipment, normal charged-shot release and a complete enemy turn.
+- Verification: 536 unit tests /57files passed, no skips (172.18 seconds). Fourteen focused keyboard/leaderboard
+  browser checks pass, including a queued-close regression: a late dialog close must not steal focus after the
+  player already moved back to a card. The final Pages artifact passes eighteen production browser checks
+  (57.1 seconds); only the deliberately opt-in real score publication test is skipped to avoid another public QA
+  record. Typecheck, Pages build and whitespace checks pass. Mobile route selection was visually inspected.
+- Accepted assets: `index-CE5z8YJe.js`, `index-BjpURJwl.css`, `neo-C8w1U-Kx.js`. Installed Chapter 2 data.win SHA256
+  remains `047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68`.
+
 ## 6. Where things are
 
 | What | Where |

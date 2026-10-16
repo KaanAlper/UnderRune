@@ -14,12 +14,28 @@ async function fixture(page:Page,configured=true){
   document.querySelector('#fixture')!.append(state.board.element);state.board.show('ch2-61');
  },configured);
 }
-test('normal and source-triggered enraged NEO scores use separate board queries',async({page})=>{
- await fixture(page);await page.getByLabel('NEO mode').selectOption('enraged');
- await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch2-61-enraged');
- await page.getByLabel('NEO mode').selectOption('normal');
+test('team NEO exposes only the normal board while solo rage is staged for the Weird route',async({page})=>{
+ await fixture(page);await expect(page.getByLabel('NEO mode')).toBeHidden();
  await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch2-61');
  await page.getByLabel('Boss',{exact:true}).selectOption('ch1-25');await expect(page.getByLabel('NEO mode')).toBeHidden();
+});
+
+test('arrows leave native selectors and open filters with Z without using Tab',async({page})=>{
+ await fixture(page);await page.getByRole('button',{name:'Join leaderboard',exact:true}).focus();
+ await page.keyboard.press('ArrowDown');await expect(page.getByLabel('Boss',{exact:true})).toBeFocused();
+ await page.keyboard.press('ArrowRight');await expect(page.getByLabel('Order',{exact:true})).toBeFocused();
+ await page.keyboard.press('ArrowRight');await expect(page.getByText('Filters: damage, time and equipment',{exact:true})).toBeFocused();
+ await page.keyboard.press('z');await expect(page.getByLabel('Minimum damage')).toBeVisible();
+ await page.keyboard.press('ArrowDown');await expect(page.getByLabel('Minimum damage')).toBeFocused();
+ await page.keyboard.press('ArrowDown');await expect(page.getByLabel('Maximum damage')).toBeFocused();
+});
+
+test('a queued dialog close never steals focus after the player already moved back to a card',async({page})=>{
+ await fixture(page);await page.evaluate(()=>{
+  const state=window as any,opener=document.createElement('button'),card=document.createElement('button');opener.textContent='Board opener';card.textContent='Return card';document.body.append(opener,card);
+  opener.focus();state.board.open('ch2-61');state.board.browser.close();card.focus();
+ });
+ await expect(page.getByRole('button',{name:'Return card',exact:true})).toBeFocused();await page.waitForTimeout(100);await expect(page.getByRole('button',{name:'Return card',exact:true})).toBeFocused();
 });
 
 test('combined challenge, range and equipment filters reach the API and show actual equipment quantities',async({page})=>{

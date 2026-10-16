@@ -10,6 +10,8 @@ import {AudioManager} from './game/audio';
 import {loadPrefs,savePrefs,browserStore} from './game/storage';
 import {NativeBattle,fetchNativeProfiles,type NativeEvent} from './game/native';
 import {PreparationPanel} from './ui/preparation';
+import {RoutePicker} from './ui/route-picker';
+import {battleRoutes,type BattleRoute} from './remake/host/routes';
 import {LeaderboardPanel} from './ui/leaderboard';
 import {LeaderboardApi,loadLeaderboardConfig} from './game/leaderboard-api';
 import {loadoutIni,type EquipmentCatalog,type Loadout} from './game/loadout';
@@ -54,10 +56,11 @@ let remakeLoad:AbortController|null=null;
 let failedChapter:number|null=null;
 const menuRecords=()=>catalog.filter(r=>r.chapter===chapter);
 let bossDeck:BossDeck|null=null;
+let routePicker:RoutePicker|null=null,chosenRoute:BattleRoute|undefined,choosingRoute=false;
 let leaderboard:LeaderboardPanel|null=null;
 function updatePreferences(){document.body.classList.toggle('reduced',prefs.reducedEffects);element('mute').textContent=prefs.muted?'SOUND OFF':'SOUND ON';element('mute').setAttribute('aria-pressed',String(prefs.muted));element('effects').textContent=prefs.reducedEffects?'CRT OFF':'CRT ON';element('effects').setAttribute('aria-pressed',String(prefs.reducedEffects));savePrefs(storage,prefs);}
 function cancelLoad(){sessionToken++;remakeLoad?.abort();remakeLoad=null;failedChapter=null;loading.hidden=true;error.hidden=true;busy=false;}
-function closeBattle(){native?.dispose();native=null;nativeRecord=null;remake=null;remakeView=null;remakePressed.clear();remakeReleased.clear();remakeMenu=false;element('outcome').hidden=true;element('stage').classList.remove('battle-over');audio?.stop();input.clear();clock.reset();}
+function closeBattle(){native?.dispose();native=null;nativeRecord=null;remake=null;remakeView=null;remakePressed.clear();remakeReleased.clear();remakeMenu=false;element('outcome').hidden=true;element('stage').classList.remove('battle-over');audio?.stop();input.setConfirmReleaseMode('logical');clock.reset();}
 function goMenu(){cancelLoad();closeBattle();scene='menu';sceneKey='';selection=Math.min(selection,menuRecords().length-1);}
 function openTheater(){cancelLoad();closeBattle();theater=new TheaterState(reducedMotion());scene='theater';sceneKey='';input.clear();}
 function showError(cause:unknown){loading.hidden=true;busy=false;element('error-text').textContent=cause instanceof Error?cause.message:String(cause);error.hidden=false;}
@@ -79,7 +82,7 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
   // The game calls randomize() when it starts: every battle gets its own random seed (tests and comparisons fix it).
   // ?seed=N repeats a run exactly (comparisons with the original's recordings).
   const fixedSeed=new URLSearchParams(location.search).get('seed'),seed=fixedSeed!==null?Number(fixedSeed)>>>0:crypto.getRandomValues(new Uint32Array(1))[0];
-  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost,scoring:publicMode});{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();remakeReleased.clear();
+  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost,scoring:publicMode,rage:chosenRoute?.rage??false});input.setConfirmReleaseMode(chosenRoute?.confirmRelease??'logical');{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();remakeReleased.clear();
   remakeView=new BattleView(remakeCtx,remakeAssets.draw);remakeMenu=false;
   remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.soundGetPitch=handle=>audio.sourceGetPitch(handle);remake.rt.stopAllSounds=()=>audio.stop();
   remake.rt.sourceAudio={effect:(name,pitch,volume)=>audio.sourceEffect(name,pitch,false,volume),volume:(handle,value,frames)=>audio.sourceVolume(handle,value,frames),free:handle=>audio.sourceFree(handle),music:name=>{audio.play(name);return name;},loop:handle=>audio.sourceSetLoop(handle),pause:handle=>audio.sourceTrackPause(handle),resume:handle=>audio.sourceTrackResume(handle),position:(handle,seconds)=>audio.sourcePosition(handle,seconds),playing:handle=>audio.sourcePlaying(handle)};
@@ -107,16 +110,21 @@ function onNativeEvent(event:NativeEvent){
  if(scene==='native'&&(event.type==='ended'||event.type==='failed'))showError(event.type==='ended'?'* The original battle engine stopped. RETRY prepares the battle again; DEVICE_MENU returns to the menu.':event.message??'The original battle stopped.');
 }
 async function startBattle(practice=false){
- const record=menuRecords()[selection];if(!record||busy)return;
+ let record=menuRecords()[selection];if(!record||busy||choosingRoute)return;
  const encounter=playableEncounter(record.id);if(practice&&!encounter?.practice)return;publicPractice=practice;
+ const routes=battleRoutes(record.id);let routeLabel:string|undefined;chosenRoute=routes[0];
+ if(!practice&&routes.length>1&&routePicker){
+  choosingRoute=true;let picked:BattleRoute|null;try{picked=await routePicker.choose(record.name,routes);}finally{choosingRoute=false;input.clear();}
+  if(!picked||!picked.ready)return;chosenRoute=picked;routeLabel=picked.title;record={...record,id:picked.encounterId};
+ }
  // Installed original battles remain the local full-battle path. Practice always uses the faithful source port.
  if(!publicMode&&!practice&&nativeIds.has(record.id)){
-  if(prep&&equipment?.chapters[record.chapter])prep.open(record);
+  if(prep&&equipment?.chapters[record.chapter])prep.open(record,{routeLabel});
   else void launchNative(record,'').catch(showError);
   return;
  }
  const playable=!!encounter;
- if(prep&&equipment?.chapters[record.chapter])prep.open(record,{practiceOnly:practice,available:playable,launchLabel:playable?practice?'START PRACTICE':'START BATTLE':'IN DEVELOPMENT',notice:playable?practice?'Single attack practice. Use START BATTLE from the encounter list for commands and continuous turns.':'Browser battle: commands, equipment stats and usable bag items. Visuals, sounds and special equipment effects are still being compared with the game.':publicMode?'Browse equipment and save your loadout. This encounter is not playable in the public demo yet.':'Browse equipment and save your loadout. A source battle for this encounter is still in development; the local original engine is unavailable.'});
+ if(prep&&equipment?.chapters[record.chapter])prep.open(record,{routeLabel,practiceOnly:practice,available:playable,launchLabel:playable?practice?'START PRACTICE':'START BATTLE':'IN DEVELOPMENT',notice:playable?practice?'Single attack practice. Use START BATTLE from the encounter list for commands and continuous turns.':'Browser battle: commands, equipment stats and usable bag items. Visuals, sounds and special equipment effects are still being compared with the game.':publicMode?'Browse equipment and save your loadout. This encounter is not playable in the public demo yet.':'Browse equipment and save your loadout. A source battle for this encounter is still in development; the local original engine is unavailable.'});
  else showError('Equipment could not load. Please retry.');
 }
 function addHitbox(name:string,x:number,y:number,w:number,h:number,run:()=>void){const button=document.createElement('button');button.className='hitbox';button.setAttribute('aria-label',name);button.style.cssText=`left:${x/6.4}%;top:${y/4.8}%;width:${w/6.4}%;height:${h/4.8}%`;button.addEventListener('click',()=>{audio.unlock();run();sceneKey='';});overlay.append(button);}
@@ -138,14 +146,14 @@ function updateControls(){
  }
  if(scene==='intro'){addHitbox('Connect device',70,60,500,360,()=>{scene='room';});status.textContent='LOCAL SIGNAL';}
  if(scene==='room'){
-  for(let i=1;i<=5;i++)addHitbox('Chapter '+i,175,112+(i-1)*32,270,31,()=>void openChapter(i));status.textContent='DEVICE_MENU';
+  for(let i=1;i<=5;i++)addHitbox('Chapter '+i,175,112+(i-1)*32,270,31,()=>void openChapter(i));overlay.children[chapter-1]?.setAttribute('aria-current','true');status.textContent='DEVICE_MENU';
  }
  if(scene==='menu'){
-  const rows=menuRecords();if(bossDeck){if(!overlay.contains(bossDeck.element))overlay.replaceChildren(bossDeck.element);bossDeck.update(rows,selection,chapter,prefs.completed,id=>publicMode?!!playableEncounter(id):nativeIds.has(id)||!!playableEncounter(id),index=>{selection=index;sceneKey='';},()=>{audio.unlock();void startBattle(false);});}
+  const rows=menuRecords();if(bossDeck){const mounted=!overlay.contains(bossDeck.element);if(mounted)overlay.replaceChildren(bossDeck.element);bossDeck.update(rows,selection,chapter,prefs.completed,id=>publicMode?!!playableEncounter(id):nativeIds.has(id)||!!playableEncounter(id),index=>{selection=index;sceneKey='';},()=>{audio.unlock();void startBattle(false);});if(mounted)bossDeck.focusSelected();}
   const select=element<HTMLSelectElement>('attack-select'),previous=select.value;select.replaceChildren();for(const [i,a]of JEVIL_PATTERNS.entries()){const opt=document.createElement('option');opt.value=String(i);opt.textContent=a.name;select.append(opt);}select.value=previous||'0';
   select.disabled=!playableEncounter(rows[selection].id)?.practice;element<HTMLButtonElement>('practice').disabled=select.disabled;
   status.textContent=`CHAPTER ${chapter} / ${rows.length} ENCOUNTERS${publicMode?' / '+availabilityLabel(chapter):''}`;
-  element('controls-hint').textContent='LEFT / RIGHT · CHANGE CARD · Z PREPARE · X CHAPTERS';
+  element('controls-hint').textContent='LEFT / RIGHT CARDS · UP / DOWN ACTIONS · Z SELECT · X BACK';
  }
 }
 function step(){
@@ -154,7 +162,8 @@ function step(){
  else if(scene==='intro'&&keys.confirm){audio.unlock();scene='room';sceneKey='';}
  else if(scene==='intro'&&keys.cancel){openTheater();}
  else if(scene==='room'){
-  if(frame-keyCooldown>10&&(keys.y||keys.x)){chapter=(chapter-1+(keys.y||keys.x)+5)%5+1;keyCooldown=frame;sceneKey='';}
+  const edge=keys.arrows?.[0],direction=edge?(['left','up'].includes(edge)?-1:1):keys.y||keys.x;
+  if(direction&&(edge||frame-keyCooldown>10)){chapter=(chapter-1+direction+5)%5+1;keyCooldown=frame;sceneKey='';}
   if(keys.confirm)void openChapter(chapter);
   if(keys.cancel){scene='intro';sceneKey='';}
  }else if(scene==='menu'){
@@ -222,6 +231,7 @@ async function initialize(){
   if(publicMode)await Promise.all([2,3,4,5].map(chapter=>assets.preload(chapter)));
   if(equipment&&!prep){const source=equipment;prep=new PreparationPanel(source,assets,storage,(record,loadout)=>!publicMode&&!publicPractice&&nativeIds.has(record.id)?launchNative(record,loadoutIni(loadout,source.chapters[record.chapter])):launchRemake(record,loadout),()=>{input.clear();if(native)setTimeout(()=>native?.focus());});}
   if(!leaderboard)leaderboard=new LeaderboardPanel(new LeaderboardApi(null,fetch,storage,loadLeaderboardConfig),catalog,equipment,n=>{input.clear();void openChapter(n);});
+  routePicker??=new RoutePicker();
   // Optional local reference art for the device room; the drawn room is used when it is absent.
   if(!publicMode)await Promise.all(['bg','console','tvglow','vessel_d_0'].map(n=>assets.loadImage('/device-room/'+n+'.png').catch(()=>null)));
   theaterView=new TheaterView(assets);await Promise.all(theaterView.urls().map(u=>assets.loadImage(u).catch(()=>null)));

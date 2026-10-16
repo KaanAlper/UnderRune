@@ -47,7 +47,7 @@ export class PreparationPanel{
   this.dialog.addEventListener('click',event=>{if(event.target===this.dialog){const r=this.dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)this.close();}});
   this.dialog.addEventListener('close',()=>{this.onDismiss();this.opener?.focus();});
  }
- open(record:EncounterRecord,options:{available?:boolean;notice?:string;launchLabel?:string;practiceOnly?:boolean}={}){
+ open(record:EncounterRecord,options:{available?:boolean;notice?:string;launchLabel?:string;practiceOnly?:boolean;routeLabel?:string}={}){
   const source=this.catalog.chapters[record.chapter];if(!source)throw Error('No equipment catalog for this chapter.');
   const party=preparationParty(record.id);this.members=party.members.filter(id=>!party.locked.includes(id));this.automatic=party.auto;
   this.record=record;this.source=source;this.loadout=readLoadout(this.storage,record.chapter,source);this.opener=document.activeElement instanceof HTMLElement?document.activeElement:null;
@@ -55,7 +55,7 @@ export class PreparationPanel{
   this.practiceOnly=options.practiceOnly??false;
   this.intro.textContent=options.notice??'Equip your party and pack your bag.';
   this.character=this.members[0]??party.members[0];this.slot=this.members.length?'armor1':'items';this.query='';this.search.value='';this.feedback.textContent='';
-  this.subtitle.textContent=`Chapter ${record.chapter}`;this.heading.textContent=record.name;
+  this.subtitle.textContent=`Chapter ${record.chapter}${options.routeLabel?' · '+options.routeLabel:''}`;this.heading.textContent=record.name;
   const soul=this.assets.getSprite('spr_heart',1);if(soul)this.dialog.style.setProperty('--soul',`url("${assetUrl(soul.frames[0].url)}")`);
   this.render();this.dialog.showModal();this.focus(this.members.length?`char:${this.character}`:'add');
  }

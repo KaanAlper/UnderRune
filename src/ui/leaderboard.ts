@@ -51,23 +51,27 @@ export class LeaderboardPanel{
   this.status.setAttribute('role','status');this.status.setAttribute('aria-live','polite');this.results.setAttribute('aria-label','Scores');
   const pages=node('div',undefined,'lb-pages');this.previous.type=this.next.type='button';this.previous.disabled=this.next.disabled=true;
   this.previous.onclick=()=>{this.offset=Math.max(0,this.offset-PAGE_SIZE);void this.refresh();};this.next.onclick=()=>{this.offset+=PAGE_SIZE;void this.refresh();};pages.append(this.previous,this.position,this.next);
-  const note=node('p','Player-submitted runs. Gameplay is not verified by a server. Time excludes pauses. No item means no items used; an unused packed bag is allowed. Enraged NEO records require triggering his rapid-shot reaction during the run.','lb-note');
+  const note=node('p','Player-submitted runs. Gameplay is not verified by a server. Time excludes pauses. No item means no items used; an unused packed bag is allowed.','lb-note');
   this.element.append(this.form,this.status,this.results,pages,note);this.gearOptions();this.setupPublish();
   const close=node('button','×','lb-browser-close');close.type='button';close.setAttribute('aria-label','Close leaderboard');close.onclick=()=>this.browser.close();
   this.browser.setAttribute('aria-label','Battle leaderboard');this.browser.append(close);
-  this.browser.addEventListener('close',()=>{this.hide();this.browserOpener?.focus();});
-  this.browser.addEventListener('keydown',event=>{if(event.key.toLowerCase()==='x'&&!(event.target instanceof HTMLInputElement)&&!(event.target instanceof HTMLSelectElement)){event.preventDefault();event.stopPropagation();this.browser.close();}else if(event.key.toLowerCase()==='z'&&event.target===close){event.preventDefault();event.stopPropagation();close.click();}});
-  for(const root of [this.element,this.dialog])root.addEventListener('keydown',event=>{
-   const target=event.target;if(!(target instanceof HTMLButtonElement)||event.altKey||event.ctrlKey||event.metaKey)return;
-   if(event.key.toLowerCase()==='z'){event.preventDefault();event.stopPropagation();target.click();return;}
+  this.browser.addEventListener('close',()=>{this.hide();if(document.activeElement===document.body||this.browser.contains(document.activeElement))this.browserOpener?.focus();});
+  this.browser.addEventListener('keydown',event=>{if(event.key.toLowerCase()==='x'&&!(event.target instanceof HTMLInputElement)){event.preventDefault();event.stopPropagation();this.browser.close();}else if(event.key.toLowerCase()==='z'&&event.target===close){event.preventDefault();event.stopPropagation();close.click();}});
+  for(const root of [this.element,this.dialog,this.profileDialog])root.addEventListener('keydown',event=>{
+   const target=event.target;if(!(target instanceof HTMLElement)||event.altKey||event.ctrlKey||event.metaKey)return;
+   const text=target instanceof HTMLInputElement&&target.type!=='checkbox';
+   if(event.key.toLowerCase()==='x'&&!text&&root instanceof HTMLDialogElement){event.preventDefault();event.stopPropagation();root.close();return;}
+   if(event.key.toLowerCase()==='z'&&(target instanceof HTMLButtonElement||target.tagName==='SUMMARY'||target instanceof HTMLInputElement&&target.type==='checkbox')){event.preventDefault();event.stopPropagation();if(!event.repeat)target.click();return;}
    if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+   // Select up/down remains native; left/right moves to another field. Text fields keep cursor movement.
+   if(target instanceof HTMLSelectElement&&['ArrowUp','ArrowDown'].includes(event.key)||text&&['ArrowLeft','ArrowRight'].includes(event.key))return;
    const controls=Array.from(root.querySelectorAll<HTMLElement>('button:not(:disabled),select,input,summary')).filter(el=>el.getClientRects().length>0);
    const index=controls.indexOf(target);if(index<0)return;event.preventDefault();event.stopPropagation();controls[(index+(['ArrowLeft','ArrowUp'].includes(event.key)?-1:1)+controls.length)%controls.length]?.focus();
   });
  }
  private field(label:string,control:HTMLElement,parent:HTMLElement=this.form){control.setAttribute('aria-label',label);const wrapper=node('label',undefined,'lb-field');wrapper.append(node('span',label),control);parent.append(wrapper);}
  private gearOptions(){
-  this.modeField.hidden=this.boss.value!=='ch2-61';
+  this.modeField.hidden=this.boss.value!=='ch2-61-weird';
   const chapter=this.encounters.find(record=>record.id===this.boss.value)?.chapter??1,source=this.equipment.chapters[chapter];
   for(const [key,entries]of [['weapon',source?.weapons],['armor',source?.armors],['bagItem',source?.items],['usedItem',source?.items]] as const){
    const select=this.controls.get(key) as HTMLSelectElement;select.replaceChildren(option('','Any'));for(const entry of entries??[])if(entry.id!==0)select.append(option(String(entry.id),entry.name));
@@ -84,7 +88,7 @@ export class LeaderboardPanel{
  }
  hide(){this.active=false;this.element.hidden=true;this.abort?.abort();this.revision++;if(this.browser.open)this.browser.close();}
  private filters():LeaderboardFilters{
-  const filters:LeaderboardFilters={encounterId:this.boss.value+(this.boss.value==='ch2-61'&&this.mode.value==='enraged'?'-enraged':''),order:this.order.value as 'damage'|'time',offset:this.offset};
+  const filters:LeaderboardFilters={encounterId:this.boss.value+(this.boss.value==='ch2-61-weird'&&this.mode.value==='enraged'?'-enraged':''),order:this.order.value as 'damage'|'time',offset:this.offset};
   for(const [key,control]of this.controls){if(control instanceof HTMLInputElement&&control.type==='checkbox'){if(control.checked)(filters as any)[key]=true;}else if(control.value!=='')(filters as any)[key]=Number(control.value);}
   for(const [min,max,label]of [['minDamage','maxDamage','Damage'],['minSeconds','maxSeconds','Time']] as const){if(filters[min]!==undefined&&filters[max]!==undefined&&filters[min]!>filters[max]!)throw Error(`${label} minimum must not exceed the maximum.`);}
   return filters;

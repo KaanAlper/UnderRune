@@ -10,7 +10,7 @@ test('card deck changes bosses with arrows and opens the selected preparation',a
  await page.keyboard.press('Enter');await expect(page.getByRole('dialog',{name:'Clover',exact:true})).toBeVisible();await page.getByRole('button',{name:'Close preparation'}).click();
  await page.locator('#boss-select').selectOption('ch1-25');await expect(page.getByRole('button',{name:'Battle JEVIL ch1-25',exact:true})).toHaveAttribute('aria-current','true');
  const previous=page.getByRole('button',{name:'Previous encounters'});await previous.focus();await page.keyboard.press('Enter');await expect(page.locator('#boss-select')).toHaveValue('ch1-20');await expect(page.locator('dialog[open]')).toHaveCount(0);
- await page.keyboard.press('Space');await expect(page.locator('#boss-select')).toHaveValue('ch1-12');await expect(page.locator('#boss-select option[value="ch1-15"]')).toHaveCount(0);await page.keyboard.press('x');await expect(page.getByRole('button',{name:'Chapter 2',exact:true})).toBeVisible();
+ await page.keyboard.press('Space');await expect(page.locator('#boss-select')).toHaveValue('ch1-12');await expect(page.locator('#boss-select option[value="ch1-15"]')).toHaveCount(0);await page.keyboard.press('x');await expect(page.locator('.boss-card[aria-current="true"]')).toBeFocused();await page.keyboard.press('x');await expect(page.getByRole('button',{name:'Chapter 2',exact:true})).toBeVisible();
  expect(errors).toEqual([]);
 });
 test('mobile deck retains swipe navigation, focus and reduced motion',async({page})=>{

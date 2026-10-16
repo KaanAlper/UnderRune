@@ -5,6 +5,7 @@ test('NEO opens the coaster battle, takes a complete yellow-soul turn, and can s
  page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/\/native\/|\.wasm|data\.win/.test(r.url()))native.push(r.url());});
  await page.goto(url);await page.getByRole('button',{name:'DELTARUNE remote'}).click();await page.getByRole('button',{name:'Connect DELTARUNE'}).click();await page.getByRole('button',{name:'Connect device'}).click();await page.getByRole('button',{name:'Chapter 2',exact:true}).click();
  await page.locator('#boss-select').selectOption('ch2-61');await page.getByRole('button',{name:'Battle Spamton NEO ch2-61',exact:true}).click();
+ await page.getByRole('dialog',{name:'Choose route',exact:true}).getByRole('button',{name:'Normal route',exact:true}).click();
  const prep=page.getByRole('dialog',{name:'Spamton NEO'});await expect(prep).toBeVisible();await prep.getByRole('button',{name:'START BATTLE',exact:true}).click();
  await expect.poll(async()=>JSON.stringify({status:await page.locator('#status').textContent(),errors,error:await page.locator('#error').textContent(),feedback:await page.locator('.prep-feedback').textContent()}),{timeout:20000}).toContain('Spamton NEO / command');await page.waitForTimeout(700);
  await page.locator('#screen').screenshot({path:'test-results/neo-commands.png'});
@@ -32,10 +33,9 @@ test('NEO opens the coaster battle, takes a complete yellow-soul turn, and can s
  });
  await page.keyboard.down('z');await page.waitForTimeout(900);
  expect(await page.evaluate(()=>(window as any).__bigShotDraws)).toBe(0);
- // The original checks each confirm key's release independently: Z stays held while Enter releases the charge.
+ // Public Normal route uses one logical shoot action; the independent-release exploit is staged for Weird.
  await page.keyboard.down('Enter');await page.waitForTimeout(100);await page.keyboard.up('Enter');
- await expect.poll(()=>page.evaluate(()=>(window as any).__bigShotDraws),{timeout:1500}).toBeGreaterThan(0);
- for(let i=0;i<7;i++){await page.waitForTimeout(120);await page.keyboard.press('Enter');}
+ await page.waitForTimeout(100);expect(await page.evaluate(()=>(window as any).__bigShotDraws)).toBe(0);
  await page.keyboard.up('z');
  await expect.poll(()=>page.evaluate(()=>(window as any).__bigShotDraws),{timeout:1500}).toBeGreaterThan(0);
  await page.locator('#screen').screenshot({path:'test-results/neo-yellow-soul.png'});
