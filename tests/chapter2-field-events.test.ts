@@ -88,7 +88,7 @@ function fixture(seed=11){
 }
 const run=(s:GmInstance,rt:GmRuntime,e:GmEvent)=>{const f=resolveEvent(s.object,e);if(!f)throw Error(`Missing ${s.object.name}.${e}`);f(s,rt);};
 // The comparison adapter reserves sprite as its builtin and recognizes named sounds by prefix.
-const eventSource=(name:string,event:string)=>fs.readFileSync(`extracted/chapter2_windows/code/gml_Object_${name}_${event}.gml`,'utf8').replace(/\bsprite\[/g,'partsprite[').replace(/\bmotor_swing_down\b/g,'snd_motor_swing_down');
+const eventSource=(name:string,event:string)=>fs.readFileSync(`extracted/chapter2_windows/code/gml_Object_${name}_${event}.gml`,'utf8').replace(/\bsprite\[/g,'gml_sprite[').replace(/\bmotor_swing_down\b/g,'snd_motor_swing_down');
 const state=(rt:GmRuntime)=>rt.instances.map(s=>Object.fromEntries(Object.entries(s).filter(([k])=>!['layerEntry','frameCount'].includes(k)).map(([k,v])=>[k,k==='object'?v.name:k==='visible'?!!v:k==='difficulty'&&typeof v==='boolean'?Number(v):v])));
 
 describe('field families have executable combat and minigames',()=>{

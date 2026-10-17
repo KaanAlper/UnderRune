@@ -1,7 +1,7 @@
 // Loads locally recorded reference runs (npm run oracle) and restores them into the remake runtime.
 // The recordings and the sprite table come from the maintainer's own game install and never leave this machine.
 import fs from 'node:fs';
-import {GmRuntime,type GmObjectDef,type GmInstance} from '../../src/remake/gm/runtime';
+import {GML_RENAMED,GmRuntime,type GmObjectDef,type GmInstance} from '../../src/remake/gm/runtime';
 import {spriteBank,type SpriteBank} from '../../src/remake/gm/sprites';
 
 export type TraceObject=[id:number,object:string,x:number,y:number,imageIndex:number,sprite:string,visible:boolean];
@@ -149,9 +149,11 @@ export function compareState(rt:GmRuntime,dump:Dump,checked:Set<string>,res:Reso
     // the game sets it itself where it reads it. Only compared where the remake sets it.
     if(key==='creator'&&!('creator' in o))continue;
     if(ignore[name]?.includes(key))continue;
-    if(!(key in o))problems.push(`${at} ${key}: unset, reference has ${show(value)}`);else diff(key,o[key],value);
+    const field=GML_RENAMED[key]??key;
+    if(!(field in o))problems.push(`${at} ${key}: unset, reference has ${show(value)}`);else diff(key,o[field],value);
    }
-   for(const key of Object.keys(o))if(!RUNTIME_FIELDS.has(key)&&!key.startsWith('$')&&!(key in d.selfVariables))problems.push(`${at} ${key}: ${show(o[key])}, not set in the reference`);
+   const renamedBack=Object.fromEntries(Object.entries(GML_RENAMED).map(([g,r])=>[r,g]));
+   for(const key of Object.keys(o))if(!RUNTIME_FIELDS.has(key)&&!key.startsWith('$')&&!((renamedBack[key]??key) in d.selfVariables))problems.push(`${at} ${key}: ${show(o[key])}, not set in the reference`);
   });
  }
  return problems;

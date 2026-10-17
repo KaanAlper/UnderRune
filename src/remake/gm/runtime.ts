@@ -110,8 +110,11 @@ export class GmInstance{
 /** GML built-in variable names whose runtime fields are named differently (variable_instance_get/set by name). */
 const GML_BUILTINS:Readonly<Record<string,string>>={sprite_index:'sprite',mask_index:'mask',object_index:'object',image_index:'imageIndex',image_speed:'imageSpeed',
  image_xscale:'imageXscale',image_yscale:'imageYscale',image_angle:'imageAngle',image_alpha:'imageAlpha',image_blend:'imageBlend',gravity_direction:'gravityDirection'};
+/** GML instance variables whose names are runtime fields, and the names the remake keeps them under. `sprite` is the
+ * runtime's sprite_index, so an object's own `sprite` variable (Tasque Manager's parts, obj_animator) is `gml_sprite`. */
+export const GML_RENAMED:Readonly<Record<string,string>>={sprite:'gml_sprite'};
 /** The runtime field that holds the GML variable `name` (built-ins have their own names; instance variables keep theirs). */
-export function gmField(name:string){return GML_BUILTINS[name]??name;}
+export function gmField(name:string){return GML_BUILTINS[name]??GML_RENAMED[name]??name;}
 export function gmArray<T=any>(inst:GmInstance,name:string,make:()=>T[]=()=>[]):T[]{
  if(!(name in inst))inst[name]=make();
  return inst[name];
@@ -257,7 +260,8 @@ export class GmRuntime{
  /** Recreate an instance from a reference snapshot without running its Create event (ids keep creation order). */
  restore(object:GmObjectDef,id:number,x:number,y:number,vars:Record<string,unknown>={}):GmInstance{
   object=this.object(object);
-  const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;Object.assign(inst,vars);
+  const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;
+  for(const [k,v] of Object.entries(vars))inst[GML_RENAMED[k]??k]=v;
   this.instances.push(inst);this.instances.sort((a,b)=>a.id-b.id);return inst;
  }
  destroy(inst:GmInstance){if(this.destroyedInstances.has(inst))return;this.destroyedInstances.add(inst);this.run(inst,'destroy');this.run(inst,'cleanup');inst.live=false;}

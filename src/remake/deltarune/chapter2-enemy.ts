@@ -88,8 +88,8 @@ export function actCharSpriteEnd(s:GmInstance,rt:GmRuntime){
 }
 export const animator:GmObjectDef={name:'obj_animator',index:926,events:{
  // GML's ordinary variable `sprite` is distinct from sprite_index (the runtime's sprite accessor).
- create:s=>{Object.assign(s,{con:0,initframe:-1,endframe:-1,target:-1,animatorSprite:-1,fake_image_speed:0.25,fake_image_index:0,fake_image_index_max:0,timer:0});},
- step:(s,rt)=>{const t=rt.byId(s.target);if(!t){rt.destroy(s);return;}if(s.con===0){t.imageIndex=0;t.imageSpeed=0;if(typeof s.animatorSprite==='string')t.sprite=s.animatorSprite;if(s.initframe>=0)t.imageIndex=s.initframe;s.fake_image_index_max=s.endframe;const count=t.sprite?rt.bank.get(t.sprite)?.frames??0:0;if(s.endframe===0)s.fake_image_index_max=count-1-t.imageIndex;if(s.endframe===-1)s.fake_image_index_max=count-t.imageIndex;s.con=1;}if(s.con===1){s.fake_image_index+=s.fake_image_speed;t.imageIndex=s.fake_image_index;if(s.fake_image_index>=s.fake_image_index_max)rt.destroy(s);}},
+ create:s=>{Object.assign(s,{con:0,initframe:-1,endframe:-1,target:-1,gml_sprite:-1,fake_image_speed:0.25,fake_image_index:0,fake_image_index_max:0,timer:0});},
+ step:(s,rt)=>{const t=rt.byId(s.target);if(!t){rt.destroy(s);return;}if(s.con===0){t.imageIndex=0;t.imageSpeed=0;if(typeof s.gml_sprite==='string')t.sprite=s.gml_sprite;if(s.initframe>=0)t.imageIndex=s.initframe;s.fake_image_index_max=s.endframe;const count=t.sprite?rt.bank.get(t.sprite)?.frames??0:0;if(s.endframe===0)s.fake_image_index_max=count-1-t.imageIndex;if(s.endframe===-1)s.fake_image_index_max=count-t.imageIndex;s.con=1;}if(s.con===1){s.fake_image_index+=s.fake_image_speed;t.imageIndex=s.fake_image_index;if(s.fake_image_index>=s.fake_image_index_max)rt.destroy(s);}},
 }};
 export function actCharSprite(s:GmInstance,rt:GmRuntime,actor:string,sprite:string,rate:number,mode:number){
  s._charactor=actor;const names=['kris','susie','ralsei','noelle'],id=names.indexOf(actor)+1;s._charinstance=({kris:'obj_herokris',susie:'obj_herosusie',ralsei:'obj_heroralsei',noelle:'obj_heronoelle'} as Record<string,string>)[actor]??'obj_herokris';if(id)s._charnum=id;s.__returnvalue=s._charactsprite[s._charnum];
