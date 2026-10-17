@@ -48,7 +48,9 @@ test('mobile preparation fits the viewport and retains touch controls',async({pa
  await page.setViewportSize({width:390,height:844});await page.emulateMedia({reducedMotion:'reduce'});await menu(page);
  await boss(page,"ch1-25","JEVIL");const prep=page.getByRole('dialog',{name:'JEVIL'});await expect(prep).toBeVisible();
  const bounds=await prep.boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.width).toBeLessThanOrEqual(390);
- await page.screenshot({path:'test-results/public-mobile.png'});await prep.getByRole('button',{name:'START BATTLE'}).click();await expect(page.locator('#status')).toContainText('command');
+ await page.screenshot({path:'test-results/public-mobile.png'});await prep.getByRole('button',{name:'START BATTLE'}).click();
+ // The live site loads the battle's package over the network first.
+ await expect(page.locator('#status')).toContainText('command',{timeout:20000});
 });
 test('retry recovers a transient public equipment request failure',async({page})=>{
  let blocked=false;await page.route('**/generated/equipment.json',async route=>{if(!blocked){blocked=true;await route.abort();}else await route.continue();});
