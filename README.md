@@ -82,7 +82,7 @@ npm run audit:native   # opens the catalog encounters one by one; screenshots an
 
 ## Known limitations
 
-- Battles start from the game's test room instead of from inside the story, so the cutscenes before and after a battle do not play (except where the battle's own intro is the scene: Jevil, Shadow Mantle and Susiezilla).
+- Battles start from the game's test room instead of from inside the story, so the cutscenes before and after a battle do not play (except where the battle's own intro is the scene: Jevil, ERAM (the Shadow Mantle battle) and Susiezilla).
 - Character stats are each chapter's starting values.
 - Butterscotch is an independent re-implementation of GameMaker. A few platform-specific calls, such as fullscreen and display size, have no browser equivalent; they do not affect battles and can be inspected with `?debug`.
 - The public version includes shared battle flow for Jevil, opening Lancer, standalone Clover, both K.Round encounters and normal-route Spamton NEO. NEO runs archived enemy, attack, yellow-soul and coaster events, with Chapter 2 commands and items. It enters at the battle scene after the world introduction and ends before postbattle world dialogue. Normal attack variants, ACTs and both endings are exercised in the integration tests. Full visual, sound and equipment-ability parity remains under verification; these checks do not establish identical behavior across every original game scene. Side-B NEO is unavailable.

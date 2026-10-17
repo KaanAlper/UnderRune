@@ -2246,7 +2246,7 @@
   },
   {
     "id": "ch3-mantle",
-    "name": "Shadow Mantle",
+    "name": "ERAM",
     "chapter": 3,
     "encounter": -1,
     "variant": "action",
@@ -2269,7 +2269,7 @@
         "slot": 0,
         "object": "obj_shadow_mantle_enemy",
         "type": -1,
-        "name": "Shadow Mantle",
+        "name": "ERAM",
         "hp": 30,
         "at": 0,
         "df": 0,

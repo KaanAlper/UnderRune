@@ -8,14 +8,14 @@ async function menu(page:Page,chapter=1){
 test('selected boss opens its own shared board, team rage is hidden and one name works across chapters',async({page})=>{
  const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await menu(page,2);await page.locator('#boss-select').selectOption('ch2-61');
  await expect(page.getByRole('button',{name:'Leaderboard',exact:true})).toBeEnabled();await page.getByRole('button',{name:'Leaderboard',exact:true}).focus();await page.keyboard.press('z');const board=page.locator('.leaderboard-browser');await expect(board).toBeVisible();
- await expect(board.getByLabel('Boss',{exact:true})).toHaveValue('ch2-61');await expect(board.getByRole('status')).not.toContainText('Could not load',{timeout:15000});
+ await expect(board.getByLabel('Boss',{exact:true})).toBeHidden();await expect(board.locator('.lb-boss')).toHaveText('Spamton NEO · Chapter 2');await expect(board.getByRole('status')).not.toContainText('Could not load',{timeout:15000});
  await expect.poll(()=>board.getByRole('status').textContent()).not.toMatch(/Loading/);
  await expect(board.getByRole('status')).not.toContainText('Could not load');
  await expect(board.getByLabel('NEO mode')).toBeHidden();
  await board.getByRole('button',{name:'Join leaderboard',exact:true}).click();const join=page.getByRole('dialog',{name:'Join leaderboard',exact:true});await join.getByLabel('Display name').fill('Browser Player');await join.getByRole('button',{name:'Save name'}).click();
  await expect(board).toContainText('Playing as Browser Player');await page.keyboard.press('Escape');await expect(board).toBeHidden();
  await page.keyboard.press('x');await expect(page.locator('.boss-card[aria-current="true"]')).toBeFocused();await page.keyboard.press('x');await page.getByRole('button',{name:'Chapter 1',exact:true}).click();await page.locator('#boss-select').selectOption('ch1-2');await page.getByRole('button',{name:'Leaderboard',exact:true}).click();
- await expect(board.getByLabel('Boss',{exact:true})).toHaveValue('ch1-2');await expect(board.getByLabel('NEO mode')).toBeHidden();await expect(board).toContainText('Playing as Browser Player');
+ await expect(board.getByLabel('Boss',{exact:true})).toBeHidden();await expect(board.locator('.lb-boss')).toHaveText('Lancer · Chapter 1');await expect(board.getByLabel('NEO mode')).toBeHidden();await expect(board).toContainText('Playing as Browser Player');
  await page.keyboard.press('Escape');await page.setViewportSize({width:390,height:844});const prepare=page.getByRole('button',{name:'Prepare party'}),scores=page.getByRole('button',{name:'Leaderboard',exact:true});
  const a=(await prepare.boundingBox())!,b=(await scores.boundingBox())!;expect(b.y+b.height).toBeLessThanOrEqual(a.y);await page.screenshot({path:'test-results/leaderboard-boss-deck.png'});expect(errors).toEqual([]);
 });

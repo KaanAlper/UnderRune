@@ -26,11 +26,13 @@ export class LeaderboardPanel{
  private pending?:RunRecord;private publishing=false;private publishRevision=0;
  private name=node('input');private publish=node('button','Publish score');private publishStatus=node('p');private summary=node('div',undefined,'lb-run-summary');
  private readonly encounters:EncounterRecord[];
+ /** The battle's name when the board was opened for one battle (its card's button), in place of the Boss choice. */
+ private bossTitle=node('p',undefined,'lb-boss');
  constructor(private api:LeaderboardApi,catalog:EncounterRecord[],private equipment:EquipmentCatalog,_onChapter:(n:number)=>void,storage?:Pick<Storage,'getItem'|'setItem'>){
   try{this.storage=storage??window.localStorage;const saved=JSON.parse(this.storage.getItem('underrune.leaderboard.player.v1')??'null');if(this.validName(saved?.name))this.playerName=saved.name.trim();}catch{/* Storage must never block playing. */}
   this.encounters=catalog.filter(record=>!!sourceEncounter(record.id));
   this.element.hidden=true;this.element.setAttribute('aria-label','Battle leaderboard');
-  const header=node('header',undefined,'lb-header'),title=node('div');title.append(node('h1','Leaderboard'),node('p','Finish a battle. Leave your mark.'));
+  const header=node('header',undefined,'lb-header'),title=node('div');title.append(node('h1','Leaderboard'),this.bossTitle,node('p','Finish a battle. Leave your mark.'));this.bossTitle.hidden=true;
   header.append(title,this.profile);this.element.append(header);this.setupProfile();
   for(const record of this.encounters)this.boss.append(option(record.id,`${record.name} · Chapter ${record.chapter} · ${record.encounter}`));
   this.order.append(option('damage','Least damage, then fastest'),option('time','Fastest, then least damage'));
@@ -79,12 +81,18 @@ export class LeaderboardPanel{
  }
  show(encounterId?:string){
   if(encounterId&&scoreBoss(encounterId)!==this.boss.value&&this.encounters.some(record=>record.id===scoreBoss(encounterId))){this.boss.value=scoreBoss(encounterId);this.mode.value=encounterId.endsWith('-enraged')?'enraged':'normal';this.gearOptions();this.offset=0;}
+  this.boss.parentElement!.hidden=false;this.bossTitle.hidden=true;
   this.active=true;this.element.hidden=false;void this.refresh();
  }
+ /** Opened for one battle (a boss card's button), the board shows only that battle: the Boss choice is hidden and the
+  * battle's name heads the board. Opened without one, the Boss choice picks the battle. */
  open(encounterId?:string){
   this.browserOpener=document.activeElement instanceof HTMLElement?document.activeElement:null;
   if(this.element.parentElement!==this.browser)this.browser.append(this.element);if(!this.browser.isConnected)document.body.append(this.browser);
-  this.show(encounterId);if(!this.browser.open)this.browser.showModal();this.boss.focus();
+  this.show(encounterId);
+  const record=encounterId?this.encounters.find(r=>r.id===scoreBoss(encounterId)):undefined;
+  this.boss.parentElement!.hidden=!!record;this.bossTitle.hidden=!record;this.bossTitle.textContent=record?`${record.name} · Chapter ${record.chapter}`:'';
+  if(!this.browser.open)this.browser.showModal();(record?this.order:this.boss).focus();
  }
  hide(){this.active=false;this.element.hidden=true;this.abort?.abort();this.revision++;if(this.browser.open)this.browser.close();}
  private filters():LeaderboardFilters{
@@ -101,7 +109,7 @@ export class LeaderboardPanel{
    await this.api.connect?.();if(!this.active||revision!==this.revision)return;
    if(!this.api.configured){this.status.textContent='Shared leaderboard is not connected yet. You can still play.';this.results.replaceChildren();this.position.textContent='';return;}
    const rows=await this.api.list(filters,this.abort.signal);if(!this.active||revision!==this.revision)return;
-   this.renderRows(rows);this.status.textContent=rows.length?`${rows.length} scores on this page.`:'No scores match these filters. Try another boss or widen the filters.';
+   this.renderRows(rows);this.status.textContent=rows.length?`${rows.length} scores on this page.`:(this.bossTitle.hidden?'No scores match these filters. Try another boss or widen the filters.':'No scores match these filters yet. Widen the filters, or be the first.');
    this.position.textContent=rows.length?`Filtered positions ${this.offset+1}–${this.offset+rows.length}`:'No results';this.previous.disabled=this.offset===0;this.next.disabled=rows.length===PAGE_SIZE;
   }catch(error){if(revision!==this.revision||!this.active)return;this.status.textContent=`Could not load scores. ${error instanceof Error?error.message:'Try again.'} Apply filters to retry.`;this.results.replaceChildren();this.position.textContent='';this.previous.disabled=this.offset===0;}
   finally{if(revision===this.revision)this.results.removeAttribute('aria-busy');}

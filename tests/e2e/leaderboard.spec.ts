@@ -86,8 +86,11 @@ test('failed publication keeps the same run for an explicit retry',async({page})
 
 test('boss context opens in a modal and Escape restores the opener focus',async({page})=>{
  await fixture(page);await page.evaluate(()=>{(window as any).board.hide();const button=document.createElement('button');button.textContent='Boss scores';button.onclick=()=>(window as any).board.open('ch1-25');document.body.append(button);});
- const opener=page.getByRole('button',{name:'Boss scores'});await opener.click();const dialog=page.getByRole('dialog',{name:'Battle leaderboard',exact:true});await expect(dialog).toBeVisible();await expect(dialog.getByLabel('Boss',{exact:true})).toHaveValue('ch1-25');
- await expect(dialog.getByLabel('Boss',{exact:true})).toBeFocused();await page.keyboard.press('Escape');await expect(dialog).toBeHidden();await expect(opener).toBeFocused();
+ const opener=page.getByRole('button',{name:'Boss scores'});await opener.click();const dialog=page.getByRole('dialog',{name:'Battle leaderboard',exact:true});await expect(dialog).toBeVisible();
+ // Opened for one battle: only that battle, no Boss choice.
+ await expect(dialog.getByLabel('Boss',{exact:true})).toBeHidden();await expect(dialog.locator('.lb-boss')).toHaveText('JEVIL · Chapter 1');
+ await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch1-25');
+ await expect(dialog.getByLabel('Order')).toBeFocused();await page.keyboard.press('Escape');await expect(dialog).toBeHidden();await expect(opener).toBeFocused();
  await opener.click();await dialog.getByRole('button',{name:'Close leaderboard'}).focus();await page.keyboard.press('z');await expect(dialog).toBeHidden();await expect(opener).toBeFocused();
 });
 test('time formatting does not round into a sixty second remainder',async({page})=>{

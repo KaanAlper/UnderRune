@@ -89,7 +89,7 @@ export async function generateCatalog(){
  const specialSource=sources.find(s=>s.id==='chapter3_windows');
  if(specialSource){
   const index=JSON.parse(await fs.readFile(path.join(root,'extracted',specialSource.id,'index.json'),'utf8'));
-  for(const [object,name,hpField]of [['obj_shadow_mantle_enemy','Shadow Mantle','hp'],['obj_susiezilla_singlescreen_kickboxin_tenna','Susiezilla: Tenna','maxhp']]){
+  for(const [object,name,hpField]of [['obj_shadow_mantle_enemy','ERAM','hp'],['obj_susiezilla_singlescreen_kickboxin_tenna','Susiezilla: Tenna','maxhp']]){
    const codeName=`gml_Object_${object}_Create_0`,stepName=`gml_Object_${object}_Step_${object==='obj_shadow_mantle_enemy'?2:0}`;
    const code=await fs.readFile(path.join(root,'extracted',specialSource.id,'code',codeName+'.gml'),'utf8');
    const hp=Number(code.match(new RegExp(`\\b${hpField}\\s*=\\s*(\\d+)`))?.[1]);
