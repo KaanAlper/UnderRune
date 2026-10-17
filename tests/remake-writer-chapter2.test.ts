@@ -34,7 +34,7 @@ describe('Chapter 2 writer part',()=>{
   expect(rt.random.snapshot()).toEqual(expected.snapshot());expect(w.i).toBe(7);expect(w.n).toBe(3);
  });
  it('rejects an unsupported chapter rather than silently using a different writer',()=>{
-  const {rt}=scene();rt.globals.chapter=3;expect(()=>rt.create(writer,0,0)).toThrow(/writer.*Chapter 3/i);
+  const {rt}=scene();rt.globals.chapter=4;expect(()=>rt.create(writer,0,0)).toThrow(/writer.*Chapter 4/i);
  });
  it('removes small-face descendants when a halted page advances',()=>{
   const {rt,w}=scene();const parent={name:'obj_smallface',index:999},child=rt.create({name:'obj_smallface_variant',index:1000,parent},0,0);

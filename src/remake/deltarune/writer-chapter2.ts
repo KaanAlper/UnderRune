@@ -1,17 +1,22 @@
-// Chapter 2's battle writer part. Working values stay on the instance because events and scripts share them.
+// The battle writer from Chapter 2 on. Working values stay on the instance because events and scripts share them.
+// What later chapters change is in WRITER_CHAPTERS: Chapter 3 adds voices, a speaker and a colour, fading text,
+// objects set into the text (\O), a shadowed style (special 5), a sound when the text ends, and Tenna's spacing.
 import {gmArray,type GmInstance,type GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {lengthdirX,lengthdirY,round,le,lt,ge,gt} from '../gm/math';
 import {KEY} from './battle';
 import {face,faceParent} from './writer';
+import {forChapter} from './rules';
 
 type Step=(s:GmInstance,rt:GmRuntime)=>void;
 export interface WriterPart{create:Step;alarm0:Step;alarm1:Step;alarm2:Step;draw:Step;textType:Step;}
-type Voice={font:string;color:number;rate:number;sound:string;hspace:number;vspace:number;special:number;charline?:number;shake?:number;yoff?:number};
+type Voice={font:string;color:number;rate:number;sound:string;hspace:number;vspace:number;special:number;charline?:number;shake?:number;yoff?:number;extra?:Record<string,number>};
+/** A voice, or one that depends on the game state (the dark world, the room). */
+type VoiceOf=Voice|((g:Record<string,any>,rt:GmRuntime)=>Voice);
 const main=(sound='snd_text',rate=1,hspace=8,vspace=18,special=0):Voice=>({font:'fnt_main',color:C.white,rate,sound,hspace,vspace,special});
 const big=(sound='snd_text',vspace=36,rate=1,hspace=16):Voice=>({...main(sound,rate,hspace,vspace,1),font:'fnt_mainbig'});
 const dotum=(sound='snd_text',rate=1):Voice=>({...main(sound,rate,9,20),font:'fnt_dotumche',color:C.black});
-const VOICES:Readonly<Record<number,Voice>>={
+const VOICES:Readonly<Record<number,VoiceOf>>={
  1:main(),2:main('snd_nosound',2),3:{...main('snd_text',2),special:1},4:big('snd_text',28),5:main(),6:big(),7:main('snd_txttor'),8:main('snd_txttor',2),
  10:main('snd_txtsus'),11:main('snd_txtsus'),12:main('snd_txtnoe'),13:main('snd_txtber'),14:{...main('snd_txtsans'),font:'fnt_comicsans'},15:main(),17:main('snd_txtund'),18:main('snd_txtasg'),19:main(),20:main('snd_txtal'),21:main('snd_txtal'),
  22:{...main('snd_txtal',1,6),font:'fnt_tinynoelle',yoff:7},23:{...main('snd_txtnoe',1,6),font:'fnt_tinynoelle',yoff:7},30:big('snd_txtsus'),31:big('snd_txtral'),32:big('snd_txtlan'),33:big('snd_dadtxt'),35:big('snd_txtjok'),36:big('snd_nosound'),37:big('snd_txtsus',36,3,18),
@@ -24,9 +29,10 @@ const confirm=(rt:GmRuntime)=>rt.input.pressed.has(KEY.z)||rt.input.pressed.has(
 const skipHeld=(rt:GmRuntime)=>rt.input.held.has(KEY.x)||rt.input.held.has(KEY.shift);
 const SILENT=new Set([' ','^','!','.','?',',',':','/','\\','|','*']);
 export function textType2(s:GmInstance,rt:GmRuntime){
- s.textscale=1;const voice=VOICES[rt.globals.typer];if(!voice)return;
+ s.textscale=1;const entry=wch(rt).voices[rt.globals.typer];if(!entry)return;const voice=typeof entry==='function'?entry(rt.globals,rt):entry;
  if(rt.globals.lang==='ja')throw Error('Chapter 2 writer Japanese font setup is not ported');
  Object.assign(s,{myfont:voice.font,mycolor:voice.color,writingx:s.x,writingy:s.y+(voice.yoff??0),charline:voice.charline??33,shake:voice.shake??0,rate:voice.rate,textsound:voice.sound,hspace:voice.hspace,vspace:voice.vspace,special:voice.special,colorchange:1,xcolor:voice.color});
+ if(voice.extra)Object.assign(s,voice.extra);
 }
 function playSound(rt:GmRuntime,name:string,pitch=1,volume?:number){
  if(rt.sourceAudio)return rt.sourceAudio.effect(name,pitch,volume)??name;
@@ -43,25 +49,43 @@ function textSound2(s:GmInstance,rt:GmRuntime){
   rt.soundStop?.('snd_txtspam2');playSound(rt,'snd_txtspam2',1.2,.8);s.sound_timer=2;
  }else if(s.textsound==='snd_txtsans'){
   rt.soundStop?.('snd_txtsans');s.qv=playSound(rt,'snd_txtsans');s.sound_timer=2;
+ }else if(s.textsound==='snd_tv_voice_short'){
+  const g=rt.globals,clip=rt.random.irandom(8)+1;if(g.flag[1054]<=0)g.flag[1054]=1;
+  const pitch=(.86+rt.random.random(.35))*g.flag[1054],name='snd_tv_voice_short'+(clip>=2?'_'+clip:'');
+  for(let i=1;i<=9;i++)rt.soundStop?.('snd_tv_voice_short'+(i>=2?'_'+i:''));
+  playSound(rt,name,pitch,.7);s.sound_timer=3;
  }else rt.sound?.(s.textsound);
  for(const f of rt.all(faceParent))f.mouthmove=1;s.miniface_pos++;
 }
-function nextMessage2(s:GmInstance){
- s.msgno++;Object.assign(s,{lineno:0,aster:0,halt:0,pos:1,drawaster:1,autoaster:1,miniface_pos:0,miniface_current_pos:-1,mystring:s.nstring[s.msgno],formatted:0,wxskip:0,sound_played:0,forcebutton1:0});s.alarm[0]=1;
+function nextMessage2(s:GmInstance,rt:GmRuntime){
+ const later=wch(rt).later;
+ s.msgno++;Object.assign(s,{lineno:0,aster:0,halt:0,pos:1,drawaster:1,autoaster:1,miniface_pos:0,miniface_current_pos:-1,mystring:s.nstring[s.msgno],formatted:0,wxskip:0,sound_played:0,forcebutton1:0});
+ if(later){s.reachedend=0;s.reachedend_sound_played=0;}
+ s.alarm[0]=1;
  if(lt(s.rate,3)){s.firstnoise=0;s.alarm[2]=1;}
+ if(later){for(let i=0;i<9;i++)s.object_made[i]=0;for(const t of rt.instances)if(t.live&&belongsTo(t,'obj_funnytext'))rt.destroy(t);}
 }
 function create(s:GmInstance,rt:GmRuntime){
+ const later=wch(rt).later;
  Object.assign(s,{skipme:0,forcebutton1:0,textsound:'snd_text',charline:33,originalcharline:33,hspace:8,vspace:18,rate:1,mycolor:C.white,myfont:'fnt_main',shake:0,special:0,skippable:rt.globals.flag[6]===1?0:1,automash_timer:0,f:rt.globals.darkzone===1?2:1,prevent_mash_buffer:0,formattext:true});
+ // The end sound keeps the original's sound number (only fixed text sets reachedend_sound_play).
+ if(later)Object.assign(s,{textalpha:1,textalphagain:0,fadeonend:0,shadcolor:0x6fd213,reachedend_sound:259,reachedend_sound_played:0,reachedend_sound_play:0});
  textType2(s,rt);
  Object.assign(s,{autoaster:1,drawaster:1,pos:2,lineno:0,aster:0,halt:0,reachedend:0,xcolor:C.black,wxskip:0,msgno:0,first_alarm:0,firstnoise:0,noiseskip:0,formatted:0,colorchange:0,fontchange:0,sound_played:0,sound_timer:0,sound_count:0,jpspecial:0,jpused:0,writingx:s.x,writingy:s.y,dialoguer:0,smallface:505050,faced:0,facedever:0,facer:0,siner:0,specfade:1,autocenter:0,miniface_current_pos:-1,miniface_pos:0,miniface_drawn:0});
  for(s.i=0;s.i<7;s.i++){gmArray(s,'specx')[s.i]=s.i*6;gmArray(s,'specy')[s.i]=s.i*6;}
  s.mystring=rt.globals.msg[0];for(s.j=0;s.j<100;s.j++)gmArray(s,'nstring')[s.j]=rt.globals.msg[s.j];s.length=s.mystring.length;s.alarm[0]=s.rate;
  if(lt(s.rate,3))s.alarm[2]=1;else textSound2(s,rt);
+ if(later)for(let i=0;i<9;i++)gmArray(s,'object_made')[i]=0;
 }
 function alarm0(s:GmInstance,rt:GmRuntime){
- if(gt(s.rate,2))s.alarm[1]=1;else {s.sound_timer--;if(s.first_alarm===1&&ge(s.pos,2)&&le(s.sound_timer,0))textSound2(s,rt);}
+ const later=wch(rt).later;let playsound=false;
+ if(gt(s.rate,2))s.alarm[1]=1;else {s.sound_timer--;if(s.first_alarm===1&&ge(s.pos,2)&&le(s.sound_timer,0)){if(later)playsound=true;else textSound2(s,rt);}}
  if(le(s.pos,s.length))s.alarm[0]=s.rate;else s.reachedend=1;
- if(s.first_alarm===0){s.getchar=at(s.mystring,1);s.pos+=s.getchar==='\\'?3:1;s.first_alarm=1;return;}
+ const end=()=>{
+  if(later&&s.reachedend_sound_play&&s.reachedend&&!s.reachedend_sound_played)playsound=false;
+  if(playsound)textSound2(s,rt);
+ };
+ if(s.first_alarm===0){s.getchar=at(s.mystring,1);s.pos+=s.getchar==='\\'?3:1;s.first_alarm=1;end();return;}
  s.getchar=at(s.mystring,s.pos);s.nextchar=at(s.mystring,s.pos+1);
  if(s.getchar==='`'){s.pos+=2;return;}
  if(s.getchar==='&'||s.getchar==='\n')s.pos++;
@@ -71,6 +95,7 @@ function alarm0(s:GmInstance,rt:GmRuntime){
  if(s.getchar==='|')s.pos+=2;
  if(s.getchar==='^'){s.pos+=2;if(gt(s.alarm[0],0))s.alarm[0]+=[0,5,10,15,20,30,40,60,90,150][Number(s.nextchar)]??0;}
  s.pos++;
+ end();
 }
 const FACES:Readonly<Record<string,number>>={'0':0,S:1,R:2,N:3,T:4,L:5,s:6,U:9,A:10,a:11,B:12,b:19,r:15,u:18,K:20,Q:21};
 function expression(s:GmInstance,rt:GmRuntime){
@@ -83,7 +108,10 @@ function asterSkip(s:GmInstance){if(s.aster===1&&s.autoaster===1){s.length+=2;s.
 function format(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;
  if(s.dialoguer===1){
-  s.charline=g.fc===0?s.originalcharline:26;s.writingx=g.fc===0?s.x:s.x+58*s.f;
+  s.charline=g.fc===0?s.originalcharline:26;
+  // Chapter 3: Tenna's lines are longer and further apart (30 between lines, as a writer is always there).
+  if(wch(rt).later&&g.fc===22){s.charline=30;s.vspace=28;if(rt.instances.some(i=>i.live&&belongsTo(i,'obj_writer')))s.vspace=30;}
+  s.writingx=g.fc===0?s.x:s.x+58*s.f;
   const dialoguer=rt.instances.find(i=>i.live&&belongsTo(i,'obj_dialoguer'));
   if(dialoguer?.zurasucon===2)s.writingx=rt.view.x+dialoguer.remwriterx+(g.fc>0?58*s.f:0);
  }
@@ -99,6 +127,7 @@ function format(s:GmInstance,rt:GmRuntime){
     if(s.nextchar==='E')expression(s,rt);
     if(s.nextchar==='F'){if(FACES[s.nextchar2]!==undefined&&s.nextchar2!=='b')g.fc=FACES[s.nextchar2];s.charline=g.fc===0?s.originalcharline:26;s.writingx=g.fc===0?s.x:s.x+58*s.f;}
     if(s.nextchar==='m')s.drawaster=0;if(s.nextchar==='s'&&s.nextchar2==='0')s.skippable=0;
+    if(s.nextchar==='O'&&wch(rt).later)throw Error('Chapter 3 writer objects (\\O) are not ported');
    }
   }else if(s.thischar==='&'||s.thischar==='\n'){
    if(gt(s.charpos,s.stringmax))s.stringmax=s.charpos;s.remspace=-1;s.charpos=0;s.linecount++;s.skip=1;s.nextchar=at(s.mystring,s.i+1);
@@ -142,6 +171,14 @@ function drawCharacter(s:GmInstance,rt:GmRuntime){
   for(const [x,y] of [[1,0],[-1,0],[0,1],[0,-1]])rt.drawText(s.wx+x,s.wy+y,s.mychar);
   d.alpha=(.08+Math.sin(s.siner/14)*.04)*s.specfade;for(const [x,y] of [[1,1],[-1,-1],[-1,1],[1,-1]])rt.drawText(s.wx+x,s.wy+y,s.mychar);d.alpha=1;
  }
+ if(s.special===5){
+  // Arguments run right to left: each shake draws y's offset before x's.
+  d.alpha=.25;d.color=s.shadcolor;
+  {const [x,y]=shake();rt.drawText(s.wx+x,s.wy+1+y,s.mychar);}
+  {const [x,y]=shake();rt.drawText(s.wx+1+x,s.wy+y,s.mychar);}
+  {const [x,y]=shake();rt.drawText(s.wx+1+x,s.wy+1+y,s.mychar);}
+  d.alpha=1;d.color=C.black;{const [x,y]=shake();rt.drawText(s.wx+x,s.wy+y,s.mychar);}
+ }
  if(s.special===3){
   d.color=C.white;d.alpha=1;rt.drawText(s.wx+Math.sin(s.siner/4),s.wy+Math.cos(s.siner/4),s.mychar);d.alpha=.5;
   for(const period of [5,7,9])rt.drawText(s.wx+Math.sin(s.siner/period),s.wy+Math.cos(s.siner/period),s.mychar);
@@ -162,8 +199,15 @@ function draw(s:GmInstance,rt:GmRuntime){
  // scr_debug() in the installed game returns 0; automash is enabled by flag 10.
  if(g.flag[10]===1&&rt.input.held.has(KEY.c)){s.prevent_mash_buffer=3;s.automash_timer=s.automash_timer===0?1:0;if(s.automash_timer===0)s.button1=1;else s.button2=1;}
  if(s.forcebutton1)s.button1=1;s.prevent_mash_buffer--;
+ const ch=wch(rt);
+ if(ch.later&&rt.instances.some(i=>i.live&&belongsTo(i,'obj_rouxls_ch3_enemy')))throw Error("Chapter 3 Rouxls's writer spacing (vspacechange) is not ported");
  if(s.formatted===0)format(s,rt);
  s.accept=0;s.wx=s.writingx;s.wy=s.writingy;s.colorchange=0;d.font=s.myfont;d.color=s.mycolor;
+ if(ch.later){
+  if(s.fadeonend!==0&&s.reachedend===1){s.textalphagain=-Math.abs(s.fadeonend);if(le(s.textalpha,0))rt.destroy(s);}
+  if(s.textalphagain!==0)s.textalpha=Math.max(0,Math.min(1,s.textalpha+s.textalphagain));
+  if(s.textalpha!==1)d.alpha=s.textalpha;
+ }
  if(s.halt===0&&s.button2===1&&lt(s.pos,s.length)&&s.skippable===1)s.skipme=1;
  if(s.skipme===1){s.pos=s.mystring.length+1;s.reachedend=1;s.alarm[0]=-1;s.alarm[1]=-1;}
  for(s.n=1;lt(s.n,s.pos);s.n++){
@@ -172,10 +216,10 @@ function draw(s:GmInstance,rt:GmRuntime){
   else if(s.mychar==='&'||s.mychar==='\n'){s.accept=0;s.wx=s.writingx+(s.wxskip===1?58:0);s.wy+=s.vspace;}
   else if(s.mychar==='|'){s.accept=0;s.wx+=s.hspace;}
   else if(s.mychar==='^'){s.accept=0;s.n++;}
-  else if(s.mychar==='/'){s.halt=at(s.mystring,s.n+1)==='%'?2:1;s.accept=0;}
+  else if(s.mychar==='/'){s.halt=at(s.mystring,s.n+1)==='%'?2:1;if(ch.later)s.reachedend=1;s.accept=0;}
   else if(s.mychar==='%'){
    s.accept=0;if(at(s.mystring,s.n-1)==='/')s.halt=2;
-   if(at(s.mystring,s.n+1)==='%')rt.destroy(s);else if(s.halt!==2)nextMessage2(s);
+   if(at(s.mystring,s.n+1)==='%')rt.destroy(s);else if(s.halt!==2)nextMessage2(s,rt);
   }else if(s.mychar==='\\'){
    s.nextchar=at(s.mystring,s.n+1);s.nextchar2=at(s.mystring,s.n+2);
    if(s.nextchar==='E')expression(s,rt);
@@ -185,11 +229,12 @@ function draw(s:GmInstance,rt:GmRuntime){
    if(s.nextchar==='f'&&s.faced===0){if(!g.onChapter2SmallFace)throw Error('Chapter 2 writer small-face host is not installed');g.onChapter2SmallFace(s,s.nextchar2);}
    if(s.nextchar==='*')throw Error('Chapter 2 writer button sprite resolver is not ported');
    if(s.nextchar==='T'){
-    const typer=SPEAKERS[s.nextchar2];if(typer){g.typer=typer(g);textType2(s,rt);d.font=s.myfont;}
+    const typer=ch.speakers[s.nextchar2];if(typer){g.typer=typer(g);textType2(s,rt);d.font=s.myfont;}
     if(s.dialoguer===1){if(g.fc===0){s.charline=s.originalcharline;s.wx=s.x;}else s.wxskip=1;}
    }
    if(s.nextchar==='s'){if(s.nextchar2==='0')s.skippable=0;if(s.nextchar2==='1')s.skippable=1;}
-   if(s.nextchar==='c'){s.colorchange=1;s.xcolor=s.nextchar2==='0'?s.mycolor:COLORS[s.nextchar2]??s.xcolor;}
+   if(s.nextchar==='c'){s.colorchange=1;s.xcolor=s.nextchar2==='0'?s.mycolor:ch.colors[s.nextchar2]??s.xcolor;}
+   if(s.nextchar==='O'&&ch.later)throw Error('Chapter 3 writer objects (\\O) are not ported');
    if(s.nextchar==='C'&&/[1-4]/.test(s.nextchar2))throw Error('Chapter 2 writer choice object is not ported');
    if(s.nextchar==='M'&&/^[0-9]$/.test(s.nextchar2))g.flag[20]=Number(s.nextchar2);
    if(s.nextchar==='S'&&s.sound_played===0){for(s.i=0;s.i<10;s.i++)if(s.nextchar2===String(s.i)&&s.sound_played===0){rt.sound?.(g.writersnd[s.i]);s.sound_played=1;}}
@@ -204,10 +249,32 @@ function draw(s:GmInstance,rt:GmRuntime){
   }
   if(s.accept===1)drawCharacter(s,rt);
  }
+ if(ch.later&&s.reachedend_sound_play&&s.reachedend===1&&s.reachedend_sound_played===0)throw Error('Chapter 3 writer end sound is not ported');
  if(s.halt!==0&&s.button1===1&&gt(s.siner,0)){
-  if(s.halt===1){nextMessage2(s);clearSmallFaces(rt);}
+  if(s.halt===1){nextMessage2(s,rt);clearSmallFaces(rt);}
   if(s.halt===2){clearSmallFaces(rt);if(s.facer===1)for(const f of rt.all(face))rt.destroy(f);rt.destroy(s);}
  }
  s.skipme=0;s.siner++;
+ if(ch.later&&s.textalpha!==1)d.alpha=1;
 }
+/** The writer's chapter differences. */
+interface WriterChapter{voices:Readonly<Record<number,VoiceOf>>;speakers:Readonly<Record<string,(g:Record<string,any>)=>number>>;colors:Readonly<Record<string,number>>;
+ /** Chapter 3's additions: fading text, the end sound, writer objects, special style 5, Tenna's spacing. */
+ later:boolean;}
+const BOARD_ROOMS=new Set(['room_board_preshadowmantle','room_shadowmantle','room_board_dungeon_2']);
+const WRITER_CHAPTERS:Readonly<Record<number,WriterChapter>>={
+ 2:{voices:VOICES,speakers:SPEAKERS,colors:COLORS,later:false},
+ 3:{
+  voices:{...VOICES,
+   17:g=>g.darkzone===1?big('snd_txtund'):main('snd_txtund'),
+   79:big('snd_txtsusral'),80:big('snd_tv_voice_short'),81:{...dotum('snd_tv_voice_short'),extra:{extra_ja_vspace:2}},
+   100:(_g,rt)=>({...main('snd_text',1,16,20),font:BOARD_ROOMS.has(rt.room.name)?'fnt_8bit_mixed':'fnt_8bit',charline:22}),
+   101:{...main('snd_text',1,16,20),font:'fnt_8bit_mixed',charline:22},
+  },
+  speakers:{...SPEAKERS,v:g=>g.fighting===1?81:80},
+  colors:{...COLORS,I:0xffc081},
+  later:true,
+ },
+};
+const wch=(rt:GmRuntime)=>forChapter(rt,WRITER_CHAPTERS,'writer');
 export const writer2:WriterPart={create,alarm0,alarm1:(s,rt)=>{if(lt(s.pos,s.length+2))textSound2(s,rt);},alarm2:(s,rt)=>{if(s.firstnoise===0){s.firstnoise=1;textSound2(s,rt);}},draw,textType:textType2};

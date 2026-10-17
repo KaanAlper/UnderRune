@@ -32,6 +32,9 @@ export interface ChapterRules{
 }
 const CHAPTER1:ChapterRules={chapter:1,soulHasModes:false,slowSoulSetting:false,heroesCanBePoisoned:false,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false,phaseScript:false};
 const CHAPTER2:ChapterRules={chapter:2,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
+/** Chapter 3 keeps Chapter 2's rules: each was checked in its code (scr_moveheart, scr_randomtarget, obj_tensionbar,
+ * scr_isphase, obj_heart, obj_heroparent's poison and the auto-Susie mark, which still addresses the wrong instance). */
+const CHAPTER3:ChapterRules={chapter:3,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
 /** A component's part for the running battle's chapter, from the table of its versions next to it. */
 export function forChapter<T>(rt:GmRuntime,versions:Readonly<Record<number,T>>,what:string):T{
  const v=versions[rt.globals.chapter??1];
@@ -40,7 +43,7 @@ export function forChapter<T>(rt:GmRuntime,versions:Readonly<Record<number,T>>,w
 }
 /** The running battle's chapter rules (global.chapter). */
 export function rules(rt:GmRuntime):ChapterRules{
- const r=({1:CHAPTER1,2:CHAPTER2} as Record<number,ChapterRules>)[rt.globals.chapter??1];
+ const r=({1:CHAPTER1,2:CHAPTER2,3:CHAPTER3} as Record<number,ChapterRules>)[rt.globals.chapter??1];
  if(!r)throw Error(`No battle rules for chapter ${rt.globals.chapter}`);
  return r;
 }

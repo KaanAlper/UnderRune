@@ -27,7 +27,7 @@ async function sources(dir) {
   return files;
 }
 // Enemy ports belong to a source chapter. New Chapter 2 primitives must not pull their sprites into Chapter 1.
-const bossChapters={lancer:1,clover:1,kround:1,jevil:1,king:1,'spamton-neo':2,'chapter2-field':2,'chapter2-rivals':2,queen:2,spamton:2};
+const bossChapters={lancer:1,clover:1,kround:1,jevil:1,king:1,'spamton-neo':2,'chapter2-field':2,'chapter2-rivals':2,queen:2,spamton:2,'roaring-knight':3};
 const remakeRoot=path.join(root,'src','remake');
 const chapterSources=(await sources(remakeRoot)).filter(file=>{
  const parts=path.relative(remakeRoot,file).split(path.sep);
@@ -102,9 +102,9 @@ for(const sound of parseSounds(data,soundNames)){
 const keySet=new Set(JSON.parse(await fs.readFile(path.join(root, 'src', 'remake', 'host', 'text-keys.json'), 'utf8'))[`chapter${chapter}`]??[]);
 if(chapter===2){for(const key of JSON.parse(await fs.readFile(path.join(root,'src/remake/deltarune/text-keys-ch2.json'),'utf8')).chapter2)keySet.add(key);}
 let lang={};
-if(chapter===2){for(const file of await fs.readdir(path.join(base,'code')))if(file.endsWith('.gml'))Object.assign(lang,localizationDefaults(await fs.readFile(path.join(base,'code',file),'utf8')));}
-try{Object.assign(lang,JSON.parse((await fs.readFile(path.join(gameChapter,'lang','lang_en.json'),'utf8')).replace(/^\uFEFF/,'')));}catch(error){if(error.code!=='ENOENT'||chapter!==2)throw error;}
-if(chapter===2)for(const key of referencedTextKeys(text,lang))keySet.add(key);
+if(chapter>=2){for(const file of await fs.readdir(path.join(base,'code')))if(file.endsWith('.gml'))Object.assign(lang,localizationDefaults(await fs.readFile(path.join(base,'code',file),'utf8')));}
+try{Object.assign(lang,JSON.parse((await fs.readFile(path.join(gameChapter,'lang','lang_en.json'),'utf8')).replace(/^\uFEFF/,'')));}catch(error){if(error.code!=='ENOENT'||chapter<2)throw error;}
+if(chapter>=2)for(const key of referencedTextKeys(text,lang))keySet.add(key);
 const textKeys=[...keySet];
 const gameText = {};
 for (const key of textKeys) { if (typeof lang[key] !== 'string') throw Error('Game text not found: ' + key); gameText[key] = lang[key]; }

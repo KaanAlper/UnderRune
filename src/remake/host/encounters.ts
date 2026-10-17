@@ -29,6 +29,8 @@ export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);
 /** Explicit local verification entry points. Public launches always use sourceEncounter. */
 /** Reserved for EngineBattle fixtures that still need end-to-end verification before public launch. */
 const development:readonly SourceEncounter[]=[
+ // Chapter 3's Roaring Knight: being ported (docs/superpowers/plans/2026-10-17-roaring-knight.md).
+ {id:'ch3-115',chapter:3,name:'Roaring Knight',party:[1,2,3],hp:7300,attack:40,defense:0,music:'knight',practice:false},
  // The Dojo's Tasque Manager rematch: its quiz ending still differs from the recordings.
  {id:'ch2-89',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:false},
 ];

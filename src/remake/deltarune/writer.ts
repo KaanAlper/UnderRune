@@ -2,6 +2,7 @@
 // indents, page halts), scr_texttype (font, spacing, speed and voice per typer), obj_face (speaker portraits),
 // obj_battleblcon (enemy speech balloons) and scr_battletext. Like the original, the writer draws in its Draw
 // event and calls random() for every character it draws (its shake offset), so it changes the random sequence.
+import {lerpEaseIn} from './ease';
 import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {KEY} from './battle';
@@ -206,7 +207,7 @@ const SPEAKER_TYPERS:Record<string,(g:Record<string,any>)=>number>={
 };
 
 /** Each chapter owns its writer execution, selected once at the shared event boundary. */
-const WRITER:Readonly<Record<number,WriterPart>>={1:writer1,2:writer2};
+const WRITER:Readonly<Record<number,WriterPart>>={1:writer1,2:writer2,3:writer2};
 export function textType(s:GmInstance,rt:GmRuntime){forChapter(rt,WRITER,'writer').textType(s,rt);}
 export const writer:GmObjectDef={name:'obj_writer',index:10,events:{
  create:(s,rt)=>forChapter(rt,WRITER,'writer').create(s,rt),
@@ -226,6 +227,9 @@ interface FaceRules{
  ralsei(rt:GmRuntime):string;
  noelle(s:GmInstance,rt:GmRuntime):void;
  asgoreExpressions:number;berdlyDark:boolean;rurusHat:boolean;queen:boolean;
+ /** Chapter 3: expression 61 shows the placeholder portrait; a battle timer (battletimer) drives Tenna's pointing
+  * hand, drawn whenever he speaks (fc 22). */
+ placeholder:boolean;tennaHand:boolean;
 }
 const FACES:Record<number,FaceRules>={
  1:{
@@ -236,7 +240,7 @@ const FACES:Record<number,FaceRules>={
   },
   ralsei:rt=>{const v=rt.globals.flag[30];return v===2?'spr_face_r_nohat':v===1?'spr_face_r_hood':'spr_face_r_dark';},
   noelle:(s,rt)=>{s.face='spr_face_n_matome';s.face_index=rt.globals.fe;},
-  asgoreExpressions:6,berdlyDark:false,rurusHat:false,queen:false,
+  asgoreExpressions:6,berdlyDark:false,rurusHat:false,queen:false,placeholder:false,tennaHand:false,
  },
  2:{
   susie:(s,rt,draw)=>{
@@ -246,18 +250,26 @@ const FACES:Record<number,FaceRules>={
   },
   ralsei:()=>'spr_face_r_nohat',
   noelle:(s,rt)=>{s.face=byExpression('spr_face_n',rt.globals.fe,9);s.face='spr_face_n_matome';s.face_index=rt.globals.fe;},
-  asgoreExpressions:8,berdlyDark:true,rurusHat:true,queen:true,
+  asgoreExpressions:8,berdlyDark:true,rurusHat:true,queen:true,placeholder:false,tennaHand:false,
+ },
+ 3:{
+  // Only the later portrait now: the old one needs flag 29 off and Chapter 1.
+  susie:(s,rt,draw)=>{s.face='spr_face_susie_alt';s.face_index=rt.globals.fe;draw(-5,0);},
+  ralsei:()=>'spr_face_r_nohat',
+  noelle:(s,rt)=>{s.face=byExpression('spr_face_n',rt.globals.fe,9);s.face='spr_face_n_matome';s.face_index=rt.globals.fe;},
+  asgoreExpressions:8,berdlyDark:true,rurusHat:true,queen:true,placeholder:true,tennaHand:true,
  },
 };
 export const faceParent:GmObjectDef={name:'obj_face_parent',index:6,depth:10};
 /** Speaker portraits beside the battle text; their mouths move with the voice blips. */
 export const face:GmObjectDef={name:'obj_face',index:7,parent:faceParent,events:{
- create:(s,rt)=>{Object.assign(s,{mouthmove:0,mouthtimer:0,face_index:0,imageSpeed:0,nowface:rt.globals.fc,facechange:2,rate:1,buffer:4,f:rt.globals.darkzone===1?2:1});},
- step:s=>{
+ create:(s,rt)=>{Object.assign(s,{mouthmove:0,mouthtimer:0,face_index:0,imageSpeed:0,nowface:rt.globals.fc,facechange:2,rate:1,buffer:4,f:rt.globals.darkzone===1?2:1});if(forChapter(rt,FACES,'obj_face').tennaHand)s.battletimer=0;},
+ step:(s,rt)=>{
   s.buffer-=1;if(s.buffer<0&&s.mouthmove===1&&s.mouthtimer===0){s.mouthtimer=1;s.face_index=1;}
   if(s.mouthtimer>0)s.mouthtimer+=s.rate;
   s.face_index=s.mouthtimer>=1&&s.mouthtimer<=5?1:0;
   if(s.mouthtimer>=9){s.mouthtimer=0;s.mouthmove=0;}
+  if(forChapter(rt,FACES,'obj_face').tennaHand)s.battletimer++;
  },
  // The portrait of the speaker (global.fc) with their expression (global.fe), kept in face (and face_index when the
  // portrait has one frame per expression rather than a mouth).
@@ -265,7 +277,10 @@ export const face:GmObjectDef={name:'obj_face',index:7,parent:faceParent,events:
   const g=rt.globals,r=forChapter(rt,FACES,'obj_face'),fe=g.fe,f=s.f;
   s.facechange-=1;if(s.nowface!==g.fc)s.facechange=3;
   if(s.facechange<=0){
-   const draw=(dx:number,dy:number)=>rt.drawSprite(s.face,s.face_index,s.x+dx,s.y+dy,f,f,0,C.white,1);
+   const draw=(dx:number,dy:number)=>{
+    if(r.placeholder&&fe===61){s.face='spr_face_placeholder';s.face_index=0;}
+    rt.drawSprite(s.face,s.face_index,s.x+dx,s.y+dy,f,f,0,C.white,1);
+   };
    const indexed=(sprite:string,dx:number,dy:number)=>{s.face=sprite;s.face_index=fe;draw(dx,dy);};
    switch(g.fc){
     case 1:r.susie(s,rt,draw);break;
@@ -296,6 +311,10 @@ export const face:GmObjectDef={name:'obj_face',index:7,parent:faceParent,events:
     case 20:indexed('spr_face_king',-5,-5);break;
     case 21:if(r.queen)indexed('spr_face_queen',0,0);break;
    }
+  }
+  if(r.tennaHand&&g.fc===22){
+   const sinoff=Math.sin(s.battletimer/2)*2,progress=Math.max(0,Math.min(1,s.battletimer/10)),yoffset=lerpEaseIn(440,224,progress,2);
+   rt.drawSprite('spr_tenna_point_up',0,s.x+60,s.y+yoffset,f,f,s.imageAngle+sinoff,s.imageBlend,s.imageAlpha);
   }
   s.nowface=g.fc;
  },

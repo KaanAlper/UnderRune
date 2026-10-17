@@ -1,4 +1,6 @@
-/** Canonical Chapter 2 engine registry. Boss factories and scene entry belong to encounter adapters. */
+/** The engine registry for Chapter 2 and later: every object of the chapter (from its resource table), the shared
+ * engine's objects in their places, and the source host's script calls. Boss factories and scene entry belong to
+ * encounter adapters. */
 import {type GmObjectDef,type GmInstance,type GmRuntime} from '../gm/runtime';
 import * as battle from '../deltarune/battle';
 import * as controller from '../deltarune/controller';
@@ -12,14 +14,18 @@ import type {NeoSourceHost,NeoSourceMetadata} from '../bosses/spamton-neo/body-s
 import {installSourceSurfaces} from './surfaces';
 import {spareEnemy} from '../deltarune/chapter2-enemy';
 export interface Chapter2RegistryHost extends NeoSourceHost{battleBoundary(scene:GmInstance,rt:GmRuntime):void;}
-export interface Chapter2RegistryOptions{metadata:readonly NeoSourceMetadata[];scripts?:Readonly<Record<string,string>>;room:string;battleBoundary?:(scene:GmInstance,rt:GmRuntime)=>void;}
+export interface Chapter2RegistryOptions{
+ /** The chapter whose objects these are (2 by default). */
+ chapter?:number;
+ metadata:readonly NeoSourceMetadata[];scripts?:Readonly<Record<string,string>>;room:string;battleBoundary?:(scene:GmInstance,rt:GmRuntime)=>void;}
 export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOptions){
+ const chapter=options.chapter??2;
  const objects:Record<string,GmObjectDef>={};
  const metadata=new Map(options.metadata.map(m=>[m.name,m]));
  const namesByIndex=new Map(options.metadata.map(m=>[m.index,m.name]));
- const object=(name:string)=>{const def=objects[name];if(!def)throw Error(`Chapter 2 resource not registered: ${name}`);return def;};
+ const object=(name:string)=>{const def=objects[name];if(!def)throw Error(`Chapter ${chapter} resource not registered: ${name}`);return def;};
  const resource=(meta:NeoSourceMetadata,unavailable=false):GmObjectDef=>{
-  const def:GmObjectDef={name:meta.name,index:meta.index,depth:meta.depth,visible:meta.visible,sprite:meta.sprite??undefined,mask:meta.mask??undefined,events:unavailable?{create:()=>{throw Error(`Chapter 2 object ${meta.name} is not implemented`);}}:{}};
+  const def:GmObjectDef={name:meta.name,index:meta.index,depth:meta.depth,visible:meta.visible,sprite:meta.sprite??undefined,mask:meta.mask??undefined,events:unavailable?{create:()=>{throw Error(`Chapter ${chapter} object ${meta.name} is not implemented`);}}:{}};
   if(meta.parent)Object.defineProperty(def,'parent',{get:()=>object(meta.parent!),configurable:true});return def;
  };
  const streamNames=new Map<number,string>(),pitches=new Map<number|string,number>();let nextStream=-100;
@@ -44,7 +50,10 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
     case 'scr_monstersetup':return monsterSetup(s,r);
     case 'scr_nextact':return controller.nextAct(r,s);
     case 'scr_attackphase':return controller.attackPhase(r);
-    case 'scr_spellmenu_setup':return spellMenuSetupChapter2(r,s);
+    case 'scr_spellmenu_setup':
+     // Chapter 3 renames two spells while Elnina and Lanino's controller is up.
+     if(chapter===3&&r.exists(object('obj_elnina_lanino_controller')))throw Error('scr_spellmenu_setup: Chapter 3 spell names during Elnina and Lanino are not ported');
+     return spellMenuSetupChapter2(r,s);
     case 'scr_randomtarget':return controller.randomTarget(s,r);
     case 'scr_battletext_default':return writer.battleTextDefault(r,s).id;
     case 'scr_battletext':return writer.battleText(r,s).id;
@@ -73,7 +82,7 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
     case 'snd_position':return r.sourceAudio?.position(audioHandle(args[0]),args[1]);
     case 'snd_is_playing':case 'audio_is_playing':return r.sourceAudio?.playing(audioHandle(args[0]))??false;
    }
-   throw Error(`Chapter 2 host operation not implemented: ${name}`);
+   throw Error(`Chapter ${chapter} host operation not implemented: ${name}`);
   },
  };
  // Unsupported world/optional resources retain native identity and ancestry, but
@@ -123,3 +132,5 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
  };
  return {host,objects,object,register,finalize};
 }
+/** The same registry for any chapter from 2 on. */
+export const createChapterRegistry=(rt:GmRuntime,options:Chapter2RegistryOptions&{chapter:number})=>createChapter2Registry(rt,options);

@@ -20,6 +20,7 @@ import {kingEnemy} from '../bosses/king/enemy';
 import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
 import {chapter2StartStats} from '../deltarune/chapter2';
+import {chapter3StartStats} from '../deltarune/chapter3';
 import type {installNeoHost} from './neo';
 import type {installChapter2BossHost} from './chapter2-bosses';
 import {initializeChapter2SmallFaces} from '../deltarune/chapter2-enemy';
@@ -34,6 +35,7 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:
  'ch2-83':{n:83,room:'room_dw_city_mice3_transformed_new2F',backdrop:true},
  'ch2-89':{n:89,room:'room_dw_castle_dojo',backdrop:true},
  'ch2-94':{n:94,room:'room_dw_castle_dojo',backdrop:true},
+ 'ch3-115':{n:115,room:'room_dw_snow_zone',backdrop:true},
  'ch1-2':{n:2,room:'room_field_start',backdrop:true},
  'ch1-8':{n:8,room:'room_forest_area3',backdrop:true},
  'ch1-20':{n:20,room:'room_field_puzzletutorial',backdrop:true},
@@ -44,6 +46,13 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:
  'ch1-40':{n:40,room:'room_castle_throneroom',backdrop:true},
 };
 export const runsOnEngine=(id:string)=>id in ENGINE;
+/** A chapter's boss host: its object table and boss objects, installed on the battle's runtime. */
+type ChapterHost=(rt:GmRuntime,options:{room:string})=>{objects:Record<string,GmObjectDef>;enter:(enemy:GmInstance)=>void};
+/** Each chapter's party stats at its start (Chapter 1's: BASE). */
+const START_STATS:Record<number,()=>{hp:number[];maxhp:number[];at:number[];df:number[];mag:number[]}>={
+ 1:()=>({...BASE,maxhp:BASE.hp}),2:()=>chapter2StartStats(),3:()=>chapter3StartStats(),
+};
+function forChapterStats(chapter:number){const stats=START_STATS[chapter];if(!stats)throw Error(`No Chapter ${chapter} party stats`);return stats();}
 /** Party base stats (HP, AT, DF, MAGIC for Kris, Susie, Ralsei) at this point of Chapter 1. */
 const BASE={hp:[0,90,110,70],at:[0,10,14,8],df:[0,2,2,2],mag:[0,0,1,7]};
 
@@ -68,17 +77,18 @@ export class EngineBattle{
  /** After a game over, what the player chose: try again (scr_tempload) or leave (the game's end). */
  afterDefeat:'retry'|'menu'|null=null;
  readonly scoring:BattleRunTracker|null;result:RunRecord|null=null;
- constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;chapter2Host?:typeof installChapter2BossHost;scoring?:boolean;rage?:boolean;gameOvers?:number}={}){
+ constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;chapterHost?:ChapterHost;chapter2Host?:ChapterHost;scoring?:boolean;rage?:boolean;gameOvers?:number}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
   if(!encounter||!setup)throw Error('This battle is not available yet.');
   if(id==='ch2-61'&&!options.neoHost)throw Error('Load the Chapter 2 source host before starting NEO.');
-  if(encounter.chapter===2&&id!=='ch2-61'&&!options.chapter2Host)throw Error('Load the Chapter 2 boss host before starting this battle.');
+  const host=options.chapterHost??options.chapter2Host;
+  if(encounter.chapter>=2&&id!=='ch2-61'&&!host)throw Error(`Load the Chapter ${encounter.chapter} boss host before starting this battle.`);
   validateLoadout(loadout,equipment);
   this.rt=new GmRuntime(bank,{seed});this.name=encounter.name;this.party=encounter.party;
   const rt=this.rt,gear=(list:typeof equipment.weapons,id:number)=>list.find(g=>g.id===id);
   rt.globals.chapter=encounter.chapter;
   const neo=id==='ch2-61'?options.neoHost!(rt,{rage:options.rage}):undefined;
-  const chapterHost=encounter.chapter===2&&!neo?options.chapter2Host!(rt,{room:setup.room}):undefined;
+  const chapterHost=encounter.chapter>=2&&!neo?host!(rt,{room:setup.room}):undefined;
   rt.room.name=setup.room;
   if(neo){rt.view.x=1640;rt.room.width=2400;}
   const equipped:Record<number,EquippedStats>={};
@@ -88,10 +98,10 @@ export class EngineBattle{
    equipped[c]={weapon:slot.weapon||c,armor:[...slot.armor],itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
   }
   const char=[...encounter.party,0,0,0].slice(0,3);
-  partyGlobals(rt,{char,...(encounter.chapter===2?chapter2StartStats():{...BASE,maxhp:BASE.hp}),equipped,items:loadout.items,auto:encounter.auto});
+  partyGlobals(rt,{char,...forChapterStats(encounter.chapter),equipped,items:loadout.items,auto:encounter.auto});
   // global.batmusic: the battle's music, which some enemies pause (Ralsei's lullaby).
   rt.globals.batmusic=[encounter.music,encounter.music];
-  if(encounter.chapter===2){
+  if(encounter.chapter>=2){
    const g=rt.globals;g.fighting=0;g.sp=4;g.currentsong=[-1,-1];
    g.chararmor1=[0,...[1,2,3].map(c=>loadout.characters[c].armor[0])];g.chararmor2=[0,...[1,2,3].map(c=>loadout.characters[c].armor[1])];
    initializeChapter2SmallFaces(rt);

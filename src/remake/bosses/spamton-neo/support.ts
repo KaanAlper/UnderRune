@@ -1,58 +1,13 @@
-// Small Chapter 2 objects NEO's attacks share: obj_doom (destroys its target after a delay), obj_afterimage_cut (a
-// copy that splits into four quarters drifting apart), obj_lerpvar (eases one variable of another instance) and
-// obj_basicbullet_sneo (the parent of NEO's bullets: graze points, his damage, shot reactions). Their scripts
-// (scr_doom, scr_afterimage_cut, scr_lerpvar) are here too.
-import {gmField,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
-import {C} from '../../gm/graphics';
-import {ge,le,lt} from '../../gm/math';
+// NEO's support objects: the shared small effects (deltarune/shared-effects.ts: obj_doom, obj_afterimage_cut,
+// obj_lerpvar) and obj_basicbullet_sneo (the parent of NEO's bullets: graze points, his damage, shot reactions). The
+// effects' scripts (scr_doom, scr_afterimage_cut, scr_lerpvar) are here too.
+import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
+import {ge,le} from '../../gm/math';
 import {bulletInit} from '../../deltarune/battle';
-import {lerpEaseIn,lerpEaseInout,lerpEaseOut} from '../../deltarune/ease';
+import {afterimageCut,doom,lerpvar} from '../../deltarune/shared-effects';
 
 /** The objects, with lookups through the canonical registry (`object`). */
 export function createNeoSupport(object:(name:string)=>GmObjectDef):GmObjectDef[]{
- const doom:GmObjectDef={name:'obj_doom',index:1101,depth:0,visible:false,events:{
-  alarm0:(s,rt)=>{const t=rt.byId(s.target);if(t)rt.destroy(t);rt.destroy(s);},
- }};
- /** Event 0: the measurements of its sprite (its height is taken from the width, as in the original). */
- const measure=(s:GmInstance,rt:GmRuntime)=>{
-  const spr=rt.bank.get(s.sprite!);
-  s.width=spr?.width??0;s.height=spr?.width??0;s.xo=spr?.originX??0;s.yo=spr?.originY??0;
- };
- const afterimageCut:GmObjectDef={name:'obj_afterimage_cut',index:211,depth:0,events:{
-  create:(s,rt)=>{s.faderate=0.1;s.siner=0;s.sprite='spr_whitepx';s.imageSpeed=0;rt.userEvent(s,0);s.flash=false;},
-  user0:measure,
-  draw:(s,rt)=>{
-   if(s.flash){
-    rt.drawSpriteFog(s.sprite!,s.imageIndex,s.x,s.y,s.imageXscale,s.imageYscale,s.imageAngle,C.white,s.imageAlpha);
-    s.flash=false;return;
-   }
-   s.siner+=1;
-   const hw=s.width/2,hh=s.height/2,m=lerpEaseOut(0,rt.spriteHeight(s)/2,(s.siner+2)/10,1);
-   s.imageAlpha-=s.faderate;
-   const ox=s.xo*s.imageXscale/2,oy=s.yo*s.imageYscale/2;
-   const part=(left:number,top:number,dx:number,dy:number)=>rt.drawSpritePart(s.sprite!,s.imageIndex,left,top,hw,hh,s.x+dx-ox,s.y+dy-oy,s.imageXscale,s.imageYscale,s.imageBlend,s.imageAlpha);
-   part(0,0,-m,-m);part(hw,0,m,-m);part(0,hh,-m,m);part(hw,hh,m,m);
-   if(lt(s.imageAlpha,0))rt.destroy(s);
-  },
- }};
- const lerpvar:GmObjectDef={name:'obj_lerpvar',index:929,depth:0,events:{
-  create:s=>{Object.assign(s,{variable:0,varname:'variable',pointa:0,pointb:0,time:0,maxtime:30,target:-1,init:0,easetype:0,easeinout:'out'});},
-  step:(s,rt)=>{
-   const t=rt.byId(s.target);
-   if(!t){rt.destroy(s);return;}
-   const field=gmField(s.varname);
-   if(s.init===0){if(typeof s.pointa==='string')s.pointa=t[field];s.init=1;}
-   s.time+=1;
-   const k=s.time/s.maxtime;
-   if(s.easetype===0)t[field]=s.pointa+(s.pointb-s.pointa)*k;
-   else{
-    if(s.easeinout==='out')t[field]=lerpEaseOut(s.pointa,s.pointb,k,s.easetype);
-    if(s.easeinout==='in')t[field]=lerpEaseIn(s.pointa,s.pointb,k,s.easetype);
-    if(s.easeinout==='inout')t[field]=lerpEaseInout(s.pointa,s.pointb,k,s.easetype);
-   }
-   if(ge(s.time,s.maxtime))rt.destroy(s);
-  },
- }};
  const basicBullet:GmObjectDef={name:'obj_basicbullet_sneo',index:597,parent:object('obj_collidebullet'),sprite:'spr_sneo_bullet0',depth:0,
   events:{
    create:(s,rt)=>{
