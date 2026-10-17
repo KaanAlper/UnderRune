@@ -43,7 +43,7 @@ in the browser (https://kaanalper.github.io/UnderRune/play/). This is the owner'
 
 - Code, comments, README, commits and docs: **English**.
 - Chat with the owner: **Turkish**.
-- End commit messages with your own co-author trailer, like the existing commits do.
+- Do not add a `Co-Authored-By: Claude …` trailer to commit messages (the owner asked, 2026-10-17).
 
 ### Architecture (the owner's explicit request)
 
