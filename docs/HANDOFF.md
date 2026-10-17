@@ -626,6 +626,11 @@ New scripts go in `tools/oracle-scripts.mjs`.
 - Then Queen (59), the rivals (58, 62, 63, 82), GIGA Queen (84), Spamton (normal) and Noelle's remaining parts,
   in the plan's order. Use `PARITY_SURVEY=1` to list every difference in a frame.
 
+- **Catalog card sprites**: an enemy that draws itself has the object sprite `spr_nothing`; `tools/catalog.mjs`
+  now takes its Create event's `idlesprite` for the card (only Mauswheel changes). Regenerating the whole catalog
+  also flips `adaptation` from `not-ported` to `browser-adaptation` for many records, so the committed catalog
+  differs from the tool's rule there. That change was left out; decide which is right before regenerating.
+
 ### 18. Requested next (after the release above)
 
 - **General chat**, from Supabase. Separate rooms for UNDERTALE and DELTARUNE. It sits left of the leaderboard on

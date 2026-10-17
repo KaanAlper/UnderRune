@@ -68,7 +68,13 @@ export async function generateCatalog(){
   for(const entry of entries){
    if(entry.encounter>=500||!entry.enemies.some(e=>bosses.has(e.object)))continue;
    if(entry.enemies.some(e=>!index.objects.some(o=>o.name===e.object)))continue;
-   const enemies=entry.enemies.map(e=>({...e,...monsters.get(e.type),sprite:index.objects.find(o=>o.name===e.object)?.sprite}));
+   // An enemy that draws itself has an empty object sprite (spr_nothing); its card shows the idle sprite its Create
+   // event sets (idlesprite).
+   const cardSprite=async(object)=>{
+    const own=index.objects.find(o=>o.name===object)?.sprite;if(own&&own!=='spr_nothing')return own;
+    try{return (await fs.readFile(path.join(base,'code',`gml_Object_${object}_Create_0.gml`),'utf8')).match(/^\s*idlesprite\s*=\s*(spr_\w+)\s*;/m)?.[1]??own;}catch{return own;}
+   };
+   const enemies=await Promise.all(entry.enemies.map(async e=>({...e,...monsters.get(e.type),sprite:await cardSprite(e.object)})));
    for(const enemy of enemies){
     if(enemy.object==='obj_knight_enemy'&&!enemy.name)enemy.name='Roaring Knight';
     if(enemy.object==='obj_aqua_enemy'&&enemy.name==='???'){enemy.sourceDisplayName=enemy.name;enemy.name='Aqua';}

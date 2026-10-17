@@ -1122,7 +1122,7 @@
             "CatchX"
           ],
           "sourceBlockHash": "e63a74f6c001ff139ec16e519d64d05b2be0e4931c8050d581844e529be1f61f",
-          "sprite": "spr_nothing"
+          "sprite": "spr_mauswheel_idle"
         }
       ],
       "status": "identified",
