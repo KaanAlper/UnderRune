@@ -23,7 +23,8 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  await prep.getByRole('button',{name:/Dice Brace/}).click();await expect(prep.locator('.prep-hero[data-character="1"] .prep-summary')).toContainText('DF 2');
  await prep.getByRole('button',{name:'+ Add item',exact:true}).click();await prep.locator('.prep-entry').filter({hasText:'Dark Candy'}).click();
  await expect(prep.locator('.prep-bag')).toContainText('Dark Candy');await prep.screenshot({path:'test-results/public-preparation.png'});
- await prep.getByRole('button',{name:'START BATTLE'}).click();await expect(prep).toBeHidden();await expect(page.locator('#status')).toContainText('JEVIL / command');
+ // The live site loads the battle's package over the network before preparation closes.
+ await prep.getByRole('button',{name:'START BATTLE'}).click();await expect(prep).toBeHidden({timeout:20000});await expect(page.locator('#status')).toContainText('JEVIL / command');
  await page.waitForTimeout(600);await page.locator('#screen').screenshot({path:'test-results/public-battle.png'});
  for(let i=0;i<3;i++)await defend(page);await expect(page.locator('#status')).toContainText('enemy talk');
  await page.waitForTimeout(700);await key(page,'z');await expect(page.locator('#status')).toContainText('JEVIL / enemy attack');
