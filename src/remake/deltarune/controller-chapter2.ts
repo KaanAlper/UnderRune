@@ -1,12 +1,24 @@
-// Chapter 2's HUD/menu rendering part. Turn progression, heroes and damage stay in the shared controller.
+// The battle panel and menus from Chapter 2 on. Turn progression, heroes and damage stay in the shared controller.
+// Chapter 3's differences are in HUD_CHAPTERS: spell costs round down, the tired and spell highlights pulse on
+// Ralsei's turn, the heal list's bars stop at -100, Susie's TECH can be greyed out, and the A-key preview is debug-only.
+// Its minigames and other bosses' panels (Rouxls's button grid, Tenna's boards and games) are named errors.
 import {gmArray,type GmInstance,type GmRuntime} from '../gm/runtime';
 import {C,mergeColor} from '../gm/graphics';
 import {round} from '../gm/math';
 import {actorActs} from './chapter2';
-import {withHook} from './rules';
+import {forChapter,withHook} from './rules';
 import {sourceText} from '../host/text';
 
 const nl=(v:unknown)=>String(v).replace(/#/g,'\n');
+interface HudChapter{later:boolean;cost:(v:number)=>number;}
+const HUD_CHAPTERS:Readonly<Record<number,HudChapter>>={2:{later:false,cost:round},3:{later:true,cost:Math.floor}};
+const hud=(rt:GmRuntime)=>forChapter(rt,HUD_CHAPTERS,'battle panel');
+/** Chapter 3 objects whose battles change or hide the panel in ways not ported yet. */
+const UNPORTED_PANELS=['obj_shadowman_sharpshoot_cursor','obj_actor_tenna','obj_tenna_zoom','obj_susiezilla_gamecontroller','obj_chefs_game','obj_rhythmgame',
+ 'obj_tenna_minigame_ui','obj_shootout_controller','obj_rouxls_ch3_enemy','obj_tenna_board4_enemy','obj_pippins_enemy','obj_tenna_enemy_bg','obj_tennabattleconvo_controller'];
+const BOARD_ROOMS=new Set(['room_board_1','room_board_2','room_board_3']);
+const isA=(i:GmInstance,name:string)=>{for(let d=i.object;d;d=d.parent!)if(d.name===name)return true;return false;};
+const present=(rt:GmRuntime,name:string)=>rt.instances.some(i=>i.live&&isA(i,name));
 const heads=['spr_headkris','spr_headsusie','spr_headralsei','spr_headnoelle'];
 const names=['spr_bnamekris','spr_bnamesusie','spr_bnameralsei','spr_bnamenoelle'];
 const flash=(i:GmInstance|undefined)=>{if(i){if(i.flash===0)i.fsiner=0;i.flash=1;i.becomeflash=1;}};
@@ -41,7 +53,7 @@ function charBox(s:GmInstance,rt:GmRuntime){
    s.spare_glow=0;for(s.sglowi=0;s.sglowi<3;s.sglowi++)if(g.monster[s.sglowi]===1&&g.mercymod[s.sglowi]>=100)s.spare_glow=1;
    s.pacify_glow=0;
    if(c===2||c===3){pacifyGlow(s,rt);if(g.tension<(c===3?80:40))s.pacify_glow=0;}
-   rt.drawSprite('spr_btfight',s.btc[0],x+20,y+5);rt.drawSprite(c===0?'spr_btact':'spr_bttech',s.btc[1],x+55,y+5);
+   rt.drawSprite('spr_btfight',s.btc[0],x+20,y+5);rt.drawSprite(c===0?'spr_btact':hud(rt).later&&s.disablesusieact===1&&c===1?'spr_ja_bttech_grey':'spr_bttech',s.btc[1],x+55,y+5);
    rt.drawSprite('spr_btitem',s.btc[2],x+90,y+5);rt.drawSprite('spr_btspare',s.btc[3],x+125,y+5);rt.drawSprite('spr_btdefend',s.btc[4],x+160,y+5);
    const glow=0.4+Math.sin(g.time/6)*0.4;
    if(s.spare_glow===1&&s.gc===pos)rt.drawSprite('spr_btspare',2,x+125,y+5,1,1,0,C.white,glow);
@@ -77,6 +89,12 @@ function cursor(s:GmInstance,rt:GmRuntime,value:number,right=230){
 export function drawController2(s:GmInstance,rt:GmRuntime,width:(text:string)=>number){
  const g=rt.globals,d=rt.drawState;
  if(g.lang==='ja')throw Error('Chapter 2 controller Japanese HUD is not ported');
+ const panel=hud(rt);
+ if(panel.later){
+  if(withHook(rt,'hidesBattleHud').some(([e,h])=>h(e,rt)))return;
+  for(const name of UNPORTED_PANELS)if(present(rt,name))throw Error(`Chapter 3 battle panel with ${name} is not ported`);
+  if(BOARD_ROOMS.has(rt.room.name))throw Error("Chapter 3 board battles' timer is not ported");
+ }
  s.xx=rt.view.x;s.yy=rt.view.y;for(const [e,h] of withHook(rt,'controllerHudOffset'))s.yy+=h(e,s,rt);
  s.tpoff=s.tp-s.tpy+s.yy;s.bpoff=-s.bp+s.bpy+s.yy;
  if(s.intro===1){if(s.bp<s.bpy-1){if(s.bpy-s.bp<40)s.bp+=round((s.bpy-s.bp)/2.5);else s.bp+=30;}else s.bp=s.bpy;if(s.bp===s.bpy)s.intro=0;}
@@ -92,6 +110,7 @@ export function drawController2(s:GmInstance,rt:GmRuntime,width:(text:string)=>n
   for(s.i=0;s.i<3;s.i++){
    const i=s.i;flash(rt.byId(g.monsterinstance[coord[m][t]]));if(g.monster[i]!==1)continue;
    d.color=C.white;s.mercydraw=0;s.tireddraw=0;s.mnamecolor1=C.white;s.mnamecolor2=C.white;s.aqcolor=mergeColor(C.aqua,0xff0000,0.3);
+   if(panel.later&&t===2)s.aqcolor=mergeColor(mergeColor(C.aqua,0xff0000,0.3),C.white,0.5+Math.sin(s.t_siner/4)*0.5);
    if(g.monsterstatus[i]===1)s.tireddraw=1;if(g.mercymod[i]>=g.mercymax[i])s.mercydraw=1;s.namewidth=width(nl(g.monstername[i]));
    if(s.tireddraw===1){if(!withHook(rt,'suppressesPacifyHighlight').some(([e,h])=>h(e,rt))){d.color=s.aqcolor;s.mnamecolor1=s.aqcolor;s.mnamecolor2=s.aqcolor;}rt.drawSprite('spr_tiredmark',0,s.xx+80+s.namewidth+40,s.yy+385+i*30);}
    if(s.mercydraw===1){d.color=C.yellow;s.mnamecolor1=C.yellow;if(s.tireddraw===0)s.mnamecolor2=C.yellow;if(s.hidemercy===0)rt.drawSprite('spr_sparestar',0,s.xx+80+s.namewidth+20,s.yy+385+i*30);}
@@ -99,7 +118,7 @@ export function drawController2(s:GmInstance,rt:GmRuntime,width:(text:string)=>n
    if(m!==13){
     d.color=C.gray;text(80+s.namewidth+60,375+i*30,g.monstercomment[i]);d.color=0x000080;rt.drawRect(s.xx+420,s.yy+380+i*30,s.xx+500,s.yy+395+i*30);
     d.color=C.lime;rt.drawRect(s.xx+420,s.yy+380+i*30,s.xx+420+g.monsterhp[i]/g.monstermaxhp[i]*80,s.yy+395+i*30);
-    d.color=C.white;text(424,364,sourceText('obj_battlecontroller_slash_Draw_0_gml_173_0'),1,0.5);text(424,380+i*30,Math.ceil(g.monsterhp[i]/g.monstermaxhp[i]*100)+'%',1,0.5);
+    d.color=C.white;text(424,364,sourceText('obj_battlecontroller_slash_Draw_0_gml_173_0'),1,0.5);text(424,380+i*30,panel.later&&withHook(rt,'hidesHpPercent').some(([e,h])=>h(e,rt))?'???':Math.ceil(g.monsterhp[i]/g.monstermaxhp[i]*100)+'%',1,0.5);
    }else{
     const standard=sourceText('obj_battlecontroller_slash_Draw_0_gml_172_0');let act=actorActs(rt,i).name[coord[2][t]];
     if(['S-Action','R-Action','N-Action'].includes(act))act=standard;
@@ -123,10 +142,10 @@ export function drawController2(s:GmInstance,rt:GmRuntime,width:(text:string)=>n
   for(s.i=0;s.i<3;s.i++)for(let n=0;n<2;n++){
    const index=s.page*6+s.i*2+n;d.color=C.white;if(merged&&g.battlespellspecial[ch][index]>=1)d.color=s.hpcolorsoft[g.char[ch]-1];
    if(g.tension<cost[index])d.color=C.gray;
-   else if((merged||n===0)&&(sp[index]===3||sp[index]===8)){pacifyGlow(s,rt);if(s.pacify_glow===1)d.color=mergeColor(C.aqua,0xff0000,0.3);}
+   else if((merged||n===0)&&(sp[index]===3||sp[index]===8)){pacifyGlow(s,rt);if(s.pacify_glow===1)d.color=panel.later?mergeColor(mergeColor(C.aqua,0xff0000,0.3),C.white,0.5+Math.sin(s.t_siner/4)*0.5):mergeColor(C.aqua,0xff0000,0.3);}
    text(30+n*230,375+s.i*30,names[index]);
   }
-  d.color=C.gray;text(500,375,desc[s.page*6+s.spellcoord]);s.thiscost=round(cost[s.page*6+s.spellcoord]/g.maxtension*100);d.color=C.orange;if(!merged||s.thiscost>0)text(500,440,s.thiscost+'% TP');
+  d.color=C.gray;text(500,375,desc[s.page*6+s.spellcoord]);s.thiscost=panel.cost(cost[s.page*6+s.spellcoord]/g.maxtension*100);d.color=C.orange;if(!merged||s.thiscost>0)text(500,440,s.thiscost+'% TP');
  }
  if(m===4&&g.myfight===0){
   s.itemcoord=coord[4][t];s.page=0;if(s.itemcoord>5){s.page=1;s.itemcoord-=6;}cursor(s,rt,s.itemcoord);
@@ -137,6 +156,7 @@ export function drawController2(s:GmInstance,rt:GmRuntime,width:(text:string)=>n
  }
  if(m===9&&g.myfight===0){
   s.actcoord=coord[9][t];actInfo2(s,rt,s.thisenemy,true);s.page=0;cursor(s,rt,s.actcoord);
+  if(panel.later&&[59,103].includes(g.monstertype[s.thisenemy]))throw Error(`Chapter 3 ACT locks for monster ${g.monstertype[s.thisenemy]} are not ported`);
   for(s.i=0;s.i<6;s.i++){
    const i=s.i;s.cant=0;s.chartime=g.char[t]===1?g.actactor[coord[11][t]][i]:0;s.charoffset=0;s.xoffset=i%2===1?230:0;s.yoffset=i>3?60:i>1?30:0;
    s.drawsus=0;s.drawral=0;s.drawnoe=0;s.susblend=C.white;s.ralblend=C.white;s.noeblend=C.white;
@@ -158,10 +178,10 @@ export function drawController2(s:GmInstance,rt:GmRuntime,width:(text:string)=>n
   rt.drawSprite('spr_heart',0,s.xx+55,s.yy+385+coord[m][t]*30);d.font='fnt_mainbig';
   for(s.i=0;s.i<3;s.i++)if(g.char[s.i]!==0){
    const i=s.i;flash(rt.byId(g.charinstance[coord[m][t]]));d.color=C.white;text(80,375+i*30,g.charname[g.char[i]]);
-   d.color=0x000080;rt.drawRect(s.xx+400,s.yy+380+i*30,s.xx+500,s.yy+395+i*30);d.color=C.lime;rt.drawRect(s.xx+400,s.yy+380+i*30,s.xx+400+g.hp[g.char[i]]/g.maxhp[g.char[i]]*100,s.yy+395+i*30);
+   d.color=0x000080;rt.drawRect(s.xx+400,s.yy+380+i*30,s.xx+500,s.yy+395+i*30);d.color=C.lime;{let hp=g.hp[g.char[i]]/g.maxhp[g.char[i]]*100;if(panel.later&&hp<=-100)hp=-100;rt.drawRect(s.xx+400,s.yy+380+i*30,s.xx+400+hp,s.yy+395+i*30);}
   }
  }
- if(rt.input.held.has(65)&&g.flag[34]===0&&g.myfight===0&&[11,13,2].includes(g.bmenuno))throw Error('Chapter 2 A-held ACT preview is not ported');
+ if(!panel.later&&rt.input.held.has(65)&&g.flag[34]===0&&g.myfight===0&&[11,13,2].includes(g.bmenuno))throw Error('Chapter 2 A-held ACT preview is not ported');
  d.color=C.white;d.alpha=1;
 }
 function wrap(value:string,max:number,width:(text:string)=>number){

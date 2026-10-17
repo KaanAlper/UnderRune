@@ -29,12 +29,15 @@ export interface ChapterRules{
  readonly tensionBarSurface:boolean;
  /** Enemies ask the battle phase through scr_isphase, which leaves its answer in the asking instance's __isphase. */
  readonly phaseScript:boolean;
+ /** Chapter 3's command row: the cursor skips Susie's TECH while the controller's disablesusieact is set, DEFEND counts
+  * in idefendedthisturn, and other encounters' input locks (board introductions, Rouxls's grid) exist. */
+ readonly commandRow3:boolean;
 }
-const CHAPTER1:ChapterRules={chapter:1,soulHasModes:false,slowSoulSetting:false,heroesCanBePoisoned:false,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false,phaseScript:false};
-const CHAPTER2:ChapterRules={chapter:2,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
+const CHAPTER1:ChapterRules={chapter:1,commandRow3:false,soulHasModes:false,slowSoulSetting:false,heroesCanBePoisoned:false,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false,phaseScript:false};
+const CHAPTER2:ChapterRules={chapter:2,commandRow3:false,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
 /** Chapter 3 keeps Chapter 2's rules: each was checked in its code (scr_moveheart, scr_randomtarget, obj_tensionbar,
  * scr_isphase, obj_heart, obj_heroparent's poison and the auto-Susie mark, which still addresses the wrong instance). */
-const CHAPTER3:ChapterRules={chapter:3,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
+const CHAPTER3:ChapterRules={chapter:3,commandRow3:true,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
 /** A component's part for the running battle's chapter, from the table of its versions next to it. */
 export function forChapter<T>(rt:GmRuntime,versions:Readonly<Record<number,T>>,what:string):T{
  const v=versions[rt.globals.chapter??1];
@@ -59,6 +62,10 @@ export interface BattleHooks{
  interceptSpellDamage?(enemy:GmInstance,spell:GmInstance,rt:GmRuntime,target:number,damage:number,spellId:number):boolean;
  /** The encounter suppresses the tired/Pacify cue even when its enemy is tired. */
  suppressesPacifyHighlight?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** The battle panel is not drawn at all (the Roaring Knight's ending cutscene). */
+ hidesBattleHud?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** The enemy list shows "???" instead of HP percentages (the Roaring Knight). */
+ hidesHpPercent?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** Extra vertical movement of the command panel (boxing transitions). */
  controllerHudOffset?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime):number;
  /** An encounter replaces a party portrait and name (boxing). True when it drew them. */

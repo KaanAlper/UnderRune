@@ -113,7 +113,7 @@ export function sndFree(rt:GmRuntime,caller:GmInstance,handle:number|string){
 function freeStream(rt:GmRuntime,handle:number|string){if(rt.soundFree)rt.soundFree(handle);else rt.sourceAudio?.free(handle);}
 
 /** Per chapter: from Chapter 2 an afterimage's fading speed is its own variable (fadeSpeed), so makers can change it. */
-const AFTERIMAGE:Record<number,{ownSpeed:boolean}>={1:{ownSpeed:false},2:{ownSpeed:true}};
+const AFTERIMAGE:Record<number,{ownSpeed:boolean}>={1:{ownSpeed:false},2:{ownSpeed:true},3:{ownSpeed:true}};
 /** Fades out and goes. */
 export const afterimage:GmObjectDef={name:'obj_afterimage',index:192,events:{
  create:(s,rt)=>{if(forChapter(rt,AFTERIMAGE,'obj_afterimage').ownSpeed)s.fadeSpeed=0.04;},

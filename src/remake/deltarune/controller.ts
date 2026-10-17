@@ -18,7 +18,7 @@ import {pressed} from './keys';
 import {mercyAdd2} from './chapter2-battle';
 import {drawController2} from './controller-chapter2';
 import {controllerTail2,stepControllerMenus2} from './controller-menu2';
-import {controllerScripts2,type ControllerScripts} from './controller-script-parts';
+import {controllerScripts2,controllerScripts3,type ControllerScripts} from './controller-script-parts';
 
 /** Small script differences alongside the controller; the frame/turn pipeline itself is shared. */
 const CONTROLLER_SCRIPTS:Record<number,ControllerScripts>={
@@ -27,6 +27,7 @@ const CONTROLLER_SCRIPTS:Record<number,ControllerScripts>={
   startActors:()=>{},afterCreate:()=>{},victoryRows:4,tensionGoldMultiplier:1,
   victoryText:rt=>subst(lang('obj_battlecontroller_slash_Step_0_gml_40_0'),rt.globals.monsterexp[3],rt.globals.monstergold[3]),victoryLevelUp:()=>{},reward:()=>{},afterVictory:()=>{},},
  2:controllerScripts2,
+ 3:controllerScripts3,
 };
 const controllerScripts=(rt:GmRuntime)=>forChapter(rt,CONTROLLER_SCRIPTS,'battle controller scripts');
 export const left_p=(rt:GmRuntime)=>pressed(rt,KEY.left);
@@ -311,9 +312,13 @@ function smallFaces(rt:GmRuntime){return rt.instances.filter(i=>{if(!i.live)retu
 export function commandMenu(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,t=()=>g.charturn as number,coord=g.bmenucoord;
   if(g.bmenuno===0){
+   const row3=rules(rt).commandRow3;
+   if(row3)for(const name of ['obj_board_battleintroduction','obj_rouxls_ch3_enemy','obj_tenna_enemy','obj_tennabattleconvo_controller','obj_pippins_enemy'])
+    if(rt.instances.some(i=>i.live&&i.object.name===name))throw Error(`Chapter 3 command row with ${name} is not ported`);
    if(!rt.byId(s.battlewriter)){g.msg[0]=g.battlemsg[0];g.typer=g.battletyper;s.battlewriter=battleText(rt,s).id;}
-   if(left_p(rt)&&s.lbuffer<0){if(coord[0][t()]===0)coord[0][t()]=4;else coord[0][t()]-=1;s.movenoise=1;s.rbuffer=1;}
-   if(right_p(rt)&&s.rbuffer<0){if(coord[0][t()]===4)coord[0][t()]=0;else coord[0][t()]+=1;s.movenoise=1;s.lbuffer=1;}
+   const skipTech=(to:number)=>{if(row3&&s.disablesusieact===1&&g.charturn===1&&coord[0][t()]===1)coord[0][t()]=to;};
+   if(left_p(rt)&&s.lbuffer<0){if(coord[0][t()]===0)coord[0][t()]=4;else coord[0][t()]-=1;s.movenoise=1;s.rbuffer=1;skipTech(0);}
+   if(right_p(rt)&&s.rbuffer<0){if(coord[0][t()]===4)coord[0][t()]=0;else coord[0][t()]+=1;s.movenoise=1;s.lbuffer=1;skipTech(2);}
    if(button1_p(rt)&&s.twobuffer<0){
     s.onebuffer=1;s.selnoise=1;const c=coord[0][t()];
     if(c===0)g.bmenuno=1;
@@ -324,7 +329,7 @@ export function commandMenu(s:GmInstance,rt:GmRuntime){
      for(s.i=0;s.i<12;s.i++)if(s.tempitem[coord[4][t()]][t()]===0&&coord[4][t()]>0)coord[4][t()]-=1;
     }
     if(c===3){s.onebuffer=1;g.bmenuno=12;}
-    if(c===4){tensionHeal(rt,40);g.faceaction[t()]=4;g.charaction[t()]=10;nextHero(s,rt);for(const [e,h] of withHook(rt,'onCommandChosen'))h(e,s,rt,'defend');}
+    if(c===4){tensionHeal(rt,40);if(row3)s.idefendedthisturn++;g.faceaction[t()]=4;g.charaction[t()]=10;nextHero(s,rt);for(const [e,h] of withHook(rt,'onCommandChosen'))h(e,s,rt,'defend');}
    }
    if(button2_p(rt)&&s.onebuffer<0&&g.charturn>0){s.twobuffer=1;s.movenoise=1;prevHero(s,rt);}
    writerDepth(s,rt,3,false);
@@ -459,8 +464,8 @@ function stepMenus1(s:GmInstance,rt:GmRuntime){
    }
   }
 }
-const CONTROLLER_MENUS:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:stepMenus1,2:stepControllerMenus2};
-const CONTROLLER_TAIL:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:()=>{},2:controllerTail2};
+const CONTROLLER_MENUS:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:stepMenus1,2:stepControllerMenus2,3:stepControllerMenus2};
+const CONTROLLER_TAIL:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:()=>{},2:controllerTail2,3:controllerTail2};
 function step(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,t=()=>g.charturn as number;
  if(withHook(rt,'blocksControllerStep').some(([e,h])=>h(e,s,rt)))return;
@@ -648,7 +653,7 @@ function draw1(s:GmInstance,rt:GmRuntime){
  }
  d.color=C.white;d.alpha=1;
 }
-const CONTROLLER_DRAW:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:draw1,2:(s,rt)=>drawController2(s,rt,nameWidth)};
+const CONTROLLER_DRAW:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:draw1,2:(s,rt)=>drawController2(s,rt,nameWidth),3:(s,rt)=>drawController2(s,rt,nameWidth)};
 function draw(s:GmInstance,rt:GmRuntime){forChapter(rt,CONTROLLER_DRAW,'battle controller HUD')(s,rt);}
 /** Alarm 2: the enemy turn is over; the next turn starts, unless an enemy takes over (rules.ts onTurnEnd). */
 function alarm2(s:GmInstance,rt:GmRuntime){

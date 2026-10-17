@@ -19,7 +19,7 @@ describe('Chapter 2 controller HUD part',()=>{
   expect(()=>rt.draw()).toThrow(/ACT preview.*not ported/i);
  });
  it('dispatches through an explicit chapter part',()=>{
-  const {rt}=scene();rt.globals.chapter=3;expect(()=>rt.draw()).toThrow(/controller.*Chapter 3/i);
+  const {rt}=scene();rt.globals.chapter=4;expect(()=>rt.draw()).toThrow(/controller.*Chapter 4/i);
  });
  it('uses Chapter 2 party spacing and preserves selection working fields',()=>{
   const {rt,s}=scene();rt.draw();expect(s.slmxx).toBe(426);expect(s.gc).toBe(2);expect(s.btc).toEqual([1,0,0,0,0]);expect(s.c).toBe(4);expect(s.i).toBe(12);

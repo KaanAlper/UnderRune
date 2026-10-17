@@ -60,6 +60,28 @@ function afterCreate(s:GmInstance,rt:GmRuntime){
  s.hpcolor[3]=C.yellow;gmArray(s,'hpcolorsoft');for(s.i=0;s.i<4;s.i++)s.hpcolorsoft[s.i]=mergeColor(s.hpcolor[s.i],C.white,0.5);
  g.flag[36]=0;g.flag[39]=0;g.flag[63]=0;
 }
+/** obj_battlecontroller's Create, Chapter 3: Chapter 2's ending without GIGA Queen's values, then the Chapter 3 working
+ * values (Rouxls's button grid, the dog minigame, Tenna's boards), the board timer and one random pick (rabbickvar),
+ * and the trip ticket. Board battles and the trip ticket are other encounters' and are not ported. */
+function afterCreate3(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals;resetChapter2Actors(rt);spellMenuSetupChapter2(rt,s);
+ Object.assign(s,{spellpage:0,t_siner:0,myfightreturntimer:1,messagepriority:-1,attackpriority:-1,hidemercy:0,cantspare:[0,0,0]});
+ g.turntimer=120;
+ for(const key of ['charpos','havechar','mmy'])if(s[key][3]===undefined)s[key][3]=key==='charpos'?-1:0;
+ s.hpcolor[3]=C.yellow;gmArray(s,'hpcolorsoft');for(s.i=0;s.i<4;s.i++)s.hpcolorsoft[s.i]=mergeColor(s.hpcolor[s.i],C.white,0.5);
+ g.flag[36]=0;g.flag[39]=0;g.flag[63]=0;
+ Object.assign(s,{disablesusieact:0,mercytotal:0,idefendedthisturn:0,ypostenna:0,oopsallacts:0,spadebuttonenabled:false,spadebuttoncount:0,spadebuttontimer:0,
+  heartbuttoncount:0,heartbuttontimer:0,heartbuttondirection:270,heartsuccesstimer:0,heartsuccesscon:0,recentlyhighlightingheart:0,recentlyhighlightingheartvalue:0,
+  rouxlsbuttontimer:0,rouxlsbuttoncount:-6,rouxlsbuttoncount2:-6,rouxlsbuttoncount_y:0,rouxlsgridenabled:false,recentlyhighlightingspade:0,recentlyhighlightingspadevalue:0,
+  gridchangedirections:true,spadebuttondirection:0,rouxlsbuttondirection:270,rouxlsbuttondirection2:270,rouxlserrorcon:0,rouxlserrortimer:0,rouxlstelegraphtimer:0,
+  rouxlstelegraphcon:0,spadetelegraphtimer:0,spadetelegraphcon:0,spadesuccesstimer:0,spadesuccesscon:0,rouxlsbuttonendcon:0,buttonorder:0,spadefail:false,buttonspeed:0,
+  norouxlsbutton:false,dogtimer:0,dogcon:0,dogselectedcount:0});
+ if(BOARD_ROOMS.has(rt.room.name))throw Error('Chapter 3 board battles (obj_tennabattleconvo_controller) are not ported');
+ Object.assign(s,{battletimer:0,battleseconds:0,battleminutes:0,boardend:0});g.boardbattleresult='won';s.rabbickvar=rt.random.choose(0,1);
+ Object.assign(s,{tripticket:0,tripticketcon:0,triptickettimer:0});
+ if([131,126,125].includes(g.encounterno))throw Error('Chapter 3 trip ticket escape (key item 18) is not ported');
+}
+const BOARD_ROOMS=new Set(['room_board_1','room_board_2','room_board_3']);
 function reward(_s:GmInstance,rt:GmRuntime){
  const g=rt.globals;
  const count=(id:number)=>g.char.filter((c:number)=>c>0).reduce((n:number,c:number)=>n+(g.chararmor1[c]===id?1:0)+(g.chararmor2[c]===id?1:0),0);
@@ -101,4 +123,12 @@ export const controllerScripts2:ControllerScripts={
   return g.flag[37]===1?T('43_0'):subst(T('42_0'),g.monsterexp[3],g.monstergold[3]);
  },
  victoryLevelUp:rt=>{if(rt.globals.flag[63]!==1)return;snd(rt,'snd_dtrans_lw',2,0.7);levelUp(rt);},
+};
+/** Chapter 3's controller parts: Chapter 2's, with its own Create ending. Parts not yet checked against Chapter 3's code
+ * stop with a named error. */
+export const controllerScripts3:ControllerScripts={
+ ...controllerScripts2,
+ afterCreate:afterCreate3,
+ victoryText:()=>{throw Error("Chapter 3's victory message is not ported");},
+ victoryLevelUp:()=>{throw Error("Chapter 3's victory level-up is not ported");},
 };
