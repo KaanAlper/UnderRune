@@ -786,64 +786,6 @@
     "adaptation": "not-ported"
   },
   {
-    "id": "ch2-65",
-    "name": "Werewerewire",
-    "chapter": 2,
-    "encounter": 65,
-    "variant": "65",
-    "kind": "miniboss",
-    "sources": [
-      {
-        "packageId": "chapter2_windows",
-        "sha256": "047c5ab003e3e017a709c02757e119c81e0327760169512110fd276b19241e68",
-        "encounter": 65,
-        "code": [
-          "gml_GlobalScript_scr_monstersetup",
-          "gml_GlobalScript_scr_encountersetup"
-        ],
-        "rooms": []
-      }
-    ],
-    "enemies": [
-      {
-        "slot": 0,
-        "object": "obj_werewerewire_enemy",
-        "type": 40,
-        "name": "Werewerewire",
-        "hp": 1753,
-        "at": 11,
-        "df": 0,
-        "acts": [
-          "Check",
-          "BeCold",
-          "BeTough",
-          "BeSweet"
-        ],
-        "sourceBlockHash": "82ed32084a24db7c42e8e99acd91f2f1cd2ff0ae5af5d1653562ff22f54c0dc1",
-        "sprite": "spr_werewerewire_idle"
-      },
-      {
-        "slot": 1,
-        "object": "obj_werewerewire_enemy",
-        "type": 40,
-        "name": "Werewerewire",
-        "hp": 1753,
-        "at": 11,
-        "df": 0,
-        "acts": [
-          "Check",
-          "BeCold",
-          "BeTough",
-          "BeSweet"
-        ],
-        "sourceBlockHash": "82ed32084a24db7c42e8e99acd91f2f1cd2ff0ae5af5d1653562ff22f54c0dc1",
-        "sprite": "spr_werewerewire_idle"
-      }
-    ],
-    "status": "identified",
-    "adaptation": "not-ported"
-  },
-  {
     "id": "ch2-71",
     "name": "Clover",
     "chapter": 2,
@@ -1074,6 +1016,7 @@
     "encounter": 89,
     "variant": "89",
     "kind": "miniboss",
+    "setting": "Dojo rematch",
     "sources": [
       {
         "packageId": "chapter2_windows",
@@ -1134,6 +1077,7 @@
     "encounter": 94,
     "variant": "94",
     "kind": "miniboss",
+    "setting": "Dojo final round",
     "sources": [
       {
         "packageId": "chapter2_windows",

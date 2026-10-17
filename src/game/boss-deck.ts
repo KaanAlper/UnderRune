@@ -57,7 +57,7 @@ export class BossDeck{
      this.assets.draw(c,enemy.sprite,chapter,x,y,scale);
     });
     const name=document.createElement('strong');name.className='card-name';name.textContent=record.name;
-    const type=document.createElement('span');type.className='card-type';type.textContent=record.kind==='secret'?'Secret encounter':record.kind==='main'?'Boss encounter':`Encounter ${record.encounter}`;
+    const type=document.createElement('span');type.className='card-type';type.textContent=record.setting?`${record.setting} · ${record.encounter}`:record.kind==='secret'?'Secret encounter':record.kind==='main'?'Boss encounter':`Encounter ${record.encounter}`;
     const state=document.createElement('span');state.className='card-state';
     const stamp=document.createElement('span');stamp.className='card-development-stamp';stamp.textContent='IN DEVELOPMENT';stamp.setAttribute('aria-hidden','true');stamp.hidden=true;
     const bottom=corner.cloneNode(true) as HTMLElement;bottom.classList.add('card-corner-bottom');

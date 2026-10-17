@@ -29,6 +29,7 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
   for(const [i,[name,type,x,y]] of setup.monsters.entries()){
    const def=enemies[name];if(!def)throw Error(`Encounter ${n} needs ${name}`);g.monsterinstancetype[i]=def;g.monstertype[i]=type;g.monstermakex[i]=r.view.x+x;g.monstermakey[i]=r.view.y+y;
   }
+  if('heroes' in setup)for(const [i,[x,y]] of setup.heroes.entries()){g.heromakex[i]=r.view.x+x;g.heromakey[i]=r.view.y+y;}
   g.battlemsg[0]=sourceText('scr_encountersetup_slash_scr_encountersetup_gml_'+setup.intro);return true;
  }};
  registry.finalize();installSmallFaceWriter(rt,object);

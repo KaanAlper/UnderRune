@@ -5,8 +5,9 @@ export const FIELD_ENCOUNTERS={
  65:{party:[1,2,3],monsters:[['obj_werewerewire_enemy',40,502,70],['obj_werewerewire_enemy',40,456,190]],intro:'808_0',kind:'unused'},
  81:{party:[1,2,3],monsters:[['obj_werewerewire_enemy',40,482,164]],intro:'1066_0',kind:'story'},
  83:{party:[1,2,3],monsters:[['obj_mauswheel_enemy',44,450,100]],intro:'1090_0',kind:'story'},
- 89:{party:[1,2,3],monsters:[['obj_tasque_manager_enemy',42,487,94]],intro:'1247_0',kind:'dojo'},
- 94:{party:[1,2,3],monsters:[['obj_werewerewire_enemy',40,464,68],['obj_werewerewire_enemy',40,494,184]],intro:'1339_0',kind:'dojo-final-round'},
+ // The Dojo's rematches stand the party further left and higher (their heromakex/heromakey).
+ 89:{party:[1,2,3],monsters:[['obj_tasque_manager_enemy',42,487,94]],heroes:[[94,50],[80,122],[72,200]],intro:'1247_0',kind:'dojo'},
+ 94:{party:[1,2,3],monsters:[['obj_werewerewire_enemy',40,464,68],['obj_werewerewire_enemy',40,494,184]],heroes:[[94,50],[80,122],[72,200]],intro:'1339_0',kind:'dojo-final-round'},
 } as const;
 const T=(key:string)=>sourceText('scr_monstersetup_slash_scr_monstersetup_gml_'+key);
 /** The source scr_monstersetup blocks, after the caller's shared ACT-table reset. */

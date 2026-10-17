@@ -628,8 +628,16 @@ New scripts go in `tools/oracle-scripts.mjs`.
   - `ds_*` ids are numbered per kind.
 - The app loads `installChapter2BossHost` for Chapter 2 battles other than NEO. Browser test:
   `tests/e2e/chapter2-bosses.spec.ts` (each opens from its card and plays a full turn).
-- Next, in the plan's order: Queen (59), the rivals (58, 62, 63, 82), GIGA Queen (84), Spamton (normal), Noelle's
-  remaining parts. Record each with `z`, `menu` and `act` before making it public.
+- The Dojo: its final round (94, two Werewerewires) matches all three recordings and is public. Its Tasque Manager
+  rematch (89) is in development: the turn timer is now held at 99999 only while she waits and attacks, as the
+  original does, but the recordings still part at frames 637-724, where the original ends the battle after the
+  quiz and the remake does not. 89 is out of `BOSS_ENCOUNTERS` in the parity test until it matches.
+- Cards: an optional `setting` in the catalog ("Dojo rematch", "Dojo final round") tells same-named cards apart.
+  Encounter 65 (two Werewerewires) is never started by the game, like Chapter 1's 15, and is left out of the
+  cards (`UNUSED` in `tools/catalog.mjs`).
+- The owner moved the next work to Chapter 3's Roaring Knight (2026-10-17). Remaining Chapter 2 work, in the plan's
+  order: Queen (59), the rivals (58, 62, 63, 82), GIGA Queen (84), Spamton (normal), Noelle's remaining parts, the
+  Dojo's 89. Record each with `z`, `menu` and `act` before making it public.
 
 ### 18. Requested next (after the release above)
 

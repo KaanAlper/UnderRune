@@ -11,6 +11,8 @@ const playable:readonly SourceEncounter[]=[
  {id:'ch2-57',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:false},
  {id:'ch2-81',chapter:2,name:'Werewerewire',party:[1,2,3],hp:1753,attack:11,defense:0,music:'battle',practice:false},
  {id:'ch2-83',chapter:2,name:'Mauswheel',party:[1,2,3],hp:1753,attack:10,defense:0,music:'battle',practice:false},
+ // The Dojo's final round: two Werewerewires.
+ {id:'ch2-94',chapter:2,name:'Werewerewire',party:[1,2,3],hp:1753,attack:11,defense:0,music:'battle',practice:false},
  {id:'ch1-2',chapter:1,name:'Lancer',party:[1,2],auto:[2],hp:540,attack:5,defense:1,music:'lancerfight',practice:false},
  {id:'ch1-8',chapter:1,name:'Clover',party:[1,3],hp:270,attack:6,defense:1,music:'battle',practice:false},
  // getsusieevent rejoins Ralsei, then Susie. Her gamestart charauto remains set until prisonevent.
@@ -27,6 +29,8 @@ export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);
 /** Explicit local verification entry points. Public launches always use sourceEncounter. */
 /** Reserved for EngineBattle fixtures that still need end-to-end verification before public launch. */
 const development:readonly SourceEncounter[]=[
+ // The Dojo's Tasque Manager rematch: its quiz ending still differs from the recordings.
+ {id:'ch2-89',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:false},
 ];
 export const developmentEncounter=(id:string)=>sourceEncounter(id)??development.find(p=>p.id===id);
 export const availableEncounters=(chapter:number)=>playable.filter(p=>p.chapter===chapter);

@@ -4,10 +4,12 @@ import {createHash} from 'node:crypto';
 const hash=code=>createHash('sha256').update(code).digest('hex');
 import {fileURLToPath} from 'node:url';
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+/** Encounters the game defines but never starts, left out of the boss selection: Chapter 1's 15 (a Clover and Hathy
+ * pairing) and Chapter 2's 65 (two Werewerewires; nothing sets it as an encounter). */
+const UNUSED=new Set(['ch1-15','ch2-65']);
 export function buildCatalog(records){
  const map=new Map();
- // Encounter 15 is an unused Clover/Hathy pairing, excluded from the playable boss selection.
- for(const r of records){if(r.id==='ch1-15')continue;const prev=map.get(r.id);if(!prev){map.set(r.id,structuredClone(r));continue;}
+ for(const r of records){if(UNUSED.has(r.id))continue;const prev=map.get(r.id);if(!prev){map.set(r.id,structuredClone(r));continue;}
   if(prev.name!==r.name||prev.chapter!==r.chapter||prev.variant!==r.variant)throw Error('Encounter identity conflict');
   prev.sources.push(...r.sources.filter(s=>!prev.sources.some(p=>JSON.stringify(p)===JSON.stringify(s))));
  }
@@ -55,6 +57,8 @@ const bosses=new Set(['obj_lancerboss','obj_lancerboss2','obj_lancerboss3','obj_
  'obj_tenna_enemy','obj_tenna_board4_enemy','obj_knight_enemy','obj_shadow_mantle_enemy','obj_susiezilla_enemy','obj_lanino_enemy','obj_elnina_enemy','obj_lanino_rematch_enemy','obj_elnina_rematch_enemy','obj_rouxls_ch3_enemy',
  'obj_hammer_of_justice_enemy','obj_titan_enemy','obj_titan_spawn_enemy','obj_jackenstein_enemy','obj_holywatercooler_enemy',
  'obj_orange_enemy','obj_green_enemy','obj_blue_enemy','obj_yellow_enemy','obj_purple_enemy','obj_pink_enemy','obj_flowery_enemy','obj_aqua_enemy','obj_ball_enemy','obj_nubert_enemy','obj_netskie_enemy','obj_terracota_enemy']);
+/** Where an encounter takes place, when its name alone is shared with another card: the Dojo's rematches. */
+const SETTINGS={'ch2-89':'Dojo rematch','ch2-94':'Dojo final round'};
 export async function generateCatalog(){
  const game=process.env.DELTARUNE_DIR??'C:/Program Files (x86)/Steam/steamapps/common/DELTARUNE';
  const sources=JSON.parse((await fs.readFile(path.join(root,'extracted/source-manifest.json'),'utf8')).replace(/^\uFEFF/,''));
@@ -87,7 +91,7 @@ export async function generateCatalog(){
    const id=`ch${chapter}-${entry.encounter}`;
    const secret=enemies.some(e=>/joker|spamton_neo|knight|shadow_mantle|hammer_of_justice/.test(e.object));
    const main=enemies.some(e=>/king_boss|queen_enemy|gigaqueen|tenna|titan_enemy|pink|flowery/.test(e.object));
-   const record={id,name,chapter,encounter:entry.encounter,variant:String(entry.encounter),kind:secret?'secret':main?'main':'miniboss',sources:[sourceRecord],enemies,status:'identified',adaptation:'browser-adaptation'};
+   const record={id,name,chapter,encounter:entry.encounter,variant:String(entry.encounter),kind:secret?'secret':main?'main':'miniboss',...(SETTINGS[id]?{setting:SETTINGS[id]}:{}),sources:[sourceRecord],enemies,status:'identified',adaptation:'browser-adaptation'};
    signatures.set(signature,record);records.push(record);
   }
   all.push({chapter,monsterTypes:[...monsters.values()],encounters:entries});

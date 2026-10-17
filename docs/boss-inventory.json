@@ -1178,6 +1178,7 @@
       "encounter": 89,
       "variant": "89",
       "kind": "miniboss",
+      "setting": "Dojo rematch",
       "sources": [
         {
           "packageId": "chapter2_windows",
@@ -1238,6 +1239,7 @@
       "encounter": 94,
       "variant": "94",
       "kind": "miniboss",
+      "setting": "Dojo final round",
       "sources": [
         {
           "packageId": "chapter2_windows",

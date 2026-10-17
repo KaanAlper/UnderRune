@@ -8,6 +8,9 @@ import {bulletSpawner,blconSkip,isPhase,mercyAdd2,msgSet,drawBodyPart,turnTimer}
 import {enemyObjectInit,enemyDrawHurtGeneric,monsterPop,simulText,actCharSprite,actCharSpriteEnd,terminateWriter,spareEnemy} from '../../deltarune/chapter2-enemy';
 import {sourceText} from '../../host/text';
 const T=(key:string)=>sourceText('obj_tasque_manager_enemy_slash_Step_0_gml_'+key);
+/** The Dojo's quiz (encounter 89) has no time limit: until Tasque Manager attacks, and as she does, the turn timer is
+ * held at 99999. */
+const dojoTurn=(rt:GmRuntime)=>{if(rt.globals.encounterno===89)turnTimer(rt,99999);};
 export function createTasqueManager(object:(n:string)=>GmObjectDef):GmObjectDef[]{
  const enemy=defineEnemy({...object('obj_tasque_manager_enemy'),depth:0},{
   create:(s,rt)=>{enemyObjectInit(s,rt);Object.assign(s,{talkmax:90,imageSpeed:1/6,hurtsprite:'spr_tm_hurt',timer:0,gml_sprite:['spr_tm_head','spr_tm_body','spr_tm_tail','spr_tm_hand_l','spr_tm_hand_r','spr_tm_legs'],sparesprite:['spr_tm_head_spare','spr_tm_body_spare','spr_tm_tail_spare','spr_tm_hand_l_spare','spr_tm_hand_r_spare','spr_tm_legs_spare'],sparedsprite:'spr_npc_tasquemanager',xOffset:[],yOffset:[],timesOrdered:0,timesCharged:0,balloon:-4,timesTrained:0,treatText:false,badgeText:false,quizDifficulty:0,overrideAttack:0,tailcheck:false,knifecheck:false,lastQuizLetter:0,init:0,violenceused:0,violenceusedcon:0,hitbysimonsaysattackcount:0,simonsayscon:0});
@@ -23,9 +26,9 @@ export function createTasqueManager(object:(n:string)=>GmObjectDef):GmObjectDef[
    }},
   attackDelay:15,
   attack:(s,rt)=>{const g=rt.globals;if(s.rr===0||s.rr===1){g.monsterattackname[s.myself]=s.rr===0?'WhipAttack':'QuizAttack';if(s.rr===1)s.lastQuizLetter=-1;const d=bulletSpawner(s,rt,s.x,s.y,object('obj_dbulletcontroller'));s.dc=d.id;d.type=s.rr===0?20:32;d.element=6;if(s.rr===1){if(g.encounterno===89){d.special=1;d.difficulty=4;}else d.difficulty=s.quizDifficulty;}}
-   turnTimer(rt,140);s.overrideAttack=0;},
+   turnTimer(rt,140);s.overrideAttack=0;dojoTurn(rt);},
+  attackWait:(_s,rt)=>{turnTimer(rt,120);dojoTurn(rt);},
   statusLine:(s,rt)=>{const g=rt.globals;s.rr=rt.random.choose(0,1,2,3,4);let txt=T(`${164+s.rr*3}_0`);if(g.monsterstatus[s.myself]===1)txt=T('181_0');if(g.mercymod[s.myself]>=g.mercymax[s.myself])txt=T('186_0');g.battlemsg[0]=txt;},
-  afterAttack:(_s,rt)=>{if(rt.globals.encounterno===89)turnTimer(rt,99999);},
   acts:(s,rt)=>managerActs(s,rt),actsDone:()=>{},
   afterStep:(s,rt)=>{if(rt.globals.myfight!==3){for(const n of ['obj_herokris','obj_herosusie','obj_heroralsei']){const h=rt.first(object(n));if(h&&h.imageAlpha===0){actCharSpriteEnd(s,rt);break;}}}},
   events:{alarm4:s=>{s.actcon++;},user13:()=>{},user10:(s,rt)=>{for(const t of rt.all(object('obj_tasque_enemy')))rt.userEvent(t,10);spareEnemy(s,rt);},
