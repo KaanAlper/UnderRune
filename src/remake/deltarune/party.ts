@@ -559,15 +559,15 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
   Object.assign(s,{boltnum:1,boltuse:[0,0,0],lastbolt:-1,boltchar:[-1],diff:10});
   if(g.flag[13]===0)s.diff+=2;
   if(s[bar.method]===1){
-   s.boltalive=[];s.boltframe=[];s.boltred=[];
+   // The bolt arrays exist only once a bolt is written (no one attacking: none), as GML creates arrays on write.
    for(s.i=0;s.i<s.bolttotal;s.i+=1){
-    s.boltalive[s.i]=1;s.c=R.choose(0,1,2);
+    gmArray(s,'boltalive')[s.i]=1;s.c=R.choose(0,1,2);
     while(s.havechar[s.c]===0)s.c=R.choose(0,1,2);
     while(s.boltuse[s.c]>=s.charbolt[s.c]){s.c=R.choose(0,1,2);while(s.havechar[s.c]===0)s.c=R.choose(0,1,2);}
     s.boltchar[s.i]=s.c;s.boltuse[s.c]+=1;
    }
    for(s.i=0;s.i<s.bolttotal;s.i+=1){
-    const i=s.i;s.boltred[i]=0;s.boltxoff+=s.lastbolt;s.boltframe[i]=30+s.boltxoff;
+    const i=s.i;gmArray(s,'boltred')[i]=0;s.boltxoff+=s.lastbolt;gmArray(s,'boltframe')[i]=30+s.boltxoff;
     if(i<s.bolttotal-1){
      if(s.lastbolt!==0&&s.boltchar[i]!==s.boltchar[i+1]){s.lastbolt=R.choose(0,s.diff,s.diff*1.5);s.boltred[i]=1;}
      else s.lastbolt=R.choose(s.diff,s.diff*1.5);

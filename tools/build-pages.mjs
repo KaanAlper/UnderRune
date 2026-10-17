@@ -22,4 +22,4 @@ await fs.cp(path.join(root,'public/generated/remake/ch2'),path.join(app,'generat
 await fs.copyFile(path.join(root,'public/favicon.svg'),path.join(app,'favicon.svg'));
 await fs.copyFile(path.join(root,'public/leaderboard-config.json'),path.join(app,'leaderboard-config.json'));
 await fs.copyFile(path.join(root,'site/index.html'),path.join(out,'index.html'));await fs.copyFile(path.join(root,'site/preview.png'),path.join(out,'preview.png'));await fs.writeFile(path.join(out,'.nojekyll'),'');
-console.log(`Pages: theater, ${Object.keys(sprites).length} menu sprites, equipment catalog, every Chapter 1 boss, and normal Spamton NEO. Native files excluded.`);
+console.log(`Pages: theater, ${Object.keys(sprites).length} menu sprites, equipment catalog, every Chapter 1 boss, and Chapter 2's playable bosses. Native files excluded.`);

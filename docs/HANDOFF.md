@@ -611,25 +611,25 @@ New scripts go in `tools/oracle-scripts.mjs`.
   - Existing browser tests now leave battles with two presses (a `leave` helper in `public.spec.ts`).
   - The Chapter 2 boss recordings (57, 81, 83) are still red: that work is in progress (section 17).
 
-### 17. Chapter 2 bosses in progress (2026-10-17)
+### 17. Chapter 2 bosses: Tasque Manager, Werewerewire, Mauswheel public (2026-10-17)
 
-- Plan: `docs/superpowers/plans/2026-10-16-chapter2-bosses.md`. Host: `installChapter2BossHost`
-  (`host/chapter2-bosses.ts`). Recordings: `.tools/oracle/ch2-{57,81,83}-s11-god{,-menu}` (4000 frames, dumps
-  every 20 frames). Test: `tests/remake-chapter2-bosses-parity.test.ts`.
-- Fixed so far: faithful `obj_face` (per-chapter `FACES` table in `writer.ts`); creation depths from
-  `__global_object_depths` (`tools/build-chapter2-resources.mjs` regenerates `chapter2-resources.json`); the
-  comparer accepts GML booleans as 1/0; `scr_defeatrun`'s Chapter 2 part.
-- Next differences:
-  - 57 z: frame 460, a state difference after the recruit message.
-  - 57 menu: frame 367, `obj_yarnmaker` count.
-  - 83 z: frame 200, `obj_maus_cursor_follow trail: [] vs 0`.
-- Then Queen (59), the rivals (58, 62, 63, 82), GIGA Queen (84), Spamton (normal) and Noelle's remaining parts,
-  in the plan's order. Use `PARITY_SURVEY=1` to list every difference in a frame.
-
-- **Catalog card sprites**: an enemy that draws itself has the object sprite `spr_nothing`; `tools/catalog.mjs`
-  now takes its Create event's `idlesprite` for the card (only Mauswheel changes). Regenerating the whole catalog
-  also flips `adaptation` from `not-ported` to `browser-adaptation` for many records, so the committed catalog
-  differs from the tool's rule there. That change was left out; decide which is right before regenerating.
+- All nine recordings match to the end (about 3960 frames each, full state every 20 frames):
+  `.tools/oracle/ch2-{57,81,83}-s11-god{,-menu,-act}`. The `act` script (`tools/oracle-scripts.mjs`) opens ACT
+  on the first enemy with a different ACT each cycle and tries MERCY every third.
+- Fixes the recordings found:
+  - Fractional comparisons need GML's tolerance.
+  - Arrays are created on write: `bullet[]`; the FIGHT bar's bolts when no one attacks.
+  - `obj_defeatanim`'s loop variable stays on the instance.
+  - `obj_recruitanim` sets its depth in Create.
+  - Werewerewire's ACTs call `scr_speaker`.
+  - Chapter 2's victory level-up (`scr_levelup`, flag 63).
+  - `obj_rouxls_power_up_orb` is now ported.
+  - `median`: the reference runner returns the upper middle value for an even count.
+  - `ds_*` ids are numbered per kind.
+- The app loads `installChapter2BossHost` for Chapter 2 battles other than NEO. Browser test:
+  `tests/e2e/chapter2-bosses.spec.ts` (each opens from its card and plays a full turn).
+- Next, in the plan's order: Queen (59), the rivals (58, 62, 63, 82), GIGA Queen (84), Spamton (normal), Noelle's
+  remaining parts. Record each with `z`, `menu` and `act` before making it public.
 
 ### 18. Requested next (after the release above)
 
