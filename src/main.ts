@@ -151,8 +151,9 @@ function updateControls(){
  const engineBattle=remake instanceof EngineBattle?remake:null;
  const leaving=performance.now()<leaveArmedUntil,key=[scene,theater?.active,theater?.selected,chapter,selection,native?.paused,remake?.paused,remake?.outcome,engineBattle?.phase,engineBattle?.turn,busy,leaving].join(':');
  if(key===sceneKey)return;sceneKey=key;
- // Quiet UNDERTALE music in the device room and the encounter menu; battles bring their own.
- if(audio&&(scene==='room'||scene==='menu'))audio.playMenu(assets.manifest.menuMusic??[]);else if(audio&&scene==='native')audio.stopMenu();if(scene!=='menu')overlay.replaceChildren();element('menu-tools').hidden=scene!=='menu';element('pause').hidden=scene!=='native'&&scene!=='remake';element('back').hidden=scene==='theater';
+ // Quiet UNDERTALE music from the theater to the encounter menu, one track after another; battles bring their own.
+ // Browsers start it at the first click or key press.
+ if(audio&&(scene==='theater'||scene==='intro'||scene==='room'||scene==='menu'))audio.playMenu(assets.manifest.menuMusic??[]);else if(audio&&scene==='native')audio.stopMenu();if(scene!=='menu')overlay.replaceChildren();element('menu-tools').hidden=scene!=='menu';element('pause').hidden=scene!=='native'&&scene!=='remake';element('back').hidden=scene==='theater';
  if(scene==='native'&&nativeRecord)status.textContent=`${nativeRecord.name} / ORIGINAL ENGINE${native?.paused?' / paused':''}`;
  element('controls-hint').textContent=scene==='native'?'ARROWS · Z / ENTER CONFIRM · X / SHIFT CANCEL · P PAUSE':'ARROWS / WASD · Z CONFIRM · X BACK · R RESTART · P PAUSE';
  element('adaptation').textContent=scene==='native'?'FAN PROJECT · ORIGINAL GAME CODE':'FAN PROJECT · SOURCE PORT';

@@ -597,8 +597,8 @@ New scripts go in `tools/oracle-scripts.mjs`.
     kept focus after its dialog closed, so Z reopened preparation over the battle; cards launch only from the
     menu now.
   - The stage, not the canvas, hears the pointer: `#interactions` lies over the canvas.
-- **Menu music**: quiet UNDERTALE tracks (Ruins, Snowy, Snowdin Town, Home) loop in the device room and the
-  encounter menu (`AudioManager.playMenu`).
+- **Menu music**: quiet UNDERTALE tracks (Ruins, Snowy, Snowdin Town, Home) loop from the theater through the
+  device room to the encounter menu (`AudioManager.playMenu`); browsers start them at the first click or key.
   - `tools/build-assets.mjs` copies them, and `mus_gameover`, from the owner's UNDERTALE install. It also copies
     the three DELTARUNE game-over tracks.
 - **Text keys**: `DEVICE_*` keys are now accepted by the text-key scanner and the localization parser.
