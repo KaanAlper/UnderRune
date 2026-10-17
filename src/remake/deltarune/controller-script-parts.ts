@@ -7,6 +7,7 @@ import {nextAct} from './controller';
 import {sourceText} from '../host/text';
 
 export interface ControllerScripts{
+ spellInfoExtra?(s:GmInstance,rt:GmRuntime,id:number):void;
  readonly spellRows:number;
  readonly text:(key:string)=>string;
  readonly healingUsable:number;
@@ -51,7 +52,7 @@ function afterCreate(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;resetChapter2Actors(rt);spellMenuSetupChapter2(rt,s);
  Object.assign(s,{spellpage:0,t_siner:0,myfightreturntimer:1,messagepriority:-1,attackpriority:-1,hidemercy:0,cantspare:[0,0,0],gigaqueeny:0,gigaqueentimer:0,gigaqueencon:0});
  g.turntimer=120;
- for(const key of ['charpos','havechar','mmy'])s[key][3]=key==='charpos'?-1:0;
+ for(const key of ['charpos','havechar','mmy'])if(s[key][3]===undefined)s[key][3]=key==='charpos'?-1:0;
  s.hpcolor[3]=C.yellow;gmArray(s,'hpcolorsoft');for(s.i=0;s.i<4;s.i++)s.hpcolorsoft[s.i]=mergeColor(s.hpcolor[s.i],C.white,0.5);
  g.flag[36]=0;g.flag[39]=0;g.flag[63]=0;
 }
@@ -67,6 +68,12 @@ function afterVictory(s:GmInstance,rt:GmRuntime){
  if(g.flag[38]===1){const w=rt.byId(s.lastbattlewriter);if(w)rt.destroy(w);}
 }
 export const controllerScripts2:ControllerScripts={
+ spellInfoExtra:(s,rt,id)=>{
+  const rows:Record<number,[number,number,number,number,number,number]>={8:[96,97,98,99,0,80],9:[107,108,109,110,2,40],10:[121,122,123,124,0,rt.globals.maxtension*2],11:[147,148,149,150,1,250]};
+  const row=rows[id];if(!row)return;const [name,battle,desc,long,target,cost]=row,T=(n:number)=>sourceText(`scr_spellinfo_slash_scr_spellinfo_gml_${n}_0`);
+  Object.assign(s,{spellname:T(name),spellnameb:T(battle),spelldescb:T(desc),spelldesc:T(long),spelltarget:target,cost,spellusable:0});
+  if((id===9||id===10)&&rt.globals.charweapon[4]===13)s.cost*=0.5;
+ },
  spellRows:6,text:sourceText,healingUsable:0,ultimateDescription:93,replaceItems:true,victoryRows:5,tensionGoldMultiplier:2,
  mergedSpells:rt=>rt.globals.flag[34]===0,
  initActs:(_s,rt)=>initChapter2ActTables(rt),resetActors,undoAct,

@@ -17,6 +17,7 @@ export interface GmGraphics{
  spriteTiled?(name:string,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;
  rect(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,outline:boolean):void;
  line?(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,width?:number):void;
+ lineColor?(x1:number,y1:number,x2:number,y2:number,color1:number,color2:number,alpha:number):void;
  triangle?(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,color:number,alpha:number,outline:boolean):void;
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean):void;
  text(x:number,y:number,text:string,style:TextStyle):void;

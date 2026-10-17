@@ -269,7 +269,7 @@ export function battleText(rt:GmRuntime,caller:GmInstance):GmInstance{
 /** scr_battletext_default: the plain battle voice and no portrait. */
 export function battleTextDefault(rt:GmRuntime,caller:GmInstance):GmInstance{rt.globals.fc=0;rt.globals.typer=4;return battleText(rt,caller);}
 /** scr_susface, scr_ralface, scr_lanface, scr_noface: a page that switches the battle text's portrait (and emotion). */
-const FACE_SCRIPTS={susie:'scr_susface_slash_scr_susface_gml_1_0',ralsei:'scr_ralface_slash_scr_ralface_gml_1_0',lancer:'scr_lanface_slash_scr_lanface_gml_1_0'} as const;
+const FACE_SCRIPTS={susie:'scr_susface_slash_scr_susface_gml_1_0',ralsei:'scr_ralface_slash_scr_ralface_gml_1_0',lancer:'scr_lanface_slash_scr_lanface_gml_1_0',noelle:'scr_noeface_slash_scr_noeface_gml_1_0'} as const;
 export function msgFace(rt:GmRuntime,slot:number,who:keyof typeof FACE_SCRIPTS|'none',emotion:number|string=0){
  rt.globals.msg[slot]=who==='none'?optionalSourceText('scr_noface_slash_scr_noface_gml_1_0'):optionalSourceText(FACE_SCRIPTS[who]).split('~1').join(String(emotion));
 }

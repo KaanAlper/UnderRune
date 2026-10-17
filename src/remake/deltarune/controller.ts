@@ -87,6 +87,7 @@ export function spellInfo(s:GmInstance,rt:GmRuntime,id:number){
   case 6:set(75,76,77,null,0,0,0);break;
   case 7:set(86,87,88,part.ultimateDescription,0,0,0);break;
  }
+ part.spellInfoExtra?.(s,rt,id);
 }
 /** scr_spellinfo_all: the spell tables the menus read, for every character's 12 slots. */
 export function spellInfoAll(rt:GmRuntime,s:GmInstance){
@@ -287,7 +288,7 @@ function create(s:GmInstance,rt:GmRuntime){
  g.charinstance=[12129292,12129292,12129292];
  for(let i=0;i<3;i++){
   const c=g.char[i];if(c!==0)s.chartotal+=1;
-  if(c>=1&&c<=3){
+  if(c>=1&&c<=HERO_DEFS.length){
    s.havechar[c-1]=1;s.charpos[c-1]=i;
    const h=rt.create(HERO_DEFS[c-1],g.heromakex[i],g.heromakey[i]);g.charinstance[i]=h.id;h.myself=i;h.char=c;h.depth=200-i*20;
   }

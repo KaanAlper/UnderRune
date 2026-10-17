@@ -46,6 +46,14 @@ export function rules(rt:GmRuntime):ChapterRules{
 }
 
 export interface BattleHooks{
+ /** Redirect a FIGHT hit before HP subtraction. True means the encounter consumed the damage. */
+ interceptFightDamage?(enemy:GmInstance,hero:GmInstance,rt:GmRuntime,target:number,damage:number,number:GmInstance):boolean;
+ /** React to the completed slash effect. True suppresses ordinary enemy recoil, retaining hurtamt. */
+ onFightImpact?(enemy:GmInstance,hero:GmInstance,attack:GmInstance,rt:GmRuntime,target:number,damage:number):boolean;
+ /** Final source encounter adjustments after a FIGHT impact, before ordinary defeat handling. */
+ onFightResolved?(enemy:GmInstance,hero:GmInstance,rt:GmRuntime,target:number,damage:number):void;
+ /** Redirect a spell impact before the ordinary damage helper creates its number and recoil. */
+ interceptSpellDamage?(enemy:GmInstance,spell:GmInstance,rt:GmRuntime,target:number,damage:number,spellId:number):boolean;
  /** The encounter suppresses the tired/Pacify cue even when its enemy is tired. */
  suppressesPacifyHighlight?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** Extra vertical movement of the command panel (boxing transitions). */

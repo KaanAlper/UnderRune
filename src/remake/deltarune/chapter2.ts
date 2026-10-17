@@ -6,7 +6,7 @@ import {spellInfoAll} from './controller';
 import {withHook} from './rules';
 
 /** scr_gamestart, without scr_levelup progression or equipment bonuses. Index 0 is the empty slot. */
-export function chapter2StartStats(){return {hp:[0,120,140,100],maxhp:[0,120,140,100],at:[0,12,16,10],df:[0,2,2,2],mag:[0,0,1,9]};}
+export function chapter2StartStats(includeNoelle=false){const stats={hp:[0,120,140,100],maxhp:[0,120,140,100],at:[0,12,16,10],df:[0,2,2,2],mag:[0,0,1,9]};if(includeNoelle){stats.hp.push(90);stats.maxhp.push(90);stats.at.push(3);stats.df.push(1);stats.mag.push(11);}return stats;}
 export function sideBPhase(rt:GmRuntime){
  const flag=rt.globals.flag;if(flag[916]!==0)return 0;
  const n=flag[915];return n>=20?4:n>=7?3:n>=4?2:n>0?1:0;

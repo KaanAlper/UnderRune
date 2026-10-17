@@ -35,7 +35,8 @@ function make(){
 const press=(rt:GmRuntime,key:number)=>{rt.input.pressed.add(key);rt.step();for(let i=0;i<3;i++)rt.step();};
 describe.skipIf(!hasChapter2Source)('Chapter 2 source command foundation',()=>{
  it('rejects an unported hero instead of creating an invisible party member',()=>{
-  const {rt,g}=make();g.char[0]=4;expect(()=>rt.create(battleControllerFull,0,0)).toThrow(/hero 4.*not ported/i);
+  // Kris, Susie, Ralsei and Noelle (1-4) are ported; a fifth party member is not.
+  const {rt,g}=make();g.char[0]=5;expect(()=>rt.create(battleControllerFull,0,0)).toThrow(/hero 5.*not ported/i);
  });
  it('keeps spell-table setup working variables on its caller',()=>{
   const {g,c}=make();expect([c.__i,c.__fj,c.__ib]).toEqual([3,12,g.battleactcount[2]+11]);

@@ -1,3 +1,5 @@
+import {enemyObjectInit} from '../../deltarune/chapter2-enemy';
+export {enemyObjectInit} from '../../deltarune/chapter2-enemy';
 // obj_spamton_neo_enemy (Chapter 2, encounter 61), normal route: his lines before each attack, the attack it starts,
 // Check, the wire-snapping ACTs (Kris, Susie, Ralsei, everyone), Susie's Super Charge, Ralsei's fluff guards and the
 // Kris throw, the cut wires as mercy rises, and both endings (HP to zero, or every wire cut). The side-B route's
@@ -60,17 +62,6 @@ function create(s:GmInstance,rt:GmRuntime){
   headsize:1,headforceframe:-1,aimmode:0,armaim:-80,hitcontimer:0,balloonorder:0,ballooncon:0,balloonend:1,talkedcon:0,init:0,statustextorder:0,statustextalt:0,
   statustextalt2:0,statustextupdate:0,joke:0,eyeshp:16,nosehp:16,mouthhp:16,specialcontimer:0,specialcon:0,flameframe:0,flamealpha:0});
 }
-/** scr_enemy_object_init: the fields every Chapter 2 enemy starts with. */
-export function enemyObjectInit(s:GmInstance,rt:GmRuntime){
- Object.assign(s,{becomeflash:0,flash:0,turnt:0,turns:0,talktimer:0,state:0,siner:0,fsiner:0,talked:0,attacked:0,hurt:0,hurttimer:0,hurtshake:0,shakex:0,acting:0,actcon:0,
-  mywriter:343249823,acttimer:0,con:0,dodgetimer:0,fatal:0,candodge:0,mytarget:0,ambushed:0,firststrike:0,damage:-1,grazepoints:-1,timepoints:-1,inv:-1,target:-1,grazed:-1,
-  grazetimer:-1,element:'none',actingsus:0,actingnoe:0,actingral:0,actconsus:0,actconral:0,actconnoe:0,simulorderkri:-1,simulordersus:-1,simulorderral:-1,simulordernoe:-1,
-  simultotal:0,simulboss:-1,talkmax:90,mercymod:0,maxmercy:100,recruitable:1,freezable:1,recruitcount:1,sactionboxx:0,sactionboxy:0,hurtspriteoffx:0,hurtspriteoffy:0,
-  imageXscale:2,imageYscale:2,imageSpeed:0.2,idlesprite:'spr_diamond_knight_overworld',hurtsprite:'spr_diamond_knight_hurt',sparedsprite:'spr_diamond_knight_spared',custombody:0});
- s._charactsprite=new Array(10).fill(382938298329);
- s.depth=90-(s.y-rt.view.y)/50;
-}
-
 // ---- Step: his lines before the attack ----
 /** Which line opens the enemy turn: [message key, follow-up balloon (0: none)]. */
 function openingLine(s:GmInstance):[string,number]|undefined{

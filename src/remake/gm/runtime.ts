@@ -3,11 +3,12 @@
 // per-object dispatch for Step/Alarm events and the same motion math.
 import {f32,clamp6} from './math';
 import {GmRandom} from './random';
+import {GmPaths} from './paths';
 import {instancesMeet} from './collision';
 import type {SpriteBank,SpriteData} from './sprites';
 import type {DrawState,GmGraphics} from './graphics';
 
-export type GmEvent='create'|'destroy'|'beginStep'|'step'|'endStep'|'draw'|`alarm${number}`|`user${number}`|'animationEnd';
+export type GmEvent='create'|'destroy'|'cleanup'|'roomEnd'|'beginStep'|'step'|'endStep'|'draw'|'endDraw'|`alarm${number}`|`user${number}`|'animationEnd'|'pathEnd';
 export type GmHandler=(self:GmInstance,rt:GmRuntime)=>void;
 export type GmCollision={target:GmObjectDef;run:(self:GmInstance,other:GmInstance,rt:GmRuntime)=>void};
 export interface GmObjectDef{
@@ -88,7 +89,7 @@ export class GmInstance{
   this.$speed=s;
  }
  /** runner.c motion step: friction, gravity, then position. */
- move(){
+ move(adaptPath?:(self:GmInstance)=>void){
   if(this.$friction!==0){
    const ns=f32(this.$speed>0?this.$speed-this.$friction:this.$speed+this.$friction);
    if((this.$speed>0&&ns<0)||(this.$speed<0&&ns>0))this.$speed=0;else if(this.$speed!==0)this.$speed=ns;
@@ -100,6 +101,7 @@ export class GmInstance{
    this.$vspeed=f32(this.$vspeed-f32(this.$gravity*clamp6(Math.sin(rad))));
    this.speedFromComponents();
   }
+  adaptPath?.(this);
   if(this.$hspeed!==0||this.$vspeed!==0){this.$x=f32(this.$x+this.$hspeed);this.$y=f32(this.$y+this.$vspeed);}
  }
 }
@@ -164,6 +166,10 @@ export class GmEventError extends Error{
 }
 
 export class GmRuntime{
+ /** Encounter adapters provide source setup tables; shared battle objects remain independent of boss names. */
+ battleSetup?:{monster:(self:GmInstance,rt:GmRuntime)=>boolean;encounter:(rt:GmRuntime,n:number,enemies:Record<string,GmObjectDef>)=>boolean};
+ readonly paths=new GmPaths();
+ private adaptPath=(i:GmInstance)=>{if(this.paths.advance(i))this.run(i,'pathEnd');};
  instances:GmInstance[]=[];frame=0;nextId:number;random:GmRandom;
  /** Engine lifetime must not share a name with GML variables such as NEO wireheart's `destroyed`. */
  private destroyedInstances=new WeakSet<GmInstance>();
@@ -215,6 +221,7 @@ export class GmRuntime{
  }
  drawRect(x1:number,y1:number,x2:number,y2:number,outline=false){this.gfx?.rect(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,outline);}
  drawLine(x1:number,y1:number,x2:number,y2:number,width?:number){if(!this.gfx)return;if(!this.gfx.line)throw Error('Graphics backend does not support line drawing');if(width===undefined)this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha);else this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,width);}
+ drawLineColor(x1:number,y1:number,x2:number,y2:number,color1:number,color2:number){if(!this.gfx)return;if(!this.gfx.lineColor)throw Error('Graphics backend does not support gradient lines');this.gfx.lineColor(x1,y1,x2,y2,color1,color2,this.drawState.alpha);}
  drawCircle(x:number,y:number,r:number,outline=false){this.gfx?.circle(x,y,r,this.drawState.color,this.drawState.alpha,outline);}
  drawTriangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,outline=false){if(!this.gfx)return;if(!this.gfx.triangle)throw Error('Renderer lacks source triangles');this.gfx.triangle(x1,y1,x2,y2,x3,y3,this.drawState.color,this.drawState.alpha,outline);}
  drawText(x:number,y:number,text:string,xscale=1,yscale=1,angle=0){
@@ -253,7 +260,13 @@ export class GmRuntime{
   const inst=new GmInstance(id,object,x,y);inst.frameCount=this.frameCount;Object.assign(inst,vars);
   this.instances.push(inst);this.instances.sort((a,b)=>a.id-b.id);return inst;
  }
- destroy(inst:GmInstance){if(this.destroyedInstances.has(inst))return;this.destroyedInstances.add(inst);this.run(inst,'destroy');inst.live=false;}
+ destroy(inst:GmInstance){if(this.destroyedInstances.has(inst))return;this.destroyedInstances.add(inst);this.run(inst,'destroy');this.run(inst,'cleanup');inst.live=false;}
+ /** Battle hosts own room transitions. Room End precedes cleanup; exiting a room does not run Destroy. */
+ endRoom(){
+  this.dispatch('roomEnd',true);
+  for(const inst of [...this.instances])if(inst.live&&!this.destroyedInstances.has(inst)){this.destroyedInstances.add(inst);this.run(inst,'cleanup');inst.live=false;}
+  this.instances=[];
+ }
  /** Every active instance of the object or its children, in creation order. */
  all(object:GmObjectDef){object=this.object(object);return this.instances.filter(i=>i.live&&isA(i.object,object));}
  /** GML object `with` snapshots: the runner visits one/two forwards, three or more backwards (VM PushEnv).
@@ -334,7 +347,7 @@ export class GmRuntime{
    for(const inst of list){if(!inst.live||inst.alarm[a]<=0)continue;inst.alarm[a]--;if(inst.alarm[a]===0){inst.alarm[a]=-1;this.run(inst,key);}}
   }
   this.dispatch('step',true);
-  for(const i of [...this.instances])if(i.live)i.move();
+  for(const i of [...this.instances])if(i.live)i.move(this.adaptPath);
   this.collide();
   this.dispatch('endStep',true);
   this.instances=this.instances.filter(i=>!this.destroyedInstances.has(i));
@@ -349,6 +362,7 @@ export class GmRuntime{
   * an instance that moves to (or is created in) a layer not yet drawn this frame is drawn there, even if it was
   * already drawn in another layer; one leaving the layer being drawn shifts the rest. */
  draw(){
+  for(const event of ['draw','endDraw'] as const){
   let last=Infinity;
   for(;;){
    let depth=-Infinity;
@@ -360,9 +374,10 @@ export class GmRuntime{
    for(let j=0;j<count;j++){
     const els=layer();if(j>=els.length)break;
     const inst=els[j];if(!inst.live||!inst.visible)continue;
-    if(!this.run(inst,'draw'))this.drawSelf(inst);
+    if(!this.run(inst,event)&&event==='draw')this.drawSelf(inst);
    }
    last=depth;
+  }
   }
   this.instances=this.instances.filter(i=>!this.destroyedInstances.has(i));
   this.dropConsumed();

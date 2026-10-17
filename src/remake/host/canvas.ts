@@ -117,6 +117,11 @@ export class CanvasGraphics implements GmGraphics{
  line(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,width=1){
   const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.strokeStyle=css(color);c.lineWidth=width;c.beginPath();c.moveTo(x1-this.view.x,y1-this.view.y);c.lineTo(x2-this.view.x,y2-this.view.y);c.stroke();c.restore();
  }
+ lineColor(x1:number,y1:number,x2:number,y2:number,color1:number,color2:number,alpha:number){
+  const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));
+  const gradient=c.createLinearGradient(x1-this.view.x,y1-this.view.y,x2-this.view.x,y2-this.view.y);gradient.addColorStop(0,css(color1));gradient.addColorStop(1,css(color2));
+  c.strokeStyle=gradient;c.lineWidth=1;c.beginPath();c.moveTo(x1-this.view.x,y1-this.view.y);c.lineTo(x2-this.view.x,y2-this.view.y);c.stroke();c.restore();
+ }
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean){
   if(r<=0)return;const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.beginPath();c.arc(x-this.view.x,y-this.view.y,r,0,Math.PI*2);
   if(outline){c.strokeStyle=css(color);c.stroke();}else{c.fillStyle=css(color);c.fill();}

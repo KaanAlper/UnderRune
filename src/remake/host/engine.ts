@@ -21,11 +21,16 @@ import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
 import {chapter2StartStats} from '../deltarune/chapter2';
 import type {installNeoHost} from './neo';
+import type {installChapter2BossHost} from './chapter2-bosses';
+import {initializeChapter2SmallFaces} from '../deltarune/chapter2-enemy';
 import {BattleRunTracker,type RunRecord} from '../../game/battle-run';
 
 /** The encounters whose enemies run on the engine, with their scr_encountersetup number and room. */
 const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:(rt:GmRuntime)=>void}>={
  'ch2-61':{n:61,room:'room_dw_mansion_b_east',backdrop:false},
+ 'ch2-57':{n:57,room:'room_dw_mansion_east_2f_d',backdrop:true},
+ 'ch2-81':{n:81,room:'room_dw_mansion_east_4f_b',backdrop:true},
+ 'ch2-83':{n:83,room:'room_dw_city_mice3_transformed_new2F',backdrop:true},
  'ch1-2':{n:2,room:'room_field_start',backdrop:true},
  'ch1-8':{n:8,room:'room_forest_area3',backdrop:true},
  'ch1-20':{n:20,room:'room_field_puzzletutorial',backdrop:true},
@@ -56,15 +61,17 @@ export class EngineBattle{
  readonly rt:GmRuntime;readonly name:string;readonly party:readonly number[];
  paused=false;outcome:'victory'|'defeat'|null=null;turn=0;
  readonly scoring:BattleRunTracker|null;result:RunRecord|null=null;
- constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;scoring?:boolean;rage?:boolean}={}){
+ constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;chapter2Host?:typeof installChapter2BossHost;scoring?:boolean;rage?:boolean}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
   if(!encounter||!setup)throw Error('This battle is not available yet.');
   if(id==='ch2-61'&&!options.neoHost)throw Error('Load the Chapter 2 source host before starting NEO.');
+  if(encounter.chapter===2&&id!=='ch2-61'&&!options.chapter2Host)throw Error('Load the Chapter 2 boss host before starting this battle.');
   validateLoadout(loadout,equipment);
   this.rt=new GmRuntime(bank,{seed});this.name=encounter.name;this.party=encounter.party;
   const rt=this.rt,gear=(list:typeof equipment.weapons,id:number)=>list.find(g=>g.id===id);
   rt.globals.chapter=encounter.chapter;
   const neo=id==='ch2-61'?options.neoHost!(rt,{rage:options.rage}):undefined;
+  const chapterHost=encounter.chapter===2&&!neo?options.chapter2Host!(rt,{room:setup.room}):undefined;
   rt.room.name=setup.room;
   if(neo){rt.view.x=1640;rt.room.width=2400;}
   const equipped:Record<number,EquippedStats>={};
@@ -74,24 +81,25 @@ export class EngineBattle{
    equipped[c]={weapon:slot.weapon||c,armor:[...slot.armor],itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
   }
   const char=[...encounter.party,0,0,0].slice(0,3);
-  partyGlobals(rt,{char,...(neo?chapter2StartStats():{...BASE,maxhp:BASE.hp}),equipped,items:loadout.items,auto:encounter.auto});
+  partyGlobals(rt,{char,...(encounter.chapter===2?chapter2StartStats():{...BASE,maxhp:BASE.hp}),equipped,items:loadout.items,auto:encounter.auto});
   // global.batmusic: the battle's music, which some enemies pause (Ralsei's lullaby).
-  if(!neo)rt.globals.batmusic=[encounter.music,encounter.music];
-  if(neo){
-   const g=rt.globals;g.fighting=0;g.sp=4;g.currentsong=[-1,-1];g.batmusic=['spamton_neo_mix_ex_wip','spamton_neo_mix_ex_wip'];
+  rt.globals.batmusic=[encounter.music,encounter.music];
+  if(encounter.chapter===2){
+   const g=rt.globals;g.fighting=0;g.sp=4;g.currentsong=[-1,-1];
    g.chararmor1=[0,...[1,2,3].map(c=>loadout.characters[c].armor[0])];g.chararmor2=[0,...[1,2,3].map(c=>loadout.characters[c].armor[1])];
-   for(const name of ['smalarm','smyy','smxx','smdir','smspeed','smtype','smimage','smimagespeed','smsprite','smcolor','smstring','sminstance'])g[name]=Array(20).fill(0);
+   initializeChapter2SmallFaces(rt);
    g.itemelement=Array.from({length:4},()=>[0,0,0]);g.itemelementamount=Array.from({length:4},()=>[0,0,0]);
    for(const c of [1,2,3])for(let j=0;j<2;j++){const armor=gear(equipment.armors,loadout.characters[c].armor[j]);g.itemelement[c][j+1]=armor?.element??0;g.itemelementamount[c][j+1]=armor?.elementAmount??0;}
    g.chemg_sprite_map=Object.fromEntries([...(bank.names?.()??[])].map(name=>[name,name]));
   }
-  encounterSetup(rt,setup.n,neo?{'obj_spamton_neo_enemy':neo.objects.obj_spamton_neo_enemy}:engineEnemies(id));
+  encounterSetup(rt,setup.n,neo?{'obj_spamton_neo_enemy':neo.objects.obj_spamton_neo_enemy}:chapterHost?chapterHost.objects:engineEnemies(id));
   if(setup.backdrop)rt.create(b.battleBack,0,0);
   // Jevil's room has its own spinning background (drawn by the host view).
   if(id==='ch1-25')rt.create(jokerBackground,0,0);
   rt.create(battleControllerFull,0,0);
   setup.presentation?.(rt);
   if(neo){rt.globals.fighting=1;neo.enter(this.enemy!);}
+  chapterHost?.enter(this.enemy!);
   this.scoring=options.scoring&&!options.development?new BattleRunTracker(id,loadout,rt.globals):null;
   if(this.scoring)rt.onItemUsed=item=>this.scoring!.itemUsed(item);
   if(this.scoring)rt.onBattleMode=mode=>this.scoring!.mode(mode);

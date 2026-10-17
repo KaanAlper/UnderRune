@@ -23,7 +23,7 @@ export interface PartySetup{
 /** Where each chapter keeps Kris's, Susie's and Ralsei's names (obj_initializer, then scr_gamestart). */
 const CHAR_NAMES:Record<number,string[]>={
  1:['obj_initializer_slash_Create_0_gml_48_0','obj_initializer_slash_Create_0_gml_49_0','obj_initializer_slash_Create_0_gml_50_0'],
- 2:['scr_gamestart_slash_scr_gamestart_gml_99_0','scr_gamestart_slash_scr_gamestart_gml_100_0','scr_gamestart_slash_scr_gamestart_gml_101_0'],
+ 2:['scr_gamestart_slash_scr_gamestart_gml_99_0','scr_gamestart_slash_scr_gamestart_gml_100_0','scr_gamestart_slash_scr_gamestart_gml_101_0','scr_gamestart_slash_scr_gamestart_gml_105_0'],
 };
 /** The globals obj_initializer / scr_gamestart and the save file give a battle. */
 export function partyGlobals(rt:GmRuntime,p:PartySetup){
@@ -35,8 +35,9 @@ export function partyGlobals(rt:GmRuntime,p:PartySetup){
  g.item=new Array(13).fill(0);p.items.slice(0,12).forEach((id,i)=>{g.item[i]=id;});
  // scr_gamestart: Kris has the hidden ACT spell (7), Susie Rude Buster, Ralsei Pacify and Heal Prayer.
  g.spell=Array.from({length:4},()=>new Array(13).fill(0));g.spell[1][0]=7;g.spell[2][0]=4;g.spell[3][0]=3;g.spell[3][1]=2;
+ if(p.char.includes(4)){g.spell[4]=new Array(13).fill(0);g.spell[4][0]=2;g.spell[4][1]=8;g.spell[4][2]=9;}
  g.charname=[' ',...forChapter(rt,CHAR_NAMES,'party names').map(key=>lang(key))];
- g.charauto=[0,0,0,0];for(const c of p.auto??[])g.charauto[c]=1;
+ g.charauto=new Array(p.char.includes(4)?5:4).fill(0);for(const c of p.auto??[])g.charauto[c]=1;
  g.flag??=new Array(1000).fill(0);g.tempflag??=new Array(100).fill(0);
  g.maxtension=250;g.inv=-1;g.invc=1;g.time=0;g.lang='en';g.charselect=-1;g.chemg_god_mode=false;g.gold??=0;g.xp??=0;
  g.msg=new Array(100).fill(' ');g.battlemsg=new Array(100).fill(' ');g.turntimer=0;
@@ -56,6 +57,7 @@ export function encounterSetup(rt:GmRuntime,n:number,enemies:Record<string,GmObj
   g.monsterinstancetype[0]=def;g.monstertype[0]=type;g.monstermakex[0]=xx+x;g.monstermakey[0]=yy+y;g.monstertype[1]=0;g.monstertype[2]=0;
   if(message!==undefined)g.battlemsg[0]=lang(`scr_encountersetup_slash_scr_encountersetup_gml_${message}_0`);
  };
+ if(rt.battleSetup?.encounter(rt,n,enemies))return;
  switch(n){
   case 61:
    if(g.chapter!==2)throw Error('Encounter 61 requires Chapter 2');
@@ -82,6 +84,7 @@ export function encounterSetup(rt:GmRuntime,n:number,enemies:Record<string,GmObj
 
 /** scr_monstersetup, run by the enemy (from its event 12): name, stats, rewards, mercy and ACTs. */
 export function monsterSetup(s:GmInstance,rt:GmRuntime){
+ if(rt.battleSetup?.monster(s,rt))return;
  const g=rt.globals,i=s.myself as number,L=(n:number)=>lang(`scr_monstersetup_slash_scr_monstersetup_gml_${n}_0`);
  const stats=(name:number,hp:number,at:number,df:number,gold:number,spare:number,mercymax:number)=>{
   g.monstername[i]=L(name);g.monstermaxhp[i]=hp;g.monsterhp[i]=hp;g.monsterat[i]=at;g.monsterdf[i]=df;g.monsterexp[i]=0;g.monstergold[i]=gold;

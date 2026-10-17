@@ -4,13 +4,14 @@
 import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {f32,pointDirection,pointDistance,round} from '../gm/math';
-import {afterImage,afterimage,dmgWriter,heroKris,heroParent,heroRalsei,heroSusie,marker,mergeColor,shake,tensionHeal} from './battle';
+import {afterImage,afterimage,dmgWriter,heroKris,heroParent,heroRalsei,heroSusie,heroNoelle,marker,mergeColor,shake,tensionHeal} from './battle';
 import {burstBolt,basicAttack} from './player-effects';
 import {battleTextDefault,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
 import {attackPhase,button1_p,button2_p,button3_p,itemShift,mercyAdd,monsterDefeat,monsterPop,subst,winCombat} from './controller';
-import {teaAmountChapter2} from './chapter2';
+import {teaAmountChapter2,sideBPhase} from './chapter2';
 import {forChapter,hooksOf,rules,withHook} from './rules';
+import {castSleepMist,castIceShock} from './noelle-spells';
 
 const destroyId=(rt:GmRuntime,id:number)=>{const i=rt.byId(id);if(i)rt.destroy(i);};
 const isHero=(i:GmInstance,name:string)=>i.object.name===name;
@@ -47,10 +48,11 @@ const FRAMES:Record<string,[number,number,number,number,number,number,number,num
 };
 // Chapter 2 obj_heroparent_Create_0: Kris/Susie are identical; Ralsei uses his hatless sprite set.
 const RALSEI_CH2:Record<string,string>={normal:'spr_ralsei_walk_right',idle:'spr_ralsei_idle',defend:'spr_ralsei_defend',hurt:'spr_ralsei_hurt_fixed',attackready:'spr_ralsei_attackready',attack:'spr_ralsei_attack',item:'spr_ralsei_item',itemready:'spr_ralsei_itemready',spellready:'spr_ralsei_spellready',spell:'spr_ralsei_spell',defeat:'spr_ralsei_defeat',victory:'spr_ralsei_victory',actready:'spr_ralsei_actready',act:'spr_ralsei_act'};
+const NOELLE_CH2:Record<string,string>={normal:'spr_noelle_walk_right_dw',idle:'spr_noelleb_idle',defend:'spr_noelleb_defend',hurt:'spr_noelleb_hurt',attackready:'spr_noelleb_attackready',attack:'spr_noelleb_attack',item:'spr_noelleb_item',itemready:'spr_noelleb_itemready',spellready:'spr_noelleb_spellready',spell:'spr_noelleb_spell',defeat:'spr_noelleb_defeat',victory:'spr_noelleb_victory',actready:'spr_noelleb_actready',act:'spr_noelleb_act'};
 /** Each chapter's battle sprites and animation frame counts per hero. */
 const HERO_LOOKS:Record<number,{sprites:Record<string,Record<string,string>>;frames:typeof FRAMES}>={
  1:{sprites:SPRITES,frames:FRAMES},
- 2:{sprites:{...SPRITES,obj_heroralsei:RALSEI_CH2},frames:{...FRAMES,obj_heroralsei:[8,12,6,6,7,10,0.5,52,86]}},
+ 2:{sprites:{...SPRITES,obj_heroralsei:RALSEI_CH2,obj_heronoelle:NOELLE_CH2},frames:{...FRAMES,obj_heroralsei:[8,12,6,6,7,10,0.5,52,86],obj_heronoelle:[7,11,4,9,0,6,0.5,52,86]}},
 };
 function heroCreate(s:GmInstance,rt:GmRuntime){
  Object.assign(s,{char:0,myself:0,points:0,becomeflash:0,state:0,flash:0,siner:0,fsiner:0,attacktimer:0,attacked:0,combatdarken:1,darkentimer:0,darkify:0,
@@ -62,6 +64,10 @@ function heroCreate(s:GmInstance,rt:GmRuntime){
  if(s.object.name==='obj_herosusie'&&rt.globals.charweapon?.[2]===0){s.idlesprite='spr_susieb_idle_unarmed';s.attackreadysprite='spr_susieb_attackready_unarmed';s.attacksprite='spr_susieb_attack_unarmed';}
  [s.actframes,s.actreturnframes,s.attackframes,s.itemframes,s.defendframes,s.spellframes,s.attackspeed,s.mywidth,s.myheight]=f;
  s.victoryframes=rt.bank.get(s.victorysprite)?.frames??1;
+ if(s.object.name==='obj_heronoelle'){
+  s._sideb=sideBPhase(rt)>=2?1:0;if(rt.globals.encounterno===73)s.idlesprite='spr_noelle_shocked_dw';
+  if(s._sideb===1)Object.assign(s,{attackreadysprite:'spr_noelleb_idle',attacksprite:'spr_noelleb_spell',attackframes:6,victorysprite:'spr_noelleb_pray',victoryframes:10,defendframes:5,defendsprite:'spr_noelleb_defend_sideb',hurtsprite:'spr_noelleb_hurt_sideb',idlesprite:'spr_noelleb_idle_sideb'});
+ }
  s.sprite=s.idlesprite;
 }
 function heroDraw(s:GmInstance,rt:GmRuntime){
@@ -82,7 +88,7 @@ function heroDraw(s:GmInstance,rt:GmRuntime){
   if(s.state===1&&s.hurt===0){
    s.siner+=1;
    if(s.attacked===0){
-    const pitch=isHero(s,'obj_heroralsei')?1.15:isHero(s,'obj_herosusie')?0.9:1;
+    const pitch=isHero(s,'obj_heroralsei')?1.15:isHero(s,'obj_herosusie')?0.9:isHero(s,'obj_heronoelle')?1.5:1;
     rt.sound?.('snd_laz_c',pitch,true);
     if(s.points===150){
      rt.sound?.('snd_criticalswing',1,true);
@@ -179,7 +185,9 @@ function heroHit(s:GmInstance,rt:GmRuntime){
  if(g.monstertype[t]===19)damage=Math.ceil(damage*0.3);
  if(damage<0)damage=0;
  if(damage===0){dm.delay=2;if(m&&m.hurttimer<=15&&m.candodge===1){m.dodgetimer=0;m.state=4;}}
- s.damage=damage;dm.damage=damage;g.hittarget[t]+=1;g.monsterhp[t]-=damage;
+ s.damage=damage;dm.damage=damage;g.hittarget[t]+=1;
+ const redirected=withHook(rt,'interceptFightDamage').some(([enemy,intercept])=>intercept(enemy,s,rt,t,damage,dm));
+ if(!redirected)g.monsterhp[t]-=damage;
  if(s.is_auto_susie===1&&g.monsterhp[t]<=0&&m&&rules(rt).autoSusieMarksKill)g.flag[51+m.myself]=5;
  if(damage>0){
   tensionHeal(rt,round(s.points/(g.monstertype[0]===20?15:10)));
@@ -187,9 +195,14 @@ function heroHit(s:GmInstance,rt:GmRuntime){
   const a=rt.create(basicAttack,x,y),fx=HIT_EFFECTS[s.object.name];s.attack=a.id;
   if(fx){a.sprite=fx.sprite;a.imageSpeed=fx.speed;a.maxindex=4;if(fx.sound)rt.sound?.(fx.sound);if(fx.shake)rt.create(shake,0,0);}
   if(s.points===150){a.imageXscale=2.5;a.imageYscale=2.5;}
-  for(const [enemy,hit] of withHook(rt,'onHeroHit'))hit(enemy,rt);
-  if(m){m.shakex=9;m.state=3;m.hurttimer=30;m.hurtamt=damage;}
+  const ownImpact=withHook(rt,'onFightImpact').some(([enemy,impact])=>impact(enemy,s,a,rt,t,damage));
+  if(!ownImpact){
+   for(const [enemy,hit] of withHook(rt,'onHeroHit'))hit(enemy,rt);
+   if(m){m.shakex=9;m.state=3;m.hurttimer=30;}
+  }
+  if(m)m.hurtamt=damage;
  }
+ for(const [enemy,resolved] of withHook(rt,'onFightResolved'))resolved(enemy,s,rt,t,damage);
  if(g.monsterhp[t]<=0&&m&&defeatable(rt))monsterDefeat(m,rt);
 }
 /** Alarm 4: the spell or item takes effect. */
@@ -199,7 +212,7 @@ function heroSpell(s:GmInstance,rt:GmRuntime){
  s.state=0;s.attacktimer=0;
 }
 const heroEvents={create:heroCreate,draw:heroDraw,alarm1:heroHit,alarm4:heroSpell};
-export const HERO_DEFS:readonly GmObjectDef[]=[heroKris,heroSusie,heroRalsei].map(base=>({...base,parent:base,events:heroEvents}));
+export const HERO_DEFS:readonly GmObjectDef[]=[heroKris,heroSusie,heroRalsei,heroNoelle].map(base=>({...base,parent:base,events:heroEvents}));
 
 // ---- Healing and damage helpers ----
 // These scripts work in their caller's variables (scr_heal's hltarget, scr_damage_enemy's dm, a heal's ha and dmgwr on
@@ -289,7 +302,7 @@ const notPorted=(what:string)=>()=>{throw Error(`scr_spell: ${what} is not porte
 const SPELLS:Record<number,SpellRules>={
  1:{pacifyImmune:[19,3],pacifyEffect:false,spareOwnEnding:[3],dualHeal:m=>m*4,extra:{}},
  2:{pacifyImmune:[19,3,52,43],pacifyEffect:true,spareOwnEnding:[3,52],dualHeal:m=>Math.ceil(m*5.5),extra:{
-  8:notPorted("Noelle's SleepMist (8)"),9:notPorted("Noelle's IceShock (9)"),10:notPorted("Noelle's SnowGrave (10)"),
+  8:castSleepMist,9:(s,rt)=>castIceShock(s,rt,()=>retargetSpell(s,rt)),10:notPorted("Noelle's SnowGrave (10)"),
   // UltimatHeal: Susie's heal, magic + 1.
   11:(s,rt)=>{
    const g=rt.globals;s.healnum=g.battlemag[s.caster]+1;heal(s,rt,s.star,s.healnum);
@@ -804,7 +817,7 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
      if(Math.abs(s.chosen_bolt-s.final_bolt)<=2){s.bonus_anim=1;rt.sound?.('snd_scytheburst');}
     }
     if(s.red===1)s.damage+=90;
-    if(inBattle){g.hittarget[s.star]=0;damageEnemy(s,rt,s.star,s.damage);if(g.monstertype[0]!==20)boltFlash(s,rt);}
+    if(inBattle){g.hittarget[s.star]=0;const redirected=withHook(rt,'interceptSpellDamage').some(([enemy,intercept])=>intercept(enemy,s,rt,s.star,s.damage,4));if(!redirected)damageEnemy(s,rt,s.star,s.damage);if(g.monstertype[0]!==20)boltFlash(s,rt);}
     else boltFlash(s,rt);
     rt.sound?.('snd_rudebuster_hit');
     const burst=gmArray(s,'burst');

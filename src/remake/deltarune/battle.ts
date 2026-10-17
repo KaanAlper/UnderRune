@@ -22,6 +22,7 @@ export const heroParent:GmObjectDef={name:'obj_heroparent',index:212,depth:100,s
 export const heroKris:GmObjectDef={name:'obj_herokris',index:213,depth:100,parent:heroParent,sprite:'spr_krisplace'};
 export const heroSusie:GmObjectDef={name:'obj_herosusie',index:214,depth:100,parent:heroParent,sprite:'spr_krisplace'};
 export const heroRalsei:GmObjectDef={name:'obj_heroralsei',index:215,depth:100,parent:heroParent,sprite:'spr_krisplace'};
+export const heroNoelle:GmObjectDef={name:'obj_heronoelle',index:378,depth:0,parent:heroParent,sprite:'spr_krisplace'};
 /** The enemy turn's darkness: it fades the screen and the heroes in; with darken = 0 it closes the box and fades out. */
 /** Per chapter: from Chapter 2 the darkener sets its own depth when made. */
 const DARKENER:Record<number,{depth?:number}>={1:{},2:{depth:205}};

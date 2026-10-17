@@ -1,0 +1,9 @@
+import {describe,it,expect} from 'vitest';
+import {GmRuntime,type GmObjectDef} from '../src/remake/gm/runtime';
+import {spriteBank} from '../src/remake/gm/sprites';
+import {planGigaAttacks,resetGigaAttackList} from '../src/remake/bosses/giga-queen/plans';
+function fixture(){const rt=new GmRuntime(spriteBank({atLeast2022_1:false,optionsInfo:0,sprites:[]}),{seed:11}),defs:Record<string,GmObjectDef>={};let index=5000;const object=(name:string)=>defs[name]??(defs[name]={name,index:index++});const controller=rt.restore(object('o_boxingcontroller'),100001,320,390,{wireframe_boxing:0,beat_phase2_no_damage_taken:0,boxingtimer:0}),hud=rt.restore(object('o_boxinghud'),100002,0,0,{sub_healthbar_count:2}),enemy=rt.restore(object('obj_gigaqueen_enemy'),100003,0,0,{missleattack:0,breathattack:0}),queen=rt.restore(object('o_boxingqueen'),100004,320,300,{attackorderlooping:0,pacifist:1,health_count:1500,health_count_max:1500,attackpattern:0,pattern_state:0,has_boss_done_pattern7:0,finalbaseballused:0});resetGigaAttackList(queen);return {rt,object,controller,hud,enemy,queen};}
+describe('GIGA source pattern planning',()=>{
+ it('lists four opening punches before advancing to the next pattern',()=>{const c=fixture();planGigaAttacks(c.queen,c.rt,c.object);expect(c.queen.attackcountmax).toBe(4);expect(c.queen.list_attacktype.slice(0,4)).toEqual([0,0,0,0]);expect(c.queen.list_attackvariant.slice(0,4)).toEqual([4,4,4,4]);expect(c.queen.list_attackwait.slice(0,4)).toEqual([30,30,30,0]);expect([c.queen.attackpattern,c.controller.boxingtimer]).toEqual([1,400]);});
+ it('selects the actual final-baseball sequence below27percent in the third round',()=>{const c=fixture();c.hud.sub_healthbar_count=0;c.queen.health_count=400;planGigaAttacks(c.queen,c.rt,c.object);expect(c.queen.list_attacktype.slice(0,c.queen.attackcountmax)).toEqual([4,9]);expect([c.queen.finalbaseballused,c.controller.boxingtimer,c.enemy.missleattack,c.enemy.breathattack]).toEqual([1,1000,0,0]);});
+});
