@@ -57,7 +57,7 @@ test('no-native source battle uses preparation, real commands, pause, restart an
  await page.keyboard.press('r');await expect(page.locator('#status')).toContainText('command / TURN 1');
  await page.locator('#credits').click();await expect(page.locator('#difference-note')).toContainText('source-ported');await page.locator('#close-about').click();await expect(page.locator('#status')).toContainText('paused');
  await page.locator('#effects').click();await expect(page.locator('#effects')).toHaveAttribute('aria-pressed','true');await page.locator('#mute').click();await expect(page.locator('#mute')).toHaveAttribute('aria-pressed','true');
- await page.keyboard.press('x');await expect(page.locator('#boss-select')).toBeVisible();await boss(page,'ch1-25','JEVIL');await expect(prep.locator('.prep-hero[data-character="1"] .prep-slots')).toContainText('Dice Brace');
+ await page.keyboard.press('x');await expect(page.locator('#status')).toContainText('AGAIN TO LEAVE');await page.keyboard.press('x');await expect(page.locator('#boss-select')).toBeVisible();await boss(page,'ch1-25','JEVIL');await expect(prep.locator('.prep-hero[data-character="1"] .prep-slots')).toContainText('Dice Brace');
  expect(failures).toEqual([]);expect(remote).toEqual([]);
 });
 
@@ -67,7 +67,7 @@ test('local Jevil source practice uses equipment and rematches as practice',asyn
  await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('paused');await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('Diamond rain');
  await page.keyboard.press('r');await expect(page.locator('#status')).toContainText('Diamond rain / PRACTICE');
  await expect(page.locator('#outcome')).toBeVisible({timeout:18000});await page.locator('#outcome-again').click();await expect(page.locator('#outcome')).toBeHidden();await expect(page.locator('#status')).toContainText('PRACTICE');
- await page.locator('#back').click();await (await choose(page,'ch1-2','Lancer')).focus();await expect(page.locator('#practice')).toBeDisabled();await page.keyboard.press('t');await expect(prep).toBeHidden();
+ await page.locator('#back').click();await page.locator('#back').click();await (await choose(page,'ch1-2','Lancer')).focus();await expect(page.locator('#practice')).toBeDisabled();await page.keyboard.press('t');await expect(prep).toBeHidden();
 });
 
 test('no-native unsupported encounters offer truthful preparation without a fake fight',async({page})=>{
@@ -128,6 +128,6 @@ test.describe('mobile controls',()=>{
   const canvas=await page.locator('#screen').boundingBox();expect(canvas!.x).toBeGreaterThanOrEqual(0);expect(canvas!.width).toBeLessThanOrEqual(390);
   // The original menus ignore another confirm for two source frames; queue FIGHT + target for each party member.
   await page.waitForTimeout(180);for(let i=0;i<6;i++){await page.getByRole('button',{name:'Confirm or shoot'}).tap();await page.waitForTimeout(180);}
-  await expect(page.locator('#status')).toHaveText('JEVIL / attack / TURN 1');await page.locator('#pause').tap();await expect(page.locator('#status')).toContainText('paused');await page.locator('#pause').tap();await expect(page.locator('#status')).not.toContainText('paused');await page.locator('#back').tap();await expect(page.locator('#boss-select')).toBeVisible();
+  await expect(page.locator('#status')).toHaveText('JEVIL / attack / TURN 1');await page.locator('#pause').tap();await expect(page.locator('#status')).toContainText('paused');await page.locator('#pause').tap();await expect(page.locator('#status')).not.toContainText('paused');await page.locator('#back').tap();await expect(page.locator('#status')).toContainText('AGAIN TO LEAVE');await page.locator('#back').tap();await expect(page.locator('#boss-select')).toBeVisible();
  });
 });

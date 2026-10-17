@@ -4,7 +4,7 @@ export type Sprite={name:string;width:number;height:number;originX:number;origin
 type Glyph={charCode:number;x:number;y:number;w:number;h:number;shift:number;offset:number};
 type FontData={url:string;glyphs:Glyph[]};
 // font: DELTARUNE fnt_main; utFont: UNDERTALE fnt_main from the user's install (theater only, optional).
-export type Manifest={version:number;sprites:Record<string,Sprite>;font:FontData|null;utFont?:FontData|null;music:string[];sourcePackages:unknown[]};
+export type Manifest={version:number;sprites:Record<string,Sprite>;font:FontData|null;utFont?:FontData|null;music:string[];menuMusic?:string[];sourcePackages:unknown[]};
 export type FontName='deltarune'|'undertale';
 export class AssetStore{
  images=new Map<string,HTMLImageElement>();private pending=new Map<string,Promise<HTMLImageElement>>();private fontColors=new Map<string,HTMLCanvasElement>();

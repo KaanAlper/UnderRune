@@ -4,7 +4,8 @@
 import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {f32,pointDirection,pointDistance,round} from '../gm/math';
-import {afterImage,afterimage,dmgWriter,heroKris,heroParent,heroRalsei,heroSusie,heroNoelle,marker,mergeColor,shake,tensionHeal} from './battle';
+import {afterImage,afterimage,dmgWriter,heroKris,heroParent,heroRalsei,heroSusie,heroNoelle,marker,mergeColor,monsterParent,shake,tensionHeal} from './battle';
+import {recruitAnim} from './chapter2-enemy';
 import {burstBolt,basicAttack} from './player-effects';
 import {battleTextDefault,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
@@ -849,6 +850,28 @@ export const defeatAnim:GmObjectDef={name:'obj_defeatanim',index:300,events:{
   if(s.t>=1){for(let i=0;i<=80;i++){s.i=i;s.alph=.4;rt.drawSprite(s.sprite,s.imageIndex,s.x+4*i,s.y,s.imageXscale,s.imageYscale,0,s.imageBlend,s.alph-s.t/8+i/200);}if(s.t>=15)rt.destroy(s);}
  },
 }};
-/** scr_defeatrun, run by the enemy. */
-export function defeatRun(s:GmInstance,rt:GmRuntime){const a=rt.create(defeatAnim,s.x,s.y);a.sprite=s.hurtsprite;a.imageIndex=0;a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;rt.destroy(s);return a;}
+/** What a beaten enemy leaves behind, per chapter (scr_defeatrun's first half): Chapter 2 marks a recruitable enemy
+ * that was beaten as lost (its recruit flag turns -1, with the LOST message), and a frozen one (Snowgrave) stays as
+ * ice; a fatal blow (fatal) kills it instead of making it run. Returns whether it was frozen. */
+const DEFEAT_RUN:Record<number,(s:GmInstance,rt:GmRuntime)=>boolean>={
+ 1:()=>false,
+ 2:(s,rt)=>{
+  const g=rt.globals,flag=g.monstertype[s.myself]+600;
+  if(!rt.is(s,monsterParent)){s.fatal=0;return false;}
+  const frozen=g.flag[51+s.myself]===6;
+  const lost=(frame:number)=>{const t=rt.create(recruitAnim,g.monsterx[s.myself],g.monstery[s.myself]-40);s._rtext=t.id;t.imageIndex=frame;};
+  if(frozen){lost(12);if(s.recruitable===1)g.flag[flag]=-1;g.flag[63]=1;}
+  if(s.recruitable===1&&g.flag[61]===0&&!frozen){g.flag[63]=1;if(g.flag[flag]!==-1){g.flag[flag]=-1;lost(7);}}
+  if(frozen)throw Error('scr_defeatrun: a frozen enemy (obj_frozennpc) is not ported yet');
+  if(s.fatal===1)throw Error('scr_defeatrun: a fatal defeat (obj_deathanim) is not ported yet');
+  return false;
+ },
+};
+/** scr_defeatrun, run by the enemy: it runs off as obj_defeatanim (kept in its defeatanim), and is gone. */
+export function defeatRun(s:GmInstance,rt:GmRuntime){
+ forChapter(rt,DEFEAT_RUN,'scr_defeatrun')(s,rt);
+ const a=rt.create(defeatAnim,s.x,s.y);s.defeatanim=a.id;
+ a.sprite=s.sprite;a.sprite=s.hurtsprite;a.imageIndex=0;a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;
+ rt.destroy(s);return a;
+}
 void itemShift;void writer;

@@ -6,7 +6,7 @@ const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const game=process.env.DELTARUNE_DIR??'C:/Program Files (x86)/Steam/steamapps/common/DELTARUNE';
 const catalog=JSON.parse(await fs.readFile(path.join(root,'src/bosses/catalog.json'),'utf8'));
 const output=path.join(root,'public/generated');await fs.mkdir(output,{recursive:true});
-const manifest={version:1,sprites:{},font:null,music:[],sourcePackages:[]};
+const manifest={version:1,sprites:{},font:null,music:[],menuMusic:[],sourcePackages:[]};
 const common=/^spr_(krisb_idle|susieb_idle|ralseib_idle|heart|heartsmall|spadebullet|diamondbullet|clubsbullet|joker_scythebody|carousel|suitsbomb|bomb_heart|smallbullet|axebullet_b|lancerbike|kris_d|kris_walkdown|kris_down|star|bullet|sneo_body|sneo_wings|sneo_legs|sneo_head|spamton_neo|tenna_pose_podium|queen_chair_1|queen_idle|checker|knight_bullet_star|gerson_bell|titan_feather)/;
 const extra=/^spr_(shadow_mantle_idle|susiezilla_susie_idle|tenna_point_up|kris_board|kris_sword|berdlyb_idle|rurus_pirate|tasque_idle|lanino_idle|elnina_idle|mauswheel|sneo_face|sneo_body|sneo_wings|sneo_head|sneo_legs|smallbullet|heart_centered)/;
 // Theater intro, DELTARUNE side: logo, dark-world Kris, the Chapter 2 TV remote, Tenna's stage curtain and spotlight.
@@ -64,7 +64,14 @@ try{
 }catch(error){if(error.code!=='ENOENT')throw error;console.log('UNDERTALE not extracted; the theater uses its text fallback.');}
 const tracks=['nightmare_boss_heavy','joker','kingboss','lancerfight','lancer_susie','checkers','battle','cyber_battle','queen_boss','berdly_battle','berdly_battle_heartbeat_true','spamton_battle','spamton_neo_mix_ex_wip','spamton_neo_meeting','spamton_happy','ruruskaado','rouxls_battle','smart_race','knight','tenna_battle','gerson_theme_nointro','titan_battle','titan_spawn','ch4_battle','pink','flowery','flowery_iog','battle_vapor'];
 await fs.mkdir(path.join(output,'music'),{recursive:true});
-for(const name of tracks){const file=name+'.ogg';try{await fs.copyFile(path.join(game,'mus',file),path.join(output,'music',file));manifest.music.push(name);}catch{}}
+// The game over's music: Chapter 1's drone, Chapter 2's theme and the darkness after giving up.
+for(const name of [...tracks,'AUDIO_DRONE','AUDIO_DEFEAT','AUDIO_DARKNESS']){const file=name+'.ogg';try{await fs.copyFile(path.join(game,'mus',file),path.join(output,'music',file));manifest.music.push(name);}catch{}}
+// Menu music: quiet UNDERTALE tracks (Ruins, Snowy, Snowdin Town, Home) from the user's own install, when there is one.
+const undertale=process.env.UNDERTALE_DIR??'C:/Program Files (x86)/Steam/steamapps/common/Undertale';
+manifest.menuMusic=[];
+for(const name of ['mus_ruins','mus_snowy','mus_town','mus_hometown']){const file=name+'.ogg';try{await fs.copyFile(path.join(undertale,file),path.join(output,'music',file));manifest.music.push(name);manifest.menuMusic.push(name);}catch{}}
+// UNDERTALE's game over theme plays on the game over screen in its place (see src/main.ts), when there is one.
+try{await fs.copyFile(path.join(undertale,'mus_gameover.ogg'),path.join(output,'music','mus_gameover.ogg'));manifest.music.push('mus_gameover');}catch{}
 const sourceManifest=JSON.parse((await fs.readFile(path.join(root,'extracted/source-manifest.json'),'utf8')).replace(/^\uFEFF/,''));
 manifest.sourcePackages=sourceManifest;
 await fs.writeFile(path.join(output,'manifest.json'),JSON.stringify(manifest));

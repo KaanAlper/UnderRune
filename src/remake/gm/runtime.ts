@@ -186,6 +186,8 @@ export class GmRuntime{
   this.objectAliases=aliases;this.collisionAliases=new WeakMap();
  }
  private object(def:GmObjectDef){return this.objectAliases.get(def)??def;}
+ /** object_is_ancestor / instance-of: is `inst` an instance of `def` or of one of its children (aliases resolved)? */
+ is(inst:GmInstance,def:GmObjectDef){return isA(inst.object,this.object(def));}
  private collisions(def:GmObjectDef){
   if(!this.objectAliases.size)return flatCollisions(def);
   let rows=this.collisionAliases.get(def);
@@ -243,6 +245,22 @@ export class GmRuntime{
  soundGetPitch?:(handle:number|string)=>number;
  soundFree?:(handle:number|string)=>void;
  readonly dynamicSprites=new Map<string,SpriteData>();
+ private newSprites:boolean[]=[];
+ /** The name sprite_create_from_surface gives a new sprite: "__newsprite<index>", the first deleted slot after the
+  * game's own sprites, or a new one at the end (the runner reuses freed slots, keeping their names). */
+ newSprite(width:number,height:number,originX=0,originY=0){
+  let slot=this.newSprites.indexOf(false);if(slot<0)slot=this.newSprites.length;this.newSprites[slot]=true;
+  const name=`__newsprite${this.spriteBase()+slot}`;
+  this.dynamicSprites.set(name,{name,width,height,originX,originY,bboxMode:1,left:0,right:width-1,top:0,bottom:height-1,sepMasks:0,frames:1,special:false,playbackSpeed:1,playbackType:1});
+  return name;
+ }
+ private spriteBase(){return [...(this.bank.names?.()??[])].length;}
+ /** sprite_delete for a sprite made while running. */
+ deleteSprite(name:string){const m=/^__newsprite(\d+)$/.exec(name);if(m)this.newSprites[Number(m[1])-this.spriteBase()]=false;this.dynamicSprites.delete(name);this.gfx?.spriteDelete?.(name);}
+ /** sprite_create_from_surface(application_surface, 0, 0, view width, view height, ...): the last frame drawn. */
+ spriteFromScreen(){const {width,height}=this.view,name=this.newSprite(width,height);this.gfx?.screenSprite?.(name,width,height);return name;}
+ /** string_width in the current font (0 without a renderer). */
+ stringWidth(text:string){return this.gfx?.textWidth?.(this.drawState.font,text)??0;}
  sourceSurfaces?:{create:(width:number,height:number)=>number;target:(id:number|null)=>void;clear:(color:number,alpha:number)=>void;capture:(id:number,left:number,top:number,width:number,height:number,originX:number,originY:number)=>string;free:(id:number)=>void;deleteSprite:(name:string)=>void};
  sourceAudio?:{effect:(name:string,pitch?:number,volume?:number)=>number|undefined;volume:(handle:number|string,value:number,frames:number)=>void;free:(handle:number|string)=>void;music:(name:string)=>number|string;loop:(handle:number|string)=>void;pause:(handle:number|string)=>void;resume:(handle:number|string)=>void;position:(handle:number|string,seconds?:number)=>number|void;playing:(handle:number|string)=>boolean};
  /** Set by room_goto; the host decides what the room change means (game over, battle end). */

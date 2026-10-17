@@ -5,6 +5,12 @@ async function key(page:Page,k:string,wait=180){await page.keyboard.press(k);awa
 /** DEFEND: from FIGHT, left wraps to the last button. */
 async function defend(page:Page){await key(page,'ArrowLeft');await key(page,'z');}
 async function boss(page:Page,id:string,name:string){await page.locator('#boss-select').selectOption(id);const card=page.getByRole('button',{name:`Battle ${name} ${id}`,exact:true});await expect(card).toHaveAttribute('aria-current','true');await card.click();}
+/** DEVICE_MENU out of a battle: a battle still on asks for a second click; a finished one leaves at once. */
+async function leave(page:Page){
+ const back=page.getByRole('button',{name:'Device menu',exact:true});await back.click();
+ await expect(page.locator('#status')).toContainText(/AGAIN TO LEAVE|ENCOUNTERS/);
+ if((await page.locator('#status').textContent())?.includes('AGAIN TO LEAVE'))await back.click();
+}
 async function menu(page:Page,chapter=1){
  await page.goto(url);await page.getByRole('button',{name:'DELTARUNE remote'}).click();
  await page.getByRole('button',{name:'Connect DELTARUNE'}).click();await page.getByRole('button',{name:'Connect device'}).click();
@@ -26,7 +32,7 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  await expect(page.locator('#status')).toContainText('JEVIL / command / TURN 2',{timeout:16000});await expect(page.locator('#outcome')).toBeHidden();
  await page.keyboard.press('ArrowRight');await page.keyboard.press('r');await expect(page.locator('#outcome')).toBeHidden();
  await page.waitForTimeout(600);await page.locator('#screen').screenshot({path:'test-results/public-practice.png'});
- await page.getByRole('button',{name:'Device menu',exact:true}).click();await boss(page,"ch1-25","JEVIL");
+ await leave(page);await boss(page,"ch1-25","JEVIL");
  await expect(prep.locator('.prep-hero[data-character="1"] .prep-slots')).toContainText('Dice Brace');await expect(prep.locator('.prep-bag')).toContainText('Dark Candy');
  await prep.getByRole('button',{name:'Close preparation'}).click();await page.reload();await menu(page);
  await boss(page,"ch1-25","JEVIL");await expect(prep.locator('.prep-hero[data-character="1"] .prep-slots')).toContainText('Dice Brace');
@@ -57,6 +63,8 @@ test('chapter previews load and paused music stays paused after movement and mut
  const images:string[]=[];page.on('response',r=>{if(r.ok())images.push(r.url());});await menu(page);
  expect(images.some(url=>url.includes('/sprites/2/spr_tasque_idle_0.png'))).toBe(true);
  await boss(page,"ch1-25","JEVIL");await page.getByRole('button',{name:'START BATTLE'}).click();
+ // The menu plays its own music; the battle's track is the one made when the battle starts.
+ await expect(page.locator('#status')).toContainText('JEVIL / command');
  await expect.poll(()=>page.evaluate(()=>(window as any).__tracks.at(-1)?.paused)).toBe(false);
  await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('paused');
  await page.keyboard.press('ArrowRight');await page.locator('#mute').click();await page.locator('#mute').click();
@@ -116,11 +124,11 @@ test('King, the second Lancer battle and Susie & Lancer launch and play',async({
  for(let i=0;i<60&&!(await page.locator('#status').textContent())?.includes('King / enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
  await expect(page.locator('#status')).toContainText('King / command / TURN 2',{timeout:16000});
  // Lancer with Susie on his side: Kris's first turn is a talk with Susie.
- await page.getByRole('button',{name:'Device menu',exact:true}).click();await boss(page,'ch1-20','Lancer');await page.getByRole('button',{name:'START BATTLE'}).click();
+ await leave(page);await boss(page,'ch1-20','Lancer');await page.getByRole('button',{name:'START BATTLE'}).click();
  for(let i=0;i<60&&!(await page.locator('#status').textContent())?.includes('enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
  await expect(page.locator('#status')).toContainText('Lancer / enemy attack');
  // Susie & Lancer: Kris and Ralsei DEFEND, both enemies speak, the team-up attack plays.
- await page.getByRole('button',{name:'Device menu',exact:true}).click();await boss(page,'ch1-31','Susie & Lancer');await page.getByRole('button',{name:'START BATTLE'}).click();
+ await leave(page);await boss(page,'ch1-31','Susie & Lancer');await page.getByRole('button',{name:'START BATTLE'}).click();
  await expect(page.locator('#status')).toContainText('Susie & Lancer / command');await page.waitForTimeout(600);await defend(page);await defend(page);
  for(let i=0;i<40&&!(await page.locator('#status').textContent())?.includes('enemy attack');i++){await page.keyboard.press('z');await page.waitForTimeout(250);}
  await expect(page.locator('#status')).toContainText('Susie & Lancer / enemy attack');

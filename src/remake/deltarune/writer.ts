@@ -216,10 +216,41 @@ export const writer:GmObjectDef={name:'obj_writer',index:10,events:{
  draw:(s,rt)=>forChapter(rt,WRITER,'writer').draw(s,rt),
 }};
 
-/** Susie's portrait has one sprite per emotion (the two frames are her mouth). */
-const SUSIE_FACES=['','spr_face_s1','spr_face_s2','spr_face_s3','spr_face_s4','spr_face_s5','spr_face_s6','spr_face_s7','spr_face_s8','spr_face_s9','spr_face_sA','spr_face_sB','spr_face_sC','spr_face_sD'];
+/** A portrait sprite by expression: prefix + 0..9, then A, B, ... (spr_face_sA is expression 10). */
+const byExpression=(prefix:string,fe:number,max:number,fallback=prefix+'0')=>fe>=1&&fe<=max?prefix+(fe<10?String(fe):String.fromCharCode(55+fe)):fallback;
+/** What obj_face's Draw does differently per chapter. Chapter 2 always shows Susie's later portrait (also over her
+ * old one while flag 29 is off), Ralsei without his hat, and adds Asgore's last two expressions, Berdly's Dark World
+ * portrait, Rurus's pirate hat and Queen. */
+interface FaceRules{
+ susie(s:GmInstance,rt:GmRuntime,draw:(x:number,y:number)=>void):void;
+ ralsei(rt:GmRuntime):string;
+ noelle(s:GmInstance,rt:GmRuntime):void;
+ asgoreExpressions:number;berdlyDark:boolean;rurusHat:boolean;queen:boolean;
+}
+const FACES:Record<number,FaceRules>={
+ 1:{
+  susie:(s,rt,draw)=>{
+   const g=rt.globals;
+   if(g.flag[29]===0){s.face=byExpression('spr_face_s',g.fe,13);draw(-5,0);}
+   else{s.face='spr_face_susie_alt';s.face_index=g.fe;draw(-5,0);}
+  },
+  ralsei:rt=>{const v=rt.globals.flag[30];return v===2?'spr_face_r_nohat':v===1?'spr_face_r_hood':'spr_face_r_dark';},
+  noelle:(s,rt)=>{s.face='spr_face_n_matome';s.face_index=rt.globals.fe;},
+  asgoreExpressions:6,berdlyDark:false,rurusHat:false,queen:false,
+ },
+ 2:{
+  susie:(s,rt,draw)=>{
+   const g=rt.globals;
+   if(g.flag[29]===0){s.face=byExpression('spr_face_s',g.fe,13);draw(-5,0);}
+   s.face='spr_face_susie_alt';s.face_index=g.fe;draw(-5,0);
+  },
+  ralsei:()=>'spr_face_r_nohat',
+  noelle:(s,rt)=>{s.face=byExpression('spr_face_n',rt.globals.fe,9);s.face='spr_face_n_matome';s.face_index=rt.globals.fe;},
+  asgoreExpressions:8,berdlyDark:true,rurusHat:true,queen:true,
+ },
+};
 export const faceParent:GmObjectDef={name:'obj_face_parent',index:6,depth:10};
-/** Speaker portraits beside the battle text; Susie's mouth moves with her voice blips. */
+/** Speaker portraits beside the battle text; their mouths move with the voice blips. */
 export const face:GmObjectDef={name:'obj_face',index:7,parent:faceParent,events:{
  create:(s,rt)=>{Object.assign(s,{mouthmove:0,mouthtimer:0,face_index:0,imageSpeed:0,nowface:rt.globals.fc,facechange:2,rate:1,buffer:4,f:rt.globals.darkzone===1?2:1});},
  step:s=>{
@@ -228,14 +259,43 @@ export const face:GmObjectDef={name:'obj_face',index:7,parent:faceParent,events:
   s.face_index=s.mouthtimer>=1&&s.mouthtimer<=5?1:0;
   if(s.mouthtimer>=9){s.mouthtimer=0;s.mouthmove=0;}
  },
+ // The portrait of the speaker (global.fc) with their expression (global.fe), kept in face (and face_index when the
+ // portrait has one frame per expression rather than a mouth).
  draw:(s,rt)=>{
-  const g=rt.globals;s.facechange-=1;if(s.nowface!==g.fc)s.facechange=3;
+  const g=rt.globals,r=forChapter(rt,FACES,'obj_face'),fe=g.fe,f=s.f;
+  s.facechange-=1;if(s.nowface!==g.fc)s.facechange=3;
   if(s.facechange<=0){
-   const fe=g.fe,f=s.f;
-   if(g.fc===1&&(g.flag?.[29]??0)===0&&SUSIE_FACES[fe])rt.drawSprite(SUSIE_FACES[fe],s.face_index,s.x-5,s.y,f,f,0,C.white,1);
-   const indexed:Record<number,[string,number,number]>={2:[g.flag?.[30]===1?'spr_face_r_hood':g.flag?.[30]===2?'spr_face_r_nohat':'spr_face_r_dark',-15,-10],
-    3:['spr_face_n_matome',-12,-10],5:['spr_face_l0',-15,-10],15:['spr_face_rudy',-12,-10],18:['spr_face_rurus',-10,0],20:['spr_face_king',-5,-5]};
-   const e=indexed[g.fc];if(e)rt.drawSprite(e[0],fe,s.x+e[1],s.y+e[2],f,f,0,C.white,1);
+   const draw=(dx:number,dy:number)=>rt.drawSprite(s.face,s.face_index,s.x+dx,s.y+dy,f,f,0,C.white,1);
+   const indexed=(sprite:string,dx:number,dy:number)=>{s.face=sprite;s.face_index=fe;draw(dx,dy);};
+   switch(g.fc){
+    case 1:r.susie(s,rt,draw);break;
+    case 2:s.face=r.ralsei(rt);s.face_index=fe;draw(-15,-10);break;
+    case 3:r.noelle(s,rt);draw(-12,-10);break;
+    case 4:rt.drawSprite('spr_face_tbody',0,s.x-7,s.y+29,f,f,0,C.white,1);s.face=byExpression('spr_face_t',fe,9);draw(0,0);break;
+    case 5:indexed('spr_face_l0',-15,-10);break;
+    case 6:s.face=byExpression('spr_face_sans',fe,5);draw(0,0);break;
+    case 9:indexed('spr_face_undyne',-10,0);break;
+    case 10:s.face=byExpression('spr_face_asgore',fe,r.asgoreExpressions);draw(-10,0);break;
+    case 11:indexed('spr_alphysface',-10,0);break;
+    case 12:
+     // Expressions 6-9 reuse the first one.
+     s.face=fe>=6&&fe<=9?'spr_face_b1':byExpression('spr_face_b',fe,5);
+     if(r.berdlyDark&&g.darkzone===1){s.face='spr_face_berdly_dark';s.face_index=fe;}
+     draw(-10,0);break;
+    case 13:s.face=byExpression('spr_face_c',fe,2);draw(-10,0);break;
+    // Jockington's checks all test expression 1, so expression 1 shows his last face and every other his first.
+    case 14:s.face=fe===1?'spr_face_jock9':'spr_face_jock0';draw(-10,0);break;
+    case 15:indexed('spr_face_rudy',-12,-10);break;
+    case 16:indexed('spr_face_catty',-10,0);break;
+    case 17:indexed('spr_face_bratty',-5,2);break;
+    case 18:
+     indexed('spr_face_rurus',-10,0);
+     if(r.rurusHat&&g.flag[326]===1)rt.drawSprite('spr_face_rurus_piratehat',s.face_index,s.x-10-3*f,s.y-4*f,f,f,0,C.white,1);
+     break;
+    case 19:indexed('spr_face_burgerpants',-5,-5);break;
+    case 20:indexed('spr_face_king',-5,-5);break;
+    case 21:if(r.queen)indexed('spr_face_queen',0,0);break;
+   }
   }
   s.nowface=g.fc;
  },

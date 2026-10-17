@@ -40,6 +40,6 @@ test('NEO opens the coaster battle, takes a complete yellow-soul turn, and can s
  await expect.poll(()=>page.evaluate(()=>(window as any).__bigShotDraws),{timeout:1500}).toBeGreaterThan(0);
  await page.locator('#screen').screenshot({path:'test-results/neo-yellow-soul.png'});
  await expect(page.locator('#status')).toContainText('Spamton NEO / command / TURN 2',{timeout:34000});await expect(page.locator('#outcome')).toBeHidden();
- await page.getByRole('button',{name:'Device menu',exact:true}).click();await page.keyboard.press('x');await page.getByRole('button',{name:'Chapter 1',exact:true}).click();await page.locator('#boss-select').selectOption('ch1-2');await page.getByRole('button',{name:'Battle Lancer ch1-2',exact:true}).click();await page.getByRole('button',{name:'START BATTLE',exact:true}).click();await expect(page.locator('#status')).toContainText('Lancer / command');
+ await page.getByRole('button',{name:'Device menu',exact:true}).click();await page.getByRole('button',{name:'Device menu',exact:true}).click();await page.keyboard.press('x');await page.getByRole('button',{name:'Chapter 1',exact:true}).click();await page.locator('#boss-select').selectOption('ch1-2');await page.getByRole('button',{name:'Battle Lancer ch1-2',exact:true}).click();await page.getByRole('button',{name:'START BATTLE',exact:true}).click();await expect(page.locator('#status')).toContainText('Lancer / command');
  expect(errors).toEqual([]);expect(native).toEqual([]);
 });

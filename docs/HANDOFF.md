@@ -1,4 +1,4 @@
-# UnderRune handoff (2026-10-15)
+# UnderRune handoff (2026-10-17)
 
 This file explains how to continue the work: the rules that must hold, how the work is verified, what is done and
 what is left, in order. Read it fully before changing code.
@@ -566,6 +566,78 @@ New scripts go in `tools/oracle-scripts.mjs`.
 - Publication: source `f31a135`, Pages `e77ded9`, successful GitHub build/deploy. The live entry matches the
   accepted artifact. Both live-browser regressions passed (28.7 seconds): full keyboard launch flow and NEO
   charged shots, enemy turn and chapter switching. No new public boss or solo route was enabled.
+
+### 16. Battle endings, pause and menu music (2026-10-17)
+
+- **Game over** (`src/remake/deltarune/battle-end.ts`). `scr_gameover` now leads to the original rooms instead
+  of a banner. `room_gameover` runs `obj_gameover_init`: the last frame for a second, then the soul cracks and
+  shatters. Four presses of Z while it breaks skip to the retry, as in the original. `PLACE_FAILURE` (320x240
+  view, drawn at 2x) runs `DEVICE_FAILURE` and `DEVICE_CHOICE` (type 0).
+  - Chapter differences are the `FAILURE` table. Chapter 1 has the voice asking whether to try again. Chapter 2
+    has the GAME OVER title, Susie's or Ralsei's call and its own two choices.
+  - `scr_tempload` and the game's end are the pseudo-rooms `RETRY_ROOM` and `GAME_END_ROOM`. `EngineBattle`
+    turns them into `afterDefeat` (`retry` or `menu`), and the host relaunches or returns.
+  - `global.tempflag[3]` (game overs) carries over a retry through the `gameOvers` option, so the second failure
+    screen is the quick one.
+  - Music: the host plays UNDERTALE's `mus_gameover` in place of `AUDIO_DRONE`/`AUDIO_DEFEAT` when it is
+    installed (`GAME_OVER_THEME` in `main.ts`; the owner asked for it). `AUDIO_DARKNESS` follows GIVE UP.
+- **Win**: `scr_endcombat` creates `obj_endbattle` again. The battle background fades and the music fades out;
+  15 frames later the host shows the result screen (`src/game/battle-result.ts`). It shows YOU WON, the boss,
+  time, turns, damage taken, items used and, when the shared board answers, the place this run would take.
+  The place comes from `LeaderboardApi.rank`: two counted reads; nothing is published.
+  - The heroes' running markers back to the overworld are not made: the remake's battles have no overworld.
+- **Runtime**: `rt.spriteFromScreen()` (`application_surface` capture), `rt.newSprite`/`deleteSprite` (one
+  `__newsprite` slot allocator, shared with source surfaces), `rt.stringWidth`, `rt.is(inst, def)`.
+- **`scr_defeatrun` Chapter 2 part** (`DEFEAT_RUN` in `party.ts`): a recruitable enemy beaten becomes lost (the
+  LOST message, flag -1). Frozen and fatal defeats are named unported errors.
+- **Pause** (`main.ts`). Z, Enter, P, Esc or a click continue. Leaving a battle still on takes a second X or a
+  second DEVICE_MENU click within three seconds; the status line says so. Closing the tab during a battle asks
+  first.
+  - Two shell bugs were found while doing this. Leaving inside a frame then read the closed battle. A boss card
+    kept focus after its dialog closed, so Z reopened preparation over the battle; cards launch only from the
+    menu now.
+  - The stage, not the canvas, hears the pointer: `#interactions` lies over the canvas.
+- **Menu music**: quiet UNDERTALE tracks (Ruins, Snowy, Snowdin Town, Home) loop in the device room and the
+  encounter menu (`AudioManager.playMenu`).
+  - `tools/build-assets.mjs` copies them, and `mus_gameover`, from the owner's UNDERTALE install. It also copies
+    the three DELTARUNE game-over tracks.
+- **Text keys**: `DEVICE_*` keys are now accepted by the text-key scanner and the localization parser.
+  `tools/remake-text-keys.mjs` was never committed although the build imports it; it is now.
+- **Development-only hook**: `window.__underrune.lose()/win()/choosing()` exists only in `vite dev`. The
+  browser tests in `tests/e2e/battle-end.spec.ts` use it to reach a battle's end.
+- **Tests**:
+  - `tests/remake-battle-end.test.ts` (5) covers the win fade, both chapters' failure screens, YES, NO and the
+    Z skip.
+  - Existing browser tests now leave battles with two presses (a `leave` helper in `public.spec.ts`).
+  - The Chapter 2 boss recordings (57, 81, 83) are still red: that work is in progress (section 17).
+
+### 17. Chapter 2 bosses in progress (2026-10-17)
+
+- Plan: `docs/superpowers/plans/2026-10-16-chapter2-bosses.md`. Host: `installChapter2BossHost`
+  (`host/chapter2-bosses.ts`). Recordings: `.tools/oracle/ch2-{57,81,83}-s11-god{,-menu}` (4000 frames, dumps
+  every 20 frames). Test: `tests/remake-chapter2-bosses-parity.test.ts`.
+- Fixed so far: faithful `obj_face` (per-chapter `FACES` table in `writer.ts`); creation depths from
+  `__global_object_depths` (`tools/build-chapter2-resources.mjs` regenerates `chapter2-resources.json`); the
+  comparer accepts GML booleans as 1/0; `scr_defeatrun`'s Chapter 2 part.
+- Next differences:
+  - 57 z: frame 460, a state difference after the recruit message.
+  - 57 menu: frame 367, `obj_yarnmaker` count.
+  - 83 z: frame 200, `obj_maus_cursor_follow trail: [] vs 0`.
+- Then Queen (59), the rivals (58, 62, 63, 82), GIGA Queen (84), Spamton (normal) and Noelle's remaining parts,
+  in the plan's order. Use `PARITY_SURVEY=1` to list every difference in a frame.
+
+### 18. Requested next (after the release above)
+
+- **General chat**, from Supabase. Separate rooms for UNDERTALE and DELTARUNE. It sits left of the leaderboard on
+  the main menu. It uses the leaderboard's player name, and resets weekly (pg_cron) to keep the database small.
+  The owner wants the SQL too.
+- **Main-menu leaderboard**: a battle combobox on the main DELTARUNE and UNDERTALE menus' leaderboard, showing
+  that battle's board.
+- **Leaderboard look**: an overlay over the content with a semi-transparent backdrop, not a full-screen tab;
+  styled like the leaderboards of games and challenge events.
+- **Shell refactor**: `main.ts` keeps scene state in shared variables, which is where this session's bugs came
+  from. Proposed: an explicit scene state machine (enter, exit, input, draw per scene; transitions in one place).
+  First list its responsibilities (shortcuts, focus, pause, audio, leaderboard, hooks).
 
 ## 6. Where things are
 

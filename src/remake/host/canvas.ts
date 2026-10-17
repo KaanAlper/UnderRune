@@ -37,6 +37,10 @@ export class CanvasGraphics implements GmGraphics{
   const page=this.pages.length;this.pages.push(canvas);this.generatedPages.set(name,page);this.generated.set(name,{originX,originY,width,height,frames:[{page,sx:0,sy:0,sw:width,sh:height,tx:0,ty:0,tw:width,th:height}]});
  }
  surfaceFree(id:number){this.surfaces.delete(id);}
+ screenSprite(name:string,width:number,height:number){
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d')!.drawImage(this.screen.canvas,0,0,width,height,0,0,width,height);
+  const page=this.pages.length;this.pages.push(canvas);this.generatedPages.set(name,page);this.generated.set(name,{originX:0,originY:0,width,height,frames:[{page,sx:0,sy:0,sw:width,sh:height,tx:0,ty:0,tw:width,th:height}]});
+ }
  spriteDelete(name:string){const page=this.generatedPages.get(name);if(page!==undefined){const canvas=this.pages[page] as HTMLCanvasElement;canvas.width=canvas.height=0;}this.generatedPages.delete(name);this.generated.delete(name);this.tints.clear();this.fogs.clear();}
  private tinted(f:FrameRef,blend:number,bottom=blend){
   const key=`${f.page}:${f.sx},${f.sy}:${blend}:${bottom}`;let c=this.tints.get(key);if(c)return c;

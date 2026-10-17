@@ -12,6 +12,7 @@ import {optionalSourceText as lang,sourceText} from '../host/text';
 import {HERO_DEFS,attackPress,spellPhase,heal,spellText,healAnim} from './party';
 import {forChapter,rules,withHook} from './rules';
 import {itemInfoChapter2,nextActChapter2} from './chapter2';
+import {endBattle} from './battle-end';
 
 import {pressed} from './keys';
 import {mercyAdd2} from './chapter2-battle';
@@ -249,9 +250,10 @@ export function mnEndTurn(s:GmInstance,rt:GmRuntime){
  if(s.skip===1){if(g.char[0]===2&&g.charauto[2]===1){g.acting[0]=1;g.myfight=3;}endTurn(s,rt);}
  for(s.i=0;s.i<12;s.i++)for(s.j=0;s.j<3;s.j++)s.tempitem[s.i][s.j]=g.item[s.i];
 }
-/** scr_endcombat: the battle is over; the host sees room 'battle_end' and shows its result. */
-function endCombat(s:GmInstance,rt:GmRuntime){
+/** scr_endcombat: the battle is over; obj_endbattle fades it out, and the host sees room 'battle_end'. */
+export function endCombat(s:GmInstance,rt:GmRuntime){
  rt.globals.fighting=0;
+ rt.create(endBattle,0,0);
  destroyAll(rt,monsterParent);destroyAll(rt,bulletParent);destroyAll(rt,heroParent);rt.destroy(s);
  rt.pendingRoom='battle_end';
 }

@@ -24,6 +24,7 @@ import type {installNeoHost} from './neo';
 import type {installChapter2BossHost} from './chapter2-bosses';
 import {initializeChapter2SmallFaces} from '../deltarune/chapter2-enemy';
 import {BattleRunTracker,type RunRecord} from '../../game/battle-run';
+import {GAME_END_ROOM,RETRY_ROOM,endBattle,gotoGameOverRoom,isGameOverRoom} from '../deltarune/battle-end';
 
 /** The encounters whose enemies run on the engine, with their scr_encountersetup number and room. */
 const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:(rt:GmRuntime)=>void}>={
@@ -60,8 +61,12 @@ export const engineRoom=(id:string)=>ENGINE[id]?.room??'';
 export class EngineBattle{
  readonly rt:GmRuntime;readonly name:string;readonly party:readonly number[];
  paused=false;outcome:'victory'|'defeat'|null=null;turn=0;
+ /** While the game plays its ending: the win's fade-out (obj_endbattle) or the game over's rooms. */
+ ending:'victory'|'defeat'|null=null;
+ /** After a game over, what the player chose: try again (scr_tempload) or leave (the game's end). */
+ afterDefeat:'retry'|'menu'|null=null;
  readonly scoring:BattleRunTracker|null;result:RunRecord|null=null;
- constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;chapter2Host?:typeof installChapter2BossHost;scoring?:boolean;rage?:boolean}={}){
+ constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;chapter2Host?:typeof installChapter2BossHost;scoring?:boolean;rage?:boolean;gameOvers?:number}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
   if(!encounter||!setup)throw Error('This battle is not available yet.');
   if(id==='ch2-61'&&!options.neoHost)throw Error('Load the Chapter 2 source host before starting NEO.');
@@ -103,12 +108,15 @@ export class EngineBattle{
   this.scoring=options.scoring&&!options.development?new BattleRunTracker(id,loadout,rt.globals):null;
   if(this.scoring)rt.onItemUsed=item=>this.scoring!.itemUsed(item);
   if(this.scoring)rt.onBattleMode=mode=>this.scoring!.mode(mode);
+  // global.tempflag[3] counts game overs; it outlives scr_tempload, and the failure screen is quicker after the first.
+  rt.globals.tempflag[3]=options.gameOvers??0;
  }
  get enemy():GmInstance|undefined{return this.rt.byId(this.rt.globals.monsterinstance[0]);}
  /** A short label for the status line: whose turn it is. */
  get phase(){
   const g=this.rt.globals;
   if(this.outcome)return this.outcome;
+  if(this.ending==='defeat')return 'game over';
   if(g.myfight===0)return 'command';
   if(g.myfight===1)return 'attack';
   if(g.myfight===3)return 'act';
@@ -124,9 +132,13 @@ export class EngineBattle{
   const rt=this.rt,g=rt.globals,before=g.mnfight;
   g.time+=1;rt.step();
   this.scoring?.frame(g);
-  if(before===2&&g.mnfight===0)this.turn+=1;
-  if(rt.pendingRoom==='room_gameover')this.outcome='defeat';
-  else if(rt.pendingRoom==='battle_end')this.outcome='victory';
-  if(this.outcome)this.result=this.scoring?.finish(this.outcome,g)??null;
+  if(before===2&&g.mnfight===0&&!this.ending)this.turn+=1;
+  const room=rt.pendingRoom;
+  if(room==='battle_end'&&!this.ending)this.end('victory');
+  if(this.ending==='victory'&&!rt.exists(endBattle))this.outcome='victory';
+  if(isGameOverRoom(room)){rt.pendingRoom=null;if(!this.ending)this.end('defeat');gotoGameOverRoom(rt,room!);}
+  if(room===RETRY_ROOM||room===GAME_END_ROOM){this.afterDefeat=room===RETRY_ROOM?'retry':'menu';this.outcome='defeat';}
  }
+ /** The run is scored when the battle itself ends, not after the ending plays. */
+ private end(how:'victory'|'defeat'){this.ending=how;this.result=this.scoring?.finish(how,this.rt.globals)??null;}
 }

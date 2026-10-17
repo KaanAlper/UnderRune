@@ -10,6 +10,29 @@ export class AudioManager{
  play(name:string){
   this.stop();this.paused=false;if(!this.available.includes(name))return;const audio=new Audio(assetUrl('/generated/music/'+name+'.ogg'));audio.loop=true;audio.volume=.38;audio.muted=this.muted;this.track=audio;this.trackName=name;if(this.audible&&!this.muted)void audio.play().catch(()=>{});
  }
+ /** Menu music: the tracks one after another, round and round (each plays once, then the next). Keeps playing when
+  * called again while already on the menu list. */
+ playMenu(tracks:readonly string[]){
+  const list=tracks.filter(t=>this.available.includes(t));
+  if(!list.length)return;
+  if(this.menuList&&list.includes(this.trackName)){if(this.paused)this.pause(false);return;}
+  this.stop();this.paused=false;this.menuList=list;this.playMenuTrack(this.menuNext%list.length);
+ }
+ private menuList:readonly string[]|null=null;private menuNext=0;
+ private playMenuTrack(index:number){
+  const list=this.menuList;if(!list)return;
+  const name=list[index],audio=new Audio(assetUrl('/generated/music/'+name+'.ogg'));
+  audio.loop=false;audio.volume=.32;audio.muted=this.muted;this.track=audio;this.trackName=name;this.menuNext=index+1;
+  audio.addEventListener('ended',()=>{if(this.track===audio&&this.menuList)this.playMenuTrack(this.menuNext%this.menuList.length);});
+  if(this.audible&&!this.muted)void audio.play().catch(()=>{});
+ }
+ /** Whether a music track is part of this build. */
+ has(name:string){return this.available.includes(name);}
+ /** Ends the menu music (leaving the menu for a battle that brings its own sound). */
+ stopMenu(){if(this.menuList)this.stop();}
+ /** The music fades out over the given time. */
+ fadeOut(ms:number){if(!this.track||this.trackFade!==null)return;const track=this.track,start=track.volume,steps=Math.max(1,Math.round(ms/50));let n=0;
+  this.trackFade=setInterval(()=>{n++;track.volume=Math.max(0,start*(1-n/steps));if(n>=steps){if(this.trackFade!==null)clearInterval(this.trackFade);this.trackFade=null;track.pause();}},50);}
  setMuted(muted:boolean){this.muted=muted;if(muted)this.stopEffects();else this.resumeLoops();if(this.track){this.track.muted=muted;if(!muted&&this.audible&&!this.paused)void this.track.play().catch(()=>{});}}
  pause(value:boolean){this.paused=value;if(value)this.stopEffects();else this.resumeLoops();if(!this.track)return;if(value)this.track.pause();else if(!this.muted&&this.audible)void this.track.play().catch(()=>{});}
  async prepareEffects(sounds:Record<string,SourceSound>,signal?:AbortSignal){
@@ -67,6 +90,6 @@ export class AudioManager{
  sourceSetLoop(handle:number|string){if(handle===this.trackName&&this.track)this.track.loop=true;}
  private releaseVoice(voice:AudioBufferSourceNode){const s=this.voices.get(voice);if(!s)return;voice.disconnect();s.gain.disconnect();this.voices.delete(voice);}
  private stopEffects(){for(const voice of this.voices.keys()){voice.stop();this.releaseVoice(voice);}}
- stop(){if(this.trackFade!==null)clearInterval(this.trackFade);this.trackFade=null;this.trackName='';for(const controller of this.loads)controller.abort();this.loops.clear();this.stopEffects();if(this.track){this.track.pause();this.track.removeAttribute('src');this.track.load();this.track=null;}}
+ stop(){this.menuList=null;if(this.trackFade!==null)clearInterval(this.trackFade);this.trackFade=null;this.trackName='';for(const controller of this.loads)controller.abort();this.loops.clear();this.stopEffects();if(this.track){this.track.pause();this.track.removeAttribute('src');this.track.load();this.track=null;}}
  dispose(){this.stop();this.disposed=true;if(this.context)void this.context.close().catch(()=>{});}
 }

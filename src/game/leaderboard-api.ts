@@ -77,6 +77,20 @@ export class LeaderboardApi{
   const response=await request(this.fetcher,`${config.url}/rest/v1/leaderboard_runs?${params}`,{headers:this.headers()},signal);if(!response.ok)throw await serviceError(response);
   const rows:unknown=await response.json();if(!Array.isArray(rows))throw Error('Leaderboard returned an invalid result.');return rows as LeaderboardRow[];
  }
+ /** Where a finished run would stand on its boss's board, ordered as the board is (damage taken, then time): its
+  * place, and how many runs there would be with it. Two counted reads; nothing is published. */
+ async rank(run:RunRecord,signal?:AbortSignal):Promise<{place:number;of:number}>{
+  const config=this.requireConfig();
+  if(!/^[a-zA-Z0-9][a-zA-Z0-9:_-]{0,79}$/.test(run.encounter_id)||!Number.isSafeInteger(run.damage)||!Number.isSafeInteger(run.duration_ms))throw Error('Invalid leaderboard run.');
+  const count=async(extra:Record<string,string>)=>{
+   const params=new URLSearchParams({select:'id',encounter_id:`eq.${run.encounter_id}`,rules_version:'eq.battle-v1',limit:'1',...extra});
+   const headers=this.headers();headers.set('Prefer','count=exact');
+   const response=await request(this.fetcher,`${config.url}/rest/v1/leaderboard_runs?${params}`,{headers},signal);if(!response.ok)throw await serviceError(response);
+   const total=/\/(\d+)$/.exec(response.headers.get('content-range')??'')?.[1];if(total===undefined)throw Error('Leaderboard returned no count.');return Number(total);
+  };
+  const [ahead,all]=await Promise.all([count({or:`(damage.lt.${run.damage},and(damage.eq.${run.damage},duration_ms.lt.${run.duration_ms}))`}),count({})]);
+  return {place:ahead+1,of:all+1};
+ }
  private parseSession(value:unknown):Session|null{
   if(!value||typeof value!=='object')return null;const s=value as Session&{expires_in?:number};
   if(typeof s.access_token!=='string'||!s.access_token||typeof s.refresh_token!=='string'||!s.refresh_token)return null;

@@ -123,6 +123,8 @@ function sameValue(ours:unknown,ref:unknown,res:ResourceIndex,gone:(id:number)=>
   return false;
  }
  if(ref===null||ref===undefined)return ours===null||ours===undefined;
+ // GML booleans are the numbers 0 and 1 (the reference runtime keeps the bool type, so its dumps say true/false).
+ if(typeof ref==='boolean')return ours===ref||ours===(ref?1:0);
  return ours===ref;
 }
 const show=(v:unknown)=>{const s=v&&typeof v==='object'&&!Array.isArray(v)?`<${(v as any).name??(v as any).id??'object'}>`:JSON.stringify(v);return (s??String(v)).slice(0,80);};
