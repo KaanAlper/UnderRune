@@ -10,6 +10,8 @@ test('Z X and arrows navigate theater, chapters, cards, board, routes, bag and b
  await page.keyboard.press('ArrowDown');await page.keyboard.press('z');await expect(page.locator('#status')).toContainText('CHAPTER 2');
  const card=page.locator('.boss-card[aria-current="true"]');await expect(card).toBeFocused();
  const first=await card.getAttribute('aria-label');await page.keyboard.press('ArrowRight');await expect(card).not.toHaveAttribute('aria-label',first!);await page.keyboard.press('ArrowLeft');await expect(card).toHaveAttribute('aria-label',first!);
+ // Chapter 2 opens on a playable card (Tasque Manager): its Leaderboard comes before Prepare party.
+ await page.keyboard.press('ArrowDown');await expect(page.getByRole('button',{name:'Leaderboard',exact:true})).toBeFocused();
  await page.keyboard.press('ArrowDown');await expect(page.getByRole('button',{name:'Prepare party',exact:true})).toBeFocused();
  await page.keyboard.press('ArrowDown');await expect(page.getByRole('button',{name:'Previous encounters',exact:true})).toBeFocused();await page.keyboard.press('z');await expect(card).not.toHaveAttribute('aria-label',first!);
  await page.keyboard.press('ArrowDown');await expect(page.getByRole('button',{name:'Next encounters',exact:true})).toBeFocused();await page.keyboard.press('z');await expect(card).toHaveAttribute('aria-label',first!);await page.keyboard.press('x');await expect(card).toBeFocused();
