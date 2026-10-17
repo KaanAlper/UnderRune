@@ -35,5 +35,25 @@ export function menuScript(totalFrames){
  }
  return script;
 }
+/** ACTs and mercy: a 300-frame cycle in which Kris opens ACT on the first enemy and picks one of its ACTs (a different
+ * one each cycle), Susie and Ralsei DEFEND, and every third cycle Kris tries MERCY's spare instead. Then Z every 8
+ * frames reads the text and the enemy's turn. It does not watch the battle, so the cycle drifts against the turns;
+ * a long run still reaches ACT descriptions, mercy gains and spares. */
+export function actScript(totalFrames){
+ const {script,press,release}=events();
+ const tap=(f,key)=>{if(f<totalFrames){press(f,key);release(f+1,key);}};
+ for(let base=30,cycle=0;base<totalFrames;base+=300,cycle++){
+  const seq=cycle%3===2
+   // MERCY is three to the right of FIGHT; Z picks it, Z the enemy, Z SPARE.
+   ?[RIGHT,RIGHT,RIGHT,Z,Z,Z]
+   // ACT, the first enemy, then down to another ACT each cycle.
+   :[RIGHT,Z,Z,...Array(cycle%4).fill(DOWN),Z];
+  // Susie and Ralsei DEFEND: left from FIGHT wraps to DEFEND.
+  seq.push(LEFT,Z,LEFT,Z);
+  seq.forEach((key,i)=>tap(base+i*8,key));
+  for(let f=base+seq.length*8+8;f<base+300;f+=8)tap(f,Z);
+ }
+ return script;
+}
 // Separate filename for a longer FIGHT replay: existing short acceptance recordings remain intact.
-export const SCRIPTS={z:zScript,zlong:zScript,menu:menuScript};
+export const SCRIPTS={z:zScript,zlong:zScript,menu:menuScript,act:actScript};

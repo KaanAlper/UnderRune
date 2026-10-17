@@ -1,5 +1,5 @@
 import {resolveEvent,type GmObjectDef} from '../../gm/runtime';
-import {pointDirection} from '../../gm/math';
+import {pointDirection,lt} from '../../gm/math';
 import {bulletInit,damage,damageAll} from '../../deltarune/battle';
 import {bulletInherit2} from '../../deltarune/chapter2-battle';
 export function createTasqueBullets(object:(n:string)=>GmObjectDef):GmObjectDef[]{
@@ -18,7 +18,7 @@ export function createTasqueBullets(object:(n:string)=>GmObjectDef):GmObjectDef[
  }};
  const maker:GmObjectDef={...object('obj_yarnmaker'),events:{
   create:(s,rt)=>{Object.assign(s,{grazed:0,target:0,inv:120,damage:124,element:6,grazepoints:5,timepoints:5,dont:1,activetimer:0,difficulty:1,childspeed:6,childgravity:0,scale:0,state:0,imageXscale:0,imageYscale:0});const h=rt.first(object('obj_heart'));if(h)s.futuredir=pointDirection(s.x,s.y,h.x+8,h.y+8);else rt.destroy(s);},
-  draw:(s,rt)=>{if(s.dont===0){if(s.state===0){if(s.sprite)rt.drawSprite(s.sprite,0,s.x,s.y,s.scale,s.scale,s.direction+Math.sqrt(s.scale)*720,0xffffff,1);if(s.scale<1)s.scale+=0.1;else{s.state=1;const b=rt.create(yarn,s.x,s.y);s.mybul=b.id;b.damage=s.damage;b.target=s.target;b.element=s.element;b.element=6;b.sprite='spr_yarnbullet';b.direction=s.direction;b.gravity=s.childgravity;b.speed=s.childspeed;b.imageAngle=s.direction;b.grazepoints=s.grazepoints;b.updateimageangle=1;}}else rt.destroy(s);}else s.dont=0;},
+  draw:(s,rt)=>{if(s.dont===0){if(s.state===0){if(s.sprite)rt.drawSprite(s.sprite,0,s.x,s.y,s.scale,s.scale,s.direction+Math.sqrt(s.scale)*720,0xffffff,1);if(lt(s.scale,1))s.scale+=0.1;else{s.state=1;const b=rt.create(yarn,s.x,s.y);s.mybul=b.id;b.damage=s.damage;b.target=s.target;b.element=s.element;b.element=6;b.sprite='spr_yarnbullet';b.direction=s.direction;b.gravity=s.childgravity;b.speed=s.childspeed;b.imageAngle=s.direction;b.grazepoints=s.grazepoints;b.updateimageangle=1;}}else rt.destroy(s);}else s.dont=0;},
  }};
  const meowing:GmObjectDef={...object('obj_tasque_meowing'),events:{
   create:s=>{s.loop=1;s.creator=0;s.imageXscale=2;s.imageYscale=2;},

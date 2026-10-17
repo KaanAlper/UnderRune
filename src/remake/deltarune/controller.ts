@@ -25,7 +25,7 @@ const CONTROLLER_SCRIPTS:Record<number,ControllerScripts>={
  1:{spellRows:4,text:lang,healingUsable:1,ultimateDescription:89,replaceItems:false,mergedSpells:()=>false,
   initActs:()=>{},resetActors:()=>{},undoAct:()=>{},beforeAttack:()=>{},hasActors:(_s,rt)=>rt.globals.acting[0]===1,
   startActors:()=>{},afterCreate:()=>{},victoryRows:4,tensionGoldMultiplier:1,
-  victoryText:()=>lang('obj_battlecontroller_slash_Step_0_gml_40_0'),reward:()=>{},afterVictory:()=>{},},
+  victoryText:rt=>subst(lang('obj_battlecontroller_slash_Step_0_gml_40_0'),rt.globals.monsterexp[3],rt.globals.monstergold[3]),victoryLevelUp:()=>{},reward:()=>{},afterVictory:()=>{},},
  2:controllerScripts2,
 };
 const controllerScripts=(rt:GmRuntime)=>forChapter(rt,CONTROLLER_SCRIPTS,'battle controller scripts');
@@ -472,7 +472,7 @@ function step(s:GmInstance,rt:GmRuntime){
   if(s.skipvictory===0){
    g.monstergold[3]+=Math.floor(g.tension/10)*controllerScripts(rt).tensionGoldMultiplier;if(g.charweapon[1]===8)g.monstergold[3]+=Math.floor(g.monstergold[3]/20);
    controllerScripts(rt).reward(s,rt);g.gold=(g.gold??0)+g.monstergold[3];g.xp=(g.xp??0)+g.monsterexp[3];g.fc=0;g.fe=0;
-   g.battlemsg[0]=subst(controllerScripts(rt).victoryText(rt),g.monsterexp[3],g.monstergold[3]);
+   g.battlemsg[0]=controllerScripts(rt).victoryText(rt);controllerScripts(rt).victoryLevelUp(rt);
    g.msg[0]=g.battlemsg[0];g.typer=g.battletyper;s.lastbattlewriter=battleText(rt,s).id;controllerScripts(rt).afterVictory(s,rt);
    for(let i=0;i<3;i++)withId(rt,g.charinstance[i],h=>{h.state=7;h.hurt=0;h.hurttimer=0;});
   }

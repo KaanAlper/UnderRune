@@ -56,9 +56,9 @@ export function spareAnimation(s:GmInstance,rt:GmRuntime){const a=rt.create(spar
 export function spareEnemy(s:GmInstance,rt:GmRuntime){
  spareAnimation(s,rt);recruitEnemy(s,rt);monsterDefeat(s,rt);rt.destroy(s);
 }
-export const recruitAnim:GmObjectDef={name:'obj_recruitanim',index:870,sprite:'spr_battlemsg',depth:-5,events:{
- create:s=>{Object.assign(s,{imageIndex:6,lerptimer:0,imageXscale:4,imageYscale:0,timer:0,imageSpeed:0,firstnumber:1,secondnumber:1});},
- step:(s,rt)=>{s.timer++;const interpolate=(toX:number,toY:number,t:number)=>{s.imageXscale+=(toX-s.imageXscale)*t;s.imageYscale+=(toY-s.imageYscale)*t;};if(s.timer<=5){s.lerptimer++;interpolate(1,1,s.lerptimer/5);}if(s.timer===5)s.lerptimer=0;if(s.timer>=5&&s.timer<=8){s.lerptimer++;interpolate(0.5,2,s.lerptimer/3);}if(s.timer===8)s.lerptimer=0;if(s.timer>=8&&s.timer<=10){s.lerptimer++;if(s.lerptimer>=2)s.lerptimer=2;interpolate(1,1,s.lerptimer/2);}s.x=s.xstart+rt.spriteWidth(s)/2;if(s.timer>=35){s.vspeed-=1;s.imageYscale+=0.1;s.imageAlpha-=0.1;if(s.imageAlpha<=0)rt.destroy(s);}},
+export const recruitAnim:GmObjectDef={name:'obj_recruitanim',index:870,sprite:'spr_battlemsg',events:{
+ create:s=>{s.sprite='spr_battlemsg';Object.assign(s,{imageIndex:6,lerptimer:0,imageXscale:4,imageYscale:0,depth:-5,timer:0,imageSpeed:0,firstnumber:1,secondnumber:1});},
+ step:(s,rt)=>{s.timer++;const interpolate=(toX:number,toY:number,t:number)=>{s.imageXscale+=(toX-s.imageXscale)*t;s.imageYscale+=(toY-s.imageYscale)*t;};if(s.timer<=5){s.lerptimer++;interpolate(1,1,s.lerptimer/5);}if(s.timer===5)s.lerptimer=0;if(s.timer>=5&&s.timer<=8){s.lerptimer++;interpolate(0.5,2,s.lerptimer/3);}if(s.timer===8)s.lerptimer=0;if(s.timer>=8&&s.timer<=10){s.lerptimer++;if(s.lerptimer>=2)s.lerptimer=2;interpolate(1,1,s.lerptimer/2);}s.x=s.xstart+rt.spriteWidth(s)/2;if(s.timer>=35){s.vspeed-=1;s.imageYscale+=0.1;s.imageAlpha-=0.1;if(le(s.imageAlpha,0))rt.destroy(s);}},
  draw:(s,rt)=>{rt.drawSelf(s);if(s.secondnumber>1){rt.drawState.color=0xffffff;rt.drawState.font=rt.globals.damagefontgold;rt.drawState.alpha=s.imageAlpha;rt.drawText(s.x-70,s.y+35,String(s.firstnumber));rt.drawText(s.x-30,s.y+35,String(s.secondnumber));rt.drawSprite('spr_numbersfontbig_gold',13,s.x-50,s.y+35);rt.drawState.alpha=1;}},
 }};
 export function recruitEnemy(s:GmInstance,rt:GmRuntime){

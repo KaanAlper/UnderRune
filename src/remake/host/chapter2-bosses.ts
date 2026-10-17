@@ -12,6 +12,7 @@ import {createNeoSupport} from '../bosses/spamton-neo/support';
 import {createNeoFace} from '../bosses/spamton-neo/face';
 import {sourceText} from './text';
 import {iceHexagon,iceSpell,sleepMist} from '../deltarune/noelle-spells';
+import {createPowerUpOrb} from '../bosses/chapter2-field/power-up-orb';
 
 export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapter2Registry(rt,{metadata,room:options.room}),{object}=registry;
@@ -20,6 +21,7 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  registry.register(createNeoSupport(object).filter(d=>['obj_doom','obj_lerpvar','obj_afterimage_cut'].includes(d.name)));
  registry.register(createNeoFace(object).filter(d=>['obj_werewire_bullet_lasercircle','obj_werewire_bullet_lasersquare'].includes(d.name)));
  registry.register(createChapter2Field(object));
+ registry.register([createPowerUpOrb(object)]);
  registry.register([createChapter2BulletController(object,[createChapter2FieldBulletRunner(object)])]);
  rt.battleSetup={monster:setupFieldMonster,encounter:(r,n,enemies)=>{
   const setup=FIELD_ENCOUNTERS[n as keyof typeof FIELD_ENCOUNTERS];if(!setup||setup.kind==='unused')return false;

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {median} from '../src/remake/gm/math';
 import {describe,it,expect} from 'vitest';
 import {GmInstance,GmRuntime,resolveEvent,type GmObjectDef,type GmEvent} from '../src/remake/gm/runtime';
 import {spriteBank} from '../src/remake/gm/sprites';
@@ -75,7 +76,8 @@ function fixture(seed=11){
    case 'scr_approach':return args[0]<args[1]?Math.min(args[0]+args[2],args[1]):Math.max(args[0]-args[2],args[1]);
    case 'scr_remapvalue':return args[3]+(args[2]-args[0])/(args[1]-args[0])*(args[4]-args[3]);
    case 'scr_getlaunchdirection':return args[0]*args[0]/args[2]<=args[1]?45:90-Math.asin(args[1]*args[2]/(args[0]*args[0]))*180/Math.PI/2;
-   case 'median':return (args[0]+args[1])/2;
+   // The reference runner returns the upper middle value for an even count (gm/math median).
+   case 'median':return median(...args);
    case 'dsin':return Math.sin(args[0]*Math.PI/180);
    case 'scr_lerpvar_instance':{const l=r.create(object('obj_lerpvar'),0,0);s.__lerpvar=l.id;Object.assign(l,{target:args[0],varname:args[1],pointa:args[2],pointb:args[3],maxtime:args[4]});return l.id;}
    case 'snd_play':case 'snd_play_x':case 'snd_stop':case 'snd_volume':case 'snd_loop':case 'snd_pitch':return;

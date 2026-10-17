@@ -1,3 +1,4 @@
+import {le} from '../../gm/math';
 import type {GmObjectDef} from '../../gm/runtime';
 /** Small native parents used by the field minigames. Their descendants inherit these events. */
 export function createFieldEffects(object:(name:string)=>GmObjectDef):GmObjectDef[]{
@@ -11,7 +12,7 @@ export function createFieldEffects(object:(name:string)=>GmObjectDef):GmObjectDe
  const shake:GmObjectDef={...object('obj_shakeobj'),events:{
   create:(s,rt)=>{Object.assign(s,{active:0,target:0,shakeamt:rt.globals.darkzone===0?5:10,shakereduct:rt.globals.darkzone===0?1:2,shakespeed:1,nowx:0,nowy:0,on:1,timer:0});},
   user0:(s,rt)=>{const t=rt.byId(s.target);if(t){s.active=1;s.nowx=t.x;s.nowy=t.y;}else rt.destroy(s);},
-  step:(s,rt)=>{if(s.active===0)rt.destroy(s);if(s.active===1){const t=rt.byId(s.target);if(t){s.shakeamt-=s.shakereduct;s.on*=-1;t.x=s.nowx+s.shakeamt*s.on;if(s.shakeamt<=0)rt.destroy(s);}else rt.destroy(s);}},
+  step:(s,rt)=>{if(s.active===0)rt.destroy(s);if(s.active===1){const t=rt.byId(s.target);if(t){s.shakeamt-=s.shakereduct;s.on*=-1;t.x=s.nowx+s.shakeamt*s.on;if(le(s.shakeamt,0))rt.destroy(s);}else rt.destroy(s);}},
  }};
  return [animation,shake];
 }

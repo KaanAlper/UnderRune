@@ -847,7 +847,7 @@ export const defeatAnim:GmObjectDef={name:'obj_defeatanim',index:300,events:{
  draw:(s,rt)=>{
   if(s.t===0)rt.drawSelf(s);s.sweat=s.g<=5||(s.g>=9&&s.g<=13)?1:0;
   if(s.sweat===1)rt.drawSprite('spr_defeatsweat',0,s.x-6,s.y-6);
-  if(s.t>=1){for(let i=0;i<=80;i++){s.i=i;s.alph=.4;rt.drawSprite(s.sprite,s.imageIndex,s.x+4*i,s.y,s.imageXscale,s.imageYscale,0,s.imageBlend,s.alph-s.t/8+i/200);}if(s.t>=15)rt.destroy(s);}
+  if(s.t>=1){for(s.i=0;s.i<=80;s.i++){s.alph=.4;rt.drawSprite(s.sprite,s.imageIndex,s.x+4*s.i,s.y,s.imageXscale,s.imageYscale,0,s.imageBlend,s.alph-s.t/8+s.i/200);}if(s.t>=15)rt.destroy(s);}
  },
 }};
 /** What a beaten enemy leaves behind, per chapter (scr_defeatrun's first half): Chapter 2 marks a recruitable enemy

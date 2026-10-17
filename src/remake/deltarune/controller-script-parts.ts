@@ -3,7 +3,8 @@ import {gmArray,type GmInstance,type GmRuntime} from '../gm/runtime';
 import {C,mergeColor} from '../gm/graphics';
 import {monsterParent} from './battle';
 import {actSimulChapter2,initChapter2ActTables,resetChapter2Actors,spellMenuSetupChapter2} from './chapter2';
-import {nextAct} from './controller';
+import {nextAct,subst} from './controller';
+import {snd} from './sound';
 import {sourceText} from '../host/text';
 
 export interface ControllerScripts{
@@ -23,7 +24,10 @@ export interface ControllerScripts{
  hasActors(s:GmInstance,rt:GmRuntime):boolean;
  startActors(s:GmInstance,rt:GmRuntime):void;
  afterCreate(s:GmInstance,rt:GmRuntime):void;
+ /** The victory message, its numbers in place. */
  victoryText(rt:GmRuntime):string;
+ /** Once the message is set: Chapter 2's level up when an enemy was beaten for good (flag 63) instead of EXP. */
+ victoryLevelUp(rt:GmRuntime):void;
  reward(s:GmInstance,rt:GmRuntime):void;
  afterVictory(s:GmInstance,rt:GmRuntime):void;
 }
@@ -61,8 +65,20 @@ function reward(_s:GmInstance,rt:GmRuntime){
  const count=(id:number)=>g.char.filter((c:number)=>c>0).reduce((n:number,c:number)=>n+(g.chararmor1[c]===id?1:0)+(g.chararmor2[c]===id?1:0),0);
  g.monstergold[3]=Math.floor(g.monstergold[3]*(1+count(8)*0.05)*(1+count(21)*0.3));
  if(g.flag[37]===1)g.monstergold[3]=0;
- if(g.flag[63]===1)throw Error('Chapter 2 victory level progression is not ported');
 }
+/** scr_levelup (Chapter 2): every beaten-for-good enemy adds HP to the party, and every tenth adds attack and magic;
+ * Noelle grows faster. */
+function levelUp(rt:GmRuntime){
+ const g=rt.globals;g.flag[65]++;
+ for(const c of [1,2,3]){g.maxhp[c]+=2;g.hp[c]+=2;}
+ if(g.flag[65]%2===0)g.maxhp[2]+=1;
+ if(g.flag[65]%10===0){g.at[1]+=1;g.at[2]+=1;g.mag[2]+=1;g.at[3]+=1;g.mag[3]+=1;g.flag[66]++;}
+ if(haveChar(rt,4)){g.flag[919]++;g.maxhp[4]+=4;g.hp[4]+=4;if(g.flag[65]%4===0){g.at[4]+=1;g.mag[4]+=1;}}
+ const clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
+ g.maxhp[1]=clamp(g.maxhp[1],10,160);g.maxhp[2]=clamp(g.maxhp[2],10,190);g.maxhp[3]=clamp(g.maxhp[3],10,140);g.maxhp[4]=clamp(g.maxhp[4],10,999);
+ for(let i=1;i<5;i++)g.hp[i]=Math.min(g.hp[i],g.maxhp[i]);
+}
+const haveChar=(rt:GmRuntime,n:number)=>[0,1,2].some(i=>rt.globals.char[i]===n);
 function afterVictory(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;if(g.gold<0)g.gold=0;
  if(g.flag[38]===1){const w=rt.byId(s.lastbattlewriter);if(w)rt.destroy(w);}
@@ -79,5 +95,10 @@ export const controllerScripts2:ControllerScripts={
  initActs:(_s,rt)=>initChapter2ActTables(rt),resetActors,undoAct,
  beforeAttack:(s,rt)=>{for(s.__hiti=0;s.__hiti<3;s.__hiti++)rt.globals.hittarget[s.__hiti]=0;},
  hasActors,startActors,afterCreate,reward,afterVictory,
- victoryText:rt=>sourceText(rt.globals.flag[37]===1?'obj_battlecontroller_slash_Step_0_gml_43_0':'obj_battlecontroller_slash_Step_0_gml_42_0'),
+ victoryText:rt=>{
+  const g=rt.globals,T=(n:string)=>sourceText('obj_battlecontroller_slash_Step_0_gml_'+n);
+  if(g.flag[63]===1)return subst(T(haveChar(rt,4)?'69_0':'46_0'),g.monstergold[3]);
+  return g.flag[37]===1?T('43_0'):subst(T('42_0'),g.monsterexp[3],g.monstergold[3]);
+ },
+ victoryLevelUp:rt=>{if(rt.globals.flag[63]!==1)return;snd(rt,'snd_dtrans_lw',2,0.7);levelUp(rt);},
 };

@@ -1,5 +1,5 @@
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
-import {lengthdirX,lengthdirY,lt,gt} from '../../gm/math';
+import {lengthdirX,lengthdirY,lt,gt,ge,le} from '../../gm/math';
 import {spareAnim} from '../../deltarune/battle';
 import {button3_p} from '../../deltarune/controller';
 import {battleTextDefault,destroyWriters,writer} from '../../deltarune/writer';
@@ -27,11 +27,11 @@ export function createWerewireThrow(object:(name:string)=>GmObjectDef):GmObjectD
  }}]};
  const throwing:GmObjectDef={...object('obj_werewire_throwkris'),events:{
   create:(s,rt)=>{Object.assign(s,{angle:0,throwcon:1,angledraw:1,imageXscale:2,imageYscale:2,radius:300,anglespeed:2,kx:184+rt.view.x,ky:170+rt.view.y,lx:rt.view.x,ly:rt.view.y,krisyoff:Array(1000).fill(0),krisgrav:1,fro:0,mypower:30,maxpower:30,minpower:15,powerdir:1,powerspeed:0.6,throwready:0,throwalpha:0,activatethrow:0});},
-  step:(s,rt)=>{if(s.throwcon===1){if(s.throwready===0)s.angle+=s.anglespeed;if(s.angle>=42)s.anglespeed=-2;if(s.angle<=-2)s.anglespeed=2;if(button3_p(rt)){s.activatethrow=1;destroyWriters(rt);}if(s.activatethrow===1){s.throwready=1;s.activatethrow=0;s.imageIndex=0;s.imageSpeed=0.5;s.sprite='spr_susieb_attack_unarmed';s.angledraw=0;s.throwcon=2;snd(rt,'snd_ultraswing');const k=rt.create(kris,s.kx,s.ky);s.kris=k.id;k.speed=s.mypower;k.mypower=s.mypower;k.imageXscale=2;k.imageYscale=2;k.direction=s.angle;k.imageAngle=s.angle;k.gravity=s.krisgrav;}}
-   if(s.throwcon===2&&s.imageIndex>=5)s.imageSpeed=0;
+  step:(s,rt)=>{if(s.throwcon===1){if(s.throwready===0)s.angle+=s.anglespeed;if(ge(s.angle,42))s.anglespeed=-2;if(le(s.angle,-2))s.anglespeed=2;if(button3_p(rt)){s.activatethrow=1;destroyWriters(rt);}if(s.activatethrow===1){s.throwready=1;s.activatethrow=0;s.imageIndex=0;s.imageSpeed=0.5;s.sprite='spr_susieb_attack_unarmed';s.angledraw=0;s.throwcon=2;snd(rt,'snd_ultraswing');const k=rt.create(kris,s.kx,s.ky);s.kris=k.id;k.speed=s.mypower;k.mypower=s.mypower;k.imageXscale=2;k.imageYscale=2;k.direction=s.angle;k.imageAngle=s.angle;k.gravity=s.krisgrav;}}
+   if(s.throwcon===2&&ge(s.imageIndex,5))s.imageSpeed=0;
    if(s.angledraw===1){s.lx=lengthdirX(s.mypower,s.angle);s.ly=lengthdirY(s.mypower,s.angle);for(s.i=0;s.i<42;s.i++){s.krisyadd=s.krisgrav+s.krisgrav*s.i;s.krisyoff[s.i]=s.i>0?s.krisyoff[s.i-1]+s.krisyadd:s.krisyadd;}}
   },
-  draw:(s,rt)=>{rt.drawSelf(s);if(s.angledraw===0)s.throwalpha=0;if(s.angledraw===1){if(s.throwalpha<1)s.throwalpha+=0.125;rt.drawState.alpha=s.throwalpha;rt.drawState.color=mergeColor(0xff0000,0xffffff,0.5);for(s.i=0;s.i<12;s.i++){s.fr=2;const n=s.i*s.fr+s.fro,next=(s.i+1)*s.fr+s.fro,x=s.kx+s.lx*n,y=s.ky+s.ly*n+s.krisyoff[n];rt.drawCircle(x,y,4);rt.drawLine(x,y,s.kx+s.lx*next,s.ky+s.ly*next+s.krisyoff[next],2);rt.drawSprite('spr_werewire_throwarrow',0,s.kx,s.ky,2,2,s.angle,0x0000ff,1);}rt.drawState.alpha=1;}},
+  draw:(s,rt)=>{rt.drawSelf(s);if(s.angledraw===0)s.throwalpha=0;if(s.angledraw===1){if(lt(s.throwalpha,1))s.throwalpha+=0.125;rt.drawState.alpha=s.throwalpha;rt.drawState.color=mergeColor(0xff0000,0xffffff,0.5);for(s.i=0;s.i<12;s.i++){s.fr=2;const n=s.i*s.fr+s.fro,next=(s.i+1)*s.fr+s.fro,x=s.kx+s.lx*n,y=s.ky+s.ly*n+s.krisyoff[n];rt.drawCircle(x,y,4);rt.drawLine(x,y,s.kx+s.lx*next,s.ky+s.ly*next+s.krisyoff[next],2);rt.drawSprite('spr_werewire_throwarrow',0,s.kx,s.ky,2,2,s.angle,0x0000ff,1);}rt.drawState.alpha=1;}},
  }};
  const spare2:GmObjectDef={...object('obj_werewire_spare2'),events:{
   create:(s,rt)=>{s.imageXscale=2;s.imageYscale=2;s.alarm[0]=1;if(lt(rt.random.random(10),5))s.sprite='spr_plugboy_cower';},

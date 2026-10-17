@@ -259,6 +259,12 @@ export class GmRuntime{
  deleteSprite(name:string){const m=/^__newsprite(\d+)$/.exec(name);if(m)this.newSprites[Number(m[1])-this.spriteBase()]=false;this.dynamicSprites.delete(name);this.gfx?.spriteDelete?.(name);}
  /** sprite_create_from_surface(application_surface, 0, 0, view width, view height, ...): the last frame drawn. */
  spriteFromScreen(){const {width,height}=this.view,name=this.newSprite(width,height);this.gfx?.screenSprite?.(name,width,height);return name;}
+ /** ds_* data structures (queue, list, map, stack, grid, priority): each kind numbers its own from 0 and reuses the
+  * number of a destroyed one, as the runner does. A structure is held as an array. */
+ private dsPools=new Map<string,(unknown[]|undefined)[]>();
+ dsCreate(kind:string){let pool=this.dsPools.get(kind);if(!pool)this.dsPools.set(kind,pool=[]);let id=pool.indexOf(undefined);if(id<0)id=pool.length;pool[id]=[];return id;}
+ ds(kind:string,id:number){const v=this.dsPools.get(kind)?.[id];if(!v)throw Error(`ds_${kind} ${id} does not exist`);return v;}
+ dsDestroy(kind:string,id:number){const pool=this.dsPools.get(kind);if(pool?.[id])pool[id]=undefined;}
  /** string_width in the current font (0 without a renderer). */
  stringWidth(text:string){return this.gfx?.textWidth?.(this.drawState.font,text)??0;}
  sourceSurfaces?:{create:(width:number,height:number)=>number;target:(id:number|null)=>void;clear:(color:number,alpha:number)=>void;capture:(id:number,left:number,top:number,width:number,height:number,originX:number,originY:number)=>string;free:(id:number)=>void;deleteSprite:(name:string)=>void};

@@ -29,3 +29,6 @@ export const ge=(a:number,b:number)=>cmp(a,b)>=0;
 export const eq=(a:number,b:number)=>cmp(a,b)===0;
 /** GML round(): halves go to the even neighbour. */
 export const round=bankersRound;
+/** median: the middle value; with an even count, the upper of the two middle ones (as the reference runner and
+ * HTML5 do). */
+export function median(...values:number[]){const v=[...values].sort((a,b)=>a-b);return v[Math.floor(v.length/2)];}
