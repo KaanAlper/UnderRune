@@ -1,5 +1,6 @@
 // Small objects the battles share from Chapter 2 on: obj_doom (destroys its target after a delay), obj_afterimage_cut
-// (a copy that splits into four quarters drifting apart) and obj_lerpvar (eases one variable of another instance).
+// (a copy that splits into four quarters drifting apart) and obj_lerpvar (eases one variable of another instance),
+// with the scripts that make them (scr_doom, scr_lerpvar).
 import {gmField,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {ge,lt} from '../gm/math';
@@ -55,3 +56,17 @@ export const lerpvar:GmObjectDef={name:'obj_lerpvar',index:929,depth:0,events:{
   if(ge(s.time,s.maxtime))rt.destroy(s);
  },
 }};
+
+/** scr_doom, run by any caller: the target is destroyed after `delay` frames. */
+export function scrDoom(rt:GmRuntime,target:number,delay:number){
+ const d=rt.create(doom,0,0);d.depth=0;d.alarm[0]=delay;d.target=target;return d;
+}
+/** scr_lerpvar, run by `s`: eases s[varname] from a to b over `time` frames, kept in s.___lerpvar (the instance
+ * script keeps it in __lerpvar too). */
+export function scrLerpvar(s:GmInstance,rt:GmRuntime,varname:string,a:number|string,b:number,time:number,easetype?:number,easeinout?:string){
+ const l=rt.create(lerpvar,0,0);s.__lerpvar=l.id;
+ l.target=s.id;l.varname=varname;l.pointa=a;l.pointb=b;l.maxtime=time;
+ if(easetype!==undefined)l.easetype=easetype;
+ if(easeinout!==undefined)l.easeinout=easeinout;
+ s.___lerpvar=l.id;return l;
+}

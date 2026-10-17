@@ -37,6 +37,8 @@ export interface EnemyStrategy{
  attackDelay?:number;
  /** The attack starts: bullet makers and the turn's length. */
  attack:Step;
+ /** While true, the attack step does not run at all (the Roaring Knight's ending). */
+ holdsAttack?:(s:GmInstance,rt:GmRuntime)=>boolean;
  /** False when the enemy counts its turns itself in attack() (K.Round counts only the turns he attacks in). */
  countTurn?:boolean;
  /** Each frame before the attack starts: the turn lasts at least this long (the template's scr_turntimer(120)). */
@@ -90,7 +92,7 @@ function templateStep(st:EnemyStrategy):Step{
    if(isPhase(rt,'enemytalk',s)&&s.talked===0)startTalk(s,rt);
    st.duringTalk?.(s,rt);
    endTalk(s,rt);
-   if(isPhase(rt,'bullets',s)&&s.attacked===0){
+   if(isPhase(rt,'bullets',s)&&s.attacked===0&&!st.holdsAttack?.(s,rt)){
     if(delay>0)s.rtimer+=1;
     if(delay===0||s.rtimer===delay){st.attack(s,rt);if(st.countTurn!==false)s.turns+=1;g.typer=6;g.fc=0;st.statusLine?.(s,rt);s.attacked=1;}
     else attackWait(s,rt);

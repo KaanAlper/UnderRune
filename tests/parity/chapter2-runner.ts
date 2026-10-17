@@ -23,7 +23,8 @@ const SOUND_HANDLES:Record<string,string[]>={obj_heart:['chargeshot_sound'],obj_
 export const chapter2RecordingReady=(run:string,chapter=2)=>fs.existsSync(`${run}-f${START}.json`)&&fs.existsSync(run+'.ndjson')&&
  fs.existsSync(`extracted/chapter${chapter}_windows/sprites.json`)&&fs.existsSync(`extracted/chapter${chapter}_windows/code`);
 
-export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects:Record<string,GmObjectDef>},extraSoundHandles:Record<string,string[]>={},chapter=2){
+/** afterRestore fixes what the snapshots leave out (they record no xstart/ystart). */
+export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects:Record<string,GmObjectDef>},extraSoundHandles:Record<string,string[]>={},chapter=2,afterRestore?:(rt:GmRuntime)=>void){
  const code=`extracted/chapter${chapter}_windows/code/`;
  setSourceText(Object.assign({},...fs.readdirSync(code).filter(f=>f.endsWith('.gml')).map(f=>localizationDefaults(fs.readFileSync(code+f,'utf8')))));
  const trace=new Map<number,TraceLine>(fs.readFileSync(run+'.ndjson','utf8').trim().split('\n').map(l=>{const x=JSON.parse(l) as TraceLine;return [x.f,x];}));
@@ -52,6 +53,7 @@ export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects
  const name=(v:unknown)=>typeof v==='number'&&SPRITES[v]?SPRITES[v]:v;
  for(const i of rt.instances)for(const k of Object.keys(i))if(/sprite/.test(k)&&k!=='sprite')i[k]=Array.isArray(i[k])?i[k].map(name):name(i[k]);
  const tracked=new Set(Object.keys(objects).filter(n=>!skipped.has(n)));
+ afterRestore?.(rt);
  const end=process.env.PARITY_END?Number(process.env.PARITY_END):Math.max(...trace.keys());
  if(process.env.PARITY_DEBUG)(globalThis as any).__parityRt=rt;
  if(process.env.PARITY_LIFE){

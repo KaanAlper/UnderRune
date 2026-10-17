@@ -4,7 +4,7 @@
 import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {eq,ge,gt,le,lt,pointDistance,round} from '../gm/math';
 import {C,mergeColor} from '../gm/graphics';
-import {forChapter,rules,withHook} from './rules';
+import {forChapter,rules,withHook,type BattleHooks,type HookedDef} from './rules';
 import {yellowSoul} from './yellow-soul';
 
 import {KEY,held} from './keys';
@@ -25,7 +25,7 @@ export const heroRalsei:GmObjectDef={name:'obj_heroralsei',index:215,depth:100,p
 export const heroNoelle:GmObjectDef={name:'obj_heronoelle',index:378,depth:0,parent:heroParent,sprite:'spr_krisplace'};
 /** The enemy turn's darkness: it fades the screen and the heroes in; with darken = 0 it closes the box and fades out. */
 /** Per chapter: from Chapter 2 the darkener sets its own depth when made. */
-const DARKENER:Record<number,{depth?:number}>={1:{},2:{depth:205}};
+const DARKENER:Record<number,{depth?:number}>={1:{},2:{depth:205},3:{depth:205}};
 export const darkener:GmObjectDef={name:'obj_darkener',index:205,depth:200,events:{
  create:(s,rt)=>{
   const depth=forChapter(rt,DARKENER,'obj_darkener').depth;if(depth!==undefined)s.depth=depth;
@@ -68,7 +68,8 @@ export const returnHeart:GmObjectDef={name:'obj_returnheart',index:220,sprite:'s
 }};
 /** The soul leaves Kris and flies to the arena in eight original game frames. */
 /** Per chapter: from Chapter 2 the soul flies to the box's own place (custom boxes are moved) and is not made twice. */
-const MOVE_HEART:Record<number,{toBox:boolean;once:boolean}>={1:{toBox:false,once:false},2:{toBox:true,once:true}};
+/** Chapter 3's soul takes the flying soul's sprite and mask (an attack can change them before it lands). */
+const MOVE_HEART:Record<number,{toBox:boolean;once:boolean;passSprite?:boolean}>={1:{toBox:false,once:false},2:{toBox:true,once:true},3:{toBox:true,once:true,passSprite:true}};
 const named=(rt:GmRuntime,name:string)=>rt.instances.find(i=>i.live&&i.object.name===name);
 export const moveHeart:GmObjectDef={name:'obj_moveheart',index:219,sprite:'spr_dodgeheart',events:{
  create:(s,rt)=>{
@@ -82,7 +83,8 @@ export const moveHeart:GmObjectDef={name:'obj_moveheart',index:219,sprite:'spr_d
  step:s=>{s.imageAlpha+=.334;},
  alarm0:(s,rt)=>{
   s.x=s.distx;s.y=s.disty;
-  if(!forChapter(rt,MOVE_HEART,'obj_moveheart').once||!rt.exists(heart))rt.create(heart,s.x,s.y).depth=1;
+  const rules=forChapter(rt,MOVE_HEART,'obj_moveheart');
+  if(!rules.once||!rt.exists(heart)){const h=rt.create(heart,s.x,s.y);h.depth=1;if(rules.passSprite){s.heart=h.id;h.sprite=s.sprite;h.mask=s.mask;}}
   rt.destroy(s);
  },
 }};
@@ -134,7 +136,7 @@ export const afterimageGrow:GmObjectDef={name:'obj_afterimage_grow',index:193,ev
 /** Camera shake: offsets the view, alternating sides, shrinking by a pixel per swing. */
 /** Per chapter: Chapter 2 keeps one shake at a time and restores the view only once it has moved it. Its
  * remembered view position has another name there (mycamerax). */
-const SHAKE:Record<number,{single:boolean;x:string;y:string}>={1:{single:false,x:'camerax',y:'cameray'},2:{single:true,x:'mycamerax',y:'mycameray'}};
+const SHAKE:Record<number,{single:boolean;x:string;y:string}>={1:{single:false,x:'camerax',y:'cameray'},2:{single:true,x:'mycamerax',y:'mycameray'},3:{single:true,x:'mycamerax',y:'mycameray'}};
 export const shake:GmObjectDef={name:'obj_shake',index:147,events:{
  create:(s,rt)=>{
   s.camera=0;s.shakespeed=1;s.shakesign=1;s.shakex=4;s.shakey=4;s.siner=0;s.active=0;s.permashake=0;
@@ -165,8 +167,10 @@ export {mergeColor};
 
 /** Damage numbers: they pop, bounce twice, then fade upward. The motion runs in the Draw event. */
 /** Per chapter: Chapter 2's damage writer also shows mercy (type 5: "+N%" in the gold digits, the MAX message at 100),
- * a yellow type 6 and more messages, and is kept inside the view while fighting. */
-const DMG_WRITER:Record<number,{mercy:boolean}>={1:{mercy:false},2:{mercy:true}};
+ * a yellow type 6 and more messages, and is kept inside the view while fighting. Chapter 3 counts its frames
+ * (mercytimer, which scr_mercyadd reads) and has two more messages: type 12 (frame 13 in red, a hero knocked out hard)
+ * and type 13 (frame 14 in a blue aqua). */
+const DMG_WRITER:Record<number,{mercy:boolean;timer:boolean}>={1:{mercy:false,timer:false},2:{mercy:true,timer:false},3:{mercy:true,timer:true}};
 /** The battle message sprite frame and blend for each message (blend undefined: the current colour). */
 const BATTLE_MESSAGES:Record<number,[number,number|undefined]>={1:[0,undefined],2:[1,C.red],3:[2,C.lime],4:[3,C.lime],
  5:[5,C.lime],6:[8,C.white],7:[9,C.white],8:[10,C.white],9:[11,C.white]};
@@ -177,6 +181,7 @@ export const dmgWriter:GmObjectDef={name:'obj_dmgwriter',index:312,events:{
   s.spec=0;s.delaytimer=0;s.delay=2;s.active=0;s.damage=round(rt.random.random(600));s.bounces=0;s.type=-1;
   s.stretch=0.2;s.stretchgo=1;s.lightf=mergeColor(C.purple,C.white,0.6);s.lightb=mergeColor(C.aqua,C.white,0.5);s.lightg=mergeColor(C.lime,C.white,0.5);
   if(mercy){s.lighty=mergeColor(C.yellow,C.white,0.3);s.init=0;}
+  if(forChapter(rt,DMG_WRITER,'obj_dmgwriter').timer){s.mercytimer=0;s.aqcolor=mergeColor(C.aqua,0xff0000,0.3);}
   s.kill=0;s.killtimer=0;s.killactive=0;
   for(const o of rt.all(dmgWriter))if(o.type!==3)o.killtimer=0;
   s.specialmessage=0;
@@ -186,18 +191,21 @@ export const dmgWriter:GmObjectDef={name:'obj_dmgwriter',index:312,events:{
   const mercy=forChapter(rt,DMG_WRITER,'obj_dmgwriter').mercy;
   if(s.delaytimer<s.delay)for(const o of rt.all(dmgWriter))o.killtimer=0;
   s.delaytimer+=1;
+  if(forChapter(rt,DMG_WRITER,'obj_dmgwriter').timer)s.mercytimer++;
   if(s.delaytimer===s.delay){s.vspeed=-5-rt.random.random(2);s.hspeed=10;s.vstart=s.vspeed;s.flip=90;}
-  if(s.delaytimer>=s.delay)writeDamage(s,rt,mercy);
+  if(s.delaytimer>=s.delay)writeDamage(s,rt,mercy,forChapter(rt,DMG_WRITER,'obj_dmgwriter').timer);
   if(mercy&&rt.globals.fighting===1&&s.stayincamera===1&&s.x>=s.xx+600)s.x=s.xx+600;
  },
 }};
-function writeDamage(s:GmInstance,rt:GmRuntime,mercy:boolean){
+function writeDamage(s:GmInstance,rt:GmRuntime,mercy:boolean,later:boolean){
  const d=rt.drawState;
  d.color=s.type===0?s.lightb:s.type===1?s.lightf:s.type===2?s.lightg:s.type===3?C.lime:s.type===4?C.red:C.white;
  if(mercy&&s.type===5&&s.damage<0)d.color=C.ltgray;
  if(mercy&&s.type===6)d.color=s.lighty;
  s.message=s.specialmessage;if(eq(s.damage,0))s.message=1;if(s.type===4)s.message=2;
  if(mercy&&s.type===5&&s.damage===100)s.message=5;
+ if(later&&s.type===12)s.message=10;
+ if(later&&s.type===13){s.message=13;d.color=s.aqcolor;}
  d.font=mercy&&s.type===5?'damagefontgold':'damagefont';
  if(gt(s.hspeed,0))s.hspeed=s.hspeed-1;
  if(lt(s.hspeed,0))s.hspeed=s.hspeed+1;
@@ -212,7 +220,7 @@ function writeDamage(s:GmInstance,rt:GmRuntime,mercy:boolean){
   d.alpha=1-s.kill;d.halign=2;rt.drawText(s.x+30,s.y,mercy?s.damagemessage:String(s.damage),2-s.stretch,s.stretch+s.kill,s.spec===1?90:0);d.halign=0;d.alpha=1;
  }else{
   // Chapter 1 has the first four messages only.
-  const m=BATTLE_MESSAGES[s.message];
+  const m=later&&s.message===10?[13,C.red] as const:later&&s.message===13?[14,s.aqcolor] as const:BATTLE_MESSAGES[s.message];
   if(m&&(mercy||s.message<=4))rt.drawSprite(mercy?s.message_sprite:'spr_battlemsg',m[0],s.x+30,s.y,2-s.stretch,s.stretch+s.kill,0,m[1]??d.color,1-s.kill);
  }
  if(s.bounces<2)s.vspeed=s.vspeed+1;
@@ -263,7 +271,7 @@ export const bulletParent:GmObjectDef={name:'obj_bulletparent',index:199};
 /** A bullet that hurts the soul on contact (User Event 5 runs the damage, then the bullet is gone). */
 /** Per chapter: Chapter 2 bullets start from scr_bullet_init, may survive a hit (destroyonhit), reach further out of
  * view before they go, and can turn with their direction, spin or fade near the bottom. */
-const BULLETS:Record<number,{v2:boolean;bounds:[number,number,number,number]}>={1:{v2:false,bounds:[40,680,40,520]},2:{v2:true,bounds:[80,760,80,580]}};
+const BULLETS:Record<number,{v2:boolean;bounds:[number,number,number,number]}>={1:{v2:false,bounds:[40,680,40,520]},2:{v2:true,bounds:[80,760,80,580]},3:{v2:true,bounds:[80,760,80,580]}};
 /** scr_bullet_init (Chapter 2): a bullet's starting fields. */
 export function bulletInit(s:GmInstance){
  Object.assign(s,{grazed:0,grazetimer:0,destroyonhit:1,target:0,inv:60,damage:10,element:0,grazepoints:1,timepoints:1,active:1,updateimageangle:0});
@@ -362,7 +370,13 @@ export function inheritBullet(from:GmInstance,to:GmInstance){
  to.damage=from.damage;to.grazepoints=from.grazepoints;to.timepoints=from.timepoints;to.inv=from.inv;to.target=from.target;to.grazed=0;to.grazetimer=0;
 }
 
-export function tensionHeal(rt:GmRuntime,amount:number){const g=rt.globals;g.tension+=amount;if(gt(g.tension,g.maxtension))g.tension=g.maxtension;}
+export function tensionHeal(rt:GmRuntime,amount:number){
+ const g=rt.globals;g.tension+=amount;if(gt(g.tension,g.maxtension))g.tension=g.maxtension;
+ if(rules(rt).tensionCountsMercy){
+  const c=rt.instances.find(i=>i.live&&i.object.name==='obj_battlecontroller');if(!c)throw Error('scr_tensionheal needs obj_battlecontroller');
+  c.mercytotal+=amount;if(lt(c.mercytotal,0))c.mercytotal=0;if(ge(c.mercytotal,250))c.mercytotal=250;
+ }
+}
 
 /** The soul: moves 4 px per frame (2 while holding cancel), slides along the box walls, stays on screen. */
 /** The soul's colour modes (scr_heartcolor): red only moves; yellow also shoots (yellow-soul.ts). */
@@ -452,10 +466,13 @@ function heartStep(s:GmInstance,rt:GmRuntime){
 }
 
 /** How grazing works per chapter: what a repeated graze gives (a fraction of the bullet's points), whether inactive
- * bullets count, and (Chapter 2) the armors that raise the TP, the time and the box size (scr_armorcheck_equipped_party). */
-const GRAZE:Record<number,{repeat:number;inactiveCount:boolean;armor?:{tp:number;time:number;size:[number,number][]}}>={
+ * bullets count, and (from Chapter 2) what each armor the party wears adds to the TP, the time and the box size
+ * (scr_armorcheck_equipped_party, [armor, amount] in the original's order). Chapter 3 counts the grazes (grazecount). */
+type ArmorEffects=readonly (readonly [armor:number,amount:number])[];
+const GRAZE:Record<number,{repeat:number;inactiveCount:boolean;counts?:boolean;armor?:{tp:ArmorEffects;time:ArmorEffects;size:ArmorEffects}}>={
  1:{repeat:20,inactiveCount:true},
- 2:{repeat:30,inactiveCount:false,armor:{tp:15,time:14,size:[[3,0.2],[9,0.25]]}},
+ 2:{repeat:30,inactiveCount:false,armor:{tp:[[15,0.1]],time:[[14,0.1]],size:[[3,0.2],[9,0.25]]}},
+ 3:{repeat:30,inactiveCount:false,counts:true,armor:{tp:[[15,0.1],[24,0.05],[3,-0.2],[9,-0.25]],time:[[14,0.1],[3,-0.2],[9,-0.25]],size:[[3,0.2],[9,0.25]]}},
 };
 /** scr_armorcheck_equipped_party: how many of this armor the party wears. */
 function partyWears(rt:GmRuntime,armor:number){
@@ -467,10 +484,11 @@ function partyWears(rt:GmRuntime,armor:number){
 export const grazebox:GmObjectDef={name:'obj_grazebox',index:206,depth:2,sprite:'spr_grazeappear',mask:'spr_grazemask',
  events:{
   create:(s,rt)=>{
-   const armor=forChapter(rt,GRAZE,'obj_grazebox').armor;
+   const graze=forChapter(rt,GRAZE,'obj_grazebox'),armor=graze.armor;
    if(armor){
-    s.grazetimer=0;s.grazetpfactor=1;s.grazetimefactor=1;s.grazesizefactor=1;
-    s.grazetpfactor+=partyWears(rt,armor.tp)*0.1;s.grazetimefactor+=partyWears(rt,armor.time)*0.1;
+    s.grazetimer=0;s.grazetpfactor=1;s.grazetimefactor=1;s.grazesizefactor=1;if(graze.counts)s.grazecount=0;
+    for(const [id,add] of armor.tp)s.grazetpfactor+=partyWears(rt,id)*add;
+    for(const [id,add] of armor.time)s.grazetimefactor+=partyWears(rt,id)*add;
     for(const [id,add] of armor.size)s.grazesizefactor+=partyWears(rt,id)*add;
     s.grazetimefactor=Math.min(s.grazetimefactor,3);s.grazetpfactor=Math.min(s.grazetpfactor,3);s.grazesizefactor=Math.min(s.grazesizefactor,3);
     s.imageXscale=s.grazesizefactor;s.imageYscale=s.grazesizefactor;
@@ -493,7 +511,7 @@ export const grazebox:GmObjectDef={name:'obj_grazebox',index:206,depth:2,sprite:
  },
  collisions:[{target:collideBullet,run:(s,b,rt)=>{
   const g=rt.globals,graze=forChapter(rt,GRAZE,'obj_grazebox');
-  if(!graze.inactiveCount&&!b.active)return;
+  if(!graze.inactiveCount&&!b.active&&!(b.object as HookedDef).hooks?.grazedWhileInactive)return;
   const tp=graze.armor?s.grazetpfactor:1,time=graze.armor?s.grazetimefactor:1;
   if(g.inv>=0)return;
   if(b.grazed===1){
@@ -502,6 +520,7 @@ export const grazebox:GmObjectDef={name:'obj_grazebox',index:206,depth:2,sprite:
    for(const gb of rt.all(grazebox)){if(gb.grazetimer>=0&&gb.grazetimer<4)gb.grazetimer=3;if(gb.grazetimer<2)gb.grazetimer=2;}
   }
   if(b.grazed===0){
+   if(graze.counts)for(const gb of rt.all(grazebox))gb.grazecount++;
    b.grazed=1;tensionHeal(rt,b.grazepoints*tp);
    if(ge(g.turntimer,10))g.turntimer-=b.timepoints*time;
    for(const c of rt.all(battleController))c.grazenoise=1;
@@ -553,20 +572,30 @@ interface DamageRules{
  defense(rt:GmRuntime,damage:number,slot:number):number;
  /** Chapter 2: the bullet's element can be resisted by armor, and target 4 means "a party member, avoiding the weakest". */
  readonly elements:boolean;
- /** A whole-party hit on the hero in this slot: the damage carried on to the next one, and the HP this one loses. */
- partyHit(rt:GmRuntime,damage:number,slot:number,element:number):[number,number];
+ /** A whole-party hit on the hero in this slot: the damage carried on to the next one, and the HP this one loses.
+  * reduce is the enemy's cut for the slot (reducesHit); mantle.cut stays set once one was made. */
+ partyHit(rt:GmRuntime,damage:number,slot:number,element:number,reduce:(slot:number,damage:number)=>number|undefined,mantle:{cut:boolean}):[number,number];
+ /** Invincibility after a hit, in frames per point of the bullet's invc. */
+ readonly invFrames:number;
+ /** scr_damage_all checks for damage itself (Chapter 3 leaves it to each scr_damage). */
+ readonly allChecks:boolean;
+ /** A hit on Ralsei in his yarn sprite shakes him (Chapter 3). */
+ readonly yarnShake:boolean;
 }
 const DAMAGE:Record<number,DamageRules>={
- 1:{godSwitch:true,elements:false,
+ 1:{godSwitch:true,elements:false,invFrames:40,allChecks:true,yarnShake:false,
   defense:(rt,d,slot)=>Math.ceil(d-rt.globals.battledf[slot]*3),
   partyHit:(rt,d,slot)=>[d,rt.globals.charaction[slot]===10?Math.ceil(d/2):d]},
- 2:{godSwitch:false,elements:true,
-  defense:damageCalculation,
-  partyHit:(rt,d,slot,element)=>{
-   const g=rt.globals,next=Math.ceil(damageCalculation(rt,d,slot)*elementReduction(rt,element,g.char[slot]));
-   return [next,g.charaction[slot]===10?Math.ceil(3*next/4):next];
-  }},
+ 2:{godSwitch:false,elements:true,invFrames:40,allChecks:true,yarnShake:false,defense:damageCalculation,partyHit:partyHit2},
+ 3:{godSwitch:false,elements:true,invFrames:30,allChecks:false,yarnShake:true,defense:damageCalculation,partyHit:partyHit2},
 };
+/** Chapter 2 on: defense, then the enemy's cut, then element resistance (unless a cut was made), then defending. */
+function partyHit2(rt:GmRuntime,d:number,slot:number,element:number,reduce:(slot:number,damage:number)=>number|undefined,mantle:{cut:boolean}):[number,number]{
+ const g=rt.globals;let next=damageCalculation(rt,d,slot);
+ const cut=reduce(slot,next);if(cut!==undefined){next=cut;mantle.cut=true;}
+ if(!mantle.cut)next=Math.ceil(next*elementReduction(rt,element,g.char[slot]));
+ return [next,g.charaction[slot]===10?Math.ceil(3*next/4):next];
+}
 /** scr_damage_calculation (Chapter 2): each defense point takes 3 off a big hit (over a fifth of max HP), 2 off a
  * medium one (over an eighth) and 1 otherwise; at least 1 is left. */
 function damageCalculation(rt:GmRuntime,damage:number,slot:number){
@@ -594,18 +623,20 @@ function partyHpAverage(rt:GmRuntime){
 }
 /** scr_damage: a bullet hits its target (a party slot, 3 for everyone, from Chapter 2 also 4 for "someone"). */
 export function damage(s:GmInstance,rt:GmRuntime){
- damageContact(s,rt,{defense:true,defendDenominator:3,knockoutHook:true});
+ damageContact(s,rt,{defense:true,defendDenominator:3,hooks:true});
 }
 /** Contact which keeps elemental resistance but skips defense and defending reduction. */
 export function damageUnmitigated(s:GmInstance,rt:GmRuntime){
  if(!lt(rt.globals.inv,0))return;
  rt.globals.damage_cache=hpOf(rt);
- damageContact(s,rt,{defense:false,defendDenominator:2,knockoutHook:false});
+ damageContact(s,rt,{defense:false,defendDenominator:2,hooks:false});
 }
-function damageContact(s:GmInstance,rt:GmRuntime,contact:{defense:boolean;defendDenominator:number;knockoutHook:boolean}){
+/** hooks: scr_damage's enemy hooks run (NEO's unmitigated copy has none). */
+function damageContact(s:GmInstance,rt:GmRuntime,contact:{defense:boolean;defendDenominator:number;hooks:boolean}){
  const g=rt.globals,r=forChapter(rt,DAMAGE,'scr_damage');
  if(g.inv>=0||(r.godSwitch&&g.chemg_god_mode))return;
- const before=hpOf(rt);
+ const before=hpOf(rt),hook=<K extends keyof BattleHooks>(name:K):[GmInstance,NonNullable<BattleHooks[K]>][]=>contact.hooks?withHook(rt,name):[];
+ for(const [e,h] of hook('onPartyHit'))h(e,rt);
  const element=r.elements&&'element' in s&&typeof s.element==='number'?s.element:0;
  if(s.target<3&&le(g.hp[g.char[s.target]],0)){
   randomTarget(s,rt);s.target=s.mytarget;
@@ -621,16 +652,23 @@ function damageContact(s:GmInstance,rt:GmRuntime,contact:{defense:boolean;defend
   if(s.target===0&&share()<0.35){randomTarget(s,rt);s.target=s.mytarget;}
   const c=rt.byId(g.charinstance[s.target]);if(c){c.imageBlend=C.white;c.darkify=0;}
  }
+ const trueDamage=hook('dealsTrueDamage').some(([e,h])=>h(e,rt));
+ if(!trueDamage)for(const [e,h] of hook('redirectsHit'))h(e,s,rt);
+ const reduce=(slot:number,d:number)=>{let out:number|undefined;for(const [e,h] of hook('reducesHit')){const v=h(e,rt,slot,out??d);if(v!==undefined)out=v;}return out;};
  s.chartarget=3;let td=s.damage;
  if(s.target<3){
-  if(contact.defense)td=r.defense(rt,td,s.target);s.chartarget=g.char[s.target];
-  if(g.charaction[s.target]===10)td=Math.ceil(2*td/contact.defendDenominator);
-  if(r.elements)td=Math.ceil(td*elementReduction(rt,element,g.char[s.target]));
+  if(contact.defense&&!trueDamage)td=r.defense(rt,td,s.target);s.chartarget=g.char[s.target];
+  const reduced=trueDamage?undefined:reduce(s.target,td);if(reduced!==undefined)td=reduced;
+  if(!trueDamage){
+   if(g.charaction[s.target]===10)td=Math.ceil(2*td/contact.defendDenominator);
+   if(r.elements&&reduced===undefined)td=Math.ceil(td*elementReduction(rt,element,g.char[s.target]));
+  }
   if(lt(td,1))td=1;
  }
  s.tdamage=td;
  if(!rt.exists(shake))rt.create(shake,0,0);
- const hero=rt.byId(g.charinstance[s.target]);if(hero){hero.hurt=1;hero.hurttimer=0;}
+ const hero=rt.byId(g.charinstance[s.target]);
+ if(hero){hero.hurt=1;hero.hurttimer=0;if(r.yarnShake&&hero.sprite==='spr_ralseib_yarn_2')throw Error("scr_damage: Ralsei's yarn shake (scr_shakeobj) is not ported");}
  s.hpdiff=td;
  for(const w of rt.all(dmgWriter))if(w.delaytimer>=1)w.killactive=1;
  s.doomtype=-1;
@@ -639,27 +677,34 @@ function damageContact(s:GmInstance,rt:GmRuntime,contact:{defense:boolean;defend
   const ct=s.chartarget;
   if(le(g.hp[ct],0)){s.doomtype=4;g.hp[ct]-=round(td/4);s.hpdiff=round(td/4);}
   else{
+   for(const [e,h] of hook('softensHit')){const v=h(e,rt,td);if(v!==undefined){td=v;s.tdamage=td;s.hpdiff=td;}}
    g.hp[ct]-=td;
-   if(contact.knockoutHook&&le(g.hp[ct],0)&&withHook(rt,'catchesKnockout').some(([e,h])=>h(e,rt)))g.hp[ct]=1;
-   if(le(g.hp[ct],0)){s.hpdiff=Math.abs(g.hp[ct]-g.maxhp[ct]/2);s.doomtype=4;g.hp[ct]=round(-g.maxhp[ct]/2);dead(rt,s.target);}
+   if(le(g.hp[ct],0)&&hook('catchesKnockout').some(([e,h])=>h(e,rt)))g.hp[ct]=1;
+   if(le(g.hp[ct],0)){
+    if(hook('knocksOutHard').some(([e,h])=>h(e,rt,s.target))){s.doomtype=12;s.hpdiff=round(g.hp[ct]+999);g.hp[ct]=-999;dead(rt,s.target);}
+    else{s.hpdiff=Math.abs(g.hp[ct]-g.maxhp[ct]/2);s.doomtype=4;g.hp[ct]=round(-g.maxhp[ct]/2);dead(rt,s.target);}
+   }
   }
   const ci=rt.byId(g.charinstance[s.target])!;
   const w=rt.create(dmgWriter,ci.x,ci.y+ci.myheight-24);s.dmgwriter=w.id;w.damage=s.hpdiff;w.type=s.doomtype;
  }
  if(s.target===3){
+  // The Shadow Mantle's cut, once made, also spares the later heroes the element reduction (one flag in the original).
+  const mantle={cut:false};
   for(s.hpi=0;s.hpi<3;s.hpi+=1){
    s.chartarget=g.char[s.hpi];const ct=s.chartarget;
    if(ge(g.hp[ct],0)){
-    const [next,lost]=r.partyHit(rt,td,s.hpi,element);td=next;s.tdamage=td;
+    const [next,lost]=r.partyHit(rt,td,s.hpi,element,reduce,mantle);td=next;s.tdamage=td;
     g.hp[ct]-=lost;
     if(le(g.hp[ct],0))g.hp[ct]=round(-g.maxhp[0]/2);
    }
   }
  }
- g.inv=g.invc*40;
+ g.inv=g.invc*r.invFrames;
  damageCheck(rt,before);
  s.gameover=1;
  for(let i=0;i<3;i++)if(g.char[i]!==0&&gt(g.hp[g.char[i]],0))s.gameover=0;
+ if(hook('preventsGameOver').some(([e,h])=>h(e,rt)))s.gameover=0;
  if(s.gameover===1)gameOver(rt);
  if(remtarget!==-1)s.target=remtarget;
 }
@@ -668,7 +713,7 @@ export function damageAll(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;if(g.inv>=0)return;
  const before=hpOf(rt);s.remdamage=s.damage;s._temptarget=s.target;
  for(s.ti=0;s.ti<3;s.ti+=1){g.inv=-1;s.damage=s.remdamage;s.target=s.ti;if(gt(g.hp[g.char[s.ti]],0)&&g.char[s.ti]!==0)damage(s,rt);}
- g.inv=g.invc*40;s.target=s._temptarget;damageCheck(rt,before);
+ const r=forChapter(rt,DAMAGE,'scr_damage_all');g.inv=g.invc*r.invFrames;s.target=s._temptarget;if(r.allChecks)damageCheck(rt,before);
 }
 /** scr_damage_proportional: late attack contact uses current HP bands, then the old defense calculation.
  * It leaves the old selector's chosen target and source working fields on its caller. */

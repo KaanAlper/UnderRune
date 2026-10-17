@@ -31,12 +31,13 @@ export function msgNext(rt:GmRuntime,text:string){msgSet(rt,(rt.globals.msgno??0
 /** merge_colour: each channel mixed, truncated. */
 export {mergeColor};
 /** scr_mercyadd (Chapter 2): mercy is capped at 100, rings by size, and shows its number over the enemy. */
-export function mercyAdd2(caller:GmInstance,rt:GmRuntime,enemy:number,amount:number){
+/** recentOnly (Chapter 3): only a mercy number shown in the last 8 frames keeps the sound from playing again. */
+export function mercyAdd2(caller:GmInstance,rt:GmRuntime,enemy:number,amount:number,recentOnly=false){
  const g=rt.globals;g.mercymod[enemy]+=amount;
  if(g.mercymod[enemy]<0)g.mercymod[enemy]=0;
  if(g.mercymod[enemy]>=100)g.mercymod[enemy]=100;
  let play=amount>0;
- for(const w of rt.all(dmgWriter))if(w.type===5)play=false;
+ for(const w of rt.all(dmgWriter))if(w.type===5&&(!recentOnly||w.mercytimer<8))play=false;
  if(play){let pitch=0.8;if(amount<99)pitch=1;if(amount<=50)pitch=1.2;if(amount<=25)pitch=1.4;rt.sourceAudio?rt.sourceAudio.effect('snd_mercyadd',pitch,0.8):rt.sound?.('snd_mercyadd',pitch);}
  const w=rt.create(dmgWriter,g.monsterx[enemy],g.monstery[enemy]+20-g.hittarget[enemy]*20);caller.__mercydmgwriter=w.id;w.damage=amount;w.type=5;g.hittarget[enemy]+=1;
 }
@@ -122,7 +123,8 @@ export function heartColor(caller:GmInstance,rt:GmRuntime,color:'red'|'yellow'){
 }
 /** scr_bulletspawner: a bullet maker that knows its enemy, target and damage. */
 export function bulletSpawner(s:GmInstance,rt:GmRuntime,x:number,y:number,def:GmObjectDef){
- const d=rt.create(def,x,y);s.__dc=d.id;d.creator=s.myself;d.target=s.mytarget;d.damage=rt.globals.monsterat[s.myself]*5;return d;
+ const d=rt.create(def,x,y);s.__dc=d.id;d.creator=s.myself;d.target=s.mytarget;d.damage=rt.globals.monsterat[s.myself]*5;
+ if(rules(rt).bulletMakerKnowsSpawner)d.creatorid=s.id;return d;
 }
 /** Chapter 2 scr_bullet_inherit: -1 keeps the live recipient's defaults; eligible graze fields reset to zero. */
 export function bulletInherit2(caller:GmInstance,recipient:GmInstance){

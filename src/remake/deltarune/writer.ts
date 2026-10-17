@@ -126,6 +126,7 @@ const writer1:WriterPart={
  alarm2:(s,rt)=>{if(s.firstnoise===0){s.firstnoise=1;textSound(s,rt);}},
  draw:(s,rt)=>drawWriter(s,rt),
  textType:textType1,
+ user5:()=>{},
 };
 
 function drawWriter(s:GmInstance,rt:GmRuntime){
@@ -215,6 +216,7 @@ export const writer:GmObjectDef={name:'obj_writer',index:10,events:{
  alarm1:(s,rt)=>forChapter(rt,WRITER,'writer').alarm1(s,rt),
  alarm2:(s,rt)=>forChapter(rt,WRITER,'writer').alarm2(s,rt),
  draw:(s,rt)=>forChapter(rt,WRITER,'writer').draw(s,rt),
+ user5:(s,rt)=>forChapter(rt,WRITER,'writer').user5(s,rt),
 }};
 
 /** A portrait sprite by expression: prefix + 0..9, then A, B, ... (spr_face_sA is expression 10). */

@@ -4,7 +4,7 @@
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {ge,le} from '../../gm/math';
 import {bulletInit} from '../../deltarune/battle';
-import {afterimageCut,doom,lerpvar} from '../../deltarune/shared-effects';
+import {afterimageCut,doom,lerpvar,scrDoom as sharedDoom,scrLerpvar as sharedLerpvar} from '../../deltarune/shared-effects';
 
 /** The objects, with lookups through the canonical registry (`object`). */
 export function createNeoSupport(object:(name:string)=>GmObjectDef):GmObjectDef[]{
@@ -33,9 +33,7 @@ export function createNeoSupport(object:(name:string)=>GmObjectDef):GmObjectDef[
 }
 
 /** scr_doom, run by `caller`: the target is destroyed after `delay` frames. */
-export function scrDoom(rt:GmRuntime,object:(name:string)=>GmObjectDef,target:number,delay:number){
- const d=rt.create(object('obj_doom'),0,0);d.depth=0;d.alarm[0]=delay;d.target=target;return d;
-}
+export function scrDoom(rt:GmRuntime,_object:(name:string)=>GmObjectDef,target:number,delay:number){return sharedDoom(rt,target,delay);}
 /** scr_afterimage_cut, run by `s`: a copy of it that splits into quarters, kept in its afterimage variable. */
 export function scrAfterimageCut(s:GmInstance,rt:GmRuntime,object:(name:string)=>GmObjectDef){
  const a=rt.create(object('obj_afterimage_cut'),s.x,s.y);s.afterimage=a.id;
@@ -45,10 +43,6 @@ export function scrAfterimageCut(s:GmInstance,rt:GmRuntime,object:(name:string)=
 }
 /** scr_lerpvar, run by `s`: eases s[varname] from a to b over `time` frames, kept in s.___lerpvar (the instance
  * script keeps it in __lerpvar too). */
-export function scrLerpvar(s:GmInstance,rt:GmRuntime,object:(name:string)=>GmObjectDef,varname:string,a:number|string,b:number,time:number,easetype?:number,easeinout?:string){
- const l=rt.create(object('obj_lerpvar'),0,0);s.__lerpvar=l.id;
- l.target=s.id;l.varname=varname;l.pointa=a;l.pointb=b;l.maxtime=time;
- if(easetype!==undefined)l.easetype=easetype;
- if(easeinout!==undefined)l.easeinout=easeinout;
- s.___lerpvar=l.id;return l;
+export function scrLerpvar(s:GmInstance,rt:GmRuntime,_object:(name:string)=>GmObjectDef,varname:string,a:number|string,b:number,time:number,easetype?:number,easeinout?:string){
+ return sharedLerpvar(s,rt,varname,a,b,time,easetype,easeinout);
 }

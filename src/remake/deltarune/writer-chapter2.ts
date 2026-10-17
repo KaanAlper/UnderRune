@@ -9,7 +9,9 @@ import {face,faceParent} from './writer';
 import {forChapter} from './rules';
 
 type Step=(s:GmInstance,rt:GmRuntime)=>void;
-export interface WriterPart{create:Step;alarm0:Step;alarm1:Step;alarm2:Step;draw:Step;textType:Step;}
+export interface WriterPart{create:Step;alarm0:Step;alarm1:Step;alarm2:Step;draw:Step;textType:Step;
+ /** User 5: lay the text out now (Chapter 3's balloons ask for it); earlier chapters have no such event. */
+ user5:Step;}
 type Voice={font:string;color:number;rate:number;sound:string;hspace:number;vspace:number;special:number;charline?:number;shake?:number;yoff?:number;extra?:Record<string,number>};
 /** A voice, or one that depends on the game state (the dark world, the room). */
 type VoiceOf=Voice|((g:Record<string,any>,rt:GmRuntime)=>Voice);
@@ -277,4 +279,5 @@ const WRITER_CHAPTERS:Readonly<Record<number,WriterChapter>>={
  },
 };
 const wch=(rt:GmRuntime)=>forChapter(rt,WRITER_CHAPTERS,'writer');
-export const writer2:WriterPart={create,alarm0,alarm1:(s,rt)=>{if(lt(s.pos,s.length+2))textSound2(s,rt);},alarm2:(s,rt)=>{if(s.firstnoise===0){s.firstnoise=1;textSound2(s,rt);}},draw,textType:textType2};
+export const writer2:WriterPart={create,alarm0,alarm1:(s,rt)=>{if(lt(s.pos,s.length+2))textSound2(s,rt);},alarm2:(s,rt)=>{if(s.firstnoise===0){s.firstnoise=1;textSound2(s,rt);}},draw,textType:textType2,
+ user5:(s,rt)=>{if(wch(rt).later&&s.formatted===0)format(s,rt);}};

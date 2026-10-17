@@ -6,7 +6,7 @@ import {button1_p,monsterPop,monsterDefeat} from './controller';
 import {drawBodyPart} from './chapter2-battle';
 import {enemyBlcon2} from './chapter2-objects';
 import {writer,msgFace} from './writer';
-import {le,round} from '../gm/math';
+import {eq,gt,le,lt,round} from '../gm/math';
 import {sourceText} from '../host/text';
 export {monsterPop};
 /** Source scr_monster_add/statreset/makeinstance. Summons use a real vacant monster slot and its ACT tables. */
@@ -67,10 +67,16 @@ export function recruitEnemy(s:GmInstance,rt:GmRuntime){
 export function monsterMakeTired(rt:GmRuntime,enemy:number){rt.globals.monstercomment[enemy]=sourceText('scr_monster_make_tired_slash_scr_monster_make_tired_gml_1_0');rt.globals.monsterstatus[enemy]=1;}
 export function enemyHurtTiredAfterDamage(s:GmInstance,rt:GmRuntime,ratio:number){if(le(rt.globals.monsterhp[s.myself],rt.globals.monstermaxhp[s.myself]*ratio))monsterMakeTired(rt,s.myself);}
 export function enemyDrawIdleGeneric(s:GmInstance,rt:GmRuntime,rate:number){if(s.state!==0)return;s.fsiner+=1;s.siner+=rate;s.thissprite=s.idlesprite;if(rt.globals.mercymod[s.myself]>=rt.globals.mercymax[s.myself])s.thissprite=s.sparedsprite;drawBodyPart(s,rt,s.thissprite,s.siner,s.x,s.y,s.imageXscale,s.imageYscale,s.imageAngle,s.imageBlend,s.imageAlpha);}
-export function enemyDrawHurtGeneric(s:GmInstance,rt:GmRuntime){
- s.hurttimer-=1;if(s.hurttimer<0){s.state=0;return;}
+/** scr_enemy_hurt (Chapter 3's script of the generic hurt draw's first half): the hurt time runs out, or the enemy
+ * shakes (and runs off once defeated). False once it is over. */
+export function enemyHurt(s:GmInstance,rt:GmRuntime):boolean{
+ s.hurttimer-=1;if(s.hurttimer<0){s.state=0;return false;}
  if(rt.globals.monster[s.myself]===0)defeatRun(s,rt);
  s.hurtshake+=1;if(s.hurtshake>1){if(s.shakex>0)s.shakex-=1;if(s.shakex<0)s.shakex+=1;s.shakex=-s.shakex;s.hurtshake=0;}
+ return true;
+}
+export function enemyDrawHurtGeneric(s:GmInstance,rt:GmRuntime){
+ if(!enemyHurt(s,rt))return;
  rt.drawSprite(s.hurtsprite,0,s.x+s.shakex+s.hurtspriteoffx,s.y+s.hurtspriteoffy,2,2,0,s.imageBlend,1);
 }
 export function terminateWriter(s:GmInstance,rt:GmRuntime){
@@ -119,3 +125,23 @@ export function enemyObjectInit(s:GmInstance,rt:GmRuntime){
  s.depth=90-(s.y-rt.view.y)/50;
 }
 
+/** The standard enemy's User 3 (obj_baseenemy's copy, which most enemies keep): the battle's rewards and how each
+ * enemy was beaten (flag 51+n: 1 violence, 2 spared, 3 pacified, 5 Susie, 6 frozen) into the chapter's tallies. */
+export function recordDefeat(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,f=g.flag,me=s.myself,is=(a:number,b:number)=>eq(a,b);
+ g.monstergold[3]+=g.monstergold[me];g.monsterexp[3]+=g.monsterexp[me];
+ if(is(f[51+me],0)){f[51+me]=2;if(le(g.monsterhp[me],0))f[51+me]=1;}
+ if(is(f[51+me],1)){f[40]+=1;if(is(s.fatal,1))f[44]++;}
+ if(is(f[51+me],2))f[41]+=1;
+ if(is(f[51+me],3))f[42]+=1;
+ if(is(f[51+me],5))f[43]+=1;
+ if(is(f[51+me],6)){f[45]+=1;g.monstergold[3]+=24;}
+ s._amt_add=0;s._frozened=0;s._violenced=0;s._spared=0;s._pacified=0;
+ for(s.d_i=0;lt(s.d_i,3);s.d_i+=1){
+  const v=f[51+s.d_i];
+  if(!is(v,0))s._amt_add+=1;if(is(v,1))s._violenced+=1;if(is(v,2))s._spared+=1;if(is(v,3))s._pacified+=1;if(is(v,6))s._frozened+=1;
+ }
+ if(gt(s._frozened,0))f[50]=6;if(gt(s._pacified,0))f[50]=3;if(gt(s._spared,0))f[50]=2;if(gt(s._violenced,0))f[50]=1;
+ if(is(f[50],6))f[926]++;
+ if(!is(f[54],0)){f[f[54]]=f[50];f[54]=0;}
+}

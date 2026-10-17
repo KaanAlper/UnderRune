@@ -10,7 +10,7 @@ import {chooseQueenAttack,advanceQueenPhase} from './chooser';
 import {updateQueenActs} from './menu';
 import {createQueenSupport} from './support';
 import {createQueenShield} from './shield';
-import {createBattleMarker} from './guard-peek';
+import {createBattleMarker} from '../../deltarune/guard-peek';
 import type {BattleHooks} from '../../deltarune/rules';
 import {createQueenBulletController} from './controller';
 

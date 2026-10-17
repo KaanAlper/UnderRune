@@ -3,7 +3,7 @@
 // and what spells do (scr_spell, scr_spelltext): healing, Pacify, Rude Buster, SPARE, items.
 import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
-import {f32,pointDirection,pointDistance,round} from '../gm/math';
+import {eq,f32,ge,pointDirection,pointDistance,round} from '../gm/math';
 import {afterImage,afterimage,dmgWriter,heroKris,heroParent,heroRalsei,heroSusie,heroNoelle,marker,mergeColor,monsterParent,shake,tensionHeal} from './battle';
 import {recruitAnim} from './chapter2-enemy';
 import {burstBolt,basicAttack} from './player-effects';
@@ -54,6 +54,7 @@ const NOELLE_CH2:Record<string,string>={normal:'spr_noelle_walk_right_dw',idle:'
 const HERO_LOOKS:Record<number,{sprites:Record<string,Record<string,string>>;frames:typeof FRAMES}>={
  1:{sprites:SPRITES,frames:FRAMES},
  2:{sprites:{...SPRITES,obj_heroralsei:RALSEI_CH2,obj_heronoelle:NOELLE_CH2},frames:{...FRAMES,obj_heroralsei:[8,12,6,6,7,10,0.5,52,86],obj_heronoelle:[7,11,4,9,0,6,0.5,52,86]}},
+ 3:{sprites:{...SPRITES,obj_heroralsei:RALSEI_CH2,obj_heronoelle:NOELLE_CH2},frames:{...FRAMES,obj_heroralsei:[7,10,6,6,7,10,0.5,52,86],obj_heronoelle:[7,10,4,9,0,6,0.5,52,86]}},
 };
 function heroCreate(s:GmInstance,rt:GmRuntime){
  Object.assign(s,{char:0,myself:0,points:0,becomeflash:0,state:0,flash:0,siner:0,fsiner:0,attacktimer:0,attacked:0,combatdarken:1,darkentimer:0,darkify:0,
@@ -65,11 +66,16 @@ function heroCreate(s:GmInstance,rt:GmRuntime){
  if(s.object.name==='obj_herosusie'&&rt.globals.charweapon?.[2]===0){s.idlesprite='spr_susieb_idle_unarmed';s.attackreadysprite='spr_susieb_attackready_unarmed';s.attacksprite='spr_susieb_attack_unarmed';}
  [s.actframes,s.actreturnframes,s.attackframes,s.itemframes,s.defendframes,s.spellframes,s.attackspeed,s.mywidth,s.myheight]=f;
  s.victoryframes=rt.bank.get(s.victorysprite)?.frames??1;
- if(s.object.name==='obj_heronoelle'){
+ if(s.object.name==='obj_heronoelle'&&!heroParts(rt).later){
   s._sideb=sideBPhase(rt)>=2?1:0;if(rt.globals.encounterno===73)s.idlesprite='spr_noelle_shocked_dw';
   if(s._sideb===1)Object.assign(s,{attackreadysprite:'spr_noelleb_idle',attacksprite:'spr_noelleb_spell',attackframes:6,victorysprite:'spr_noelleb_pray',victoryframes:10,defendframes:5,defendsprite:'spr_noelleb_defend_sideb',hurtsprite:'spr_noelleb_hurt_sideb',idlesprite:'spr_noelleb_idle_sideb'});
  }
  s.sprite=s.idlesprite;
+ if(heroParts(rt).later){
+  if(rt.instances.some(i=>i.live&&i.object.name==='obj_tenna_board4_enemy'))throw Error("Chapter 3 heroes in Tenna's board battle are not ported");
+  // Susie's fallen sprite in encounter 115 comes from the Roaring Knight's Create (and his defeatSprite hook).
+  Object.assign(s,{maxframes:0,force:0,finishattacktimer:0,spelltimer:0,gotupcon:0,gachapondead:0,thissprite:s.idlesprite,actspriteobject:-1,caster:0});
+ }
 }
 function heroDraw(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself as number;
@@ -140,7 +146,7 @@ function heroDraw(s:GmInstance,rt:GmRuntime){
  }
  s.specdraw=0;
  if(s.becomeflash===0)s.flash=0;
- if(g.targeted[me]===1){if(g.mnfight===1)rt.drawSprite('spr_chartarget',s.siner/10,s.x,s.y,2,2,0,C.white,1);}
+ if(g.targeted[me]===1){if(g.mnfight===1&&heroParts(rt).targetMarker)rt.drawSprite('spr_chartarget',s.siner/10,s.x,s.y,2,2,0,C.white,1);}
  else if(s.combatdarken===1&&rt.instances.some(i=>i.live&&i.object.name==='obj_darkener')){
   if(s.darkify===1){if(s.darkentimer<15)s.darkentimer+=1;s.imageBlend=mergeColor(C.white,C.black,s.darkentimer/30);}
  }
@@ -212,7 +218,145 @@ function heroSpell(s:GmInstance,rt:GmRuntime){
  g.faceaction[me]=0;if(monsterPop(rt)>0)castSpell(s,rt,g.charspecial[me],me);
  s.state=0;s.attacktimer=0;
 }
-const heroEvents={create:heroCreate,draw:heroDraw,alarm1:heroHit,alarm4:heroSpell};
+// ---- Chapter 3: the state logic moved to Step, Draw only draws, and the hit and spell alarms became timers ----
+function heroStep3(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself as number;
+ if(g.hp[g.char[me]]>0){
+  if(s.gachapondead){s.gachapondead=0;s.x=s.xstart;s.y=s.ystart;}
+  if(g.myfight===3&&g.faceaction[me]===6&&s.state!==8)s.state=6;
+  if(s.state===0&&s.hurt===0){
+   s.acttimer=0;s.thissprite=s.idlesprite;
+   if(g.faceaction[me]===1)s.thissprite=s.attackreadysprite;
+   if(g.faceaction[me]===3)s.thissprite=s.itemreadysprite;
+   if(g.faceaction[me]===2)s.thissprite=s.spellreadysprite;
+   if(g.faceaction[me]===6)s.thissprite=s.actreadysprite;
+   if(g.charcond[me]===5){s.thissprite=s.defeatsprite;g.faceaction[me]=9;}
+   if(g.faceaction[me]===4){s.thissprite=s.defendsprite;s.index=s.defendtimer;if(s.defendtimer<s.defendframes)s.defendtimer+=0.5;}
+   else{s.defendtimer=0;s.index=s.siner/5;}
+   s.siner+=1;
+  }
+  if(s.state===1&&s.hurt===0){
+   s.siner+=1;
+   if(s.attacked===0){
+    const pitch=isHero(s,'obj_heroralsei')?1.15:isHero(s,'obj_herosusie')?0.9:isHero(s,'obj_heronoelle')?1.5:1;
+    rt.sound?.('snd_laz_c',pitch,true);
+    if(s.points===150){
+     rt.sound?.('snd_criticalswing',1,true);
+     for(let i=0;i<3;i++){
+      const y=s.y+30+rt.random.random(30),x=s.x+s.mywidth+rt.random.random(50);
+      const a=rt.create(afterimage,x,y);s.anim=a.id;a.sprite='spr_lightfairy';a.imageSpeed=0.25;a.depth=-20;a.imageXscale=2;a.imageYscale=2;a.hspeed=2+rt.random.random(4);a.friction=-0.25;
+     }
+    }
+    s.attacked=1;s.finishattacktimer=11;
+   }
+   s.imageIndex=s.attacktimer<s.attackframes?s.attacktimer:s.attackframes;
+   s.thissprite=s.attacksprite;s.index=s.imageIndex;s.attacktimer+=s.attackspeed;
+   if(s.force===1&&eq(s.imageIndex,s.attackframes)){s.force=0;s.state=0;s.attacktimer=0;s.attacked=0;}
+  }
+  if(s.state===2&&s.hurt===0){
+   s.siner+=1;
+   if(s.itemed===0){s.itemed=1;s.spelltimer=16;}
+   s.imageIndex=s.attacktimer<s.spellframes&&s.spellframes!==0?s.attacktimer:s.spellframes;
+   if(monsterPop(rt)===0)s.attacktimer=0;
+   s.thissprite=s.spellsprite;s.index=s.imageIndex;s.attacktimer+=0.5;
+   if(s.force===1&&eq(s.imageIndex,s.attackframes)){s.force=0;s.state=0;s.attacktimer=0;s.itemed=0;}
+  }
+  if(s.state===4&&s.hurt===0){
+   s.siner+=1;
+   if(s.itemed===0){s.itemed=1;s.spelltimer=16;}
+   s.imageIndex=s.attacktimer<s.itemframes?s.attacktimer:s.itemframes;
+   if(monsterPop(rt)===0)s.attacktimer=0;
+   s.index=s.imageIndex;s.thissprite=s.itemsprite;s.attacktimer+=0.5;
+  }
+  if(s.state===6){
+   if(g.myfight===3){if(s.acttimer<s.actframes)s.acttimer+=0.5;}else s.acttimer+=0.5;
+   s.thissprite=s.actsprite;s.index=s.acttimer;
+   if(s.acttimer>=s.actreturnframes){s.acttimer=0;s.state=0;g.faceaction[me]=0;}
+  }
+  if(s.state===7){
+   s.hurt=0;s.hurttimer=0;
+   if(s._sideb===1&&s._victoried===0)throw Error("Noelle's side B victory is not ported");
+   if(s.victoryanim<s.victoryframes){s.thissprite=s.victorysprite;s.index=s.victoryanim;s.victoryanim+=0.334;}
+   else{s.thissprite=s.normalsprite;s.index=0;}
+  }
+  if(s.state===8&&ge(s.imageIndex+s.imageSpeed,s.maxframes)&&s.maxframes!==0){s.state=0;s.hurt=0;s.attacktimer=0;s.maxframes=0;}
+  if(s.hurt===1&&g.hp[g.char[me]]>0){
+   s.hurtindex=Math.min(2,s.hurttimer/2);
+   if(g.charcond[me]===5){g.faceaction[me]=5;g.charmove[me]=1;g.charcond[me]=0;}
+   if(g.faceaction[me]===0)g.faceaction[me]=5;
+   if(s.hurttimer>15){s.hurttimer=0;s.hurt=0;if(g.faceaction[me]===5)g.faceaction[me]=0;}
+   s.hurttimer+=1;
+  }
+  if(s.gotupcon===1)s.gotupcon=0;
+ }else{
+  g.charcond[me]=0;s.hurttimer=0;s.hurt=0;
+  for(const [e,h] of withHook(rt,'defeatSprite')){const sprite=h(e,s,rt);if(sprite!==undefined)s.defeatsprite=sprite;}
+  s.thissprite=s.defeatsprite;s.index=0;s.siner+=1;
+ }
+ if(g.targeted[me]!==1&&s.combatdarken===1&&rt.instances.some(i=>i.live&&i.object.name==='obj_darkener')&&s.darkify===1){
+  if(s.darkentimer<15)s.darkentimer+=1;s.imageBlend=mergeColor(C.white,C.black,s.darkentimer/30);
+ }
+ if(s.darkify===0){if(s.darkentimer>0)s.darkentimer-=3;s.imageBlend=mergeColor(C.white,C.black,s.darkentimer/30);}
+ if(s.poisonamount>0){
+  s.poisontimer++;
+  if(s.poisontimer>=10){if(g.hp[g.char[me]]>1){g.hp[g.char[me]]--;s.poisonamount--;}else s.poisonamount=0;s.poisontimer=0;}
+ }
+ if(s.finishattacktimer>0){s.finishattacktimer--;if(s.finishattacktimer===0)heroHit3(s,rt);}
+ if(s.spelltimer>0){
+  s.spelltimer--;
+  if(s.spelltimer===0){if(s.spellframes>0)g.faceaction[me]=0;if(monsterPop(rt)>0)castSpell(s,rt,g.charspecial[me],me);s.state=0;s.attacktimer=0;}
+ }
+}
+function heroDraw3(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself as number,scale=s.normalsprite==='spr_gameshow_drowningRalsei_ralsei_origin_edit'?1:2;
+ if(s.hurt===1&&s.state!==8&&g.hp[g.char[me]]>0){
+  s.specdraw=1;
+  if(g.faceaction[me]!==4)rt.drawSprite(s.hurtsprite,s.hurtindex,s.x-20+s.hurtindex*10,s.y,scale,scale,0,s.imageBlend,s.imageAlpha);
+  else{s.thissprite=s.defendsprite;s.index=s.defendtimer;rt.drawSprite(s.defendsprite,s.defendtimer,s.x-20+s.hurtindex*10,s.y,scale,scale,0,s.imageBlend,s.imageAlpha);}
+ }
+ if(s.specdraw===0&&s.state!==8){
+  // The blend is reset to white before drawing, so the darkening the Step computes does not show.
+  s.sprite=s.thissprite;s.imageIndex=s.index;s.imageBlend=C.white;
+  rt.drawSprite(s.thissprite,s.index,s.x,s.y,scale,scale,0,s.imageBlend,s.imageAlpha);
+  if(s.flash===1){s.fsiner+=1;rt.drawSpriteFog(s.thissprite,s.index,s.x,s.y,scale,scale,0,C.white,-Math.cos(s.fsiner/5)*0.4+0.6);}
+ }
+ if(s.state===8)rt.drawSelf(s);
+ s.specdraw=0;if(s.becomeflash===0)s.flash=0;s.becomeflash=0;
+}
+/** finishattacktimer: the FIGHT hit lands through scr_damage_enemy; the enemy may scale it or block it. */
+function heroHit3(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,me=s.myself as number;
+ g.faceaction[me]=0;retarget(s,rt,me);
+ const blocked=withHook(rt,'blocksFight').some(([e,h])=>h(e,rt));
+ if(s.cancelattack!==0)return;
+ const t=g.chartarget[me];
+ s.damage=round(g.battleat[me]*s.points/20-g.monsterdf[t]*3);
+ for(const [e,h] of withHook(rt,'scalesFightDamage'))s.damage=h(e,s,rt,s.damage);
+ damageEnemy(s,rt,t,s.damage);
+ const dm=rt.byId(s.dm)!;dm.type=s.char===4?6:s.char-1;dm.delay=8;
+ if(s.damage>0){
+  tensionHeal(rt,round(s.points/10));
+  if(blocked)for(const [e,h] of withHook(rt,'onFightBlocked'))h(e,rt);
+  else{
+   const y=g.monstery[t]+rt.random.random(6),x=g.monsterx[t]+rt.random.random(6);
+   const a=rt.create(basicAttack,x,y),fx=HIT_EFFECTS[s.object.name];s.attack=a.id;
+   if(fx){a.sprite=fx.sprite;a.imageSpeed=fx.speed;a.maxindex=4;if(fx.sound)rt.sound?.(fx.sound);if(fx.shake)rt.create(shake,0,0);}
+   if(g.charweapon[g.char[me]]===26){a.sprite='spr_attack_shard';a.imageSpeed=0.334;}
+   if(s.points===150){a.imageXscale=2.5;a.imageYscale=2.5;}
+  }
+ }
+}
+/** The heroes' events per chapter, and what else changed: the target marker over a targeted hero is drawn only in
+ * Chapter 1, and Chapter 3 (later) has the new fields and timers. */
+interface HeroParts{readonly later:boolean;readonly targetMarker:boolean;readonly events:Partial<Record<'step'|'draw'|'alarm1'|'alarm4'|'user0',(s:GmInstance,rt:GmRuntime)=>void>>}
+const HERO_PARTS:Readonly<Record<number,HeroParts>>={
+ 1:{later:false,targetMarker:true,events:{draw:heroDraw,alarm1:heroHit,alarm4:heroSpell}},
+ 2:{later:false,targetMarker:false,events:{draw:heroDraw,alarm1:heroHit,alarm4:heroSpell}},
+ 3:{later:true,targetMarker:false,events:{step:heroStep3,draw:heroDraw3,user0:()=>{throw Error("Chapter 3 heroes' User 0 (Tenna's and Shutta's battles) is not ported");}}},
+};
+function heroParts(rt:GmRuntime){return forChapter(rt,HERO_PARTS,'obj_heroparent');}
+const heroEvent=(name:'step'|'draw'|'alarm1'|'alarm4'|'user0')=>(s:GmInstance,rt:GmRuntime)=>heroParts(rt).events[name]?.(s,rt);
+const heroEvents={create:heroCreate,step:heroEvent('step'),draw:heroEvent('draw'),alarm1:heroEvent('alarm1'),alarm4:heroEvent('alarm4'),user0:heroEvent('user0')};
 export const HERO_DEFS:readonly GmObjectDef[]=[heroKris,heroSusie,heroRalsei,heroNoelle].map(base=>({...base,parent:base,events:heroEvents}));
 
 // ---- Healing and damage helpers ----
@@ -267,7 +411,7 @@ export function damageEnemy(s:GmInstance,rt:GmRuntime,enemy:number,amount:number
  if(s.caster===5)dm.type=5;
  dm.damage=amount;
  g.monsterhp[enemy]-=amount;
- if(amount>0&&m){m.shakex=9;m.state=3;m.hurttimer=30;m.hurtamt=amount;}
+ if(amount>0&&m){m.shakex=9;m.state=3;m.hurttimer=30;for(const [e,h] of withHook(rt,'onEnemyDamaged'))h(e,rt,amount);m.hurtamt=amount;}
  g.hittarget[enemy]+=1;
  if(amount===0&&m){m.hurtamt=0;if(m.hurttimer<=15&&m.candodge===1){m.dodgetimer=0;m.state=4;}}
  if(g.monsterhp[enemy]<=0&&m&&defeatable(rt))monsterDefeat(m,rt);
@@ -480,9 +624,12 @@ export function spellText(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
 /** What the bar does differently per chapter. Chapter 2 renames the method variable (my_method), draws the lane lines
  * only when someone fights and from the boxes on, a pixel thinner, sits the boxes a pixel lower, gives Noelle a yellow
  * box, and starts the closing fade at the bar's top. Box colours: [colour, pressbuffer slot] per party member. */
-const FIGHT_BAR:Record<number,{method:'mymethod'|'my_method';lanesWhenFighting:boolean;laneX:number;laneHeight:number;boxY:number;fadeTop:number;boxes:Record<number,[number,number]>}>={
- 1:{method:'mymethod',lanesWhenFighting:false,laneX:0,laneHeight:2,boxY:0,fadeTop:-1,boxes:{1:[0xff0000,1],2:[C.purple,2],3:[C.green,3]}},
- 2:{method:'my_method',lanesWhenFighting:true,laneX:77,laneHeight:1,boxY:1,fadeTop:0,boxes:{1:[0xff0000,1],2:[C.purple,2],3:[C.green,3],4:[C.yellow,2]}},
+/** boxY: the tops of the two target box outlines. Chapter 3 also sets and counts down the fourth press buffer, and leaves an
+ * enemy turn that has already begun (mnfight 1.5 or 2) as it is when the bar closes. */
+const FIGHT_BAR:Record<number,{method:'mymethod'|'my_method';lanesWhenFighting:boolean;laneX:number;laneHeight:number;boxY:[number,number];fadeTop:number;boxes:Record<number,[number,number]>;fourBuffers:boolean;keepsEnemyTurn:boolean}>={
+ 1:{method:'mymethod',lanesWhenFighting:false,laneX:0,laneHeight:2,boxY:[0,1],fadeTop:-1,boxes:{1:[0xff0000,1],2:[C.purple,2],3:[C.green,3]},fourBuffers:false,keepsEnemyTurn:false},
+ 2:{method:'my_method',lanesWhenFighting:true,laneX:77,laneHeight:1,boxY:[1,2],fadeTop:0,boxes:{1:[0xff0000,1],2:[C.purple,2],3:[C.green,3],4:[C.yellow,2]},fourBuffers:false,keepsEnemyTurn:false},
+ 3:{method:'my_method',lanesWhenFighting:true,laneX:77,laneHeight:1,boxY:[0,2],fadeTop:0,boxes:{1:[0xff0000,1],2:[C.purple,2],3:[C.green,3],4:[C.yellow,2]},fourBuffers:true,keepsEnemyTurn:true},
 };
 /** A bolt is hit: points by how close it was, and a burst coloured by it (yellow and bigger for a perfect hit). */
 function burstBoltAt(s:GmInstance,rt:GmRuntime,bolt:number,bc:number){
@@ -506,7 +653,9 @@ function boltCheck(s:GmInstance,rt:GmRuntime,who:number){
 }
 /** scr_boltcheck_onebutton: Z hits the nearest bolt within reach, and a bolt tied with it. */
 function boltCheckOneButton(s:GmInstance,rt:GmRuntime){
- s.dualbolt=-1;s.dualboltid=-1;s.pressbuffer[0]=5;s.pressbuffer[1]=5;s.pressbuffer[2]=5;s.qualifybolt=-1;s.close=99;s.topclose=999;
+ s.dualbolt=-1;s.dualboltid=-1;s.pressbuffer[0]=5;s.pressbuffer[1]=5;s.pressbuffer[2]=5;
+ if(forChapter(rt,FIGHT_BAR,'scr_boltcheck_onebutton').fourBuffers)s.pressbuffer[3]=5;
+ s.qualifybolt=-1;s.close=99;s.topclose=999;
  for(s.i=0;s.i<s.bolttotal;s.i+=1)if(s.boltalive[s.i]===1){
   s.close=s.boltframe[s.i]-s.boltx;
   if(s.close<15&&s.close>-5){
@@ -591,6 +740,7 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
   }
  },
  draw:(s,rt)=>{
+  if(withHook(rt,'hidesBattleHud').some(([e,h])=>h(e,rt)))return;
   const g=rt.globals,d=rt.drawState,bar=forChapter(rt,FIGHT_BAR,'obj_attackpress');
   s.maxdelaytimer+=1;
   if(s.spelluse===1&&monsterPop(rt)>0)for(s.xyz=0;s.xyz<3;s.xyz+=1)if(s.maxdelaytimer===s.spelldelay[s.xyz]){
@@ -607,8 +757,8 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
     d.color=s.bcolor;s.j=g.char[i];s.fullbox=0;
     const box=bar.boxes[s.j];
     if(box){d.color=box[0];if(s.pressbuffer[box[1]]>0)d.color=mergeColor(box[0],C.white,s.pressbuffer[box[1]]/5);}
-    rt.drawRect(s.x+78,s.y+38*i+bar.boxY,s.x+80+15*s.boltspeed,s.y+38*i+36,true);
-    rt.drawRect(s.x+79,s.y+38*i+1+bar.boxY,s.x+80+15*s.boltspeed-1,s.y+38*i+35,true);
+    rt.drawRect(s.x+78,s.y+38*i+bar.boxY[0],s.x+80+15*s.boltspeed,s.y+38*i+36,true);
+    rt.drawRect(s.x+79,s.y+38*i+bar.boxY[1],s.x+80+15*s.boltspeed-1,s.y+38*i+35,true);
     rt.drawSprite('spr_pressfront',s.j-1,s.x,s.y+38*i);
     if(g.flag[13]===0)rt.drawSprite('spr_pressfront_b',0,s.x,s.y+38*i);
     if(g.flag[13]===1)rt.drawSprite('spr_pressfront_b',i,s.x,s.y+38*i);
@@ -640,7 +790,7 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
     if(button3_p(rt)&&s.havechar[2]===1)boltCheck(s,rt,2);
    }else if(button1_p(rt))boltCheckOneButton(s,rt);
   }else{s.fakefade=1;if(s.posttimer<s.timermax-35)s.posttimer=s.timermax-34;}
-  s.imagetimer+=1;s.boltx+=1;s.pressbuffer[0]-=1;s.pressbuffer[1]-=1;s.pressbuffer[2]-=1;
+  s.imagetimer+=1;s.boltx+=1;s.pressbuffer[0]-=1;s.pressbuffer[1]-=1;s.pressbuffer[2]-=1;if(bar.fourBuffers)s.pressbuffer[3]-=1;
   if(s.imagetimer>1)s.imagetimer=0;
   s.goahead=0;
   if((s.attacked[0]===1||s.havechar[0]===0)&&(s.attacked[1]===1||s.havechar[1]===0)&&(s.attacked[2]===1||s.havechar[2]===0))s.goahead=1;
@@ -656,7 +806,7 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
     s.fade=1;
     for(const h of rt.all(heroParent)){if(h.state===1)h.state=0;h.attacked=0;h.itemed=0;}
     s.techwon=0;if(monsterPop(rt)===0)s.techwon=1;
-    if(s.techwon===0){g.mnfight=1;g.myfight=-1;}else winCombat(rt);
+    if(s.techwon===0){if(!bar.keepsEnemyTurn||(g.mnfight!==1.5&&g.mnfight!==2))g.mnfight=1;g.myfight=-1;}else winCombat(rt);
    }
   }
   if(s.fade===1||s.fakefade===1){
@@ -668,7 +818,7 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
 
 // ---- Spells and items, one caster after another ----
 /** Per chapter: Chapter 2's spell phase marks one encounter (92) as funny each step. */
-const SPELL_PHASE:Record<number,{funnyEncounter?:number}>={1:{},2:{funnyEncounter:92}};
+const SPELL_PHASE:Record<number,{funnyEncounter?:number}>={1:{},2:{funnyEncounter:92},3:{funnyEncounter:92}};
 export const spellPhase:GmObjectDef={name:'obj_spellphase',index:308,events:{
  create:s=>{s.spelltimer=0;s.spellmax=40;s.spelltotal=0;s.char=0;s.castyet=0;s.re_castyet=0;s.active=0;s.alarm[0]=5;},
  alarm0:(s,rt)=>{
@@ -759,7 +909,7 @@ export const pacifySpell:GmObjectDef={name:'obj_pacifyspell',index:298,events:{
 /** Per chapter: from Chapter 2 Rude Buster also works outside battle (battlemode 0: Susie absent from the battle, or
  * not fighting), where it flies at its target's middle and only flashes it. (GIGA Queen's shield, which takes the bolt
  * in Chapter 2, belongs to her port.) */
-const RUDE_BUSTER:Record<number,{battlemode:boolean}>={1:{battlemode:false},2:{battlemode:true}};
+const RUDE_BUSTER:Record<number,{battlemode:boolean}>={1:{battlemode:false},2:{battlemode:true},3:{battlemode:true}};
 export const rudeBusterAnim:GmObjectDef={name:'obj_rudebuster_anim',index:303,sprite:'spr_susie_rudebuster',events:{
  create:(s,rt)=>{
   s.t=0;s.imageSpeed=0;s.target=9897887;s.imageXscale=2;s.imageYscale=2;s.damage=1;s.caster=0;s.star=0;
@@ -866,6 +1016,7 @@ const DEFEAT_RUN:Record<number,(s:GmInstance,rt:GmRuntime)=>boolean>={
   if(s.fatal===1)throw Error('scr_defeatrun: a fatal defeat (obj_deathanim) is not ported yet');
   return false;
  },
+ 3:(s,rt)=>DEFEAT_RUN[2](s,rt),
 };
 /** scr_defeatrun, run by the enemy: it runs off as obj_defeatanim (kept in its defeatanim), and is gone. */
 export function defeatRun(s:GmInstance,rt:GmRuntime){

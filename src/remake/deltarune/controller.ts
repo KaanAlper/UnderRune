@@ -5,7 +5,7 @@
 // HUD and script parts dispatch through explicit tables alongside this component.
 import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
-import {eq,gt,le,lt,round} from '../gm/math';
+import {eq,gt,le,lerp,lt,round} from '../gm/math';
 import {KEY,battleController as controllerBase,bulletGenParent,bulletParent,darkener,dmgWriter,heart,heroParent,mergeColor,monsterParent,returnHeart,tensionHeal} from './battle';
 import {battleText,face,faceParent,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
@@ -63,6 +63,7 @@ export function randomTarget(s:GmInstance,rt:GmRuntime){
 const MERCY_ADD:Record<number,(caller:GmInstance,rt:GmRuntime,enemy:number,amount:number)=>void>={
  1:(_caller,rt,enemy,amount)=>{const g=rt.globals;g.mercymod[enemy]+=amount;if(g.mercymod[enemy]<0)g.mercymod[enemy]=0;},
  2:mercyAdd2,
+ 3:(caller,rt,enemy,amount)=>mercyAdd2(caller,rt,enemy,amount,true),
 };
 export function mercyAdd(caller:GmInstance,rt:GmRuntime,enemy:number,amount:number){forChapter(rt,MERCY_ADD,'scr_mercyadd')(caller,rt,enemy,amount);}
 /** scr_charcan: can this party slot still choose a command? */
@@ -150,6 +151,8 @@ export function nextHero(s:GmInstance,rt:GmRuntime){
   else endTurn(s,rt);
  }
  if(g.charturn===1&&s.moveswapped===0){s.moveswapped=1;if(charCan(s,rt,2)&&g.acting[1]===0)g.charturn=2;else endTurn(s,rt);}
+ if(rules(rt).commandRow3&&g.charturn===2&&rt.instances.some(i=>i.live&&i.object.name==='obj_heroralsei'&&(i.sprite==='spr_ralseib_yarn_1'||i.sprite==='spr_ralseib_yarn_2')))
+  throw Error("scr_nexthero: Ralsei tied up in yarn (Rouxls's battle) is not ported");
  if(g.charturn===2&&s.moveswapped===0)endTurn(s,rt);
  if(s.moveswapped===1)g.bmenuno=0;
  if(g.charturn>0){g.temptension[g.charturn]=g.tension;for(s.i=0;s.i<12;s.i++)s.tempitem[s.i][g.charturn]=s.tempitem[s.i][s.prevturn];}
@@ -163,6 +166,7 @@ export function prevHero(s:GmInstance,rt:GmRuntime){
   const t=g.charturn;g.bmenuno=0;g.faceaction[t]=0;g.chartarget[t]=0;g.charaction[t]=0;g.charspecial[t]=0;s.movenoise=1;
   controllerScripts(rt).undoAct(s,rt);
  }
+ if(rules(rt).commandRow3&&s.idefendedthisturn>0){s.idefendedthisturn--;s.mercytotal-=40;}
  if(g.charturn===0){
   for(const m of rt.all(monsterParent))m.acting=0;
   g.acting[0]=0;g.acting[1]=0;g.acting[2]=0;g.faceaction[1]=0;g.chartarget[1]=0;g.charaction[1]=0;g.charspecial[1]=0;g.faceaction[2]=0;
@@ -176,6 +180,7 @@ function endTurn(s:GmInstance,rt:GmRuntime){
  for(s.i=0;s.i<12;s.i++)for(s.j=0;s.j<3;s.j++)s.tempitem[s.i][s.j]=g.item[s.i];
  s.moveswapped=0;
  destroyAll(rt,writer);destroyAll(rt,face);for(const f of smallFaces(rt))rt.destroy(f);
+ if(rules(rt).commandRow3)s.idefendedthisturn=0;
  g.attacking=0;
  for(let i=0;i<3;i++){
   if(g.charauto[g.char[i]]===1&&g.hp[g.char[i]]>0){if(g.monster[2]===1)g.chartarget[i]=2;if(g.monster[1]===1)g.chartarget[i]=1;if(g.monster[0]===1)g.chartarget[i]=0;}
@@ -188,7 +193,7 @@ function endTurn(s:GmInstance,rt:GmRuntime){
 /** scr_nextact: enemies call this after the current ACT's writer/animation completes. */
 /** After an ACT, per chapter: Chapter 1 goes on to the attack phase; Chapter 2's scr_nextact first hands over to the
  * next hero's single ACT and says whether the attack phase starts. */
-const NEXT_ACT:Record<number,(rt:GmRuntime,caller:GmInstance)=>boolean>={1:()=>true,2:nextActChapter2};
+const NEXT_ACT:Record<number,(rt:GmRuntime,caller:GmInstance)=>boolean>={1:()=>true,2:nextActChapter2,3:nextActChapter2};
 export function nextAct(rt:GmRuntime,caller:GmInstance){if(forChapter(rt,NEXT_ACT,'scr_nextact')(rt,caller))attackPhase(rt);}
 /** scr_attackphase: spells and items first (obj_spellphase), then the FIGHT bar (obj_attackpress). */
 export function attackPhase(rt:GmRuntime){
@@ -235,7 +240,7 @@ export function mnEndTurn(s:GmInstance,rt:GmRuntime){
  for(s.i=0;s.i<3;s.i++){
   const i=s.i;withId(rt,g.charinstance[i],h=>{h.tu=0;});
   s.hptarget=g.char[i];const t=s.hptarget;
-  if(t!==0&&g.hp[t]<=0){
+  if(t!==0&&g.hp[t]<=0&&!withHook(rt,'preventsTurnRevive').some(([e,h])=>h(e,rt))){
    const amount=Math.ceil(g.maxhp[t]/8),h=rt.byId(g.charinstance[i])!;
    const w=rt.create(dmgWriter,h.x,h.y+h.myheight-24);w.delay=1;w.type=3;
    w.damage=heal(s,rt,i,amount);
@@ -667,16 +672,22 @@ export const battleControllerFull:GmObjectDef={...controllerBase,parent:controll
 /** obj_tensionbar: slides in from the left; the TP percentage in fnt_mainbig and a fill that eases toward TP. */
 /** obj_tensionbar: the TP gauge. Chapter differences are in rules.ts: from Chapter 2 it keeps below the top of the view
  * and is drawn through a surface (its cutout rounds the fill) with the logo and percentage drawn last. */
+/** Chapter 3's tension bar: it can slide 90 up out of the way (yoffset, for Rouxls's button grid), and its pulse
+ * counter (tsiner) runs on while no TP cost is shown. */
+const TENSION_BAR:Readonly<Record<number,{readonly slides:boolean}>>={1:{slides:false},2:{slides:false},3:{slides:true}};
 export const tensionBar:GmObjectDef={name:'obj_tensionbar',index:333,depth:1,sprite:'spr_tensionbar',events:{
  create:(s,rt)=>{
   const g=rt.globals;s.tsiner=0;g.tensionselect=0;s.apparent=g.tension;s.current=g.tension;s.change=0;s.changetimer=15;s.red=0;s.redtimer=0;
   s.xx=rt.view.x;s.yy=rt.view.y;s.y=s.yy+40;s.x=s.xx-40;s.hspeed=13;s.friction=1;s.flashsiner=0;s.maxed=0;
+  if(forChapter(rt,TENSION_BAR,'obj_tensionbar').slides)s.yoffset=0;
  },
  alarm5:(s,rt)=>rt.destroy(s),
  draw:(s,rt)=>{
   const g=rt.globals,d=rt.drawState,max=g.maxtension,r=rules(rt);
   if(withHook(rt,'hidesTensionBar').some(([e,hide])=>hide(e,rt)))return;
-  if(r.tensionBarFollowsView){s.yy=rt.view.y;s.y=s.yy+40;}
+  const slides=forChapter(rt,TENSION_BAR,'obj_tensionbar').slides;
+  if(slides){const c=findController(rt);s.yoffset=lerp(s.yoffset,c&&c.rouxlsgridenabled===1&&g.bmenuno===0&&g.myfight===0&&g.charturn===0?-90:0,0.25);}
+  if(r.tensionBarFollowsView){s.yy=rt.view.y;s.y=s.yy+40+(slides?s.yoffset:0);}
   const sw=rt.spriteWidth(s),sh=rt.spriteHeight(s),x=s.x,y=s.y;
   const percent=()=>{
    rt.drawSprite('spr_tplogo',0,x-30,y+30);
@@ -712,7 +723,7 @@ export const tensionBar:GmObjectDef={name:'obj_tensionbar',index:333,depth:1,spr
    s.theight=sh-s.current/max*sh;s.theight2=s.theight+g.tensionselect/max*sh;
    if(s.theight2>sh-1){s.theight2=sh-1;d.color=0x404040;d.alpha=0.7;}
    rt.drawRect(x+3,y+s.theight2,x+sw-1,y+s.theight);d.alpha=1;
-  }
+  }else if(slides)s.tsiner++;
   if(gt(s.apparent,20)&&lt(s.apparent,max))rt.drawSprite('spr_tensionmarker',0,x+3,y+sh-s.current/max*sh);
   rt.drawSprite('spr_tensionbar',0,x,y);
   if(r.tensionBarSurface)percent();

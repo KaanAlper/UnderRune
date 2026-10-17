@@ -9,13 +9,18 @@ import {animator,recruitAnim} from '../deltarune/chapter2-enemy';
 import {createSmallFace,installSmallFaceWriter} from '../deltarune/small-face';
 import {afterimageCut,doom,lerpvar} from '../deltarune/shared-effects';
 import {KNIGHT_ENCOUNTER,setupKnightMonster} from '../bosses/roaring-knight/setup';
+import {createKnight} from '../bosses/roaring-knight/knight';
+import {createBlockVfx,createFadeToWhite,createFountain} from '../bosses/roaring-knight/fountain';
+import {createBattleMarker} from '../deltarune/guard-peek';
 import {sourceText} from './text';
 
 export function installChapter3BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapterRegistry(rt,{chapter:3,metadata,room:options.room}),{object}=registry;
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object)]);
  registry.register([doom,lerpvar,afterimageCut]);
- registry.register([createChapter2BulletController(object,[])]);
+ registry.register([createChapter2BulletController(object,[]),createBattleMarker(object)]);
+ const fountain=createFountain(object),blockVfx=createBlockVfx(object),fadeToWhite=createFadeToWhite(object);
+ registry.register([fountain,blockVfx,fadeToWhite,createKnight(object,fountain,blockVfx,fadeToWhite)]);
  rt.battleSetup={monster:setupKnightMonster,encounter:(r,n,enemies)=>{
   if(n!==KNIGHT_ENCOUNTER.n)return false;
   const g=r.globals,{name,type,x,y}=KNIGHT_ENCOUNTER.monster,def=enemies[name];

@@ -1,6 +1,10 @@
-// Generic party guard-peek/marker events, kept here until the shared Chapter 2 host registers the family.
-import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
-import {isPhase} from '../../deltarune/chapter2-battle';
+// scr_guardpeek and obj_battle_marker (Chapter 2 on): a defending Ralsei or Susie peeks out while an enemy talks.
+import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
+import {isPhase} from './chapter2-battle';
+import {forChapter} from './rules';
+
+/** Where Susie's peeking marker goes from her position: Chapter 3 moves it 8 right and 4 down. */
+const SUSIE_PEEK:Readonly<Record<number,readonly [number,number]>>={2:[0,0],3:[8,4]};
 
 /** scr_battle_marker leaves thismarker on the caller. */
 export function battleMarker(s:GmInstance,rt:GmRuntime,marker:GmObjectDef,x:number,y:number,sprite:string){
@@ -28,7 +32,8 @@ export function guardPeek(s:GmInstance,rt:GmRuntime,hero:GmInstance,marker:GmObj
  if(rt.first(ralsei)?.id===hero.id){
   hero.imageAlpha=0;m=battleMarker(s,rt,marker,hero.x,hero.y,'spr_ralsei_defend_peek');m.depth=hero.depth;m.sourceobject=hero.id;m.endanimation='spr_ralsei_redefend';
  }else if(rt.first(susie)?.id===hero.id){
-  hero.imageAlpha=0;m=battleMarker(s,rt,marker,hero.x,hero.y,'spr_susie_defend_peek');m.depth=hero.depth;m.sourceobject=hero.id;
+  const [dx,dy]=forChapter(rt,SUSIE_PEEK,'scr_guardpeek');
+  hero.imageAlpha=0;m=battleMarker(s,rt,marker,hero.x+dx,hero.y+dy,'spr_susie_defend_peek');m.depth=hero.depth;m.sourceobject=hero.id;
  }
  return m??0;
 }

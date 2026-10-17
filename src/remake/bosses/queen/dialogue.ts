@@ -9,7 +9,7 @@ import {destroyWriters,writer} from '../../deltarune/writer';
 import {sourceText} from '../../host/text';
 import {chooseQueenAttack,advanceQueenPhase} from './chooser';
 import {updateQueenActs} from './menu';
-import {guardPeek} from './guard-peek';
+import {guardPeek} from '../../deltarune/guard-peek';
 import {type QueenObject,queenInstance} from './context';
 const text=(key:number|string)=>sourceText(`obj_queen_enemy_slash_Step_0_gml_${key}${typeof key==='number'?'_0':''}`);
 

@@ -30,14 +30,19 @@ export interface ChapterRules{
  /** Enemies ask the battle phase through scr_isphase, which leaves its answer in the asking instance's __isphase. */
  readonly phaseScript:boolean;
  /** Chapter 3's command row: the cursor skips Susie's TECH while the controller's disablesusieact is set, DEFEND counts
-  * in idefendedthisturn, and other encounters' input locks (board introductions, Rouxls's grid) exist. */
+  * in idefendedthisturn (cleared when everyone has chosen, taken back with its 40 mercy by going back), and other
+  * encounters' input locks (board introductions, Rouxls's grid) exist. */
  readonly commandRow3:boolean;
+ /** scr_bulletspawner also records the spawning instance in the bullet maker (creatorid). */
+ readonly bulletMakerKnowsSpawner:boolean;
+ /** scr_tensionheal also adds the TP to the controller's mercytotal (0 to 250). */
+ readonly tensionCountsMercy:boolean;
 }
-const CHAPTER1:ChapterRules={chapter:1,commandRow3:false,soulHasModes:false,slowSoulSetting:false,heroesCanBePoisoned:false,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false,phaseScript:false};
-const CHAPTER2:ChapterRules={chapter:2,commandRow3:false,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
+const CHAPTER1:ChapterRules={chapter:1,tensionCountsMercy:false,bulletMakerKnowsSpawner:false,commandRow3:false,soulHasModes:false,slowSoulSetting:false,heroesCanBePoisoned:false,moveHeartEndsInvincibility:false,autoSusieMarksKill:true,enemiesTargetWholeParty:false,tensionBarFollowsView:false,tensionBarSurface:false,phaseScript:false};
+const CHAPTER2:ChapterRules={chapter:2,tensionCountsMercy:false,bulletMakerKnowsSpawner:false,commandRow3:false,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
 /** Chapter 3 keeps Chapter 2's rules: each was checked in its code (scr_moveheart, scr_randomtarget, obj_tensionbar,
  * scr_isphase, obj_heart, obj_heroparent's poison and the auto-Susie mark, which still addresses the wrong instance). */
-const CHAPTER3:ChapterRules={chapter:3,commandRow3:true,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
+const CHAPTER3:ChapterRules={chapter:3,tensionCountsMercy:true,bulletMakerKnowsSpawner:true,commandRow3:true,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
 /** A component's part for the running battle's chapter, from the table of its versions next to it. */
 export function forChapter<T>(rt:GmRuntime,versions:Readonly<Record<number,T>>,what:string):T{
  const v=versions[rt.globals.chapter??1];
@@ -62,7 +67,7 @@ export interface BattleHooks{
  interceptSpellDamage?(enemy:GmInstance,spell:GmInstance,rt:GmRuntime,target:number,damage:number,spellId:number):boolean;
  /** The encounter suppresses the tired/Pacify cue even when its enemy is tired. */
  suppressesPacifyHighlight?(enemy:GmInstance,rt:GmRuntime):boolean;
- /** The battle panel is not drawn at all (the Roaring Knight's ending cutscene). */
+ /** The battle panel and the FIGHT bar are not drawn at all (the Roaring Knight's ending cutscene). */
  hidesBattleHud?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** The enemy list shows "???" instead of HP percentages (the Roaring Knight). */
  hidesHpPercent?(enemy:GmInstance,rt:GmRuntime):boolean;
@@ -83,6 +88,8 @@ export interface BattleHooks{
  /** False when HP at zero after a FIGHT hit or a damaging spell does not defeat the enemy there: it ends the battle
   * in its own code (NEO; also Queen and Berdly). */
  readonly defeatedByDamage?:boolean;
+ /** This bullet (exactly this object, not its children) can be grazed while inactive (the Knight's tunnel swords). */
+ readonly grazedWhileInactive?:boolean;
  /** The enemy turn is over (obj_battlecontroller Alarm 2): true when the enemy takes over instead of the next turn
   * (NEO at full mercy starts his ending). */
  onTurnEnd?(enemy:GmInstance,rt:GmRuntime):boolean;
@@ -106,6 +113,33 @@ export interface BattleHooks{
  /** A bullet takes a hero's HP to zero: true when the enemy catches it instead (the hero keeps 1 HP and the enemy
   * reacts in its own code; GIGA Queen's boxing round ends). */
  catchesKnockout?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** scr_damage (Chapter 3) first tells the enemy the party was hit (the Roaring Knight's progamer). */
+ onPartyHit?(enemy:GmInstance,rt:GmRuntime):void;
+ /** While this object exists, hits skip defense, defending, armor and element (the Knight's roar). */
+ dealsTrueDamage?(self:GmInstance,rt:GmRuntime):boolean;
+ /** Before an ordinary hit is measured, the enemy may change its target (the bullet's target field). */
+ redirectsHit?(enemy:GmInstance,bullet:GmInstance,rt:GmRuntime):void;
+ /** An ordinary hit on this party slot is cut by the enemy (the Shadow Mantle against the Knight): the new damage,
+  * which then ignores element resistance, or undefined. */
+ reducesHit?(enemy:GmInstance,rt:GmRuntime,slot:number,damage:number):number|undefined;
+ /** The damage a standing hero takes from this hit, changed by the enemy (the Knight's softer Flurry), or undefined. */
+ softensHit?(enemy:GmInstance,rt:GmRuntime,damage:number):number|undefined;
+ /** A hero knocked out in this slot drops to -999 HP (damage text type 12) instead of minus half their max HP. */
+ knocksOutHard?(enemy:GmInstance,rt:GmRuntime,slot:number):boolean;
+ /** No game over when the whole party is down (the battle ends its own way). */
+ preventsGameOver?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** Chapter 3's FIGHT: the enemy blocks the hits now (no slash; onFightBlocked instead). */
+ blocksFight?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** A blocked FIGHT hit that did damage. */
+ onFightBlocked?(enemy:GmInstance,rt:GmRuntime):void;
+ /** Chapter 3's FIGHT damage as the enemy changes it (the Knight's damage reduction). */
+ scalesFightDamage?(enemy:GmInstance,hero:GmInstance,rt:GmRuntime,damage:number):number;
+ /** scr_damage_enemy hurt this enemy (amount over 0), after its hurt state is set. */
+ onEnemyDamaged?(enemy:GmInstance,rt:GmRuntime,amount:number):void;
+ /** Downed heroes stay down at the end of the enemy turn (scr_mnendturn heals them by an eighth otherwise). */
+ preventsTurnRevive?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** The sprite a downed hero shows in this battle (Chapter 3 hero Step), or undefined. */
+ defeatSprite?(enemy:GmInstance,hero:GmInstance,rt:GmRuntime):string|undefined;
  /** Where the soul flies back to after the enemy's turn, when not to Kris (GIGA Queen's boxing ring). */
  soulReturnsTo?(enemy:GmInstance,rt:GmRuntime):[number,number];
  /** The FIGHT bar's hit goes to this object instead of the hero: true when it takes it (GIGA Queen's boxing

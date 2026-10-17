@@ -29,6 +29,18 @@ export interface GmGraphics{
 /** GML draw state (draw_set_color, draw_set_alpha, draw_set_font, draw_set_halign/valign). */
 export interface DrawState{color:number;alpha:number;font:string;halign:HAlign;valign:HAlign}
 export const C={white:0xffffff,black:0,red:0x0000ff,lime:0x00ff00,green:0x008000,aqua:0xffff00,purple:0x800080,gray:0x808080,ltgray:0xc0c0c0,yellow:0x00ffff,orange:0x40a0ff};
+/** make_color_hsv (GameMaker 2): hue, saturation and value from 0 to 255, clamped, to a BGR colour. */
+export function makeColorHsv(h:number,s:number,v:number){
+ const clamp=(x:number)=>x<0?0:x>255?255:x;h=clamp(h);const sat=clamp(s)/255,val=clamp(v)/255;
+ let r=val,g=val,b=val;
+ if(sat!==0){
+  const deg=h*360/255;let sector=deg/60;if(deg===360)sector=0;
+  const i=Math.trunc(sector),f=sector-i,p=val*(1-sat),q=val*(1-sat*f),t=val*(1-sat*(1-f));
+  [r,g,b]=i===0?[val,t,p]:i===1?[q,val,p]:i===2?[p,val,t]:i===3?[p,q,val]:i===4?[t,p,val]:[val,p,q];
+ }
+ const out=(x:number)=>Math.min(255,Math.max(0,Math.trunc(x*255+0.5)));
+ return out(r)|(out(g)<<8)|(out(b)<<16);
+}
 /** merge_color: each channel mixed and rounded (GameMaker rounds: merge_color(c_black,c_white,0.5) is 0x808080), in
  * 32-bit floats as the reference runtime computes it. */
 export function mergeColor(a:number,b:number,amount:number){

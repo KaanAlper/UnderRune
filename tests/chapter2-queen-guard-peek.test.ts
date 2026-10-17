@@ -2,7 +2,7 @@ import {describe,expect,it} from 'vitest';
 import fs from 'node:fs';
 import {GmRuntime,resolveEvent,type GmObjectDef} from '../src/remake/gm/runtime';
 import {spriteBank} from '../src/remake/gm/sprites';
-import {createBattleMarker,guardPeek} from '../src/remake/bosses/queen/guard-peek';
+import {createBattleMarker,guardPeek} from '../src/remake/deltarune/guard-peek';
 const ralsei:GmObjectDef={name:'obj_heroralsei',index:1},susie:GmObjectDef={name:'obj_herosusie',index:2};
 function setup(){
  const rt=new GmRuntime(spriteBank({atLeast2022_1:false,optionsInfo:0,sprites:[]}),{seed:13});rt.globals={chapter:2,faceaction:[0,4,4],mnfight:1};
