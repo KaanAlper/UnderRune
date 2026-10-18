@@ -10,6 +10,8 @@ const half=(a:Point,b:Point)=>point(f32(a.x+b.x)/2,f32(a.y+b.y)/2,f32(a.speed+b.
 const distance2=(a:Point,b:Point)=>f32(f32(f32(a.x-b.x)**2)+f32(f32(a.y-b.y)**2));
 export class GmPaths{
  private paths=new Map<number,Path>();private nextId=0;
+ /** path_add numbers new paths after the game's own path resources. */
+ reserve(resources:number){this.nextId=Math.max(this.nextId,resources);}
  add(){const id=this.nextId++;this.paths.set(id,{kind:0,precision:4,closed:true,points:[],nodes:[],length:0,dirty:true});return id;}
  exists(id:number){return this.paths.has(id);}
  delete(id:number){this.paths.delete(id);}

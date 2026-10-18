@@ -141,6 +141,8 @@ export interface BattleHooks{
  onFightBlocked?(enemy:GmInstance,rt:GmRuntime):void;
  /** Chapter 3's FIGHT damage as the enemy changes it (the Knight's damage reduction). */
  scalesFightDamage?(enemy:GmInstance,hero:GmInstance,rt:GmRuntime,damage:number):number;
+ /** Rude Buster's bolt aims somewhere else: true when the hook set its targetx/targety (Queen's shield). */
+ aimsRudeBuster?(enemy:GmInstance,rt:GmRuntime,bolt:GmInstance):boolean;
  /** Chapter 3's Rude Buster damage as the enemy changes it (the Knight's damage reduction). */
  scalesRudeBuster?(enemy:GmInstance,rt:GmRuntime,damage:number):number;
  /** scr_damage_enemy hurt this enemy (amount over 0), after its hurt state is set. */

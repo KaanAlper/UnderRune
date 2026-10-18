@@ -6,6 +6,7 @@ import {compareState,loadResources,loadSprites,runParity,type Dump,type TraceLin
 import {GmRuntime,type GmObjectDef} from '../../src/remake/gm/runtime';
 import {setSourceText} from '../../src/remake/host/text';
 import {localizationDefaults} from '../../tools/source-localization.mjs';
+import {codeLiterals} from '../../tools/remake-text-keys.mjs';
 import {setHudMeasure} from '../../src/remake/deltarune/controller';
 
 /** Debug switches (environment): PARITY_START (a later full snapshot), PARITY_NEXT_ID (its id counter), PARITY_END,
@@ -17,7 +18,7 @@ export const START=process.env.PARITY_START?Number(process.env.PARITY_START):40;
 const WORLD=['obj_mainchara','obj_darkcontroller','obj_overworldheart','obj_caterpillarchara','obj_gamecontroller','obj_time','obj_event_manager','obj_event_manager_debug','obj_jean_debug','obj_debugProfiler'];
 /** Sound instance numbers come from the reference runtime's audio backend (100000 plus two per sound played); the
  * remake's audio hooks do not number sounds that way, so variables holding them are not compared. */
-const SOUND_HANDLES:Record<string,string[]>={obj_heart:['chargeshot_sound'],obj_spamton_neo_enemy:['chargeshot_sound'],obj_herokris:['ls'],obj_herosusie:['ls'],obj_heroralsei:['ls'],obj_heronoelle:['ls'],
+const SOUND_HANDLES:Record<string,string[]>={obj_heart:['chargeshot_sound'],obj_writer:['qv'],obj_spamton_neo_enemy:['chargeshot_sound'],obj_herokris:['ls'],obj_herosusie:['ls'],obj_heroralsei:['ls'],obj_heronoelle:['ls'],
  obj_sneo_rotatingwall_bomb:['bomsfallsfx'],obj_sneo_pipis_bomb:['bomsfallsfx'],obj_sneo_phonecall:['sndphone']};
 
 export const chapter2RecordingReady=(run:string,chapter=2)=>fs.existsSync(`${run}-f${START}.json`)&&fs.existsSync(run+'.ndjson')&&
@@ -26,7 +27,11 @@ export const chapter2RecordingReady=(run:string,chapter=2)=>fs.existsSync(`${run
 /** afterRestore fixes what the snapshots leave out (they record no xstart/ystart). */
 export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects:Record<string,GmObjectDef>},extraSoundHandles:Record<string,string[]>={},chapter=2,afterRestore?:(rt:GmRuntime)=>void){
  const code=`extracted/chapter${chapter}_windows/code/`;
- setSourceText(Object.assign({},...fs.readdirSync(code).filter(f=>f.endsWith('.gml')).map(f=>localizationDefaults(fs.readFileSync(code+f,'utf8')))));
+ // The language fallbacks, and every plain literal as `<code file>#<n>` (as the asset build provides them).
+ setSourceText(Object.assign({},...fs.readdirSync(code).filter(f=>f.endsWith('.gml')).map(f=>{
+  const source=fs.readFileSync(code+f,'utf8'),file=f.slice(0,-4);
+  return {...localizationDefaults(source),...Object.fromEntries(codeLiterals(source).map((text,n)=>[file+'#'+n,text]))};
+ })));
  const trace=new Map<number,TraceLine>(fs.readFileSync(run+'.ndjson','utf8').trim().split('\n').map(l=>{const x=JSON.parse(l) as TraceLine;return [x.f,x];}));
  const replay=JSON.parse(fs.readFileSync(run+'.inputs.json','utf8')) as Replay,dump=JSON.parse(fs.readFileSync(`${run}-f${START}.json`,'utf8')) as Dump;
  const index=JSON.parse(fs.readFileSync(`extracted/chapter${chapter}_windows/index.json`,'utf8'));
@@ -35,6 +40,14 @@ export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects
  const advances=new Map<number,number>(mainFont.glyphs.map((g:{charCode:number;shift:number})=>[g.charCode,g.shift]));
  setHudMeasure(text=>Math.max(0,...text.split('\n').map(line=>[...line].reduce((n,ch)=>n+(advances.get(ch.charCodeAt(0))??0),0))));
  const line=trace.get(START)!,rt=new GmRuntime(loadSprites(chapter),{rng:line.rng});
+ // string_width and string_height from the game's fonts: glyph advances, and lines times the tallest glyph.
+ type FontInfo={name:string;glyphs:{charCode:number;shift:number;h:number}[]};
+ const fonts=new Map<string,FontInfo>(index.fonts.map((f:FontInfo)=>[f.name,f]));
+ const lines=(text:string)=>text.split(String.fromCharCode(10));
+ rt.textMetrics={
+  textWidth:(name,text)=>{const f=fonts.get(name);if(!f)return 0;const shift=new Map(f.glyphs.map(g=>[g.charCode,g.shift]));return Math.max(0,...lines(text).map(l=>[...l].reduce((n,ch)=>n+(shift.get(ch.charCodeAt(0))??0),0)));},
+  textHeight:(name,text)=>{const f=fonts.get(name);return f?lines(text).length*Math.max(0,...f.glyphs.map(g=>g.h)):0;},
+ };
  rt.globals=structuredClone(dump.globalVariables);
  const {objects}=install(rt);
  const skipped=new Set<string>(),skippedIds=new Set<number>();

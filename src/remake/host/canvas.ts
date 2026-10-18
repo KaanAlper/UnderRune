@@ -354,6 +354,12 @@ export class CanvasGraphics implements GmGraphics{
   const font=this.assets.font(fontName);if(!font)return 0;
   return Math.max(0,...text.split('\n').map(line=>[...line].reduce((n,ch)=>n+(this.glyph(font,ch.charCodeAt(0))?.advance??0),0)));
  }
+ /** string_height: the lines times the font's tallest glyph (the runner's line stride). */
+ textHeight(fontName:string,text:string){
+  const font=this.assets.font(fontName);if(!font)return 0;
+  const stride=font.kind==='bitmap'?Math.max(0,...Object.values(font.glyphs).map(g=>g.h)):(this.assets.sprite(font.sprite)?.height??0);
+  return text.split('\n').length*stride;
+ }
  text(x:number,y:number,text:string,style:TextStyle){
   const font=this.assets.font(style.font);if(!font||style.alpha<=0)return;
   const lines=text.split('\n');

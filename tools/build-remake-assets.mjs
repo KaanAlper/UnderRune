@@ -8,7 +8,7 @@ import sharp from 'sharp';
 import {fileURLToPath} from 'node:url';
 import {parseSounds,embeddedAudio} from './sound-assets.mjs';
 import {localizationDefaults} from './source-localization.mjs';
-import {referencedTextKeys} from './remake-text-keys.mjs';
+import {referencedLiterals,referencedTextKeys} from './remake-text-keys.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const chapter = Number(process.argv[2] ?? 1);
@@ -113,6 +113,8 @@ if(chapter>=2)for(const key of referencedTextKeys(text,lang))keySet.add(key);
 const textKeys=[...keySet];
 const gameText = {};
 for (const key of textKeys) { if (typeof lang[key] !== 'string') throw Error('Game text not found: ' + key); gameText[key] = lang[key]; }
+// Plain literals in the game's code (`<code file>#<n>`), read from this chapter's extracted code.
+if(chapter>=2)Object.assign(gameText,await referencedLiterals(text,path.join(base,'code')));
 await fs.writeFile(path.join(out, 'bundle.json'), JSON.stringify({
   chapter, atLeast2022_1: collision.atLeast2022_1, optionsInfo: collision.optionsInfo,
   pages: pages.map((_, i) => `atlas${i}.png`), sprites, fonts, sounds, text: gameText,

@@ -32,7 +32,7 @@ export function createQueenShield(object:QueenObject):GmObjectDef{
    const a=le(q.shieldhp/q.shieldmaxhp,q.shieldacthp/q.shieldactmaxhp)?q.shieldhp/q.shieldmaxhp:q.shieldacthp/q.shieldactmaxhp;
    for(let i=0;i<s.shieldsize;i++)s.shieldpiece_sprite_index[i]=(i===s.shieldsize-1?le(a,0):lt(a,(s.shieldsize-i-1)/s.shieldsize))?'spr_queenshield_pieces_hurt':'spr_queenshield_pieces';
    if(gt(s.shieldpiece_yscale[0],.1)){
-    if(s.movecon===15&&s.shieldalpha>0)s.shieldalpha-=.1;if(s.movecon!==15&&s.shieldalpha<1)s.shieldalpha+=.1;
+    if(s.movecon===15&&gt(s.shieldalpha,0))s.shieldalpha-=.1;if(s.movecon!==15&&lt(s.shieldalpha,1))s.shieldalpha+=.1;
     const idle=q.sprite==='spr_queen_chair_1_battle'||q.sprite==='spr_queen_chair_1_old',x1=idle?10:17,y1=idle?5:23,x2=idle?10:17,y2=idle?22:0;
     rt.drawState.alpha=s.shieldalpha*.8;rt.drawState.color=0x00ff00;
     rt.drawLine(s.queenhandx+x1,s.queenhandy-y1,s.x+14,s.shieldpiece_y[0]+s.y-48);

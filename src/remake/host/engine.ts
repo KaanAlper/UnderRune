@@ -36,6 +36,9 @@ import {GAME_END_ROOM,RETRY_ROOM,endBattle,gotoGameOverRoom,isGameOverRoom} from
 const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:(rt:GmRuntime)=>void}>={
  'ch2-61':{n:61,room:'room_dw_mansion_b_east',backdrop:false},
  'ch2-57':{n:57,room:'room_dw_mansion_east_2f_d',backdrop:true},
+ // Queen's story room needs the scene that hangs Berdly's wire (obj_ch2_scene25, not ported); in the battle test room
+ // Berdly starts in place, as in the recordings.
+ 'ch2-59':{n:59,room:'room_battletest',backdrop:true},
  'ch2-81':{n:81,room:'room_dw_mansion_east_4f_b',backdrop:true},
  'ch2-83':{n:83,room:'room_dw_city_mice3_transformed_new2F',backdrop:true},
  'ch2-89':{n:89,room:'room_dw_castle_dojo',backdrop:true},

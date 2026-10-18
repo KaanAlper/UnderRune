@@ -1,5 +1,5 @@
 import type {GmObjectDef} from '../../gm/runtime';
-import {afterimage} from '../../deltarune/battle';
+import {afterimage,dmgWriter} from '../../deltarune/battle';
 import {eq,lengthdirX,lengthdirY} from '../../gm/math';
 import {snd} from '../../deltarune/sound';
 import {type QueenObject,queenInstance} from './context';
@@ -23,6 +23,15 @@ export function createQueenSupport(object:QueenObject):GmObjectDef[]{
    if(s.con===3){s.timer++;s.x=s.xx+(s.xstart-s.xx)*s.timer/10;s.y=s.yy+(s.ystart+Math.sin(s.siner/6)*3-s.yy)*s.timer/10;if(s.timer===10){s.timer=0;s.con=0;}}
    if(s.alphacon===1){if(s.imageAlpha>0)s.imageAlpha-=.05;if(rt.globals.turntimer<3)s.alphacon=2;}
    if(s.alphacon===2){s.imageAlpha+=.05;if(s.imageAlpha>=1)s.alphacon=0;}
+  },
+  // Alarm 0: the wires' mercy, shown over Berdly (Queen's own mercy for him stops at 100).
+  alarm0:(s,rt)=>{
+   const q=queenInstance(rt,object,'obj_queen_enemy');let mercy=Math.ceil(s.bardlymercy);
+   if(mercy+q.bardlymercy>100)mercy=Math.ceil(100-q.bardlymercy);
+   if(mercy!==0){const w=rt.create(dmgWriter,s.x+20,s.y+20-rt.globals.hittarget[0]*20);s.__mercydmgwriter=w.id;w.damage=mercy;w.type=5;}
+   q.bardlymercy+=mercy;
+   for(const w of rt.withInstances(dmgWriter)){w.x=s.x;w.y=s.y+20;w.depth=q.depth-1;}
+   s.bardlymercy=0;
   },
   user0:(s,rt)=>{s.shake=10;snd(rt,'snd_pirouette');rt.sourceAudio?.volume('snd_pirouette',.4,0);},
   draw:(s,rt)=>{

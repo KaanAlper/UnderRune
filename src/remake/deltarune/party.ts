@@ -991,7 +991,7 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
   if(s.imageAlpha<1)s.imageAlpha=s.imageAlpha+0.25;else s.imageAlpha=1;
   if(s.t===0){
    const target=rt.byId(s.target);
-   if(inBattle){s.targetx=g.monsterx[target!.myself];s.targety=g.monstery[target!.myself];}
+   if(inBattle){if(!withHook(rt,'aimsRudeBuster').some(([e,h])=>h(e,rt,s))){s.targetx=g.monsterx[target!.myself];s.targety=g.monstery[target!.myself];}}
    else if(target){s.targetx=target.x+rt.spriteWidth(target)/2;s.targety=target.y+rt.spriteHeight(target)/2;}
    s.cx=s.targetx;s.cy=s.targety;
    s.direction=pointDirection(s.x,s.y,s.cx,s.cy)-20;s.speed=24;s.friction=-1.5;s.imageAngle=s.direction;

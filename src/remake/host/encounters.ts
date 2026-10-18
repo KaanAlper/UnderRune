@@ -31,6 +31,8 @@ export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);
 /** Explicit local verification entry points. Public launches always use sourceEncounter. */
 /** Reserved for EngineBattle fixtures that still need end-to-end verification before public launch. */
 const development:readonly SourceEncounter[]=[
+ // Queen, in her mansion's top floor: being checked against her recordings.
+ {id:'ch2-59',chapter:2,name:'Queen',party:[1,2,3],hp:1510,attack:10,defense:0,music:'queen_boss',practice:false},
  // The Dojo's Tasque Manager rematch: its quiz ending still differs from the recordings.
  {id:'ch2-89',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:false},
 ];

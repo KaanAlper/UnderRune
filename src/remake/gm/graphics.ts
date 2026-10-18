@@ -13,6 +13,8 @@ export interface GmGraphics{
  screenSprite?(name:string,width:number,height:number):void;
  /** string_width in a font (absent: 0). */
  textWidth?(font:string,text:string):number;
+ /** string_height: lines times the font's tallest glyph (absent: 0). */
+ textHeight?(font:string,text:string):number;
  sprite(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,blend:number,alpha:number):void;
  /** draw_sprite_part_ext: origin-independent crop in untrimmed sprite coordinates. */
  spritePart?(name:string,frame:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;

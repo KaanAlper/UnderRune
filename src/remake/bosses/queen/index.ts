@@ -18,6 +18,11 @@ import {createQueenBulletController} from './controller';
 export function createQueenObjects(object:(name:string)=>GmObjectDef):GmObjectDef[]{
  const hooks:BattleHooks={
   defeatedByDamage:false,
+  // Rude Buster flies at her shield while it is up.
+  aimsRudeBuster:(_s,rt,bolt)=>{
+   const shield=rt.first(object('obj_queenshield_enemy'));if(!shield)return false;
+   bolt.depth=shield.depth-1;bolt.targetx=shield.x+24;bolt.targety=shield.y+140;return true;
+  },
   interceptFightDamage:(s,_hero,rt,_target,damage)=>{
    if(rt.exists(object('obj_queenshield_enemy'))){s.shieldhp-=damage;return true;}
    if(damage!==0)s.shieldbrokecon=1;return false;

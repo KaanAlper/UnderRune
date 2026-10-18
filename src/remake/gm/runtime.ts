@@ -42,7 +42,9 @@ export class GmInstance{
  layerEntry=0;
  static layerEntries=0;
  get depth(){return this.$depth;}
- set depth(v:number){this.$depth=v;this.layerEntry=++GmInstance.layerEntries;}
+ // Depth is kept as a whole number (truncated). Moving to another depth puts the instance first in that depth's layer;
+ // setting the same depth changes nothing (the runner's Runner_moveInstanceToDepthLayer returns early).
+ set depth(v:number){v=Math.trunc(v);if(v===this.$depth&&this.layerEntry!==0)return;this.$depth=v;this.layerEntry=++GmInstance.layerEntries;}
  alarm:number[]=new Array(12).fill(-1);
  /** Object variables set by code (GML instance variables). */
  [name:string]:any;
@@ -145,6 +147,10 @@ function flatCollisions(o:GmObjectDef):GmCollision[]{
 }
 
 /** move_towards_point: aim at a point (unrounded angle) and set the speed. */
+/** motion_add: a push of `speed` toward `direction`, added to the current motion (unrounded cos and sin). */
+export function motionAdd(i:GmInstance,direction:number,speed:number){
+ const r=direction*Math.PI/180;i.hspeed+=f32(Math.cos(r)*speed);i.vspeed+=f32(-Math.sin(r)*speed);
+}
 export function moveTowardsPoint(i:GmInstance,x:number,y:number,speed:number){
  let dir=Math.atan2(-(y-i.y),x-i.x)*(180/Math.PI);if(dir<0)dir+=360;
  i.setMotion(dir,speed);
@@ -289,7 +295,10 @@ export class GmRuntime{
  ds(kind:string,id:number){const v=this.dsPools.get(kind)?.[id];if(!v)throw Error(`ds_${kind} ${id} does not exist`);return v;}
  dsDestroy(kind:string,id:number){const pool=this.dsPools.get(kind);if(pool?.[id])pool[id]=undefined;}
  /** string_width in the current font (0 without a renderer). */
- stringWidth(text:string){return this.gfx?.textWidth?.(this.drawState.font,text)??0;}
+ stringWidth(text:string){const d=this.drawState;return this.gfx?.textWidth?.(d.font,text)??this.textMetrics?.textWidth?.(d.font,text)??0;}
+ stringHeight(text:string){const d=this.drawState;return this.gfx?.textHeight?.(d.font,text)??this.textMetrics?.textHeight?.(d.font,text)??0;}
+ /** Font measures for runs without a renderer (the parity tests). */
+ textMetrics?:Pick<GmGraphics,'textWidth'|'textHeight'>;
  sourceSurfaces?:{create:(width:number,height:number)=>number;target:(id:number|null)=>void;clear:(color:number,alpha:number)=>void;capture:(id:number,left:number,top:number,width:number,height:number,originX:number,originY:number)=>string;free:(id:number)=>void;deleteSprite:(name:string)=>void;
   /** draw_surface: the surface at room coordinates. */
   draw:(id:number,x:number,y:number,alpha?:number,blend?:number)=>void;
@@ -447,6 +456,8 @@ export class GmRuntime{
    for(const i of this.instances)if(i.live&&i.depth<last&&i.depth>depth)depth=i.depth;
    if(depth===-Infinity)break;
    // Instances destroyed during this frame keep their place in the layer until cleanup, without drawing.
+   // As in the runner, a change to a layer while it draws (an instance arriving, which goes first, or leaving) moves
+   // the ones after it: drawing goes on from the same position.
    const layer=()=>this.instances.filter(i=>i.depth===depth&&(i.live||this.destroyedInstances.has(i))).sort((a,b)=>b.layerEntry-a.layerEntry);
    const count=layer().length;
    for(let j=0;j<count;j++){

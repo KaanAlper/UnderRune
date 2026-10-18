@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import {GmRuntime,GmInstance,gmField,resolveEvent,type GmObjectDef} from '../src/remake/gm/runtime';
 import type {SpriteBank} from '../src/remake/gm/sprites';
 import {createQueenShield} from '../src/remake/bosses/queen/shield';
+import {gt,lt} from '../src/remake/gm/math';
 const bank:SpriteBank={collisionCompat:true,roomSpeed:30,get:name=>({name,width:40,height:36,frames:3,originX:0,originY:0,bboxMode:1,left:0,right:39,top:0,bottom:35,sepMasks:0,special:false,playbackSpeed:0,playbackType:0})};
 function setup(size=7){
  const defs:Record<string,GmObjectDef>={};const object=(name:string)=>defs[name]??=( {name,index:Object.keys(defs).length,sprite:'spr_queenshield_pieces'} );
@@ -23,7 +24,9 @@ const directory='extracted/chapter2_windows/code/';
 describe.skipIf(!fs.existsSync(directory+'gml_Object_obj_queenshield_enemy_Draw_0.gml'))('Queen shield against installed events',()=>{
  it.each([7,10,12])('matches Create, full Draw motion, retract and hurt RNG at size %i',size=>{
   const a=setup(size),b=setup(size),read=(event:string)=>fs.readFileSync(directory+`gml_Object_obj_queenshield_enemy_${event}.gml`,'utf8');
-  const nativeCreate=read('Create_0'),nativeDraw=read('Draw_0').replace(/repeat \((\d+)\)/g,(_m,n)=>`for(let __repeat=0;__repeat<${n};__repeat++)`),nativeSort=read('Other_12');
+  const nativeCreate=read('Create_0'),nativeDraw=read('Draw_0').replace(/repeat \((\d+)\)/g,(_m,n)=>`for(let __repeat=0;__repeat<${n};__repeat++)`)
+   // GML compares reals with a tolerance: the alpha steps of 0.1 stop at zero and one.
+   .replace('shieldalpha > 0','gt(shieldalpha, 0)').replace('shieldalpha < 1','lt(shieldalpha, 1)'),nativeSort=read('Other_12');
   const sourceState=b.rt.create({...b.shield,events:{}},388,20);b.rt.destroy(b.s);
   // Reserve the source's declared instance fields. Assignments inside with(state) then behave as GML instance writes.
   for(const m of nativeCreate.matchAll(/^\s*([a-zA-Z_]\w*)(\[\w+\])?\s*=/gm))if(!(gmField(m[1]) in sourceState))sourceState[gmField(m[1])]=m[2]?[]:0;sourceState.i=0;
@@ -32,7 +35,7 @@ describe.skipIf(!fs.existsSync(directory+'gml_Object_obj_queenshield_enemy_Draw_
   a.rt.gfx={sprite:(...v:any[])=>drawsA.push(v),spriteFog:(...v:any[])=>drawsA.push(['fog',...v]),line:(...v:any[])=>drawsA.push(['line',...v])} as any;
   const env:Record<string,any>={obj_queen_enemy:q,global:b.rt.globals,c_green:0x008000,c_white:0xffffff,c_lime:0x00ff00,c_black:0,
    spr_queenshield_pieces:'spr_queenshield_pieces',spr_queenshield_pieces_hurt:'spr_queenshield_pieces_hurt',spr_nothing:'spr_nothing',spr_queen_chair_1_battle:'spr_queen_chair_1_battle',spr_queen_chair_1_old:'spr_queen_chair_1_old',
-   sin:Math.sin,min:Math.min,random:(n:number)=>b.rt.random.random(n),irandom:(n:number)=>b.rt.random.irandom(n),lerp:(x:number,y:number,t:number)=>x+(y-x)*t,
+   gt,lt,sin:Math.sin,min:Math.min,random:(n:number)=>b.rt.random.random(n),irandom:(n:number)=>b.rt.random.irandom(n),lerp:(x:number,y:number,t:number)=>x+(y-x)*t,
    lerp_ease_out:(x:number,y:number,t:number,p:number)=>x+(y-x)*(p===1?Math.sin(t*Math.PI/2):-t*(t-2)),
    sprite_get_height:()=>36,snd_swallow:'snd_swallow',snd_play:()=>{},audio_is_playing:()=>false,
    draw_set_alpha:(n:number)=>{b.rt.drawState.alpha=n;},draw_set_color:(n:number)=>{b.rt.drawState.color=n;},

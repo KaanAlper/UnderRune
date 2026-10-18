@@ -71,7 +71,8 @@ export function compareFrame(rt:GmRuntime,line:TraceLine,tracked:Set<string>,glo
  return undefined;
 }
 
-/** PARITY_TRAP=object,frame,field: logs who writes the field of that object's instances during that frame's step. */
+/** PARITY_TRAP=object,frame,field: logs who writes the field of that object's instances from the Draw before that
+ * frame through its step. */
 function trapField(rt:GmRuntime,frame:number,spec:string){
  const [name,at,field]=spec.split(',');if(Number(at)!==frame)return;
  for(const i of rt.instances.filter(i=>i.live&&i.object.name===name)){
@@ -87,8 +88,9 @@ export function runParity(rt:GmRuntime,trace:Map<number,TraceLine>,start:number,
  let frame=start;
  for(;frame<end;frame++){
   // obj_time (a world object, not restored) counts global.time in its Begin Step.
-  rt.draw();if(replay)replayInput(rt,replay,frame);rt.globals.time=(rt.globals.time??0)+1;
+  // The trap covers the previous frame's Draw and this frame's step.
   if(process.env.PARITY_TRAP)trapField(rt,frame+1,process.env.PARITY_TRAP);
+  rt.draw();if(replay)replayInput(rt,replay,frame);rt.globals.time=(rt.globals.time??0)+1;
   rt.step();
   if(process.env.PARITY_DEBUG){const watch=process.env.PARITY_DEBUG.split(','),m=rt.instances.filter(i=>i.live&&watch.includes(i.object.name));console.log(frame+1,'mnfight',rt.globals.mnfight,'myfight',rt.globals.myfight,'pressed',[...rt.input.pressed].join(),m.map(i=>i.object.name+':'+JSON.stringify(Object.fromEntries((process.env.PARITY_VARS??'').split(',').filter(k=>k in i).map(k=>[k,i[k]])))).join(' '));}
   const line=trace.get(frame+1);if(!line)return {matched:frame-start,mismatch:{frame:frame+1,what:'Missing reference frame '+(frame+1)}};
@@ -112,7 +114,7 @@ export function loadResources(chapter:number):ResourceIndex{
 }
 /** The runtime's own fields on an instance (its built-ins are stored under names starting with $); every other own
  * property is a GML instance variable. */
-const RUNTIME_FIELDS=new Set(['outsideRoom','xprevious','yprevious','xstart','ystart','imageAngle','imageBlend','mask','visible','live','frameCount','layerEntry','alarm','id','object']);
+const RUNTIME_FIELDS=new Set(['path_index','path_speed','path_position','path_positionprevious','path_scale','path_orientation','path_endaction','path_xstart','path_ystart','outsideRoom','xprevious','yprevious','xstart','ystart','imageAngle','imageBlend','mask','visible','live','frameCount','layerEntry','alarm','id','object']);
 /** Whether a remake value stands for the reference's value: numbers within GML's tolerance, booleans as 0/1,
  * resource names as their numbers, objects and instances as their indices and ids, arrays element by element. */
 function sameValue(ours:unknown,ref:unknown,res:ResourceIndex,gone:(id:number)=>boolean=()=>false):boolean{

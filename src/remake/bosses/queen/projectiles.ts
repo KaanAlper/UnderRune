@@ -1,6 +1,6 @@
 import {resolveEvent,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
 import {bulletInit,damage,damageAll} from '../../deltarune/battle';
-import {lt,pointDirection} from '../../gm/math';
+import {eq,ge,gt,le,lt,pointDirection} from '../../gm/math';
 import {snd} from '../../deltarune/sound';
 import {bulletHeal,customAfterimage,drawInBulletBox,getBoxBounds,healAll} from './shared';
 import {type QueenObject,queenInstance} from './context';
@@ -11,7 +11,7 @@ export function createQueenProjectiles(object:QueenObject):GmObjectDef[]{
  const attackStats=(s:GmInstance,rt:GmRuntime)=>{const q=rt.first(object('obj_queen_enemy'));if(q)s.damage=rt.globals.monsterat[q.myself]*5;const c=rt.first(object('obj_queen_bulletcontroller'));if(c)s.target=c.target;};
  const laser:GmObjectDef={...object('obj_queen_laser'),events:{
   create:(s,rt)=>{bulletInit(s);Object.assign(s,{destroyonhit:1,timer:0,imageXscale:0,imageYscale:1,active:1});attackStats(s,rt);s.grazepoints=4;},
-  step:(s,rt)=>{if(s.imageXscale<10)s.imageXscale+=.5;if(s.imageXscale>=6){s.speed+=4;if(s.speed>=20){s.active=0;if(s.imageYscale>=1)s.imageYscale+=.2;s.imageAlpha-=.2;if(s.imageAlpha<=0)rt.destroy(s);}}},
+  step:(s,rt)=>{if(lt(s.imageXscale,10))s.imageXscale+=.5;if(ge(s.imageXscale,6)){s.speed+=4;if(ge(s.speed,20)){s.active=0;if(ge(s.imageYscale,1))s.imageYscale+=.2;s.imageAlpha-=.2;if(le(s.imageAlpha,0))rt.destroy(s);}}},
  }};
  const gun:GmObjectDef={...object('obj_queen_lasergun'),events:{
   create:(s,rt)=>{Object.assign(s,{con:0,timer:0,imageXscale:0,imageYscale:0,init:0,inittimer:0,shotsize:1,maxsize:1.2,aimx:0,aimy:0,randomshot:1,inittime:0,aimtime:15,waittime:15,depth:queenInstance(rt,object,'obj_heart').depth+1});const d=rt.create(object('obj_queen_search_window'),s.x,s.y);s.d=d.id;d.search=99;d.depth=s.depth+1;d.targetstring='';d.donttypeanything=1;},
@@ -23,7 +23,7 @@ export function createQueenProjectiles(object:QueenObject):GmObjectDef[]{
     if(s.con===0){s.timer++;s.size=s.maxsize*(s.timer/s.aimtime);s.currentangle+=(s.idealangle-s.currentangle)*(s.timer/s.aimtime);if(s.timer>=s.aimtime){s.con=1;s.timer=0;}}
     s.imageAngle=s.currentangle;s.imageXscale=s.size;s.imageYscale=s.size;
     if(s.con===1){s.timer++;if(s.timer>=s.waittime){snd(rt,'snd_wallclaw');const l=rt.create(object('obj_queen_laser'),s.x,s.y);s.laser=l.id;l.imageAngle=s.imageAngle;l.direction=s.imageAngle;l.imageYscale=s.shotsize;s.con=2;s.timer=0;}}
-    if(s.con===2){s.direction=s.imageAngle;s.speed-=.25;s.timer++;if(s.timer>=10)s.imageAlpha-=.1;if(s.imageAlpha<=0)rt.destroy(s);}
+    if(s.con===2){s.direction=s.imageAngle;s.speed-=.25;s.timer++;if(s.timer>=10)s.imageAlpha-=.1;if(le(s.imageAlpha,0))rt.destroy(s);}
    }
   },
   draw:(s,rt)=>{if(s.con===1){rt.drawState.color=0x0000ff;rt.drawSprite('spr_lasergun_laser_telegraph',0,s.x,s.y,999,1,s.imageAngle,0xffffff,.3);}rt.drawSelf(s);},
@@ -69,10 +69,10 @@ export function createQueenProjectiles(object:QueenObject):GmObjectDef[]{
   create:(s,rt)=>{bulletInit(s);s.destroyonhit=0;s.direction=270;s.stompwait=15;s.stomphold=0;getBoxBounds(s,rt,object('obj_growtangle'));Object.assign(s,{active:0,stomplerp:0,stompspeed:.1,shootbullets:0,pos:0,special:0,specialcon:0,specialtimer:0,hurttimer:0,hittimer:0,hurtx:s.x,hurty:s.y});attackStats(s,rt);s.grazepoints=4;},
   step:(s,rt)=>{
    if(s.stompwait>0)return;
-   if(s.stompspeed>0&&s.stomplerp>=1){s.stomplerp=1;s.stompspeed=0;const existing=rt.first(object('obj_shake')),shake=existing??rt.create(object('obj_shake'),0,0);s.d=existing?object('obj_shake').index:shake.id;shake.shakex=2;shake.shakey=2;snd(rt,'snd_screenshake');if(s.shootbullets===1)rt.userEvent(s,0);}
-   else if(s.stompspeed===0&&s.stomphold>=0){s.stomphold--;if(s.stomphold<=0)s.stompspeed=-.1;if(s.special===1)s.stompspeed=0;if(s.special===2)s.stompspeed=0;}
-   else if(s.stompspeed<0&&s.stomplerp<=0)rt.destroy(s);
-   if(s.hurttimer===0&&s.hittimer===0)s.stomplerp+=s.stompspeed;if(s.special===3&&s.stomplerp>=.5)s.stompspeed=.002;if(s.special===3&&s.stomplerp>=.7)s.stompspeed=.0001;
+   if(gt(s.stompspeed,0)&&ge(s.stomplerp,1)){s.stomplerp=1;s.stompspeed=0;const existing=rt.first(object('obj_shake')),shake=existing??rt.create(object('obj_shake'),0,0);s.d=existing?object('obj_shake').index:shake.id;shake.shakex=2;shake.shakey=2;snd(rt,'snd_screenshake');if(s.shootbullets===1)rt.userEvent(s,0);}
+   else if(eq(s.stompspeed,0)&&ge(s.stomphold,0)){s.stomphold--;if(le(s.stomphold,0))s.stompspeed=-.1;if(s.special===1)s.stompspeed=0;if(s.special===2)s.stompspeed=0;}
+   else if(lt(s.stompspeed,0)&&le(s.stomplerp,0))rt.destroy(s);
+   if(s.hurttimer===0&&s.hittimer===0)s.stomplerp+=s.stompspeed;if(s.special===3&&ge(s.stomplerp,.5))s.stompspeed=.002;if(s.special===3&&ge(s.stomplerp,.7))s.stompspeed=.0001;
    const ease=s.stomplerp**2;if(s.direction===270)s.y=s.miny-4+(s.maxy-8-(s.miny-4))*ease;if(s.direction===90)s.y=s.miny-8+(s.maxy-4-(s.miny-8))*ease;
    if(s.direction===180)s.x=s.maxx-8+(s.minx-4-(s.maxx-8))*ease;if(s.direction===0)s.x=s.minx-4+(s.maxx-8-(s.minx-4))*ease;
   },
