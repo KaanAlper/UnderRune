@@ -64,10 +64,15 @@ await fs.rm(out, {recursive: true, force: true});
 await fs.mkdir(out, {recursive: true});
 for (const [i, pg] of pages.entries()) {
   const height = pg.y + pg.row;
-  const layers = await Promise.all(pg.items.map(async p => ({
-    input: await sharp(path.join(base, 'textures', `${p.t.page}.png`)).extract({left: p.t.sx, top: p.t.sy, width: p.t.sw, height: p.t.sh}).png().toBuffer(),
-    left: p.at.x, top: p.at.y,
-  })));
+  const layers = await Promise.all(pg.items.map(async p => {
+    const frame=sharp(path.join(base,'textures',`${p.t.page}.png`)).extract({left:p.t.sx,top:p.t.sy,width:p.t.sw,height:p.t.sh});
+    const rgba=await frame.clone().ensureAlpha().raw().toBuffer();
+    // Canvas decoding loses RGB under alpha zero. Only attest black when the original source proves it;
+    // atlas compositing alone is not evidence because it can erase nonblack transparent source texels.
+    p.alphaZeroRgb='black';
+    for(let j=0;j<rgba.length;j+=4)if(rgba[j+3]===0&&(rgba[j]!==0||rgba[j+1]!==0||rgba[j+2]!==0)){p.alphaZeroRgb=undefined;break;}
+    return {input:await frame.png().toBuffer(),left:p.at.x,top:p.at.y};
+  }));
   await sharp({create: {width: SIZE, height: Math.max(1, height), channels: 4, background: {r: 0, g: 0, b: 0, alpha: 0}}}).composite(layers).png().toFile(path.join(out, `atlas${i}.png`));
 }
 const frameOf = new Map(pieces.map(p => [`${p.sprite}:${p.frame}`, p]));
@@ -75,7 +80,7 @@ const sprites = collision.sprites.filter(s => names.has(s.name)).map(s => {
   const meta = index.sprites.find(x => x.name === s.name);
   return {...s, frames: undefined, frameCount: s.frames, frameRects: (meta?.frames ?? []).map((t, f) => {
     const p = frameOf.get(`${s.name}:${f}`); if (!p) return null;
-    return {page: p.at.page, sx: p.at.x, sy: p.at.y, sw: t.sw, sh: t.sh, tx: t.tx, ty: t.ty, tw: t.tw, th: t.th};
+    return {page: p.at.page, sx: p.at.x, sy: p.at.y, sw: t.sw, sh: t.sh, tx: t.tx, ty: t.ty, tw: t.tw, th: t.th,alphaZeroRgb:p.alphaZeroRgb};
   })};
 }).map(({frames, frameCount, ...s}) => ({...s, frames: frameCount}));
 // Bitmap fonts get their own page images.

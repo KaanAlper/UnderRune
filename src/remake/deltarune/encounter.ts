@@ -24,6 +24,7 @@ export interface PartySetup{
 const CHAR_NAMES:Record<number,string[]>={
  1:['obj_initializer_slash_Create_0_gml_48_0','obj_initializer_slash_Create_0_gml_49_0','obj_initializer_slash_Create_0_gml_50_0'],
  2:['scr_gamestart_slash_scr_gamestart_gml_99_0','scr_gamestart_slash_scr_gamestart_gml_100_0','scr_gamestart_slash_scr_gamestart_gml_101_0','scr_gamestart_slash_scr_gamestart_gml_105_0'],
+ 3:['scr_gamestart_slash_scr_gamestart_gml_99_0','scr_gamestart_slash_scr_gamestart_gml_100_0','scr_gamestart_slash_scr_gamestart_gml_101_0','scr_gamestart_slash_scr_gamestart_gml_105_0'],
 };
 /** The globals obj_initializer / scr_gamestart and the save file give a battle. */
 export function partyGlobals(rt:GmRuntime,p:PartySetup){

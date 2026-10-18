@@ -5,7 +5,7 @@ import {gmArray,moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime
 import {C} from '../../gm/graphics';
 import {eq,ge,le,lt,pointDistance,round} from '../../gm/math';
 import {defineEnemy} from '../../deltarune/enemy';
-import {afterimage,damage,darkener,growtangle,heart,moveHeart,moveHeartIn,shake,gameOver} from '../../deltarune/battle';
+import {afterimage,damage,darkener,dead,growtangle,heart,moveHeart,moveHeartIn,shake,gameOver} from '../../deltarune/battle';
 import {attackPhase,button3_p,findController,randomTarget,tensionBar} from '../../deltarune/controller';
 import {battleTextDefault,destroyWriters,writer} from '../../deltarune/writer';
 import {enemyBlcon2} from '../../deltarune/chapter2-objects';
@@ -347,6 +347,17 @@ export function createKnight(object:(name:string)=>GmObjectDef,fountain:GmObject
    blocksControllerStep:ending,hidesBattleHud:ending,hidesTensionBar:ending,hidesHpPercent:()=>true,
    onPartyHit:e=>{e.progamer=0;},
    redirectsHit:(e,b,rt)=>redirect(e,b,rt),
+   redirectsMaxHpHit:(e,b,rt)=>{if(!rt.exists(object('obj_knight_roaring2')))redirect(e,b,rt,true);},
+   scalesMaxHpRatio:(e,b,rt,ratio)=>!rt.exists(object('obj_knight_roaring2'))&&eq(e.aoedamage,0)&&mantle(rt,b.target)?ratio/2:ratio,
+   catchesMaxHpKnockout:(_e,b,rt)=>{
+    const g=rt.globals;
+    if(lt(g.hp[1],0)){
+     g.hp[1]=1;b.hpdiff=round(g.hp[b.chartarget]-1);b.doomtype=4;
+     b._charactor='kris';b._charinstance=object('obj_herokris').index;b._charnum=1;
+     for(const h of rt.withInstances(object('obj_herokris'))){h.state=8;h.hurt=0;h.attacktimer=0;h.sprite='spr_kris_fallen_dark';h.imageSpeed=.25;h.imageIndex=0;g.faceaction[h.myself]=0;}
+    }else{b.doomtype=12;b.hpdiff=round(g.hp[b.chartarget]+999);g.hp[b.chartarget]=-999;dead(rt,b.target);}
+    return true;
+   },
    reducesHit:(_e,rt,slot,d)=>mantle(rt,slot)?round(d*0.33):undefined,
    softensHit:(e,_rt,d)=>e.myattackchoice===2&&(e.difficulty===1||e.difficulty===3)?round(d*0.66):undefined,
    knocksOutHard:(_e,_rt,slot)=>slot!==0,
@@ -397,7 +408,7 @@ function fightDamage(k:GmInstance,hero:GmInstance,rt:GmRuntime,damage:number){
 function mantle(rt:GmRuntime,slot:number){const g=rt.globals,c=slot+1;return g.chararmor1[c]===23||g.chararmor2[c]===23;}
 /** scr_damage's Knight targeting: his ordinary hits spare Kris while Susie or Ralsei stands, and a Shadow Mantle draws
  * his first two hits (each counted in damagecounter); after that he picks anyone standing. */
-function redirect(k:GmInstance,b:GmInstance,rt:GmRuntime){
+function redirect(k:GmInstance,b:GmInstance,rt:GmRuntime,maxHp=false){
  const g=rt.globals;if(k.aoedamage!==0)return;
  if(b.target===0){
   if(g.hp[2]>0&&g.hp[3]>0)b.target=rt.random.choose(1,2);
@@ -421,7 +432,8 @@ function redirect(k:GmInstance,b:GmInstance,rt:GmRuntime){
  }
  // The original's conditions group as (target == n && armor1) || armor2, so a mantle in any armor2 slot keeps the count.
  const a1=g.chararmor1,a2=g.chararmor2;
- if(!((b.target===0&&a1[1]===23)||a2[1]===23||(b.target===1&&a1[2]===23)||a2[2]===23||(b.target===2&&a1[3]===23)||a2[3]===23))k.damagecounter=0;
+ if(maxHp){if(!mantle(rt,b.target))k.damagecounter=0;}
+ else if(!((b.target===0&&a1[1]===23)||a2[1]===23||(b.target===1&&a1[2]===23)||a2[2]===23||(b.target===2&&a1[3]===23)||a2[3]===23))k.damagecounter=0;
 }
 /** scr_get_knight_total_attempts: how many save slots have fought him before (dr.ini's URA values); the host knows. */
 function knightAttempts(rt:GmRuntime):number{

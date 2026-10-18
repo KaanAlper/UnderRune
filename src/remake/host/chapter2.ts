@@ -114,7 +114,9 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
   for(const source of definitions){
    const previous=objects[source.name],nativeParent=metadata.get(source.name)?.parent;
    const parent=source.parent?objects[source.parent.name]??source.parent:nativeParent?objects[nativeParent]:undefined;
-   const base=parent===source.parent?source:{...source,parent},definition=transform?transform(base):base;
+   // Events run in object index order (per event, as the runner does), so a shared object takes this chapter's index.
+   const index=metadata.get(source.name)?.index??source.index;
+   const base=parent===source.parent&&index===source.index?source:{...source,parent,index},definition=transform?transform(base):base;
    objects[source.name]=definition;
    if(previous&&previous!==definition)aliases.push([previous,definition]);
    if(definition!==source)aliases.push([source,definition]);

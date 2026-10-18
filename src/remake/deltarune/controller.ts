@@ -75,9 +75,9 @@ function charCan(s:GmInstance,rt:GmRuntime,slot:number){
 
 /** scr_spellinfo: name, battle name and description, cost and target kind of a spell. */
 export function spellInfo(s:GmInstance,rt:GmRuntime,id:number){
- const part=controllerScripts(rt),L=(n:number)=>part.text(`scr_spellinfo_slash_scr_spellinfo_gml_${n}_0`);
+ const part=controllerScripts(rt),L=(n:number|string)=>part.text(typeof n==='string'?n:`scr_spellinfo_slash_scr_spellinfo_gml_${n}_0`);
  s.cost=-1;s.spelltarget=1;s.spellname=' ';s.spellnameb=' ';s.spelldescb=' ';s.spelldesc=' ';s.spellanim=0;s.spellusable=0;s.spelltext=' ';
- const set=(name:number,nameb:number,descb:number,desc:number|null,target:number,cost:number,usable:number)=>{
+ const set=(name:number,nameb:number,descb:number,desc:number|string|null,target:number,cost:number,usable:number)=>{
   s.spellname=L(name);s.spellnameb=L(nameb);s.spelldescb=L(descb);s.spelldesc=desc===null?' ':L(desc);s.spelltarget=target;s.cost=cost;s.spellusable=usable;
  };
  switch(id){

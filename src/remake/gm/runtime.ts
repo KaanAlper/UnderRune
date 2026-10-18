@@ -168,7 +168,17 @@ export class GmEventError extends Error{
  }
 }
 
+/** The number the reference runner gave a struct (it shares the instance counter); dumps show it as <struct:N>. */
+export const STRUCT_ID=Symbol('GML struct id');
 export class GmRuntime{
+ private structStaticScopes=new Set<string>();
+ /** GML structs are plain data, outside the room instance lists. The reference runner shares their allocation
+  * counter with instance_create and creates a single static scope for constructors that declare static members. */
+ createStruct<T extends object>(fields:T,staticScope?:string):T{
+  Object.defineProperty(fields,STRUCT_ID,{value:this.nextId++,enumerable:false});
+  if(staticScope&&!this.structStaticScopes.has(staticScope)){this.structStaticScopes.add(staticScope);this.nextId++;}
+  return fields;
+ }
  /** Encounter adapters provide source setup tables; shared battle objects remain independent of boss names. */
  battleSetup?:{monster:(self:GmInstance,rt:GmRuntime)=>boolean;encounter:(rt:GmRuntime,n:number,enemies:Record<string,GmObjectDef>)=>boolean};
  readonly paths=new GmPaths();
@@ -227,6 +237,12 @@ export class GmRuntime{
  drawRect(x1:number,y1:number,x2:number,y2:number,outline=false){this.gfx?.rect(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,outline);}
  drawLine(x1:number,y1:number,x2:number,y2:number,width?:number){if(!this.gfx)return;if(!this.gfx.line)throw Error('Graphics backend does not support line drawing');if(width===undefined)this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha);else this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,width);}
  drawLineColor(x1:number,y1:number,x2:number,y2:number,color1:number,color2:number){if(!this.gfx)return;if(!this.gfx.lineColor)throw Error('Graphics backend does not support gradient lines');this.gfx.lineColor(x1,y1,x2,y2,color1,color2,this.drawState.alpha);}
+ drawAlphaTest(enabled:boolean){if(!this.gfx)return;if(!this.gfx.alphaTest)throw Error('Graphics backend does not support alpha testing');this.gfx.alphaTest(enabled);}
+ /** draw_set_blend_mode and its gpu_set_blendmode forms (nothing without a renderer that has them). */
+ drawBlendMode(mode:import('./graphics').BlendMode){if(!this.gfx)return;if(!this.gfx.blendMode)throw Error('Renderer lacks blend modes');this.gfx.blendMode(mode);}
+ drawTriangleColor(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,c1:number,c2:number,c3:number){
+  if(!this.gfx)return;if(!this.gfx.triangleColor)throw Error('Renderer lacks coloured triangles');this.gfx.triangleColor(x1,y1,x2,y2,x3,y3,c1,c2,c3,this.drawState.alpha);
+ }
  drawCircle(x:number,y:number,r:number,outline=false){this.gfx?.circle(x,y,r,this.drawState.color,this.drawState.alpha,outline);}
  drawTriangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,outline=false){if(!this.gfx)return;if(!this.gfx.triangle)throw Error('Renderer lacks source triangles');this.gfx.triangle(x1,y1,x2,y2,x3,y3,this.drawState.color,this.drawState.alpha,outline);}
  drawText(x:number,y:number,text:string,xscale=1,yscale=1,angle=0){
@@ -267,7 +283,13 @@ export class GmRuntime{
  dsDestroy(kind:string,id:number){const pool=this.dsPools.get(kind);if(pool?.[id])pool[id]=undefined;}
  /** string_width in the current font (0 without a renderer). */
  stringWidth(text:string){return this.gfx?.textWidth?.(this.drawState.font,text)??0;}
- sourceSurfaces?:{create:(width:number,height:number)=>number;target:(id:number|null)=>void;clear:(color:number,alpha:number)=>void;capture:(id:number,left:number,top:number,width:number,height:number,originX:number,originY:number)=>string;free:(id:number)=>void;deleteSprite:(name:string)=>void};
+ sourceSurfaces?:{create:(width:number,height:number)=>number;target:(id:number|null)=>void;clear:(color:number,alpha:number)=>void;capture:(id:number,left:number,top:number,width:number,height:number,originX:number,originY:number)=>string;free:(id:number)=>void;deleteSprite:(name:string)=>void;
+  /** draw_surface: the surface at room coordinates. */
+  draw:(id:number,x:number,y:number,alpha?:number,blend?:number)=>void;
+  copy:(id:number,x:number,y:number,source:number|null)=>void;
+  part:(id:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number)=>void;
+  /** surface_exists. */
+  exists:(id:number)=>boolean};
  sourceAudio?:{effect:(name:string,pitch?:number,volume?:number)=>number|undefined;volume:(handle:number|string,value:number,frames:number)=>void;free:(handle:number|string)=>void;music:(name:string)=>number|string;loop:(handle:number|string)=>void;pause:(handle:number|string)=>void;resume:(handle:number|string)=>void;position:(handle:number|string,seconds?:number)=>number|void;playing:(handle:number|string)=>boolean};
  /** Set by room_goto; the host decides what the room change means (game over, battle end). */
  pendingRoom:string|null=null;

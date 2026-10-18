@@ -1,7 +1,7 @@
 // Loads locally recorded reference runs (npm run oracle) and restores them into the remake runtime.
 // The recordings and the sprite table come from the maintainer's own game install and never leave this machine.
 import fs from 'node:fs';
-import {GML_RENAMED,GmRuntime,type GmObjectDef,type GmInstance} from '../../src/remake/gm/runtime';
+import {GML_RENAMED,GmRuntime,STRUCT_ID,type GmObjectDef,type GmInstance} from '../../src/remake/gm/runtime';
 import {spriteBank,type SpriteBank} from '../../src/remake/gm/sprites';
 
 export type TraceObject=[id:number,object:string,x:number,y:number,imageIndex:number,sprite:string,visible:boolean];
@@ -123,11 +123,13 @@ function sameValue(ours:unknown,ref:unknown,res:ResourceIndex,gone:(id:number)=>
   return false;
  }
  if(ref===null||ref===undefined)return ours===null||ours===undefined;
+ // A struct is dumped by its number only.
+ if(typeof ref==='string'){const m=/^<struct:(\d+)>$/.exec(ref);if(m)return !!ours&&typeof ours==='object'&&(ours as {[STRUCT_ID]?:number})[STRUCT_ID]===Number(m[1]);}
  // GML booleans are the numbers 0 and 1 (the reference runtime keeps the bool type, so its dumps say true/false).
  if(typeof ref==='boolean')return ours===ref||ours===(ref?1:0);
  return ours===ref;
 }
-const show=(v:unknown)=>{const s=v&&typeof v==='object'&&!Array.isArray(v)?`<${(v as any).name??(v as any).id??'object'}>`:JSON.stringify(v);return (s??String(v)).slice(0,80);};
+const show=(v:unknown)=>{const s=v&&typeof v==='object'&&!Array.isArray(v)?STRUCT_ID in v?`<struct:${(v as any)[STRUCT_ID]}>`:`<${(v as any).name??(v as any).id??'object'}>`:JSON.stringify(v);return (s??String(v)).slice(0,80);};
 /** Compares every variable of the checked objects' instances with a full reference dump (taken after the same frame's
  * step): built-ins, alarms and instance variables, missing and extra ones included. Instances are paired in creation
  * order per object, as in compareFrame. Returns one line per difference. */

@@ -12,7 +12,7 @@ export interface ControllerScripts{
  readonly spellRows:number;
  readonly text:(key:string)=>string;
  readonly healingUsable:number;
- readonly ultimateDescription:number;
+ readonly ultimateDescription:number|string;
  readonly replaceItems:boolean;
  readonly victoryRows:number;
  readonly tensionGoldMultiplier:number;
@@ -128,6 +128,7 @@ export const controllerScripts2:ControllerScripts={
  * stop with a named error. */
 export const controllerScripts3:ControllerScripts={
  ...controllerScripts2,
+ ultimateDescription:'scr_spellinfo_slash_scr_spellinfo_gml_93_0_b',
  afterCreate:afterCreate3,
  victoryText:()=>{throw Error("Chapter 3's victory message is not ported");},
  victoryLevelUp:()=>{throw Error("Chapter 3's victory level-up is not ported");},

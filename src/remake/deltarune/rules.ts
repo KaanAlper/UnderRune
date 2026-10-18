@@ -119,6 +119,11 @@ export interface BattleHooks{
  dealsTrueDamage?(self:GmInstance,rt:GmRuntime):boolean;
  /** Before an ordinary hit is measured, the enemy may change its target (the bullet's target field). */
  redirectsHit?(enemy:GmInstance,bullet:GmInstance,rt:GmRuntime):void;
+ /** Maximum-HP damage has its own targeting and ratio rules in the source. */
+ redirectsMaxHpHit?(enemy:GmInstance,bullet:GmInstance,rt:GmRuntime):void;
+ scalesMaxHpRatio?(enemy:GmInstance,bullet:GmInstance,rt:GmRuntime,ratio:number):number;
+ /** Handles source-specific knockout HP and feedback fields; true skips the ordinary fallen state. */
+ catchesMaxHpKnockout?(enemy:GmInstance,bullet:GmInstance,rt:GmRuntime):boolean;
  /** An ordinary hit on this party slot is cut by the enemy (the Shadow Mantle against the Knight): the new damage,
   * which then ignores element resistance, or undefined. */
  reducesHit?(enemy:GmInstance,rt:GmRuntime,slot:number,damage:number):number|undefined;

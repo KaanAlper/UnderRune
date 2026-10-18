@@ -18,14 +18,31 @@ export interface GmGraphics{
  spritePart?(name:string,frame:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;
  spriteFog?(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,color:number,alpha:number):void;
  /** draw_background_tiled_ext: frame 0 repeated over the whole view from (x, y). */
- spriteTiled?(name:string,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;
+ spriteTiled?(name:string,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number,frame?:number):void;
  rect(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,outline:boolean):void;
  line?(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,width?:number):void;
  lineColor?(x1:number,y1:number,x2:number,y2:number,color1:number,color2:number,alpha:number):void;
  triangle?(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,color:number,alpha:number,outline:boolean):void;
+ /** draw_triangle_color (filled): a colour per corner. */
+ triangleColor?(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,c1:number,c2:number,c3:number,alpha:number):void;
+ /** GPU blend factors retained across render targets. The preserve-alpha modes output As*Ad and use
+  * src_alpha with one or inv_src_alpha for RGB. Destination-alpha modes use dest_alpha for the source,
+  * and either dest_alpha (add) or zero (copy) for the destination. Canvas raster fallbacks require alpha
+  * testing or a verified raw source when a blend factor observes RGB at zero source alpha. */
+ blendMode?(mode:BlendMode):void;
+ /** Discard source fragments with zero alpha before blending (default reference value zero). */
+ alphaTest?(enabled:boolean):void;
+ /** draw_surface_ext: a surface at room coordinates (view-relative on the screen). */
+ surfaceDraw?(id:number,x:number,y:number,alpha:number,blend?:number):void;
+ /** Copy raw pixels without blending. A null source denotes the application screen. */
+ surfaceCopy?(id:number,x:number,y:number,source:number|null):void;
+ /** Surface crop, independent of sprite origins, with scale, tint and alpha. */
+ surfacePart?(id:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean):void;
  text(x:number,y:number,text:string,style:TextStyle):void;
 }
+/** GameMaker blend modes the remake draws with. */
+export type BlendMode='normal'|'add'|'subtract'|'add-preserve-alpha'|'normal-preserve-alpha'|'dest-alpha-add'|'dest-alpha-copy';
 /** GML draw state (draw_set_color, draw_set_alpha, draw_set_font, draw_set_halign/valign). */
 export interface DrawState{color:number;alpha:number;font:string;halign:HAlign;valign:HAlign}
 export const C={white:0xffffff,black:0,red:0x0000ff,lime:0x00ff00,green:0x008000,aqua:0xffff00,purple:0x800080,gray:0x808080,ltgray:0xc0c0c0,yellow:0x00ffff,orange:0x40a0ff};

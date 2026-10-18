@@ -89,14 +89,45 @@ export function instancesMeet(bank:SpriteBank,a:Collidable,b:Collidable){
  if(precise(sa)||precise(sb)||needsSat(sa,a)||needsSat(sb,b))return overlap(bank,a,b,ba,bb);
  return true;
 }
-/** Rectangle query against the same native sprite margins and per-pixel masks. */
+/** collision_point: a point inside the native half-open collision box, then its precise pixel when requested. */
+export function pointMeets(bank:SpriteBank,i:Collidable,x:number,y:number,usePrecise:boolean){
+ if(bank.collisionCompat){x=bankersRound(x);y=bankersRound(y);}
+ const b=bbox(bank,i),s=collisionSprite(bank,i);if(!b||!s||x<b.left||x>=b.right||y<b.top||y>=b.bottom)return false;
+ if(needsSat(s,i)){
+  const m=margins(s),rad=i.imageAngle*Math.PI/180,cs=Math.cos(rad),sn=Math.sin(rad),dx=x-i.x,dy=y-i.y;
+  const u=dx*cs-dy*sn,v=dx*sn+dy*cs;
+  const ax=i.imageXscale*(m.l-s.originX),bx=i.imageXscale*(m.r-s.originX),ay=i.imageYscale*(m.t-s.originY),by=i.imageYscale*(m.b-s.originY);
+  if(u<Math.min(ax,bx)||u>=Math.max(ax,bx)||v<Math.min(ay,by)||v>=Math.max(ay,by))return false;
+ }
+ return !usePrecise||!precise(s)||pointIn(s,i,x,y);
+}
+/** collision_rectangle against one instance, as the reference does it: the rectangle (rounded in compatibility mode)
+ * against the bounding box with an exclusive right and bottom edge, a rotated-box test for rotated bounding-box sprites,
+ * then (precise) the mask at the centre of each pixel where the rectangle and box overlap. */
 export function rectangleMeets(bank:SpriteBank,i:Collidable,x1:number,y1:number,x2:number,y2:number,usePrecise:boolean){
+ if(bank.collisionCompat){x1=bankersRound(x1);y1=bankersRound(y1);x2=bankersRound(x2);y2=bankersRound(y2);}
+ if(x1>x2)[x1,x2]=[x2,x1];
+ if(y1>y2)[y1,y2]=[y2,y1];
  const b=bbox(bank,i),s=collisionSprite(bank,i);if(!b||!s)return false;
- const left=Math.max(b.left,Math.min(x1,x2)),right=Math.min(b.right,Math.max(x1,x2)+1),top=Math.max(b.top,Math.min(y1,y2)),bottom=Math.min(b.bottom,Math.max(y1,y2)+1);
- if(left>=right||top>=bottom)return false;if(!usePrecise||(!precise(s)&&!needsSat(s,i)))return true;
- const offset=bank.collisionCompat?0:.5;
- for(let y=Math.floor(top);y<Math.ceil(bottom);y++)for(let x=Math.floor(left);x<Math.ceil(right);x++)if(pointIn(s,i,x+offset,y+offset))return true;
+ if(x1>=b.right||b.left>x2||y1>=b.bottom||b.top>y2)return false;
+ if(needsSat(s,i)&&!rectMeetsBox(s,i,x1,y1,x2,y2))return false;
+ if(!usePrecise||!precise(s))return true;
+ const left=Math.max(x1,b.left),right=Math.min(x2,b.right),top=Math.max(y1,b.top),bottom=Math.min(y2,b.bottom);
+ for(let y=Math.floor(top);y<Math.ceil(bottom);y++)for(let x=Math.floor(left);x<Math.ceil(right);x++)if(pointIn(s,i,x+.5,y+.5))return true;
  return false;
+}
+/** Collision_rectOverlapsInstance's separating-axis test of a world rectangle against a rotated collision box. */
+function rectMeetsBox(s:SpriteData,i:Collidable,x1:number,y1:number,x2:number,y2:number){
+ const m=margins(s);let lx0=i.imageXscale*(m.l-s.originX),lx1=i.imageXscale*(m.r-s.originX),ly0=i.imageYscale*(m.t-s.originY),ly1=i.imageYscale*(m.b-s.originY);
+ if(lx0>lx1)[lx0,lx1]=[lx1,lx0];
+ if(ly0>ly1)[ly0,ly1]=[ly1,ly0];
+ const rad=i.imageAngle*Math.PI/180,cs=Math.cos(rad),sn=Math.sin(rad);
+ let uMin=0,uMax=0,vMin=0,vMax=0;
+ [[x1,y1],[x2,y1],[x1,y2],[x2,y2]].forEach(([wx,wy],c)=>{
+  const dx=wx-i.x,dy=wy-i.y,u=dx*cs-dy*sn,v=dx*sn+dy*cs;
+  if(c===0){uMin=uMax=u;vMin=vMax=v;}else{if(u<uMin)uMin=u;else if(u>uMax)uMax=u;if(v<vMin)vMin=v;else if(v>vMax)vMax=v;}
+ });
+ return !(uMin>=lx1||lx0>=uMax||vMin>=ly1||ly0>=vMax);
 }
 /** distance_to_object: the gap between `self`'s box and the nearest of `others`' boxes (0 when `self` has no sprite;
  * 1e10 when none of the others has a box). */

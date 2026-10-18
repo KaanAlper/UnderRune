@@ -10,6 +10,9 @@ import {createSmallFace,installSmallFaceWriter} from '../deltarune/small-face';
 import {afterimageCut,doom,lerpvar} from '../deltarune/shared-effects';
 import {KNIGHT_ENCOUNTER,setupKnightMonster} from '../bosses/roaring-knight/setup';
 import {createKnight} from '../bosses/roaring-knight/knight';
+import {createStars} from '../bosses/roaring-knight/stars';
+import {createTrackingSwords} from '../bosses/roaring-knight/tracking-swords';
+import {createFlurry} from '../bosses/roaring-knight/flurry';
 import {createBlockVfx,createFadeToWhite,createFountain} from '../bosses/roaring-knight/fountain';
 import {createBattleMarker} from '../deltarune/guard-peek';
 import {sourceText} from './text';
@@ -18,7 +21,8 @@ export function installChapter3BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapterRegistry(rt,{chapter:3,metadata,room:options.room}),{object}=registry;
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object)]);
  registry.register([doom,lerpvar,afterimageCut]);
- registry.register([createChapter2BulletController(object,[]),createBattleMarker(object)]);
+ const stars=createStars(object),trackingSwords=createTrackingSwords(object),flurry=createFlurry(object);
+ registry.register([createChapter2BulletController(object,[stars.pattern,trackingSwords.pattern,flurry.pattern]),createBattleMarker(object),...stars.objects,...trackingSwords.objects,...flurry.objects]);
  const fountain=createFountain(object),blockVfx=createBlockVfx(object),fadeToWhite=createFadeToWhite(object);
  registry.register([fountain,blockVfx,fadeToWhite,createKnight(object,fountain,blockVfx,fadeToWhite)]);
  rt.battleSetup={monster:setupKnightMonster,encounter:(r,n,enemies)=>{

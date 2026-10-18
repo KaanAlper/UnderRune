@@ -128,9 +128,15 @@ export function afterImage(s:GmInstance,rt:GmRuntime){
  a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;a.imageAngle=s.imageAngle;
  return a;
 }
+const AFTERIMAGE_GROW:Record<number,{follow:boolean}>={1:{follow:false},2:{follow:false},3:{follow:true}};
 export const afterimageGrow:GmObjectDef={name:'obj_afterimage_grow',index:193,events:{
- create:s=>{s.xrate=.2;s.yrate=.2;s.fade=.1;},
- step:(s,rt)=>{s.imageAlpha-=s.fade;s.imageXscale+=s.xrate;s.imageYscale+=s.yrate;if(lt(s.imageAlpha,0))rt.destroy(s);},
+ create:(s,rt)=>{s.xrate=.2;s.yrate=.2;s.fade=.1;if(forChapter(rt,AFTERIMAGE_GROW,'obj_afterimage_grow').follow){s.target=-4;s.destroytime=-1;}},
+ step:(s,rt)=>{
+  const follow=forChapter(rt,AFTERIMAGE_GROW,'obj_afterimage_grow').follow;
+  if(follow&&!eq(s.target,-4)){const target=rt.byId(s.target);if(target){s.x=target.x;s.y=target.y;}}
+  s.imageAlpha-=s.fade;s.imageXscale+=s.xrate;s.imageYscale+=s.yrate;if(lt(s.imageAlpha,0))rt.destroy(s);
+  if(follow){if(gt(s.destroytime,-1))s.destroytime--;if(eq(s.destroytime,0))rt.destroy(s);}
+ },
 }};
 
 /** Camera shake: offsets the view, alternating sides, shrinking by a pixel per swing. */
@@ -475,7 +481,7 @@ const GRAZE:Record<number,{repeat:number;inactiveCount:boolean;counts?:boolean;a
  3:{repeat:30,inactiveCount:false,counts:true,armor:{tp:[[15,0.1],[24,0.05],[3,-0.2],[9,-0.25]],time:[[14,0.1],[3,-0.2],[9,-0.25]],size:[[3,0.2],[9,0.25]]}},
 };
 /** scr_armorcheck_equipped_party: how many of this armor the party wears. */
-function partyWears(rt:GmRuntime,armor:number){
+export function partyWears(rt:GmRuntime,armor:number){
  const g=rt.globals;let n=0;
  for(let i=0;i<3;i++)if(g.char[i]!==0){const c=g.char[i];if(g.chararmor1[c]===armor)n+=1;if(g.chararmor2[c]===armor)n+=1;}
  return n;
@@ -551,8 +557,8 @@ export const battleController:GmObjectDef={name:'obj_battlecontroller',index:196
  },
 }};
 
-function dead(rt:GmRuntime,t:number){const g=rt.globals;g.charmove[t]=0;g.charcantarget[t]=0;g.chardead[t]=1;g.charaction[t]=0;g.charspecial[t]=0;}
-function randomTarget(s:GmInstance,rt:GmRuntime){
+export function dead(rt:GmRuntime,t:number){const g=rt.globals;g.charmove[t]=0;g.charcantarget[t]=0;g.chardead[t]=1;g.charaction[t]=0;g.charspecial[t]=0;}
+export function randomTarget(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;s.abletotarget=1;
  if(g.charcantarget[0]===0&&g.charcantarget[1]===0&&g.charcantarget[2]===0)s.abletotarget=0;
  s.mytarget=rt.random.choose(0,1,2);
@@ -561,7 +567,7 @@ function randomTarget(s:GmInstance,rt:GmRuntime){
  g.targeted[s.mytarget]=1;
 }
 const hpOf=(rt:GmRuntime)=>[0,1,2].map(i=>rt.globals.hp[rt.globals.char[i]]);
-function damageCheck(rt:GmRuntime,before:number[]){
+export function damageCheck(rt:GmRuntime,before:number[]){
  if(hpOf(rt).some((hp,i)=>lt(hp,before[i])))for(const m of rt.all(eventManager))m.tookDamage=1;
 }
 /** What differs in scr_damage between chapters. */
@@ -598,13 +604,13 @@ function partyHit2(rt:GmRuntime,d:number,slot:number,element:number,reduce:(slot
 }
 /** scr_damage_calculation (Chapter 2): each defense point takes 3 off a big hit (over a fifth of max HP), 2 off a
  * medium one (over an eighth) and 1 otherwise; at least 1 is left. */
-function damageCalculation(rt:GmRuntime,damage:number,slot:number){
+export function damageCalculation(rt:GmRuntime,damage:number,slot:number){
  const g=rt.globals,def=g.battledf[slot],maxhp=g.maxhp[g.char[slot]],a=maxhp/5,b=maxhp/8;
  for(let i=0;i<def;i++){if(damage>a)damage-=3;else if(damage>b)damage-=2;else damage-=1;}
  return Math.max(damage,1);
 }
 /** scr_element_damage_reduction (Chapter 2): the share of an element's damage this hero's armors let through. */
-function elementReduction(rt:GmRuntime,element:number,char:number){
+export function elementReduction(rt:GmRuntime,element:number,char:number){
  const g=rt.globals;let r=1;
  if(element!==0)for(let i=0;i<2;i++){
   const e=g.itemelement[char][i+1],amount=g.itemelementamount[char][i+1];
@@ -616,7 +622,7 @@ function elementReduction(rt:GmRuntime,element:number,char:number){
  return Math.max(r,0.25);
 }
 /** scr_party_hpaverage: the party's HP over its max HP, rounded down (so 1 only when everyone is at full HP). */
-function partyHpAverage(rt:GmRuntime){
+export function partyHpAverage(rt:GmRuntime){
  const g=rt.globals;let hp=0,max=0;
  for(let i=0;i<3;i++)if(g.char[i]>0){hp+=g.hp[g.char[i]];max+=g.maxhp[g.char[i]];}
  return hp>0?Math.floor(hp/max):0;
