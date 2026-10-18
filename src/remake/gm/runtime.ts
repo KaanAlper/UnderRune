@@ -4,11 +4,11 @@
 import {f32,clamp6} from './math';
 import {GmRandom} from './random';
 import {GmPaths} from './paths';
-import {instancesMeet} from './collision';
+import {bbox,instancesMeet} from './collision';
 import type {SpriteBank,SpriteData} from './sprites';
 import type {DrawState,GmGraphics} from './graphics';
 
-export type GmEvent='create'|'destroy'|'cleanup'|'roomEnd'|'beginStep'|'step'|'endStep'|'draw'|'endDraw'|`alarm${number}`|`user${number}`|'animationEnd'|'pathEnd';
+export type GmEvent='create'|'destroy'|'cleanup'|'roomEnd'|'beginStep'|'step'|'endStep'|'draw'|'endDraw'|`alarm${number}`|`user${number}`|'animationEnd'|'pathEnd'|'outsideRoom'|'outsideView0';
 export type GmHandler=(self:GmInstance,rt:GmRuntime)=>void;
 export type GmCollision={target:GmObjectDef;run:(self:GmInstance,other:GmInstance,rt:GmRuntime)=>void};
 export interface GmObjectDef{
@@ -20,6 +20,8 @@ export class GmInstance{
  // Built-in fields stored the way the reference runtime stores them (32-bit floats). Their storage names start with
  // $, which no GML variable name can, so an instance variable like NEO's _sprite never overwrites them.
  private $x=0;private $y=0;xprevious=0;yprevious=0;xstart=0;ystart=0;
+ /** The reference runner's flag for its Outside Room and Outside View events (they fire once when it goes out). */
+ outsideRoom=false;
  private $speed=0;private $direction=0;private $hspeed=0;private $vspeed=0;
  private $friction=0;private $gravity=0;private $gravityDirection=270;
  private $imageIndex=0;private $imageSpeed=1;imageAngle=0;private $imageXscale=1;private $imageYscale=1;private $imageAlpha=1;imageBlend=0xffffff;
@@ -243,6 +245,7 @@ export class GmRuntime{
  drawTriangleColor(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,c1:number,c2:number,c3:number){
   if(!this.gfx)return;if(!this.gfx.triangleColor)throw Error('Renderer lacks coloured triangles');this.gfx.triangleColor(x1,y1,x2,y2,x3,y3,c1,c2,c3,this.drawState.alpha);
  }
+ drawCircleColor(x:number,y:number,r:number,c1:number,c2:number){if(!this.gfx)return;if(!this.gfx.circleColor)throw Error('Renderer lacks coloured circles');this.gfx.circleColor(x,y,r,c1,c2,this.drawState.alpha);}
  drawCircle(x:number,y:number,r:number,outline=false){this.gfx?.circle(x,y,r,this.drawState.color,this.drawState.alpha,outline);}
  drawTriangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,outline=false){if(!this.gfx)return;if(!this.gfx.triangle)throw Error('Renderer lacks source triangles');this.gfx.triangle(x1,y1,x2,y2,x3,y3,this.drawState.color,this.drawState.alpha,outline);}
  drawText(x:number,y:number,text:string,xscale=1,yscale=1,angle=0){
@@ -289,7 +292,9 @@ export class GmRuntime{
   copy:(id:number,x:number,y:number,source:number|null)=>void;
   part:(id:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number)=>void;
   /** surface_exists. */
-  exists:(id:number)=>boolean};
+  exists:(id:number)=>boolean;
+  /** surface_resize. */
+  resize:(id:number,width:number,height:number)=>void};
  sourceAudio?:{effect:(name:string,pitch?:number,volume?:number)=>number|undefined;volume:(handle:number|string,value:number,frames:number)=>void;free:(handle:number|string)=>void;music:(name:string)=>number|string;loop:(handle:number|string)=>void;pause:(handle:number|string)=>void;resume:(handle:number|string)=>void;position:(handle:number|string,seconds?:number)=>number|void;playing:(handle:number|string)=>boolean};
  /** Set by room_goto; the host decides what the room change means (game over, battle end). */
  pendingRoom:string|null=null;
@@ -365,6 +370,24 @@ export class GmRuntime{
   }
  }
  /** runner.c dispatchCollisionEvents: objects by first target then index; each pair fires its most specific event. */
+ /** Outside Room and Outside View 0, as the reference runner fires them after movement: once when an instance's box
+  * (or position, without one) goes out, per object in index order. Both share one flag (outsideRoom), and the view
+  * test compares the box's bottom with 0 rather than the view's top, as the reference does. */
+ private outsideEvents(){
+  const room=this.room,v=this.view;
+  for(const event of ['outsideRoom','outsideView0'] as const){
+   const objects=[...new Set(this.instances.filter(i=>i.live&&resolveEvent(i.object,event)).map(i=>i.object))].sort((a,b)=>a.index-b.index);
+   for(const o of objects)for(const i of this.instances.filter(x=>x.live&&x.object===o)){
+    if(!i.live)continue;
+    const b=bbox(this.bank,i);
+    const out=event==='outsideRoom'
+     ?b?0>b.right||b.left>room.width||0>b.bottom||b.top>room.height:0>i.x||i.x>room.width||0>i.y||i.y>room.height
+     :b?v.x>b.right||b.left>v.x+v.width||0>b.bottom||b.top>v.y+v.height:v.x>i.x||i.x>v.x+v.width||v.y>i.y||i.y>v.y+v.height;
+    if(out&&!i.outsideRoom)this.run(i,event);
+    i.outsideRoom=out;
+   }
+  }
+ }
  private collide(){
   const objects=[...new Set(this.instances.filter(i=>i.live).map(i=>i.object))].filter(o=>this.collisions(o).length)
    .sort((a,b)=>this.collisions(a)[0].target.index-this.collisions(b)[0].target.index||a.index-b.index);
@@ -398,6 +421,7 @@ export class GmRuntime{
   }
   this.dispatch('step',true);
   for(const i of [...this.instances])if(i.live)i.move(this.adaptPath);
+  this.outsideEvents();
   this.collide();
   this.dispatch('endStep',true);
   this.instances=this.instances.filter(i=>!this.destroyedInstances.has(i));

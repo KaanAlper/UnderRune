@@ -6,6 +6,8 @@ import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {eq,gt,lt,lengthdirX,lengthdirY,lerp} from '../gm/math';
 import {rectangleMeets,pointMeets} from '../gm/collision';
 import {afterimage,afterimageGrow,growtangle,heart} from './battle';
+import {gmlScript} from './chapter2-battle';
+import {scrLerpvar} from './shared-effects';
 
 /** scr_movetowards: a step of at most `step` from `from` towards `to`. */
 export function moveTowards(from:number,to:number,step:number){return eq(from,to)?from:gt(from,to)?Math.max(from-step,to):Math.min(from+step,to);}
@@ -97,3 +99,28 @@ export function drawOutline(s:GmInstance,rt:GmRuntime,size:number,color:number,a
  for(const [dx,dy] of [[ax,ay],[-ax,-ay],[bx,by],[-bx,-by]])
   rt.drawSpriteFog(s.sprite!,s.imageIndex,s.x+dx,s.y+dy,s.imageXscale,s.imageYscale,s.imageAngle,color,s.imageAlpha*alpha);
 }
+
+/** scr_get_box: the battle box's right (0), top (1), left (2), bottom (3), centre x (4) and y (5). */
+export function getBox(rt:GmRuntime,side:0|1|2|3|4|5){
+ const b=rt.first(growtangle);if(!b)throw Error('scr_get_box needs obj_growtangle');
+ const w=rt.spriteWidth(b)*0.5,h=rt.spriteHeight(b)*0.5;
+ return [b.x+w,b.y-h,b.x-w,b.y+h,b.x,b.y][side];
+}
+/** scr_approach: `value` moved by `step` towards `goal`, not past it. */
+export function approach(value:number,goal:number,step:number){
+ if(value<goal){value+=step;if(value>goal)return goal;}else{value-=step;if(value<goal)return goal;}
+ return value;
+}
+/** scr_heartclamp: the soul kept inside the box's walls (with extra margins). */
+export function heartClamp(rt:GmRuntime,mx=0,my=0){
+ const b=rt.first(growtangle);if(!b)return;
+ for(const h of rt.all(heart)){
+  const xt=b.imageXscale*2+1,yt=b.imageYscale*2+1,clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
+  h.x=clamp(h.x,getBox(rt,2)+xt+mx,getBox(rt,0)-(20+xt+mx));h.y=clamp(h.y,getBox(rt,1)+yt+my,getBox(rt,3)-(20+yt+my));
+ }
+}
+/** make_color_rgb: whole channels (truncated) into a BGR colour. */
+export const makeColorRgb=(r:number,g:number,b:number)=>(Math.trunc(r)|(Math.trunc(g)<<8)|(Math.trunc(b)<<16))>>>0;
+/** instance_destroy and scr_lerpvar as the scripts obj_script_delayed runs. */
+export const destroyScript=gmlScript('instance_destroy',(t:GmInstance,rt:GmRuntime)=>rt.destroy(t));
+export const lerpvarScript=gmlScript('scr_lerpvar',(t:GmInstance,rt:GmRuntime,name:string,a:number,b:number,time:number,easetype?:number,easeinout?:string)=>{scrLerpvar(t,rt,name,a,b,time,easetype,easeinout);});

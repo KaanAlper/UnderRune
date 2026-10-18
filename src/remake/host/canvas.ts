@@ -309,6 +309,15 @@ export class CanvasGraphics implements GmGraphics{
   const gradient=c.createLinearGradient(x1-this.vx,y1-this.vy,x2-this.vx,y2-this.vy);gradient.addColorStop(0,css(color1));gradient.addColorStop(1,css(color2));
   c.strokeStyle=gradient;c.lineWidth=1;c.beginPath();c.moveTo(x1-this.vx,y1-this.vy);c.lineTo(x2-this.vx,y2-this.vy);c.stroke();c.restore();
  }
+ circleColor(x:number,y:number,r:number,c1:number,c2:number,alpha:number){
+  if(r<=0)return;const c=this.ctx,cx=x-this.vx,cy=y-this.vy;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));
+  const g=c.createRadialGradient(cx,cy,0,cx,cy,r);g.addColorStop(0,css(c1));g.addColorStop(1,css(c2));
+  c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.fillStyle=g;c.fill();c.restore();
+ }
+ surfaceResize(id:number,width:number,height:number){
+  const s=this.surfaces.get(id);if(!s)throw Error('Missing surface');
+  if(s.width!==width||s.height!==height){s.width=width;s.height=height;this.surfacePixels.delete(id);}
+ }
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean){
   if(r<=0)return;const c=this.ctx;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.beginPath();c.arc(x-this.vx,y-this.vy,r,0,Math.PI*2);
   if(outline){c.strokeStyle=css(color);c.stroke();}else{c.fillStyle=css(color);c.fill();}

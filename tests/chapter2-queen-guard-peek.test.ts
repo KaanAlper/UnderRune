@@ -15,10 +15,12 @@ describe('Chapter 2 guard peek marker lifecycle',()=>{
  });
  it('holds the peek at animation end, then plays Ralsei redefend when dialogue ends',()=>{
   const {rt,marker,caller,r}=setup(),m=guardPeek(caller,rt,r,marker,ralsei,susie)!;
-  if(typeof m==='number')throw Error('Missing marker');expect([r.imageAlpha,m.sprite,m.depth,m.sourceobject,caller.thismarker]).toEqual([0,'spr_ralsei_defend_peek',42,r.id,m.id]);
+  if(typeof m==='number')throw Error('Missing marker');// sourceobject holds the hero's object, which GML stores as its index (the Knight's recording shows 1412 for Susie).
+  expect([r.imageAlpha,m.sprite,m.depth,m.sourceobject,caller.thismarker]).toEqual([0,'spr_ralsei_defend_peek',42,ralsei.index,m.id]);
   resolveEvent(marker,'animationEnd')!(m,rt);expect(m.live).toBe(true);expect(m.imageSpeed).toBe(0);
   rt.globals.mnfight=0;resolveEvent(marker,'step')!(m,rt);expect(m.live).toBe(false);const tail=rt.first(marker)!;
-  expect([tail.sprite,tail.imageSpeed,tail.sourceobject,tail.depth,tail.destroyoncomplete,m.thismarker,m.newMarker]).toEqual(['spr_ralsei_redefend',.5,r.id,42,1,tail.id,tail.id]);
+  // newMarker is a local variable in the original's Destroy event.
+  expect([tail.sprite,tail.imageSpeed,tail.sourceobject,tail.depth,tail.destroyoncomplete,m.thismarker,'newMarker' in m]).toEqual(['spr_ralsei_redefend',.5,ralsei.index,42,1,tail.id,false]);
   resolveEvent(marker,'step')!(tail,rt);expect(tail.live).toBe(true);expect(r.imageAlpha).toBe(0);
   resolveEvent(marker,'animationEnd')!(tail,rt);expect(tail.live).toBe(false);expect(r.imageAlpha).toBe(1);
  });
@@ -43,7 +45,7 @@ describe.skipIf(!fs.existsSync(folder+'gml_GlobalScript_scr_guardpeek.gml'))('gu
    const result=native(actor==='r'?nr:ns,env),actual=guardPeek(caller,rt,actor==='r'?r:s,marker,ralsei,susie);
    expect(actual===undefined).toBe(result===undefined);expect([r.imageAlpha,s.imageAlpha]).toEqual([nr.image_alpha,ns.image_alpha]);
    expect(rt.count(marker)).toBe(creates.length);
-   if(creates.length){const m=rt.first(marker)!,n=creates[0];expect([m.x,m.y,m.sprite,m.imageSpeed,m.imageXscale,m.imageYscale,m.depth,m.endanimation,m.sourceobject]).toEqual([n.x,n.y,n.sprite_index,n.image_speed,n.image_xscale,n.image_yscale,n.depth,n.endanimation,n.sourceobject.id]);}
+   if(creates.length){const m=rt.first(marker)!,n=creates[0];expect([m.x,m.y,m.sprite,m.imageSpeed,m.imageXscale,m.imageYscale,m.depth,m.endanimation,m.sourceobject]).toEqual([n.x,n.y,n.sprite_index,n.image_speed,n.image_xscale,n.image_yscale,n.depth,n.endanimation,n.sourceobject===nr?ralsei.index:susie.index]);}
   }
  });
 });

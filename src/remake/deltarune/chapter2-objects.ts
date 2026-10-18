@@ -81,6 +81,7 @@ export function enemyBlcon2(s:GmInstance,rt:GmRuntime,x:number,y:number,kind:num
  if(b[0]!=='spr_battleblcon')bl.sprite=b[0];
  if(b[1]>=0){bl.imageIndex=b[1];bl.imageSpeed=0;}
  if(b[2])bl.auto_length=1;
+ if(b[3]!==undefined)bl.side=b[3];
  return bl;
 }
 

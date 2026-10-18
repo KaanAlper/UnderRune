@@ -11,7 +11,7 @@ import type {GmRuntime} from '../src/remake/gm/runtime';
 const ON=process.env.KNIGHT_PARITY==='1';
 /** Variables holding the reference runtime's resource handles (surfaces and sounds are numbered by its renderer and
  * audio backend), not compared. */
-const RESOURCE_HANDLES:Record<string,string[]>={obj_knight_pointing_cone:['surf','starsurf'],obj_tracking_swords_manager:['hell_surface'],obj_roaringknight_boxsplitter_attack:['hell_surface'],obj_knight_split_growtangle:['source_surf','half_box_a','half_box_b'],obj_knight_split_growtangle_effect:['surf'],obj_dbulletcontroller:['starsound']};
+const RESOURCE_HANDLES:Record<string,string[]>={obj_knight_rotating_slash:['my_surface'],obj_knight_circle:['my_surface'],obj_afterimage_screen:['my_surface'],obj_knight_pointing_cone:['surf','starsurf'],obj_tracking_swords_manager:['hell_surface'],obj_roaringknight_boxsplitter_attack:['hell_surface'],obj_knight_split_growtangle:['source_surf','half_box_a','half_box_b'],obj_knight_split_growtangle_effect:['surf'],obj_dbulletcontroller:['starsound']};
 /** What the snapshots leave out: the Knight bobs around ystart, where the encounter placed him, and his afterimages
  * (fadeSpeed 0.02) drift right at 2 pixels a frame. */
 function restoreMotion(rt:GmRuntime){

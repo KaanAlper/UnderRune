@@ -78,7 +78,8 @@ export function runParity(rt:GmRuntime,trace:Map<number,TraceLine>,start:number,
  if(replay){for(let n=0;n<start;n++)replayInput(rt,replay,n);rt.input.pressed.clear();rt.input.released.clear();}
  let frame=start;
  for(;frame<end;frame++){
-  rt.draw();if(replay)replayInput(rt,replay,frame);rt.step();
+  // obj_time (a world object, not restored) counts global.time in its Begin Step.
+  rt.draw();if(replay)replayInput(rt,replay,frame);rt.globals.time=(rt.globals.time??0)+1;rt.step();
   if(process.env.PARITY_DEBUG){const watch=process.env.PARITY_DEBUG.split(','),m=rt.instances.filter(i=>i.live&&watch.includes(i.object.name));console.log(frame+1,'mnfight',rt.globals.mnfight,'myfight',rt.globals.myfight,'pressed',[...rt.input.pressed].join(),m.map(i=>i.object.name+':'+JSON.stringify(Object.fromEntries((process.env.PARITY_VARS??'').split(',').filter(k=>k in i).map(k=>[k,i[k]])))).join(' '));}
   const line=trace.get(frame+1);if(!line)return {matched:frame-start,mismatch:{frame:frame+1,what:'Missing reference frame '+(frame+1)}};
   // scr_endcombat: the game hands over to obj_endbattle (the walk back to the room); the remake ends the battle there.
@@ -101,7 +102,7 @@ export function loadResources(chapter:number):ResourceIndex{
 }
 /** The runtime's own fields on an instance (its built-ins are stored under names starting with $); every other own
  * property is a GML instance variable. */
-const RUNTIME_FIELDS=new Set(['xprevious','yprevious','xstart','ystart','imageAngle','imageBlend','mask','visible','live','frameCount','layerEntry','alarm','id','object']);
+const RUNTIME_FIELDS=new Set(['outsideRoom','xprevious','yprevious','xstart','ystart','imageAngle','imageBlend','mask','visible','live','frameCount','layerEntry','alarm','id','object']);
 /** Whether a remake value stands for the reference's value: numbers within GML's tolerance, booleans as 0/1,
  * resource names as their numbers, objects and instances as their indices and ids, arrays element by element. */
 function sameValue(ours:unknown,ref:unknown,res:ResourceIndex,gone:(id:number)=>boolean=()=>false):boolean{
