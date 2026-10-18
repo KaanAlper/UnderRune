@@ -233,7 +233,7 @@ function step(){
   const held=remake.rt.input.held;held.clear();if(keys.x<0)held.add(KEY.left);if(keys.x>0)held.add(KEY.right);if(keys.y<0)held.add(KEY.up);if(keys.y>0)held.add(KEY.down);if(keys.slow)held.add(KEY.shift);
   if(remake.paused){remakeMenu=false;remakePressed.clear();remakeReleased.clear();}else{remakeMenu||=keys.menu;
    if(keys.shootReleased)remakeReleased.add(KEY.z);
-   if(keys.confirm)remakePressed.add(KEY.z);if(keys.cancel)remakePressed.add(KEY.x);if(keys.menu)remakePressed.add(KEY.c);for(const a of keys.arrows??[])remakePressed.add(KEY[a]);}
+   if(keys.confirm)remakePressed.add(KEY.z);if(keys.cancel)remakePressed.add(KEY.x);if(keys.menu)remakePressed.add(KEY.c);if(keys.help)remakePressed.add(KEY.f1);for(const a of keys.arrows??[])remakePressed.add(KEY[a]);}
   if(!remake.paused&&!remake.outcome&&++remakeTick%2===0){
    if(remake instanceof EngineBattle){if(keys.shoot)held.add(KEY.z);for(const k of remakePressed)remake.rt.input.pressed.add(k);for(const k of remakeReleased)remake.rt.input.released.add(k);remakePressed.clear();remakeReleased.clear();remakeMenu=false;}
    // C reaches the game code as a key press on its next frame (button3_p), as the original reads it.

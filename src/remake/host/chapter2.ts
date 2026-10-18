@@ -64,7 +64,7 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
     case 'scr_battletext':return writer.battleText(r,s).id;
     case 'scr_damage_enemy':return party.damageEnemy(s,r,args[0],args[1]);
     case 'scr_gameover':return battle.gameOver(r);
-    case 'scr_wincombat':return controller.winCombat(r);
+    case 'scr_wincombat':return controller.winCombat(r,s);
     case 'scr_get_input_name':return ['LEFT','UP','RIGHT','DOWN','Z','X','C'][args[0]];
     case 'snd_init':{const id=nextStream--;streamNames.set(id,String(args[0]).replace(/\.ogg$/,''));return id;}
     case 'snd_play':case 'snd_play_x':case 'snd_play_pitch':{

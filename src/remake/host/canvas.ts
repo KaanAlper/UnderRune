@@ -403,6 +403,12 @@ export class CanvasGraphics implements GmGraphics{
   if(outline){c.strokeStyle=css(color);c.stroke();}else{c.fillStyle=css(color);c.fill();}
   c.restore();
  }
+ ellipse(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,outline:boolean){
+  const rx=Math.abs(x2-x1)/2,ry=Math.abs(y2-y1)/2;if(rx<=0||ry<=0)return;
+  const c=this.targetContext;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.beginPath();c.ellipse((x1+x2)/2-this.vx,(y1+y2)/2-this.vy,rx,ry,0,0,Math.PI*2);
+  if(outline){c.strokeStyle=css(color);c.stroke();}else{c.fillStyle=css(color);c.fill();}
+  c.restore();
+ }
  triangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,color:number,alpha:number,outline:boolean){if(!outline){this.triangleColor(x1,y1,x2,y2,x3,y3,color,color,color,alpha);return;}const ctx=this.targetContext;ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));ctx.beginPath();ctx.moveTo(x1-this.vx,y1-this.vy);ctx.lineTo(x2-this.vx,y2-this.vy);ctx.lineTo(x3-this.vx,y3-this.vy);ctx.closePath();ctx.strokeStyle=css(color);ctx.stroke();ctx.restore();}
  /** string_width: the widest line in the font, in pixels. */
  textWidth(fontName:string,text:string){

@@ -47,7 +47,7 @@ function acts(s:GmInstance,rt:GmRuntime,object:(n:string)=>GmObjectDef){
  if(s.actcon===23&&!rt.exists(writer)){rt.create(object('obj_mauswheel_tasquemanager'),rt.view.x+315-76,rt.view.y-138);rt.create(object('obj_mauswheel_tasque'),rt.view.x+435-74,rt.view.y-80);s.actcon=25;s.alarm[4]=25;}
  if(s.actcon===26){msgSet(rt,0,T('337_0'));battleTextDefault(rt,s);s.actcon=27;s.alarm[4]=12;}
  if(s.actcon===28&&!rt.exists(writer)){for(const name of ['obj_mauswheel_tasquemanager','obj_mauswheel_tasque'])for(const m of rt.all(object(name)))m.alarm[0]=30;spareAnimation(s,rt);recruitEnemy(s,rt);s.visible=false;s.actcon=29;s.alarm[4]=60;}
- if(s.actcon===30&&!rt.exists(object('obj_mauswheel_tasquemanager'))){winCombat(rt);rt.destroy(s);}
+ if(s.actcon===30&&!rt.exists(object('obj_mauswheel_tasquemanager'))){winCombat(rt,s);rt.destroy(s);}
  if(s.actingnoe===1&&s.actconnoe===1){speaker(s,rt,'no_name');msgSet(rt,0,T('360_0'));mercyAdd2(s,rt,s.myself,50);simulText(s,rt,'noelle');s.actconnoe=s.simulordernoe===0?20:0;}
  if(s.actcon===1&&!rt.exists(writer)){actCharSpriteEnd(s,rt);nextAct(rt,s);if(s.remove){const change=g.changeChapter2Monster;if(typeof change!=='function')throw Error('Mauswheel replacement requires monster_change bridge');for(const m of rt.all(object('obj_maus_enemy')))m.tasque_joined=true;g.monstermakey[s.myself]=s.y-15;g.monstermakex[s.myself]=living(rt,s.tasquemarker).x;s.newtasque=change(s,rt,s.myself,32,object('obj_tasque_enemy'));rt.destroy(living(rt,s.tasquemarker));rt.destroy(s);}
   if(s.basket!==-4){for(const id of [s.nise_susie,s.basket]){const m=rt.byId(id);if(m)rt.destroy(m);}for(const h of rt.all(object('obj_herosusie')))h.visible=true;}

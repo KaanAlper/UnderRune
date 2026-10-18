@@ -35,7 +35,7 @@ export function berdlySnowgraveScene(s:GmInstance,rt:GmRuntime,d:RivalDialogue,o
  if(s.sidebcon===29){s.fntimer++;rt.byId(s.fn)!.x+=Math.sin(s.fntimer/2)*.7;}
  if(s.sidebcon===30&&!rt.exists(writer)){
   g.flag[38]=1;g.specialbattle=1;g.monstergold[3]=0;g.monsterexp[3]=0;const sign=rt.create(object('obj_npc_sign'),607,97);s.berdlysign=sign.id;sign.sprite='spr_berdly_ice';
-  rt.destroy(rt.byId(s.fn)!);rt.destroy(rt.byId(s.fb)!);loseChar(s,rt);for(const c of rt.all(object('obj_caterpillarchara')))rt.destroy(c);s.sidebcon=11;g.flag[915]=6;winCombat(rt);
+  rt.destroy(rt.byId(s.fn)!);rt.destroy(rt.byId(s.fb)!);loseChar(s,rt);for(const c of rt.all(object('obj_caterpillarchara')))rt.destroy(c);s.sidebcon=11;g.flag[915]=6;winCombat(rt,s);
  }
 }
 export function createBerdlyPostBattleNoelle(object:(name:string)=>GmObjectDef):GmObjectDef{

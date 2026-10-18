@@ -119,7 +119,7 @@ function navigateItems(s:GmInstance,rt:GmRuntime,items:number[]){
 /** Additional Chapter 2 states run after common buffers and enemy-turn timing. */
 export function controllerTail2(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;
- if(g.myfight===3&&monsterPop(rt)===0&&!rt.exists(writer))winCombat(rt);
+ if(g.myfight===3&&monsterPop(rt)===0&&!rt.exists(writer))winCombat(rt,s);
  if(g.myfight===5){
   s.myfightreturntimer--;if(s.myfightreturntimer<=0){
    mnEndTurn(s,rt);g.spelldelay=10;

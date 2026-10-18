@@ -195,7 +195,8 @@ function endTurn(s:GmInstance,rt:GmRuntime){
  * next hero's single ACT and says whether the attack phase starts. */
 const NEXT_ACT:Record<number,(rt:GmRuntime,caller:GmInstance)=>boolean>={1:()=>true,2:nextActChapter2,3:nextActChapter2};
 export function nextAct(rt:GmRuntime,caller:GmInstance){if(forChapter(rt,NEXT_ACT,'scr_nextact')(rt,caller))attackPhase(rt);}
-/** scr_attackphase: spells and items first (obj_spellphase), then the FIGHT bar (obj_attackpress). */
+/** scr_attackphase (run in the battle controller): spells and items first (obj_spellphase), then the FIGHT bar
+ * (obj_attackpress); with no enemy left, the battle is won. */
 export function attackPhase(rt:GmRuntime){
  const g=rt.globals,c=findController(rt);if(!c)return;
  c.techwon=0;if(monsterPop(rt)===0)c.techwon=1;
@@ -206,25 +207,47 @@ export function attackPhase(rt:GmRuntime){
   if(g.myfight===4)c.fightphase=1;
   if(c.fightphase===1){g.myfight=1;rt.create(attackPress,rt.view.x+2,rt.view.y+365);}
   else{g.myfight=4;rt.create(spellPhase,0,0);}
- }else winCombat(rt);
+ }else winCombat(rt,c);
 }
 /** scr_wincombat: the last enemy is gone. */
-export function winCombat(rt:GmRuntime){
- const g=rt.globals;g.myfight=7;g.mnfight=-1;
+/** scr_wincombat, run by `caller` (its loop counter i is the caller's variable). From Chapter 2, flag 60 names an
+ * encounter that follows at once (unported: no ported battle sets it). */
+export function winCombat(rt:GmRuntime,caller:GmInstance){
+ const g=rt.globals;
+ if((g.chapter??1)>=2&&g.flag[60]!==0&&g.flag[36]!==1)throw Error('scr_wincombat: the following encounter (flag 60) is not ported');
+ g.myfight=7;g.mnfight=-1;
  for(const c of rt.all(controllerBase))c.victory=1;
- for(let i=0;i<3;i++){const m=rt.byId(g.monsterinstance[i]);if(g.monster[i]===1&&m)monsterDefeat(m,rt);}
+ for(caller.i=0;caller.i<3;caller.i+=1){const m=rt.byId(g.monsterinstance[caller.i]);if(g.monster[caller.i]===1&&m)monsterDefeat(m,rt);}
 }
-/** scr_monsterdefeat, run by the enemy: rewards, the battle's outcome flags, then the enemy's own event 11. */
+/** What scr_monsterdefeat adds after Chapter 1: frozen enemies (Noelle's IceShock, flag 6: counted in flag 45 with 24
+ * more D$), fatal kills (flag 44), the encounter's own result flag (flag 54 names it) and, in Chapter 2 only, a frozen
+ * enemy beside any other ending counting as violence. */
+const MONSTER_DEFEAT:Record<number,{frozen:boolean;frozenWithOthersIsViolence:boolean}>={1:{frozen:false,frozenWithOthersIsViolence:false},2:{frozen:true,frozenWithOthersIsViolence:true},3:{frozen:true,frozenWithOthersIsViolence:false}};
+/** scr_monsterdefeat, run by the enemy: rewards, the battle's outcome flags, then the enemy's own event 11. Its counters
+ * (_spared, d_i, ...) are the enemy's own variables, as in the script. */
 export function monsterDefeat(m:GmInstance,rt:GmRuntime){
- const g=rt.globals,i=m.myself;
- if(g.monster[i]===1){
-  g.monstergold[3]+=g.monstergold[i];g.monsterexp[3]+=g.monsterexp[i];g.monster[i]=0;
-  if(g.flag[51+i]===0){g.flag[51+i]=2;if(g.monsterhp[i]<=0)g.flag[51+i]=1;}
-  const counters:Record<number,number>={1:40,2:41,3:42,5:43};if(counters[g.flag[51+i]]!==undefined)g.flag[counters[g.flag[51+i]]]+=1;
-  if(monsterPop(rt)===0){
-   let violenced=0,spared=0,pacified=0;
-   for(let d=0;d<3;d++){if(g.flag[51+d]===1)violenced++;if(g.flag[51+d]===2)spared++;if(g.flag[51+d]===3)pacified++;}
-   if(pacified>0)g.flag[50]=3;if(spared>0)g.flag[50]=2;if(violenced>0)g.flag[50]=1;
+ const g=rt.globals,i=m.myself,v=forChapter(rt,MONSTER_DEFEAT,'scr_monsterdefeat');
+ if(g.monster[i]!==1)return;
+ g.monstergold[3]+=g.monstergold[i];g.monsterexp[3]+=g.monsterexp[i];g.monster[i]=0;
+ if(g.flag[51+i]===0){g.flag[51+i]=2;if(g.monsterhp[i]<=0)g.flag[51+i]=1;}
+ const result=g.flag[51+i];
+ if(result===1){g.flag[40]+=1;if(v.frozen&&m.fatal===1)g.flag[44]++;}
+ if(result===2)g.flag[41]+=1;
+ if(result===3)g.flag[42]+=1;
+ if(result===5)g.flag[43]+=1;
+ if(v.frozen&&result===6){g.flag[45]+=1;g.monstergold[3]+=24;}
+ if(monsterPop(rt)===0){
+  m._amt_add=0;if(v.frozen)m._frozened=0;m._violenced=0;m._spared=0;m._pacified=0;
+  for(m.d_i=0;m.d_i<3;m.d_i+=1){
+   const f=g.flag[51+m.d_i];
+   if(f!==0)m._amt_add+=1;if(f===1)m._violenced+=1;if(f===2)m._spared+=1;if(f===3)m._pacified+=1;if(v.frozen&&f===6)m._frozened+=1;
+  }
+  if(v.frozen&&m._frozened>0)g.flag[50]=6;
+  if(m._pacified>0)g.flag[50]=3;if(m._spared>0)g.flag[50]=2;if(m._violenced>0)g.flag[50]=1;
+  if(v.frozenWithOthersIsViolence&&m._frozened>0&&(m._pacified>0||m._violenced>0||m._spared>0))g.flag[50]=1;
+  if(v.frozen){
+   if(g.flag[50]===6)g.flag[926]++;
+   if(g.flag[54]!==0){g.flag[g.flag[54]]=g.flag[50];g.flag[54]=0;}
   }
  }
  rt.userEvent(m,11);
@@ -234,7 +257,7 @@ export function mnEndTurn(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;
  for(let slot=0;slot<3;slot++)if(g.char[slot]===2)s.sus=slot;
  s.techwon=0;if(monsterPop(rt)===0)s.techwon=1;
- if(s.techwon!==0){winCombat(rt);return;}
+ if(s.techwon!==0){winCombat(rt,s);return;}
  if(g.flag[14]===0)g.bmenucoord=grid(20,20,0);
  g.mnfight=0;g.myfight=0;g.bmenuno=0;g.charturn=0;s.skip=0;
  for(s.i=0;s.i<3;s.i++){
@@ -257,8 +280,13 @@ export function mnEndTurn(s:GmInstance,rt:GmRuntime){
  for(s.i=0;s.i<12;s.i++)for(s.j=0;s.j<3;s.j++)s.tempitem[s.i][s.j]=g.item[s.i];
 }
 /** scr_endcombat: the battle is over; obj_endbattle fades it out, and the host sees room 'battle_end'. */
+/** scr_endcombat. A battle a story scene started as special battle 1 (scr_battle's second argument) is left standing:
+ * that scene clears it away. The app starts every battle as 0; the reference recordings restore the scene's value. */
 export function endCombat(s:GmInstance,rt:GmRuntime){
- rt.globals.fighting=0;
+ const g=rt.globals,special=g.specialbattle??0;
+ g.fighting=0;
+ if(special!==0&&special!==2&&special!==3)return;
+ if(special===2)throw Error('scr_endcombat: back to the overworld party (special battle 2) is not ported');
  rt.create(endBattle,0,0);
  destroyAll(rt,monsterParent);destroyAll(rt,bulletParent);destroyAll(rt,heroParent);rt.destroy(s);
  rt.pendingRoom='battle_end';
@@ -485,12 +513,12 @@ function step(s:GmInstance,rt:GmRuntime){
    controllerScripts(rt).reward(s,rt);g.gold=(g.gold??0)+g.monstergold[3];g.xp=(g.xp??0)+g.monsterexp[3];g.fc=0;g.fe=0;
    g.battlemsg[0]=controllerScripts(rt).victoryText(rt);controllerScripts(rt).victoryLevelUp(rt);
    g.msg[0]=g.battlemsg[0];g.typer=g.battletyper;s.lastbattlewriter=battleText(rt,s).id;controllerScripts(rt).afterVictory(s,rt);
-   for(let i=0;i<3;i++)withId(rt,g.charinstance[i],h=>{h.state=7;h.hurt=0;h.hurttimer=0;});
+   for(s.i=0;s.i<3;s.i+=1)withId(rt,g.charinstance[s.i],h=>{h.state=7;h.hurt=0;h.hurttimer=0;});
   }
   s.victoried=1;s.victortimer=0;if(s.skipvictory===1)s.victortimer=-20;
   for(const b of rt.all(tensionBar)){b.alarm[5]=15;b.hspeed=-10;b.friction=-0.4;}
  }
- if(s.victoried===1){s.victortimer+=1;if(!rt.byId(s.lastbattlewriter)&&s.victortimer>=10){s.intro=2;if(s.bp<=0){endCombat(s,rt);return;}}}
+ if(s.victoried===1){s.victortimer+=1;if(!rt.byId(s.lastbattlewriter)&&s.victortimer>=10){s.intro=2;if(s.bp<=0){endCombat(s,rt);if(!s.live)return;}}}
  if(g.myfight===0){
   const coord=g.bmenucoord;
   forChapter(rt,CONTROLLER_MENUS,'battle controller menus')(s,rt);

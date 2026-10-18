@@ -46,6 +46,8 @@ export interface GmGraphics{
  /** Surface crop, independent of sprite origins, with scale, tint and alpha. */
  surfacePart?(id:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean):void;
+ /** draw_ellipse: the ellipse inside the rectangle (x1,y1)-(x2,y2). */
+ ellipse?(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,outline:boolean):void;
  /** draw_circle_color (filled): colour c1 at the centre fading to c2 at the edge. */
  circleColor?(x:number,y:number,r:number,c1:number,c2:number,alpha:number):void;
  /** surface_resize: the surface keeps its number at a new size (cleared). */

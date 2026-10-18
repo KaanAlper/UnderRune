@@ -89,7 +89,7 @@ export function createBerdlyRematch(object:(name:string)=>GmObjectDef,services:B
   events:{alarm5:s=>{s.sidebcon++;},alarm6:s=>{s.kris_defeat_con++;},alarm7:s=>{s.balloon_con++;},alarm8:(s,rt)=>{rt.globals.mnfight=2;s.rtimer=0;},user10:(s,rt)=>monsterDefeat(s,rt),
    draw:(s,rt)=>{
     const g=rt.globals;if(s.state===3){s.hurttimer--;if(s.hurttimer<0&&g.monster[s.myself]===1)s.state=0;
-     else{if(g.monster[s.myself]===0&&!rt.exists(writer)){s.hurtsprite='spr_berdly_hurt_kneel_battle';if(s.endbattle===0){s.endbattle=1;if(g.flag[915]===5&&g.flag[916]===0){const noe=rt.first(object('obj_heronoelle'))!;rt.create(object('obj_berdlyb2_postBattle_noelle'),noe.x,noe.y);g.flag[916]=1;}winCombat(rt);}}
+     else{if(g.monster[s.myself]===0&&!rt.exists(writer)){s.hurtsprite='spr_berdly_hurt_kneel_battle';if(s.endbattle===0){s.endbattle=1;if(g.flag[915]===5&&g.flag[916]===0){const noe=rt.first(object('obj_heronoelle'))!;rt.create(object('obj_berdlyb2_postBattle_noelle'),noe.x,noe.y);g.flag[916]=1;}winCombat(rt,s);}}
       s.hurtshake++;if(s.hurtshake>1){if(s.shakex>0)s.shakex--;if(s.shakex<0)s.shakex++;s.shakex=-s.shakex;s.hurtshake=0;}rt.drawSprite(s.hurtsprite,0,s.x+s.shakex+s.hurtspriteoffx,s.y+s.hurtspriteoffy,2,2,0,s.imageBlend,1);
      }
     }enemyDrawIdleGeneric(s,rt,1/6);if(s.becomeflash===0)s.flash=0;s.becomeflash=0;

@@ -653,6 +653,37 @@ New scripts go in `tools/oracle-scripts.mjs`.
 - Debugging aid: `PARITY_TRAP=object,frame,field` logs every write to that field during that frame, with the stack.
 - Next: the remaining Chapter 2 bosses, in the order above.
 
+### 19a. The Knight on the site; Spamton (60) (2026-10-18)
+
+- The Knight was unplayable on the site: patched (Turkish) text, missing default sprites in the bundle, slow canvas
+  drawing (fixed with Codex: English source text by default, `tools/remake-sprite-dependencies.mjs`, canvas
+  batching) and a crash on Susie's S-Action (`actactorsus` row). Deployed and checked live
+  (`UNDERRUNE_DEV_URL=https://kaanalper.github.io/UnderRune/play/ npx playwright test tests/e2e/knight-tour.spec.ts`).
+  Standing still through his first Stars can down the party now that their fragments hit (`knight.spec.ts` accepts
+  either ending). `tests/remake-battle-fuzz.test.ts` plays him with random keys.
+- Spamton (60, `src/remake/bosses/spamton/`): his enemy, three attacks (Minitons, word bullets, the money vacuum
+  with the warped box) and F1's helpers ("[Press F1 For] HELP": `obj_spamton_cherub`; F1 now reaches battles).
+  All four recordings match to their ends, including the new `choicelong` one (16000 frames: the DEAL chain with right
+  and wrong answers, the final deal and the win). `choice` in `tools/oracle-scripts.mjs` answers choice boxes left
+  and right in turn. Public (his card plays a turn in `tests/e2e/chapter2-bosses.spec.ts`); `tests/remake-spamton.test.ts` takes the
+  DEALs to the win, `tests/e2e/spamton-tour.spec.ts` is the visual tour (compared with `tools/native-frames.mjs`).
+- Engine fixes the Spamton recordings found (every chapter):
+  - `scr_monsterdefeat` after Chapter 1: frozen enemies (flag 6, flags 45/926), `fatal` (flag 44), the encounter's
+    result flag (flag 54) and its counters as the enemy's variables; event 11 only for a live enemy.
+  - `scr_wincombat`'s loop counter belongs to its caller (`winCombat(rt, caller)`); `scr_attackphase` runs in the
+    battle controller. Chapter 2's following encounter (flag 60) is a named error.
+  - `scr_endcombat` leaves a special battle 1 (a story scene's) standing for its scene, and the controller's step
+    goes on after it. The app starts battles as special battle 0.
+  - The victory loop over the party keeps its counter on the controller.
+  - Turn timers can be fractional: compare them with GML's tolerance.
+- The dev server must be restarted after `build-remake-assets` adds new files (Vite serves new public files as
+  `index.html` until then: "Unable to decode audio data").
+- Sweet, K_K and Cap'n (62): Cap'n, K_K, the dance ACTs, notes, dancers and boomboxes were already written; Sweet
+  (`trio-sweet.ts`), `obj_musical_controller` and the ending (`obj_musical_battle_end`) are being written; the score
+  (`obj_musicalbullet_controller`) was already ported. The
+  solo's clock: the original reads the audio position (`audio_sound_get_track_position`), which drifts about a frame
+  against the game; `rt.soundTrackPosition` is the host's hook, with frames since the solo started as the fallback.
+
 ### 19. Requested next (after the release above)
 
 - **General chat**, from Supabase. Separate rooms for UNDERTALE and DELTARUNE. It sits left of the leaderboard on

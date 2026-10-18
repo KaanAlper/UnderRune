@@ -55,5 +55,19 @@ export function actScript(totalFrames){
  }
  return script;
 }
+/** For ACTs that ask a question (a choice box): a 500-frame cycle in which Kris opens ACT on the first enemy and picks
+ * its second ACT, then taps left or right and Z every 8 frames, alternating each pair, so each choice box gets one or the
+ * other answer and the text in between is read. Every fourth cycle starts with left first. Over a long run the answers
+ * are mixed, so a chain of questions sees right and wrong answers and, eventually, its end. */
+export function choiceScript(totalFrames){
+ const {script,press,release}=events();
+ const tap=(f,key)=>{if(f<totalFrames){press(f,key);release(f+1,key);}};
+ for(let base=30,cycle=0;base<totalFrames;base+=500,cycle++){
+  const seq=[RIGHT,Z,Z,RIGHT,Z];
+  seq.forEach((key,i)=>tap(base+i*8,key));
+  for(let f=base+seq.length*8+8,n=cycle%4===3?0:1;f<base+500;f+=16,n++){tap(f,n%2?RIGHT:LEFT);tap(f+8,Z);}
+ }
+ return script;
+}
 // Separate filenames for longer replays (zlong, menulong, actlong): the short acceptance recordings remain intact.
-export const SCRIPTS={z:zScript,zlong:zScript,menu:menuScript,menulong:menuScript,act:actScript,actlong:actScript};
+export const SCRIPTS={z:zScript,zlong:zScript,menu:menuScript,menulong:menuScript,act:actScript,actlong:actScript,choice:choiceScript,choicelong:choiceScript};

@@ -23,7 +23,7 @@ function restoreStarts(rt:GmRuntime){
 }
 /** Sound handles the bosses keep (the remake plays no sound in tests). */
 const SOUND_HANDLES:Record<string,string[]>={obj_queen_explodinghead:['laughsound']};
-const BOSS_ENCOUNTERS=new Set(['57','58','59','81','82','83','94']);
+const BOSS_ENCOUNTERS=new Set(['57','58','59','60','81','82','83','94']);
 // The long recordings (-zlong, -menulong, -actlong: to each battle's end) take minutes; they run with LONG_PARITY=1.
 const LONG=process.env.LONG_PARITY==='1';
 const runs=fs.existsSync('.tools/oracle')?fs.readdirSync('.tools/oracle').filter(f=>/^ch2-(\d+)-s11-god[a-z-]*\.ndjson$/.test(f)&&(LONG||!/long\.ndjson$/.test(f)))

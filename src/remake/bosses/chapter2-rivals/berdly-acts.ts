@@ -59,9 +59,9 @@ export function berdlyRematchActs(s:GmInstance,rt:GmRuntime,d:RivalDialogue,side
   if(g.mercymod[s.myself]<g.mercymax[s.myself])mercyAdd2(s,rt,s.myself,s.mercy_add_amount);
   d.speaker(s,rt,'no_name');msgSet(rt,0,s.berdly_last_line);battleText(rt,s);s.actconnoe=-1;s.actcon=1;
  }
- if(s.actcon===1&&!rt.exists(writer)){if(g.mercymod[s.myself]>=100)winCombat(rt);else nextAct(rt,s);}
+ if(s.actcon===1&&!rt.exists(writer)){if(g.mercymod[s.myself]>=100)winCombat(rt,s);else nextAct(rt,s);}
  if(s.actcon===20||s.actconsus===20||s.actconral===20||s.actconnoe===20){
-  if(g.mercymod[s.myself]>=100)winCombat(rt);
+  if(g.mercymod[s.myself]>=100)winCombat(rt,s);
   else if(d.terminateWriter(s,rt)){s.actconsus=-1;s.actconral=-1;s.actconnoe=-1;s.actcon=1;}
  }
 }

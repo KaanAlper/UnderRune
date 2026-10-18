@@ -86,14 +86,14 @@ export function createBerdlyCoasterEnemy(object:(name:string)=>GmObjectDef):GmOb
     if(s.endtime===1){for(const h of rt.all(object('o_coaster_hero')))h.endscene=1;get(rt,'o_coaster_berdly').endscene=1;get(rt,'obj_battlecontroller').skipvictory=1;}
     if(s.endtime===30){sndFree(rt,s,rt.globals.batmusic[0]);Object.assign(get(rt,'o_coaster_berdly'),{xshake:10,sprite:'spr_cutscene_17_berdly_shocked'});const scene=rt.first(object('obj_ch2_scene11a'));if(scene){const c=rt.byId(scene.coaster_berdly)!;Object.assign(c,{character_sprite:'spr_berdlyb_shocked',character_offset_x:-10,character_offset_y:-5});}snd(rt,'snd_bomb');}
     if(s.endtime===90){actCharSpriteEnd(s,rt);msgSet(rt,0,T('450_0'));rt.globals.typer=69;balloon(s,rt);}
-    if(s.endtime>=90&&!rt.exists(writer)){s.endcon=0;winCombat(rt);}
+    if(s.endtime>=90&&!rt.exists(writer)){s.endcon=0;winCombat(rt,s);}
    }
   },
   events:{
    alarm5:(s,rt)=>{
     const scene=rt.first(object('obj_ch2_scene11a'));if(scene){for(const [field,sprite] of [['coaster_kris','spr_krisr_dark'],['coaster_susie','spr_susie_walk_right_dw'],['coaster_ralsei','spr_ralsei_walk_right']]){const c=rt.byId(scene[field])!;c.con=0;rt.byId(c.actor)!.sprite=sprite;c.character_sprite=sprite;c.visible=false;}rt.byId(scene.coaster_berdly)!.visible=false;}
     for(const h of rt.all(heroParent))h.visible=true;for(const name of ['o_coaster_hero','o_coaster_hero_back','o_coaster_berdly','obj_berdlyb_enemy'])for(const i of rt.all(object(name)))i.visible=true;for(const i of rt.all(object('obj_coaster')))i.stop_siner=0;
-   },alarm6:s=>{s.talked=1;},alarm7:s=>{s.bumpwait=0;},user10:(s,rt)=>{actCharSpriteEnd(s,rt);nextAct(rt,s);winCombat(rt);},
+   },alarm6:s=>{s.talked=1;},alarm7:s=>{s.bumpwait=0;},user10:(s,rt)=>{actCharSpriteEnd(s,rt);nextAct(rt,s);winCombat(rt,s);},
    animationEnd:()=>{},
    draw:(s,rt)=>{if(s.becomeflash===0)s.flash=0;s.becomeflash=0;s.fsiner++;if(rt.exists(object('o_coaster_berdly'))&&!rt.exists(object('obj_berdlyb_spearblaster'))&&s.state!==3)return;if(s.state===3){enemyHurtTiredAfterDamage(s,rt,.5);enemyDrawHurtGeneric(s,rt);}},
    destroy:(s,rt)=>{for(const name of ['o_coaster_berdly','o_coaster_hero','o_coaster_controller','obj_herokris'])for(const i of rt.all(object(name)))rt.destroy(i);rt.create(object('o_berdly_coaster_end_fix'),s.x,s.y);},

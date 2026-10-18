@@ -257,6 +257,7 @@ export class GmRuntime{
  }
  drawCircleColor(x:number,y:number,r:number,c1:number,c2:number){if(!this.gfx)return;if(!this.gfx.circleColor)throw Error('Renderer lacks coloured circles');this.gfx.circleColor(x,y,r,c1,c2,this.drawState.alpha);}
  drawCircle(x:number,y:number,r:number,outline=false){this.gfx?.circle(x,y,r,this.drawState.color,this.drawState.alpha,outline);}
+ drawEllipse(x1:number,y1:number,x2:number,y2:number,outline=false){if(!this.gfx)return;if(!this.gfx.ellipse)throw Error('Renderer lacks ellipses');this.gfx.ellipse(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,outline);}
  drawTriangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,outline=false){if(!this.gfx)return;if(!this.gfx.triangle)throw Error('Renderer lacks source triangles');this.gfx.triangle(x1,y1,x2,y2,x3,y3,this.drawState.color,this.drawState.alpha,outline);}
  drawText(x:number,y:number,text:string,xscale=1,yscale=1,angle=0){
   const d=this.drawState;this.gfx?.text(x,y,text,{font:d.font,color:d.color,alpha:d.alpha,halign:d.halign,valign:d.valign,xscale,yscale,angle});
@@ -272,6 +273,8 @@ export class GmRuntime{
  soundStop?:(handle:number|string)=>void;
  soundPitch?:(handle:number|string,pitch:number)=>void;
  soundGetPitch?:(handle:number|string)=>number;
+ /** audio_sound_get_track_position: seconds into a playing sound (undefined when the host cannot tell). */
+ soundTrackPosition?:(handle:number|string)=>number|undefined;
  soundFree?:(handle:number|string)=>void;
  readonly dynamicSprites=new Map<string,SpriteData>();
  private newSprites:boolean[]=[];

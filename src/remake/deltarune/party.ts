@@ -383,7 +383,7 @@ function healAll(caller:GmInstance,rt:GmRuntime,amount:number){
 /** scr_dmgwriter_selfchar, run by a hero: the number above them, stacked by how many they got this turn. */
 function selfWriter(h:GmInstance,rt:GmRuntime){return rt.create(dmgWriter,h.x,h.y+h.myheight-24-h.tu*20);}
 /** The heal sparkles and green number on a hero, in the hero's variables (ha, dmgwr, tu). */
-function healShow(h:GmInstance,rt:GmRuntime,amount:number){
+export function healShow(h:GmInstance,rt:GmRuntime,amount:number){
  const g=rt.globals,ha=rt.create(healAnim,h.x,h.y);h.ha=ha.id;ha.target=h.id;
  for(const [obj,shows] of withHook(rt,'showsHeals'))if(shows(obj,rt))ha.target=obj.id;
  const w=selfWriter(h,rt);h.dmgwr=w.id;w.delay=8;w.type=3;w.damage=amount;
@@ -852,7 +852,7 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
     s.fade=1;
     for(const h of rt.all(heroParent)){if(h.state===1)h.state=0;h.attacked=0;h.itemed=0;}
     s.techwon=0;if(monsterPop(rt)===0)s.techwon=1;
-    if(s.techwon===0){if(!bar.keepsEnemyTurn||(g.mnfight!==1.5&&g.mnfight!==2))g.mnfight=1;g.myfight=-1;}else winCombat(rt);
+    if(s.techwon===0){if(!bar.keepsEnemyTurn||(g.mnfight!==1.5&&g.mnfight!==2))g.mnfight=1;g.myfight=-1;}else winCombat(rt,s);
    }
   }
   if(s.fade===1||s.fakefade===1){

@@ -464,7 +464,7 @@ function endings(s:GmInstance,rt:GmRuntime){
  }
  if(s.sneo_defeat_cutscene_version===0)lostEnding(s,rt);
  if(s.sneo_defeat_cutscene_version===1)sparedEnding(s,rt);
- if(s.endcon===10){s.endcon=11;const c=findController(rt);if(c)c.skipvictory=1;winCombat(rt);}
+ if(s.endcon===10){s.endcon=11;const c=findController(rt);if(c)c.skipvictory=1;winCombat(rt,s);}
  if(s.stoprumblesfx>0)s.stoprumblesfx-=1;
  if(s.stoprumblesfx===1)rt.soundStop?.('snd_rumble');
 }

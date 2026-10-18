@@ -11,6 +11,8 @@ const playable:readonly SourceEncounter[]=[
  {id:'ch2-57',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:false},
  {id:'ch2-81',chapter:2,name:'Werewerewire',party:[1,2,3],hp:1753,attack:11,defense:0,music:'battle',practice:false},
  {id:'ch2-83',chapter:2,name:'Mauswheel',party:[1,2,3],hp:1753,attack:10,defense:0,music:'battle',practice:false},
+ // Spamton, before NEO, in Cyber City's alley: Kris alone.
+ {id:'ch2-60',chapter:2,name:'Spamton',party:[1],hp:600,attack:8,defense:0,music:'spamton_battle',practice:false},
  // The Dojo's final round: two Werewerewires.
  {id:'ch2-94',chapter:2,name:'Werewerewire',party:[1,2,3],hp:1753,attack:11,defense:0,music:'battle',practice:false},
  {id:'ch1-2',chapter:1,name:'Lancer',party:[1,2],auto:[2],hp:540,attack:5,defense:1,music:'lancerfight',practice:false},
