@@ -22,9 +22,8 @@ import {sourceEncounter,developmentEncounter} from './encounters';
 import {chapter2StartStats} from '../deltarune/chapter2';
 import {chapter3StartStats} from '../deltarune/chapter3';
 import {withHook} from '../deltarune/rules';
-/** Globals and flags a retry keeps: the Knight's failure screen counts his wins (knight_battle_losses, flag 1264) and
- * shows one message only once (flag 1263). */
-const SESSION={globals:['knight_battle_losses'],flags:[1263,1264]} as const;
+/** Globals and flags a retry keeps: the Knight's loss advice and UltraHeal's growth survive GO BACK's room change. */
+const SESSION={globals:['knight_battle_losses'],flags:[1045,1263,1264]} as const;
 export type Session={globals:Record<string,unknown>;flags:Record<number,number>};
 import type {installNeoHost} from './neo';
 import type {installChapter2BossHost} from './chapter2-bosses';
@@ -117,6 +116,8 @@ export class EngineBattle{
    for(const c of [1,2,3])for(let j=0;j<2;j++){const armor=gear(equipment.armors,loadout.characters[c].armor[j]);g.itemelement[c][j+1]=armor?.element??0;g.itemelementamount[c][j+1]=armor?.elementAmount??0;}
    g.chemg_sprite_map=Object.fromEntries([...(bank.names?.()??[])].map(name=>[name,name]));
   }
+  // Restore persistent spell progression before the controller builds the spell menus.
+  if(options.session){Object.assign(rt.globals,options.session.globals);for(const [i,v] of Object.entries(options.session.flags))rt.globals.flag[Number(i)]=v;}
   encounterSetup(rt,setup.n,neo?{'obj_spamton_neo_enemy':neo.objects.obj_spamton_neo_enemy}:chapterHost?chapterHost.objects:engineEnemies(id));
   if(setup.backdrop)rt.create(b.battleBack,0,0);
   // Jevil's room has its own spinning background (drawn by the host view).
@@ -132,7 +133,6 @@ export class EngineBattle{
   rt.globals.tempflag[3]=options.gameOvers??0;
   // scr_get_knight_total_attempts: how many times this secret boss has been fought before (save slots in dr.ini).
   rt.globals.secretbossattempts=options.secretBossAttempts??0;
-  if(options.session){Object.assign(rt.globals,options.session.globals);for(const [i,v] of Object.entries(options.session.flags))rt.globals.flag[Number(i)]=v;}
  }
  /** What outlives a retry, as it does in the game (which returns to the room without loading): see SESSION. */
  session():Session{

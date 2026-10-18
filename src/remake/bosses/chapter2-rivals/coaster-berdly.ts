@@ -47,6 +47,8 @@ export function createBerdlyCoasterBird(object:(name:string)=>GmObjectDef):GmObj
    if(s.mode===3){s.modetimer++;if(s.modetimer>=60){s.modetimer=-60;rt.create(object('o_coaster_lightning'),rt.view.x+330,s.yspot[rt.random.choose(0,1,2)]);}}
    if(s.mode===4){s.modetimer++;if(s.modetimer>=60){s.modetimer=-30;const p=rt.create(object('o_coaster_jama'),s.x-60,s.yspot[rt.random.choose(0,1,2)]);s.jama=p.id;p.bigcar=1;p.sprite='spr_coaster_car';}}
    if(s.mode===5){s.modetimer++;if(s.modetimer===40){s.nozoki=rt.random.choose(0,1,2);const p=rt.create(object('o_coaster_lightning'),rt.view.x+330,s.yspot[rt.random.choose(0,1,2)]);s.lit=p.id;p.waittime=20;p.litwaittime=20;}if(s.modetimer===80){const p=rt.create(object('o_coaster_jama'),s.x-60,s.yspot[rt.random.choose(0,1,2)]);s.jama=p.id;s.modetimer=0;}}
+   // Once he has been hurt, his collisions no longer kiss.
+   for(const b of rt.withInstances(object('obj_berdlyb_enemy')))if(g.monstermaxhp[b.myself]!==g.monsterhp[b.myself])s.kiss=0;
   },
   user0:(s,rt)=>{for(s.i=0;s.i<3;s.i++)for(const [lo,hi] of [[40,90],[40,45]]){const y=s.y-40+rt.random.randomRange(20,25),x=s.x+rt.random.randomRange(lo,hi),p=rt.create(object('o_berdly_coaster_feather'),x,y);s.o=p.id;p.direction=rt.random.random(360);p.speed=rt.random.randomRange(4,5);}},
   draw:(s,rt)=>{
@@ -60,7 +62,7 @@ export function createBerdlyCoasterBird(object:(name:string)=>GmObjectDef):GmObj
    if(s.queenmode===1)rt.drawSprite(s.sprite!,s.imageIndex,s.x+s.xshake,s.y+s.yshake,s.imageXscale,s.imageYscale,s.imageAngle,s.imageBlend,s.imageAlpha);
   },
  },collisions:[{target:object('o_coaster_hero'),run:(s,other,rt)=>{
-  const e=get(rt,'obj_berdlyb_enemy'),c=get(rt,'o_coaster_controller');if(rt.globals.monstermaxhp[e.myself]!==rt.globals.monsterhp[e.myself])s.kiss=0;
+  const e=get(rt,'obj_berdlyb_enemy'),c=get(rt,'o_coaster_controller');
   if(s.damagecon===0){s.damagecon=1;s.sprite='spr_berdlyb_shocked_battle';rt.userEvent(s,0);c.bumpmercy+=e.nitro===0?6:4;
    for(const w of rt.all(dmgWriter))w.depth=s.depth-1;if(s.movetype===0)s.movetimer=s.movethreshold;s.movebuffer=1;s.xshake=10;
    if(s.kiss===0){const y=s.y-8-rt.random.random(20),x=s.x+40+rt.random.random(80);s.particle=rt.create(object('obj_berdlyparticle'),x,y).id;}

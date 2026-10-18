@@ -4,7 +4,7 @@
 import {gmArray,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {eq,f32,ge,pointDirection,pointDistance,round} from '../gm/math';
-import {afterImage,afterimage,dmgWriter,heroKris,heroParent,heroRalsei,heroSusie,heroNoelle,marker,mergeColor,monsterParent,shake,tensionHeal} from './battle';
+import {afterImage,afterimage,afterimageGrow,dmgWriter,heroKris,heroParent,heroRalsei,heroSusie,heroNoelle,marker,mergeColor,monsterParent,shake,tensionHeal} from './battle';
 import {recruitAnim} from './chapter2-enemy';
 import {burstBolt,basicAttack} from './player-effects';
 import {battleTextDefault,writer} from './writer';
@@ -424,6 +424,7 @@ export function damageEnemy(s:GmInstance,rt:GmRuntime,enemy:number,amount:number
  g.hittarget[enemy]+=1;
  if(amount===0&&m){m.hurtamt=0;if(m.hurttimer<=15&&m.candodge===1){m.dodgetimer=0;m.state=4;}}
  if(g.monsterhp[enemy]<=0&&m&&defeatable(rt))monsterDefeat(m,rt);
+ if(g.monsterhp[enemy]<=0)for(const [e,h] of withHook(rt,'onDamagedToZero'))h(e,rt,enemy);
 }
 /** scr_retarget_spell: if the chosen enemy is gone, the next one; cancelattack when none is left. */
 function retargetSpell(s:GmInstance,rt:GmRuntime){
@@ -928,26 +929,41 @@ export const healAnim:GmObjectDef={name:'obj_healanim',index:301,sprite:'spr_spa
   }
  },
 }};
+/** Per chapter: from Chapter 2 a pacified enemy's sleep (con 20) sends nine Z's out from it, and the spell outlives
+ * its target in that state. */
+const PACIFY:Record<number,{sleepZs:boolean}>={1:{sleepZs:false},2:{sleepZs:true},3:{sleepZs:true}};
 export const pacifySpell:GmObjectDef={name:'obj_pacifyspell',index:298,events:{
- create:(s,rt)=>{s.target=439493;s.con=1;s.siner=0;s.xx=rt.view.x;s.yy=rt.view.y;s.alarm[4]=50;s.fail=0;s.flashcolor=0xff0000;},
+ create:(s,rt)=>{
+  s.target=439493;s.con=1;s.siner=0;s.xx=rt.view.x;s.yy=rt.view.y;s.alarm[4]=50;s.fail=0;s.flashcolor=0xff0000;
+  if(forChapter(rt,PACIFY,'obj_pacifyspell').sleepZs){s.timer=0;s.zcounter=0;}
+ },
  alarm4:s=>{s.con+=1;},
  step:(s,rt)=>{
+  const zs=forChapter(rt,PACIFY,'obj_pacifyspell').sleepZs;
   let t=rt.byId(s.target);
-  if(!t){s.con=99;rt.destroy(s);return;}
+  if(!t&&(!zs||s.con<20)){s.con=99;rt.destroy(s);return;}
+  const target=()=>{if(!t)throw Error('obj_pacifyspell lost its target');return t;};
   if(s.con===1){
    if(s.fail===0){
-    s.siner+=1;t.imageBlend=mergeColor(t.imageBlend,s.flashcolor,0.1);
-    if(s.siner%2===0){const y=t.y+rt.spriteHeight(t)-20,x=t.x+rt.random.random(rt.spriteWidth(t));const ai=rt.create(afterimage,x,y);ai.gravity=0.5;ai.sprite='spr_savepoint';ai.imageSpeed=0.2;}
-    t.x+=s.siner/4+Math.sin(s.siner/8)*10;t.y-=s.siner/5;
+    s.siner+=1;target().imageBlend=mergeColor(target().imageBlend,s.flashcolor,0.1);
+    if(s.siner%2===0){const y=target().y+rt.spriteHeight(target())-20,x=target().x+rt.random.random(rt.spriteWidth(target()));const ai=rt.create(afterimage,x,y);ai.gravity=0.5;ai.sprite='spr_savepoint';ai.imageSpeed=0.2;}
+    target().x+=s.siner/4+Math.sin(s.siner/8)*10;target().y-=s.siner/5;
    }else{s.siner=0;s.con=5;}
   }
-  if(s.con===2){rt.destroy(t);rt.destroy(s);}
-  t=rt.byId(s.target);if(!t){s.con=99;rt.destroy(s);return;}
+  if(s.con===2){if(t)rt.destroy(t);rt.destroy(s);}
+  if(!zs){t=rt.byId(s.target);if(!t){s.con=99;rt.destroy(s);return;}}
   if(s.con===5){s.con=6;s.alarm[4]=8;}
-  if(s.con===6)t.imageBlend=mergeColor(t.imageBlend,s.flashcolor,0.12);
+  if(s.con===6)target().imageBlend=mergeColor(target().imageBlend,s.flashcolor,0.12);
   if(s.con===7){s.con=8;s.alarm[4]=8;}
-  if(s.con===8)t.imageBlend=mergeColor(t.imageBlend,C.white,0.16);
-  if(s.con===9){t.imageBlend=C.white;rt.destroy(s);}
+  if(s.con===8)target().imageBlend=mergeColor(target().imageBlend,C.white,0.16);
+  if(s.con===9){target().imageBlend=C.white;rt.destroy(s);}
+  // Asleep: nine Z's fly out in a ring, one every two frames.
+  if(zs&&s.con===20){
+   if(s.timer===0&&s.zcounter===0)rt.sound?.('snd_pacify');
+   s.timer--;
+   if(s.timer<=0){const z=rt.create(afterimageGrow,s.x,s.y);z.sprite='spr_spare_z';z.speed=12;z.direction=s.zcounter*40;z.friction=1;s.timer=2;s.zcounter++;}
+   if(s.zcounter>=9){s.con++;rt.destroy(s);}
+  }
  },
  draw:()=>{},
 }};
@@ -1000,7 +1016,7 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
   if(s.t>=1&&s.explode===0){
    s.bolt_timer+=1;
    if(button1_p(rt)&&s.bolt_timer>=4&&s.chosen_bolt===0)s.chosen_bolt=s.bolt_timer;
-   s.dir=pointDirection(s.x,s.y,s.cx,s.cy);s.direction=f32(s.direction+angleDifference(s.dir,s.direction)/4);s.imageAngle=s.direction;
+   s.dir=pointDirection(s.x,s.y,s.cx,s.cy);s.direction=s.direction+angleDifference(s.dir,s.direction)/4;s.imageAngle=s.direction;
    if(pointDistance(s.x,s.y,s.cx,s.cy)<=40){s.final_bolt=s.chosen_bolt;s.visible=false;s.explode=1;s.t=1;}
   }
   if(s.explode===1){

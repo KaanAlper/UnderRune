@@ -22,6 +22,7 @@ import {createRoar} from '../bosses/roaring-knight/roar';
 import {createBlockVfx,createFadeToWhite,createFountain} from '../bosses/roaring-knight/fountain';
 import {createBattleMarker} from '../deltarune/guard-peek';
 import {sourceText} from './text';
+import {findController} from '../deltarune/controller';
 
 export function installChapter3BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapterRegistry(rt,{chapter:3,metadata,room:options.room}),{object}=registry;
@@ -43,5 +44,15 @@ export function installChapter3BossHost(rt:GmRuntime,options:{room:string}){
   g.tempflag[93]=1;return true;
  }};
  registry.finalize();installSmallFaceWriter(rt,object);
- return {objects:registry.objects,enter:(_enemy:GmInstance)=>{}};
+ return {objects:registry.objects,enter:(_enemy:GmInstance)=>{
+  // Knight Create runs inside the shared controller's Create, before heroes exist and before its final
+  // cantspare reset. Apply these scene-dependent writes once the fresh controller and party are ready.
+  const controller=findController(rt);if(controller)controller.cantspare[0]=1;
+  for(const h of rt.all(object('obj_herosusie'))){
+   Object.assign(h,{normalsprite:'spr_susier_dark_unhappy',idlesprite:'spr_susieb_idle_serious',defendsprite:'spr_susieb_defend_unhappy',actreadysprite:'spr_susieb_actready',
+    attacksprite:'spr_susieb_attack_serious',itemsprite:'spr_susieb_item_unhappy',itemreadysprite:'spr_susieb_itemready_unhappy',spellreadysprite:'spr_susieb_spellready_unhappy',
+    spellsprite:'spr_susieb_spell_unhappy',defeatsprite:'spr_susie_dw_fell'});
+   if(rt.globals.charweapon[2]===0)h.idlesprite='spr_susieb_idle_unarmed_unhappy';
+  }
+ }};
 }

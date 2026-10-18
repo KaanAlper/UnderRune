@@ -165,8 +165,9 @@ describe.skipIf(!fs.existsSync('extracted/chapter2_windows/code/gml_Object_obj_w
   const x=a.rt.create(a.object('obj_dbulletcontroller'),480,100),y=b.rt.create(b.object('obj_dbulletcontroller'),480,100);for(const c of [x,y])Object.assign(c,{type,init:1,miny:90,maxy:250,minx:240,maxx:400,creator:0,damage:55,target:4});
   run(x,a.rt,'step');executeNeoSource(eventSource('obj_dbulletcontroller','Step_0'),y,b.rt,b.host,undefined,'step');expect(state(a.rt)).toEqual(state(b.rt));expect(a.g).toEqual(b.g);expect(a.rt.random.snapshot()).toEqual(b.rt.random.snapshot());
  });
+ // The source interpreter reserves the arrays its code writes by index (bullet), so both sides start with it.
  for(const seed of [0,11,9182])for(const mode of [0,2,20,3,4,21])it(`matches ordinary Werewire ordered shooting events seed${seed} mode${mode}`,()=>{
-  const a=fixture(seed),b=fixture(seed);for(const c of [a,b]){const s=c.rt.create(c.object('obj_werewire_enemy'),482,164);s.myself=0;c.g.monster=[1,1,0];c.g.charaction=[0,0,0];c.g.turntimer=300;c.g.mnfight=2;Object.assign(s,{rtimer:14,shootmode:mode===0?1:0,shootcon:mode,shootwait:0,werewire_count:2,laser_angle:180,bullet_angle:180});}
+  const a=fixture(seed),b=fixture(seed);for(const c of [a,b]){const s=c.rt.create(c.object('obj_werewire_enemy'),482,164);s.myself=0;c.g.monster=[1,1,0];c.g.charaction=[0,0,0];c.g.turntimer=300;c.g.mnfight=2;Object.assign(s,{bullet:[],rtimer:14,shootmode:mode===0?1:0,shootcon:mode,shootwait:0,werewire_count:2,laser_angle:180,bullet_angle:180});}
   const x=a.rt.first(a.object('obj_werewire_enemy'))!,y=b.rt.first(b.object('obj_werewire_enemy'))!;for(let frame=0;frame<35;frame++){run(x,a.rt,'step');executeNeoSource(eventSource(y.object.name,'Step_0'),y,b.rt,b.host,undefined,'step');expect(state(a.rt)).toEqual(state(b.rt));expect(a.g).toEqual(b.g);expect(a.rt.random.snapshot()).toEqual(b.rt.random.snapshot());}
  });
  for(const name of ['obj_werewire_enemy','obj_werewire_throwkris','obj_werewire_throwtarget','obj_werewire_kristhrown','obj_werewire_spare','obj_werewire_spare2'])it(`matches ${name} source Create including final loop counters and RNG`,()=>{

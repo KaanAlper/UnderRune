@@ -46,7 +46,7 @@ let remakeMenu=false;
 // Engine battles read key presses like the game: every press since the last game frame reaches its next frame.
 const remakePressed=new Set<number>();
 const remakeReleased=new Set<number>();
-const remakeCanvas=document.createElement('canvas');remakeCanvas.width=640;remakeCanvas.height=480;const remakeCtx=remakeCanvas.getContext('2d')!;
+const remakeCanvas=document.createElement('canvas');remakeCanvas.width=640;remakeCanvas.height=480;const remakeCtx=remakeCanvas.getContext('2d',{alpha:false})!;
 let assets:AssetStore,renderer:Renderer,audio:AudioManager;
 // Local original-bytecode battles run in an iframe; source ports also work without a native install.
 let native:NativeBattle|null=null,nativeRecord:EncounterRecord|null=null,nativeIds=new Set<string>(),equipment:EquipmentCatalog|null=null,prep:PreparationPanel|null=null;
@@ -314,6 +314,7 @@ async function initialize(){
 }
 // Development builds only (removed from the site): browser tests reach a battle's end without playing it through.
 if(import.meta.env.DEV)(window as any).__underrune={
+ inspect:()=>remake,
  // The soul falls where it stands beside Kris when no attack has placed it yet.
  lose:()=>{if(!remake)return;const g=remake.rt.globals,k=remake.rt.first(heroKris);if(g.heartx===undefined&&k){g.heartx=k.x+10;g.hearty=k.y+40;}gameOver(remake.rt);},
  win:()=>{const c=remake&&findController(remake.rt);if(remake&&c)endCombat(c,remake.rt);},

@@ -64,7 +64,9 @@ export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects
  if(process.env.PARITY_NEXT_ID)rt.nextId=Number(process.env.PARITY_NEXT_ID);
  // The snapshot keeps sprite variables (single or arrays) as sprite numbers; the remake uses names.
  const name=(v:unknown)=>typeof v==='number'&&SPRITES[v]?SPRITES[v]:v;
- for(const i of rt.instances)for(const k of Object.keys(i))if(/sprite/.test(k)&&k!=='sprite')i[k]=Array.isArray(i[k])?i[k].map(name):name(i[k]);
+ // (Counters and flags whose names merely contain "sprite" stay numbers.)
+ const NOT_SPRITES=new Set(['dontshowherosprite','userealsprite']);
+ for(const i of rt.instances)for(const k of Object.keys(i))if(/sprite/.test(k)&&k!=='sprite'&&!NOT_SPRITES.has(k))i[k]=Array.isArray(i[k])?i[k].map(name):name(i[k]);
  const tracked=new Set(Object.keys(objects).filter(n=>!skipped.has(n)));
  afterRestore?.(rt);
  const end=process.env.PARITY_END?Number(process.env.PARITY_END):Math.max(...trace.keys());

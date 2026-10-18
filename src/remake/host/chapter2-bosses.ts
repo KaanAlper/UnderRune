@@ -22,12 +22,19 @@ import {createQueenSearch} from '../bosses/queen/search';
 import {createQueenSocial} from '../bosses/queen/social';
 import {createQueenElectric} from '../bosses/queen/electric';
 import {createQueenThrow} from '../bosses/queen/throw';
+import {createQueenUltimate} from '../bosses/queen/ultimate';
+import {createChapter2Rivals,runBerdlyBulletController} from '../bosses/chapter2-rivals';
+import {runBerdlySpearblastController} from '../bosses/chapter2-rivals/spearblast';
+import {berdlySnowgraveScene} from '../bosses/chapter2-rivals/berdly-snowgrave';
+import {RIVAL_ENCOUNTERS,setupRivalMonster} from '../bosses/chapter2-rivals/setup';
+import {rivalRoutePhase} from '../bosses/chapter2-rivals/berdly-rematch';
+import {anyFaceNext,monsterAdd,speaker,terminateWriter} from '../deltarune/chapter2-enemy';
 import {QUEEN_ENCOUNTERS,setupQueenMonster} from '../bosses/queen/setup';
 
 /** scr_encountersetup for the ported encounters: enemies (object, type, x, y), the opening line and optional hero
  * positions. */
 type EncounterSetup={monsters:readonly (readonly [string,number,number,number])[];intro:string;kind:string;heroes?:readonly (readonly [number,number])[]};
-const ENCOUNTERS:Record<number,EncounterSetup>={...FIELD_ENCOUNTERS,59:QUEEN_ENCOUNTERS[59]};
+const ENCOUNTERS:Record<number,EncounterSetup>={...FIELD_ENCOUNTERS,59:QUEEN_ENCOUNTERS[59],58:{...RIVAL_ENCOUNTERS[58],kind:'story'},82:{...RIVAL_ENCOUNTERS[82],kind:'story'}};
 export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapter2Registry(rt,{metadata,room:options.room}),{object}=registry;
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object),iceHexagon,iceSpell,sleepMist]);
@@ -36,13 +43,18 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  registry.register(createNeoFace(object).filter(d=>['obj_werewire_bullet_lasercircle','obj_werewire_bullet_lasersquare'].includes(d.name)));
  registry.register(createChapter2Field(object));
  registry.register([createPowerUpOrb(object)]);
- registry.register([createChapter2BulletController(object,[createChapter2FieldBulletRunner(object)])]);
+ registry.register([createChapter2BulletController(object,[createChapter2FieldBulletRunner(object),(s,r)=>runBerdlyBulletController(s,r,object),(s,r)=>runBerdlySpearblastController(s,r,object)])]);
+ // The rivals: Berdly on the coaster (58) and in the rematch (82).
+ const dialogue={speaker,faceNext:anyFaceNext,terminateWriter:(s:GmInstance,r:GmRuntime)=>!!terminateWriter(s,r)};
+ registry.register(createChapter2Rivals(object,{dialogue,monsterAdd,snowgraveScene:(s,r)=>berdlySnowgraveScene(s,r,dialogue,object,()=>{throw Error('scr_losechar (after SnowGrave) is not ported');})}));
  // Queen (59): her enemy, shield, bullet controller and attack objects.
- registry.register([...createQueenObjects(object),...createQueenProjectiles(object),...createQueenExplosions(object),...createQueenBerdly(object),...createQueenWine(object),...createQueenSearch(object),...createQueenSocial(object),...createQueenElectric(object),...createQueenThrow(object)]);
+ registry.register([...createQueenObjects(object),...createQueenProjectiles(object),...createQueenExplosions(object),...createQueenBerdly(object),...createQueenWine(object),...createQueenSearch(object),...createQueenSocial(object),...createQueenElectric(object),...createQueenThrow(object),...createQueenUltimate(object)]);
  // obj_heartmarker has no events: a place the soul is moved to.
  registry.register([{...object('obj_heartmarker'),events:{}}]);
+ // obj_animation plays its sprite once.
+ registry.register([{...object('obj_animation'),events:{animationEnd:(s,r)=>r.destroy(s)}}]);
  const plug=object('obj_berdlyplug_enemy');
- rt.battleSetup={monster:(s,r)=>setupFieldMonster(s,r)||setupQueenMonster(s,r,r.exists(plug)),encounter:(r,n,enemies)=>{
+ rt.battleSetup={monster:(s,r)=>setupFieldMonster(s,r)||setupQueenMonster(s,r,r.exists(plug))||setupRivalMonster(s,r,rivalRoutePhase(r)),encounter:(r,n,enemies)=>{
   const setup=ENCOUNTERS[n];if(!setup||setup.kind==='unused')return false;
   const g=r.globals;g.monstertype=[0,0,0];g.monsterinstancetype=[0,0,0];
   for(const [i,[name,type,x,y]] of setup.monsters.entries()){

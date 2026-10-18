@@ -197,7 +197,7 @@ export function createRotatingSlash(object:Objects,effects:SlashEffects){
    for(s.a=0;s.a<s.slash_number;s.a++)rt.drawSprite('spr_rk_quickslash_marker_gradient',0,s.aim_x-ox,s.aim_y-oy,s.timer*0.2,stretch,dirOf(),makeColorRgb(s.r,s.g,s.b),1);
    for(s.a=0;s.a<s.slash_number;s.a++)rt.drawSprite('spr_rk_quickslash_marker',0,s.aim_x-ox,s.aim_y-oy,s.timer*0.2,stretch,dirOf(),C.black,1);
    for(const line of [s.line2,s.line3]){
-    if(!line)continue;
+    if(!(line>0.5))continue;
     d.alpha=1-line/7;
     for(s.a=0;s.a<s.slash_number;s.a++){
      const dir=dirOf(),dx=lengthdirX(320,dir),dy=lengthdirY(320,dir),px=lengthdirX(line*6,dir+90),py=lengthdirY(line*6,dir+90);
@@ -211,7 +211,7 @@ export function createRotatingSlash(object:Objects,effects:SlashEffects){
   for(const sl of rt.withInstances(slash)){
    const hx=lengthdirX(640,sl.direction),hy=lengthdirY(640,sl.direction),hxo=lengthdirX(sl.width,sl.direction+90),hyo=lengthdirY(sl.width,sl.direction+90);
    const color=makeColorRgb(255,(1-sl.imageAlpha)*255,(1-sl.imageAlpha)*255),x=sl.x-ox,y=sl.y-oy;
-   if(sl.slashdir)rt.drawTriangleColor(x-hx*sl.imageAlpha,y-hy*sl.imageAlpha,x+hx+hxo,y+hy+hyo,x+hx-hxo,y+hy-hyo,color,color,color);
+   if(sl.slashdir>0.5)rt.drawTriangleColor(x-hx*sl.imageAlpha,y-hy*sl.imageAlpha,x+hx+hxo,y+hy+hyo,x+hx-hxo,y+hy-hyo,color,color,color);
    else rt.drawTriangleColor(x+hx*sl.imageAlpha,y+hy*sl.imageAlpha,x-hx+hxo,y-hy+hyo,x-hx-hxo,y-hy-hyo,color,color,color);
   }
   surfaces.target(null);surfaces.draw(s.my_surface,ox,oy);

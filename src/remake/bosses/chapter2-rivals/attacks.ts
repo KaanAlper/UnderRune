@@ -1,7 +1,8 @@
 // Berdly's wind and flyer projectiles. Event order is significant: the wind accelerates in Begin Step,
 // moves in the runner, and only then rotates around the box in Step.
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
-import {round,pointDirection,pointDistance,lengthdirX,lengthdirY,gt,lt,ge} from '../../gm/math';
+import {clamp,eq,round,pointDirection,pointDistance,lengthdirX,lengthdirY,lerp,gt,lt,ge} from '../../gm/math';
+import {moveTowards} from '../../deltarune/chapter3-scripts';
 import {mergeColor} from '../../gm/graphics';
 import {bulletInit,collideBullet,growtangle,heart,shake} from '../../deltarune/battle';
 import {snd} from '../../deltarune/sound';
@@ -13,12 +14,16 @@ function bullet(caller:GmInstance,rt:GmRuntime,def:GmObjectDef,x:number,y:number
  if('element' in caller)d.element=caller.element;
  return d;
 }
+/** Chapter 2 remap(value, a, b, c, d) and remap_clamped: value's place between a and b (scr_inverselerp, 0 when a
+ * equals b), mapped onto c..d. */
+function remapClamped(value:number,a:number,b:number,c:number,d:number){return clamp(lerp(c,d,eq(b,a)?0:(value-a)/(b-a)),c,d);}
 export function createRivalAttacks(object:ObjectLookup):GmObjectDef[]{
  const tornado:GmObjectDef={...object('obj_berdlyb_tornado'),parent:collideBullet,events:{
   create:(s,rt)=>{bulletInit(s);s.imageAlpha=0;if(!rt.exists(heart))rt.destroy(s);
    Object.assign(s,{wall_destroy:1,maxSpeed:8,speed:0,destroyonhit:0,flipSpeed:4,flipTimer:0,timer:-10,middespawn:0,traveldistance:0,maxdistance:400,firstwave:0,spindir:0,start_angle:0,init:false});},
   beginStep:s=>{
-   if(s.firstwave===1){s.speed=0;for(s.i=0;s.i<50;s.i++)s.speed+=-(-1.75+Math.sin((s.i+15.707963267948966)/10)*1.75);s.firstwave=2;}
+   // The bullet maker sets firstwave to true, which GML compares equal to 1.
+   if(Number(s.firstwave)===1){s.speed=0;for(s.i=0;s.i<50;s.i++)s.speed+=-(-1.75+Math.sin((s.i+15.707963267948966)/10)*1.75);s.firstwave=2;}
    else if(s.firstwave===2){s.speed=0;s.fadetimer=50;s.firstwave=-1;}
    else if(ge(s.timer,0)){s.speed=-(-3.5+Math.sin((s.timer+15.707963267948966)/10)*3.5);if(s.middespawn&&lt(s.traveldistance,110))s.speed/=2;}
    s.traveldistance+=s.speed;s.timer++;
@@ -33,7 +38,8 @@ export function createRivalAttacks(object:ObjectLookup):GmObjectDef[]{
   },
   draw:(s,rt)=>{
    if(s.init&&lt(s.imageAlpha,1)&&s.firstwave<=0){
-    if(s.middespawn&&s.firstwave===0){const to=.25+Math.max(0,Math.min(1,(s.timer-50)/15))*.75;s.imageAlpha+=Math.sign(to-s.imageAlpha)*Math.min(.1,Math.abs(to-s.imageAlpha));}
+    // remap_clamped(50, 65, timer, 0.25, 1): the source passes the value first, so the timer is the range's end.
+    if(s.middespawn&&s.firstwave===0)s.imageAlpha=moveTowards(s.imageAlpha,remapClamped(50,65,s.timer,.25,1),.1);
     else s.imageAlpha+=.1;
    }
    s.xflip=s.flipTimer<0?-1:1;s.flipTimer++;if(ge(s.flipTimer,s.flipSpeed))s.flipTimer-=s.flipSpeed*2;

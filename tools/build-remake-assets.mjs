@@ -7,8 +7,9 @@ import path from 'node:path';
 import sharp from 'sharp';
 import {fileURLToPath} from 'node:url';
 import {parseSounds,embeddedAudio} from './sound-assets.mjs';
-import {localizationDefaults} from './source-localization.mjs';
+import {englishLocalization,localizationDefaults} from './source-localization.mjs';
 import {referencedLiterals,referencedTextKeys} from './remake-text-keys.mjs';
+import {remakeSpriteDependencies} from './remake-sprite-dependencies.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const chapter = Number(process.argv[2] ?? 1);
@@ -35,7 +36,8 @@ const chapterSources=(await sources(remakeRoot)).filter(file=>{
 });
 const text = (await Promise.all(chapterSources.map(f => fs.readFile(f, 'utf8')))).join('\n');
 // GameMaker 2 stores backgrounds (bg_) as sprites too.
-const names = new Set(text.match(/\b(?:spr|bg|IMAGE)_[A-Za-z0-9_]+/g) ?? []);
+const objectMetadata=JSON.parse(await fs.readFile(path.join(root,'src','remake','host',`chapter${chapter}-resources.json`),'utf8').catch(error=>{if(chapter===1&&error.code==='ENOENT')return '[]';throw error;}));
+const names = remakeSpriteDependencies(text,objectMetadata);
 // Sprite fonts the code names through font_add_sprite_ext, and bitmap fonts by name.
 // Sprite fonts made with font_add_sprite_ext: damage numbers, and global.hpfont (its map is the digits plus - and +).
 const spriteFonts = {damagefont: {sprite: 'spr_numbersfontbig', map: '0123456789', proportional: true, sep: 0}, hpfont: {sprite: 'spr_numbersfontsmall', map: '0123456789-+', proportional: false, sep: 2}};
@@ -106,9 +108,10 @@ for(const sound of parseSounds(data,soundNames)){
 // Dialogue lines named in src/remake/host/text-keys.json, from the same language file the game loads.
 const keySet=new Set(JSON.parse(await fs.readFile(path.join(root, 'src', 'remake', 'host', 'text-keys.json'), 'utf8'))[`chapter${chapter}`]??[]);
 if(chapter===2){for(const key of JSON.parse(await fs.readFile(path.join(root,'src/remake/deltarune/text-keys-ch2.json'),'utf8')).chapter2)keySet.add(key);}
-let lang={};
-if(chapter>=2){for(const file of await fs.readdir(path.join(base,'code')))if(file.endsWith('.gml'))Object.assign(lang,localizationDefaults(await fs.readFile(path.join(base,'code',file),'utf8')));}
-try{Object.assign(lang,JSON.parse((await fs.readFile(path.join(gameChapter,'lang','lang_en.json'),'utf8')).replace(/^\uFEFF/,'')));}catch(error){if(error.code!=='ENOENT'||chapter<2)throw error;}
+let languageFile={},sourceDefaults={};
+for(const file of await fs.readdir(path.join(base,'code')))if(file.endsWith('.gml'))Object.assign(sourceDefaults,localizationDefaults(await fs.readFile(path.join(base,'code',file),'utf8')));
+try{languageFile=JSON.parse((await fs.readFile(path.join(gameChapter,'lang','lang_en.json'),'utf8')).replace(/^\uFEFF/,''));}catch(error){if(error.code!=='ENOENT'||chapter<2)throw error;}
+const lang=englishLocalization(languageFile,sourceDefaults);
 if(chapter>=2)for(const key of referencedTextKeys(text,lang))keySet.add(key);
 const textKeys=[...keySet];
 const gameText = {};

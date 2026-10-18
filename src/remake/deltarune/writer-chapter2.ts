@@ -7,6 +7,7 @@ import {lengthdirX,lengthdirY,round,le,lt,ge,gt} from '../gm/math';
 import {KEY} from './battle';
 import {face,faceParent} from './writer';
 import {forChapter} from './rules';
+import {choicerNeo} from './choicer';
 
 type Step=(s:GmInstance,rt:GmRuntime)=>void;
 export interface WriterPart{create:Step;alarm0:Step;alarm1:Step;alarm2:Step;draw:Step;textType:Step;
@@ -237,7 +238,11 @@ function draw(s:GmInstance,rt:GmRuntime){
    if(s.nextchar==='s'){if(s.nextchar2==='0')s.skippable=0;if(s.nextchar2==='1')s.skippable=1;}
    if(s.nextchar==='c'){s.colorchange=1;s.xcolor=s.nextchar2==='0'?s.mycolor:ch.colors[s.nextchar2]??s.xcolor;}
    if(s.nextchar==='O'&&ch.later)throw Error('Chapter 3 writer objects (\\O) are not ported');
-   if(s.nextchar==='C'&&/[1-4]/.test(s.nextchar2))throw Error('Chapter 2 writer choice object is not ported');
+   if(s.nextchar==='C'){
+    if(s.nextchar2==='1')throw Error('Chapter 2 writer choice object obj_choicer_old (\C1) is not ported');
+    // \C2-\C4: two to four answers; the writer waits (halt 5) until one is chosen.
+    if(/[2-4]/.test(s.nextchar2)){if(!rt.exists(choicerNeo)){const c=rt.create(choicerNeo,0,0);s.choicer=c.id;c.choicetotal=Number(s.nextchar2)-1;}s.halt=5;}
+   }
    if(s.nextchar==='M'&&/^[0-9]$/.test(s.nextchar2))g.flag[20]=Number(s.nextchar2);
    if(s.nextchar==='S'&&s.sound_played===0){for(s.i=0;s.i<10;s.i++)if(s.nextchar2===String(s.i)&&s.sound_played===0){rt.sound?.(g.writersnd[s.i]);s.sound_played=1;}}
    if(s.nextchar==='I'){for(s.i=0;s.i<10;s.i++)if(s.nextchar2===String(s.i))rt.drawSprite(g.writerimg[s.i],0,s.wx,s.wy+4);}

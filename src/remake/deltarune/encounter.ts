@@ -6,6 +6,7 @@ import {optionalSourceText as lang} from '../host/text';
 import {sourceText} from '../host/text';
 import {sideBPhase} from './chapter2';
 import {forChapter} from './rules';
+import {monsterActReset} from './chapter2-enemy';
 
 /** A party member's equipment in the game's terms: weapon and two armors, each with its AT, DF and MAGIC. */
 export interface EquippedStats{weapon:number;armor?:readonly [number,number];itemat:[number,number,number];itemdf:[number,number,number];itemmag:[number,number,number]}
@@ -36,6 +37,8 @@ export function partyGlobals(rt:GmRuntime,p:PartySetup){
  g.item=new Array(13).fill(0);p.items.slice(0,12).forEach((id,i)=>{g.item[i]=id;});
  // scr_gamestart: Kris has the hidden ACT spell (7), Susie Rude Buster, Ralsei Pacify and Heal Prayer.
  g.spell=Array.from({length:4},()=>new Array(13).fill(0));g.spell[1][0]=7;g.spell[2][0]=4;g.spell[3][0]=3;g.spell[3][1]=2;
+ // Chapter 3 scr_gamestart also gives Susie UltraHeal; the spell table drives the actual command menu.
+ if(g.chapter===3)g.spell[2][1]=11;
  if(p.char.includes(4)){g.spell[4]=new Array(13).fill(0);g.spell[4][0]=2;g.spell[4][1]=8;g.spell[4][2]=9;}
  g.charname=[' ',...forChapter(rt,CHAR_NAMES,'party names').map(key=>lang(key))];
  g.charauto=new Array(p.char.includes(4)?5:4).fill(0);for(const c of p.auto??[])g.charauto[c]=1;
@@ -83,8 +86,11 @@ export function encounterSetup(rt:GmRuntime,n:number,enemies:Record<string,GmObj
  }
 }
 
+/** From Chapter 2, scr_monstersetup starts by clearing the enemy's ACTs (scr_monster_actreset). */
+const SETUP_RESETS_ACTS:Record<number,boolean>={1:false,2:true,3:true};
 /** scr_monstersetup, run by the enemy (from its event 12): name, stats, rewards, mercy and ACTs. */
 export function monsterSetup(s:GmInstance,rt:GmRuntime){
+ if(forChapter(rt,SETUP_RESETS_ACTS,'scr_monstersetup'))monsterActReset(s,rt,s.myself);
  if(rt.battleSetup?.monster(s,rt))return;
  const g=rt.globals,i=s.myself as number,L=(n:number)=>lang(`scr_monstersetup_slash_scr_monstersetup_gml_${n}_0`);
  const stats=(name:number,hp:number,at:number,df:number,gold:number,spare:number,mercymax:number)=>{

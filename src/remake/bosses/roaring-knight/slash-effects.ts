@@ -46,7 +46,7 @@ export function createSlashEffects(object:(name:string)=>GmObjectDef){
   draw:(s,rt)=>{
    const hx=lengthdirX(640,s.direction),hy=lengthdirY(640,s.direction),ox=lengthdirX(s.width,s.direction+90),oy=lengthdirY(s.width,s.direction+90);
    const color=makeColorRgb(255,(1-s.imageAlpha)*255,(1-s.imageAlpha)*255),d=rt.drawState;d.alpha=s.imageAlpha*2;
-   if(s.slashdir)rt.drawTriangleColor(s.x-hx*s.imageAlpha,s.y-hy*s.imageAlpha,s.x+hx+ox,s.y+hy+oy,s.x+hx-ox,s.y+hy-oy,color,color,color);
+   if(s.slashdir>0.5)rt.drawTriangleColor(s.x-hx*s.imageAlpha,s.y-hy*s.imageAlpha,s.x+hx+ox,s.y+hy+oy,s.x+hx-ox,s.y+hy-oy,color,color,color);
    else rt.drawTriangleColor(s.x+hx*s.imageAlpha,s.y+hy*s.imageAlpha,s.x-hx+ox,s.y-hy+oy,s.x-hx-ox,s.y-hy-oy,color,color,color);
    d.alpha=1;
   },

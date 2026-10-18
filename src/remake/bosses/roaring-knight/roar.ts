@@ -316,6 +316,7 @@ export function createRoar(object:(name:string)=>GmObjectDef,effects:SlashEffect
   rt.drawBlendMode('normal');
   // The stars and their bursts.
   surfaces.target(s.star_surface);surfaces.clear(C.black,0);
+  for(const p of rt.withInstances(particle))rt.drawSprite(p.sprite,p.imageIndex,p.x-vx,p.y-vy,p.imageXscale,p.imageYscale,p.imageAngle,p.imageBlend,p.imageAlpha);
   const each=(test:(b:GmInstance)=>boolean)=>{for(const b of rt.withInstances(star)){if(test(b))continue;rt.userEvent(b,b.con===0?0:1);}};
   each(b=>b.imageBlend===C.white);
   each(b=>b.imageBlend===DKGRAY);

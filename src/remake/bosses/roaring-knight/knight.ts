@@ -181,7 +181,8 @@ export function createKnight(object:(name:string)=>GmObjectDef,fountain:GmObject
    for(const n of [426,427,428,429,430])msgNext(rt,T(n));
    anyFaceNext(s,rt,'none',0);msgNext(rt,T(432));battleTextDefault(rt,s);
    s.sactcount=1;s.actcon=1;s.actconsus=0;
-   g.canactsus[me][0]=0;g.actnamesus[me][0]='';g.actsimulsus[me][0]=0;g.actactorsus[me][0]=0;g.actcostsus[me][0]=0;
+   // global.actactorsus exists only once written (GML makes the array on assignment).
+   g.canactsus[me][0]=0;g.actnamesus[me][0]='';g.actsimulsus[me][0]=0;((g.actactorsus??=[])[me]??=[])[0]=0;g.actcostsus[me][0]=0;
    g.battlespell[1][0]=0;g.battlespell[1][0]=-1;g.battleactcount[1]=0;g.battlespellname[1][0]='';g.battlespelldesc[1][0]='';
    spellMenuSetupChapter2(rt,s);
   }

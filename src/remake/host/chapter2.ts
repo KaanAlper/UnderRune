@@ -7,12 +7,14 @@ import * as controller from '../deltarune/controller';
 import * as party from '../deltarune/party';
 import * as effects from '../deltarune/player-effects';
 import * as writer from '../deltarune/writer';
+import * as choices from '../deltarune/choicer';
 import {monsterSetup} from '../deltarune/encounter';
 import {spellMenuSetupChapter2} from '../deltarune/chapter2';
 import {sourceText} from './text';
 import type {NeoSourceHost,NeoSourceMetadata} from '../bosses/spamton-neo/body-source';
 import {installSourceSurfaces} from './surfaces';
 import {spareEnemy} from '../deltarune/chapter2-enemy';
+import {recruitInfo} from '../deltarune/recruit-info';
 export interface Chapter2RegistryHost extends NeoSourceHost{battleBoundary(scene:GmInstance,rt:GmRuntime):void;}
 export interface Chapter2RegistryOptions{
  /** The chapter whose objects these are (2 by default). */
@@ -93,7 +95,7 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
  for(const m of options.metadata)objects[m.name]=resource(m,true);
  const original:GmObjectDef[]=[];
  const collect=(value:any)=>{if(value&&typeof value==='object'&&typeof value.index==='number'&&typeof value.name==='string'){original.push(value);if(value.parent)collect(value.parent);}};
- for(const module of [battle,writer,controller,party,effects])for(const value of Object.values(module))collect(value);
+ for(const module of [battle,writer,controller,party,effects,choices])for(const value of Object.values(module))collect(value);
  party.HERO_DEFS.forEach(collect);
  // Merge same-name wrapper events into a single definition. The actual Chapter 2
  // ancestry replaces the implementation wrapper's same-name parent chain.
@@ -111,7 +113,8 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
   while(chain?.name===old.name){layers.unshift(chain);chain=chain.parent;}
   def.events={};for(const layer of layers)Object.assign(def.events,layer.events);
  }
- const parent=object('obj_monsterparent');parent.events={...parent.events,user10:spareEnemy};
+ // User event 15 (scr_monster_makeinstance): what the recruit menu knows about a recruitable enemy.
+ const parent=object('obj_monsterparent');parent.events={...parent.events,user10:spareEnemy,user15:(s,r)=>{if(s.recruitable){recruitInfo(s,r,r.globals.monstertype[s.myself]);s.recruitcount=s._recruitcount;}}};
  const aliases:(readonly [GmObjectDef,GmObjectDef])[]=[];
  const register=(definitions:readonly GmObjectDef[],transform?:(def:GmObjectDef)=>GmObjectDef)=>{
   for(const source of definitions){

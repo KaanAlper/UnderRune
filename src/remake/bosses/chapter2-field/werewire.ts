@@ -31,7 +31,6 @@ export function createWerewire(object:(name:string)=>GmObjectDef):GmObjectDef[]{
 }
 function shoot(s:GmInstance,rt:GmRuntime,object:(name:string)=>GmObjectDef){
  const g=rt.globals;
- if(!('bullet' in s))s.bullet=[];
  if(s.shootcon===0&&s.shootmode===1){if(g.turntimer>=10)s.shootwait--;if(s.shootwait<=0&&g.turntimer>=40){s.shootwait=(s.werewire_count*6+rt.random.random(7))*s.werewire_count;if(s.easymode===1)s.shootwait=(s.werewire_count*10+rt.random.random(4))*s.werewire_count;if(s.werewire_count===3)s.shootwait=(s.werewire_count*5+rt.random.random(7))*s.werewire_count;if(s.werewerewire===1)s.shootwait=0;let n=0;for(s._sameattacki=0;s._sameattacki<3;s._sameattacki++)if(g.monsterattackname[s._sameattacki]==='Chirashi'&&g.monster[s._sameattacki]===1)n++;s.__sameattack=n;if(n>0)s.shootwait+=10*s.werewire_count;s.shootcon=1;s.shoottimer=0;}else if(g.turntimer<40)s.shootmode=0;}
  if(s.shootcon===1){randomTarget(s,rt);s.damage=g.monsterat[s.myself];s.shootcon=rt.random.choose(2,20);s.sprite=s.shootcon===20?'spr_werewire_attack_1':'spr_werewire_attack_2';s.imageIndex=0;s.imageSpeed=0;s.siner=0;s.siner_timer=0;s.stop_anim=1;s.anim_timer_2=0;s.shootcount=0;}
  if(s.shootcon===2){s.anim_add=s.werewerewire===1?0.5:0.25;if(lt(s.imageIndex,3))s.imageIndex+=s.anim_add*s.m;if(ge(s.imageIndex,3)){s.shootcon=3;s.shoottimer=0;s.shootcount=0;}}

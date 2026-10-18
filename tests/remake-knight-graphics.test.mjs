@@ -4,7 +4,80 @@ import {existsSync} from 'node:fs';
 import {chromium} from '@playwright/test';
 import {createServer} from 'vite';
 
+test('multiline failure choices draw with the same native glyph stride as their measured bounds',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const atlas=document.createElement('canvas');atlas.width=1;atlas.height=4;atlas.getContext('2d').fillRect(0,0,1,4);
+  const canvas=document.createElement('canvas');canvas.width=4;canvas.height=12;const ctx=canvas.getContext('2d');
+  const font={kind:'bitmap',page:0,sx:0,sy:0,size:2,glyphs:{65:{x:0,y:0,w:1,h:4,shift:1,offset:0}}};
+  const g=new CanvasGraphics(ctx,{pages:[atlas],sprite:()=>undefined,font:()=>font},{x:0,y:0});g.text(0,6,'A\nA',{font:'main',color:0xffffff,alpha:1,halign:0,valign:1,xscale:1,yscale:1,angle:0});
+  return {height:g.textHeight('main','A\nA'),alpha:Array.from(ctx.getImageData(0,0,1,12).data).filter((_,i)=>i%4===3)};
+ });assert.equal(result.height,8);assert.deepEqual(result.alpha,[0,0,255,255,255,255,255,255,255,255,0,0]);
+});
+
+test('opaque screen composites surfaces with the GPU while retaining native visible colors',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const outputs=[];
+  for(const mode of ['normal','add']){
+   const canvas=document.createElement('canvas');canvas.width=4;canvas.height=2;const ctx=canvas.getContext('2d',{alpha:false});
+   const g=new CanvasGraphics(ctx,{pages:[],sprite:()=>undefined,font:()=>undefined},{x:10,y:20});g.surfaceClear(0x101010,1);g.surfaceCreate(1,2,2);g.surfaceTarget(1);g.surfaceClear(0x808080,.5);g.surfaceTarget(null);g.blendMode(mode);
+   let reads=0;const read=ctx.getImageData.bind(ctx);ctx.getImageData=(...args)=>{reads++;return read(...args);};
+   g.surfaceDraw(1,11,20,1);const pixel=Array.from(read(1,0,1,1).data);outputs.push({mode,reads,pixel,outside:Array.from(read(0,0,1,1).data)});
+  }return outputs;
+ });
+ for(const r of result){assert.equal(r.reads,0,'surface display must not read the entire screen back');const expected=r.mode==='normal'?72:80;for(const v of r.pixel.slice(0,3))assert.ok(Math.abs(v-expected)<=1);assert.equal(r.pixel[3],255);assert.deepEqual(r.outside,[16,16,16,255]);}
+});
+
 let server,browser,page;
+test('offscreen drawing batches transfers until presentation and flushes captures and context reads',async()=>{
+ const actual=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');
+  const canvas=document.createElement('canvas');canvas.width=24;canvas.height=2;const ctx=canvas.getContext('2d',{alpha:false});ctx.imageSmoothingEnabled=false;
+  const g=new CanvasGraphics(ctx,{pages:[],sprite:()=>undefined,font:()=>undefined},{x:0,y:0});g.surfaceCreate(1,24,2);g.surfaceTarget(1);
+  const off=g.ctx,put=off.putImageData.bind(off);let uploads=0;off.putImageData=(...args)=>{uploads++;return put(...args);};
+  g.surfaceClear(0,0);for(let x=0;x<20;x++)g.rect(x,0,x,0,0xffffff,1);
+  const before=uploads;g.surfaceTarget(null);g.blendMode('add');g.surfaceDraw(1,0,0,1);const after=uploads,pixels=Array.from(ctx.getImageData(0,0,24,1).data);
+  g.surfaceTarget(1);g.blendMode('normal');g.rect(21,0,21,0,0x0000ff,1);g.surfaceSprite(1,'capture',0,0,24,2,0,0);
+  g.surfaceTarget(null);g.sprite('capture',0,0,1,1,1,0,0xffffff,1);const capture=Array.from(ctx.getImageData(21,1,1,1).data);
+  g.surfaceTarget(1);g.rect(22,0,22,0,0x00ff00,1);const read=Array.from(g.ctx.getImageData(22,0,1,1).data);
+  return {before,after,pixels,capture,read};
+ });
+ assert.equal(actual.before,0,'drawing a surface must not upload it after every primitive');assert.equal(actual.after,1);
+ assert.deepEqual(actual.pixels,Array.from({length:24},(_,x)=>x<20?[255,255,255,255]:[0,0,0,255]).flat());
+ assert.deepEqual(actual.capture,[255,0,0,255]);assert.deepEqual(actual.read,[0,255,0,255]);
+});
+test('surface clears reuse the RGBA buffer without retaining old colors or alpha',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const canvas=document.createElement('canvas');
+  const g=new CanvasGraphics(canvas.getContext('2d'),{pages:[],sprite:()=>undefined,font:()=>undefined},{x:0,y:0});g.surfaceCreate(1,2,2);g.surfaceTarget(1);
+  const c=g.ctx,create=c.createImageData.bind(c);let allocations=0;c.createImageData=(...args)=>{allocations++;return create(...args);};
+  g.surfaceClear(0x604020,.5);g.surfaceClear(0,0);const transparent=Array.from(g.ctx.getImageData(0,0,2,2).data);
+  g.surfaceClear(0x204080,1);return {allocations,transparent,colored:Array.from(g.ctx.getImageData(0,0,2,2).data)};
+ });
+ assert.equal(result.allocations,1);assert.deepEqual(result.transparent,Array(16).fill(0));assert.deepEqual(result.colored,Array(4).fill([128,64,32,255]).flat());
+});
+test('effect-surface triangles rasterize without temporary canvases and preserve shared-edge blending',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const canvas=document.createElement('canvas');canvas.width=4;canvas.height=4;
+  const g=new CanvasGraphics(canvas.getContext('2d'),{pages:[],sprite:()=>undefined,font:()=>undefined},{x:0,y:0});g.surfaceCreate(1,4,4);g.surfaceTarget(1);g.surfaceClear(0,1);g.blendMode('add');
+  const create=document.createElement.bind(document);let canvases=0;document.createElement=(name,...args)=>{if(name==='canvas')canvases++;return create(name,...args);};
+  try{g.triangle(0,0,4,0,0,4,0x404040,1,false);g.triangleColor(4,0,0,4,4,4,0x404040,0x404040,0x404040,1);}finally{document.createElement=create;}
+  return {canvases,pixels:Array.from(g.ctx.getImageData(0,0,4,4).data)};
+ });
+ assert.equal(result.canvases,0);assert.deepEqual(result.pixels,Array.from({length:16},()=>[64,64,64,255]).flat());
+});
+test('direct surface triangles preserve vertex-color interpolation and native alpha blending',async()=>{
+ const pixels=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const canvas=document.createElement('canvas');
+  const g=new CanvasGraphics(canvas.getContext('2d'),{pages:[],sprite:()=>undefined,font:()=>undefined},{x:100,y:200});
+  g.surfaceCreate(1,40,40);g.surfaceTarget(1);g.surfaceClear(0,1);g.triangleColor(2,2,32,5,9,32,0x0000ff,0x00ff00,0xff0000,.5);
+  return [[4,4],[25,6],[9,24]].map(([x,y])=>Array.from(g.ctx.getImageData(x,y,1,1).data));
+ });
+ for(const [i,[x,y]] of [[4,4],[25,6],[9,24]].entries()){
+  const b=((x+.5-2)*30-(y+.5-2)*7)/879,c=(30*(y+.5-2)-3*(x+.5-2))/879,a=1-b-c;
+  for(const [ch,w] of [a,b,c].entries())assert.ok(Math.abs(pixels[i][ch]-Math.round(Math.round(w*255)*128/255))<=1,`${i}/${ch}: ${pixels[i]}`);
+  assert.ok(Math.abs(pixels[i][3]-191)<=1);
+ }
+});
 before(async()=>{
  server=await createServer({configFile:false,root:process.cwd(),optimizeDeps:{noDiscovery:true,entries:[]},server:{host:'127.0.0.1',port:0,watch:{ignored:['**/.tools/**','**/extracted/**','**/public/**']}}});await server.listen();
  const executablePath=process.env.PLAYWRIGHT_EXECUTABLE_PATH||['C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe','C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].find(existsSync);

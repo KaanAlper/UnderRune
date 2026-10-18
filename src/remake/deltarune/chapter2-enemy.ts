@@ -10,6 +10,18 @@ import {eq,gt,le,lt,round} from '../gm/math';
 import {sourceText} from '../host/text';
 export {monsterPop};
 /** Source scr_monster_add/statreset/makeinstance. Summons use a real vacant monster slot and its ACT tables. */
+/** scr_havechar, run by `s`: whether character `who` is in the party (kept in s._rreturn, as the script does). */
+export function haveChar(s:GmInstance,rt:GmRuntime,who:number){
+ const g=rt.globals;s._rreturn=0;for(const n of [0,1,2])if(g.char[n]===who)s._rreturn=1;return s._rreturn===1;
+}
+/** scr_monster_actreset, run by `s` for enemy slot `slot` (its loop counter __fj is an instance variable). */
+export function monsterActReset(s:GmInstance,rt:GmRuntime,slot:number){
+ const g=rt.globals;
+ for(s.__fj=0;s.__fj<6;s.__fj+=1){
+  g.canact[slot][s.__fj]=0;g.actname[slot][s.__fj]=' ';g.actactor[slot][s.__fj]=1;g.actdesc[slot][s.__fj]=' ';g.actcost[slot][s.__fj]=0;g.actsimul[slot][s.__fj]=0;
+  for(const who of ['sus','ral','noe']){g['canact'+who][slot][s.__fj]=0;g['actname'+who][slot][s.__fj]=' ';g['actdesc'+who][slot][s.__fj]=' ';g['actcost'+who][slot][s.__fj]=0;g['actsimul'+who][slot][s.__fj]=0;}
+ }
+}
 export function monsterAdd(s:GmInstance,rt:GmRuntime,type:number,object:GmObjectDef){
  const g=rt.globals;s.__returnid=-1;
  for(s.__mopenslot=0;s.__mopenslot<3;s.__mopenslot++)if(g.monster[s.__mopenslot]===0){

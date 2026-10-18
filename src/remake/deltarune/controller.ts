@@ -281,7 +281,8 @@ function create(s:GmInstance,rt:GmRuntime){
  g.actname=grid(3,6,' ');g.actdesc=grid(3,6,' ');g.actactor=grid(3,6,1);
  controllerScripts(rt).initActs(s,rt);
  for(let i=0;i<3;i++)if(g.monstertype[i]>0){
-  g.monster[i]=1;const m=rt.create(g.monsterinstancetype[i],g.monstermakex[i],g.monstermakey[i]);g.monsterinstance[i]=m.id;m.myself=i;rt.userEvent(m,12);
+  // scr_monster_makeinstance: user events 12 (set-up) and 15 (recruit info; Chapter 1's enemies have none).
+  g.monster[i]=1;const m=rt.create(g.monsterinstancetype[i],g.monstermakex[i],g.monstermakey[i]);g.monsterinstance[i]=m.id;m.myself=i;rt.userEvent(m,12);rt.userEvent(m,15);
  }
  g.charturn=0;
  for(const key of ['acting','charaction','charspecial','chartarget','faceaction','rembmenuno','targeted','battleat','battledf','battlemag'])g[key]=[0,0,0];
