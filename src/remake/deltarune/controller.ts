@@ -257,6 +257,8 @@ export function mnEndTurn(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;
  for(let slot=0;slot<3;slot++)if(g.char[slot]===2)s.sus=slot;
  s.techwon=0;if(monsterPop(rt)===0)s.techwon=1;
+ // From Chapter 2, flag 39 wins the battle at the end of the enemy turn (the Dojo's challenges).
+ if((g.chapter??1)>=2&&g.flag[39]===1)s.techwon=1;
  if(s.techwon!==0){winCombat(rt,s);return;}
  if(g.flag[14]===0)g.bmenucoord=grid(20,20,0);
  g.mnfight=0;g.myfight=0;g.bmenuno=0;g.charturn=0;s.skip=0;

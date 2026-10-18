@@ -57,6 +57,8 @@ export function rules(rt:GmRuntime):ChapterRules{
 }
 
 export interface BattleHooks{
+ /** scr_endturn (Chapter 2): the ACTs start with only the first party member's single ACT chosen this turn. */
+ soleFirstActor?(enemy:GmInstance,rt:GmRuntime):void;
  /** Redirect a FIGHT hit before HP subtraction. True means the encounter consumed the damage. */
  interceptFightDamage?(enemy:GmInstance,hero:GmInstance,rt:GmRuntime,target:number,damage:number,number:GmInstance):boolean;
  /** React to the completed slash effect. True suppresses ordinary enemy recoil, retaining hurtamt. */
@@ -88,6 +90,11 @@ export interface BattleHooks{
  /** False when HP at zero after a FIGHT hit or a damaging spell does not defeat the enemy there: it ends the battle
   * in its own code (NEO; also Queen and Berdly). */
  readonly defeatedByDamage?:boolean;
+ /** While this enemy is in the battle, damage leaves every enemy at 1 HP at least (Sweet's band: they are not beaten
+  * by FIGHTing, they drink milk). */
+ readonly keepsEnemiesAtOneHp?:boolean;
+ /** Where a heal's white flash goes from this enemy's origin (obj_healanim moves every flash by it). */
+ readonly healFlashShift?:readonly [number,number];
  /** This bullet (exactly this object, not its children) can be grazed while inactive (the Knight's tunnel swords). */
  readonly grazedWhileInactive?:boolean;
  /** The enemy turn is over (obj_battlecontroller Alarm 2): true when the enemy takes over instead of the next turn

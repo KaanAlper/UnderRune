@@ -40,6 +40,8 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:
  'ch2-59':{n:59,room:'room_battletest',backdrop:true},
  // Spamton's alley (room_dw_city_spamton_alley) holds the scene that starts him; the battle itself needs nothing of it.
  'ch2-60':{n:60,room:'room_battletest',backdrop:true},
+ // The band plays in Cyber City's music room (obj_ch2_cyber01 starts them); the battle needs nothing of it.
+ 'ch2-62':{n:62,room:'room_battletest',backdrop:true},
  'ch2-81':{n:81,room:'room_dw_mansion_east_4f_b',backdrop:true},
  'ch2-83':{n:83,room:'room_dw_city_mice3_transformed_new2F',backdrop:true},
  'ch2-89':{n:89,room:'room_dw_castle_dojo',backdrop:true},

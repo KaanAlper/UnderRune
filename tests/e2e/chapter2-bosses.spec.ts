@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 const url=process.env.UNDERRUNE_PUBLIC_URL??'http://127.0.0.1:5173/?demo=1';
 // The Chapter 2 bosses that run on the Chapter 2 host open from their cards in the public demo and play a full turn.
 // Spamton fights Kris alone: a soul that never moves can fall in his first turn, which also ends the turn.
-for(const [id,name,card,canFall] of [['ch2-57','Tasque Manager','Tasque & Tasque Manager',false],['ch2-81','Werewerewire','Werewerewire',false],['ch2-83','Mauswheel','Mauswheel',false],['ch2-60','Spamton','Spamton',true]] as const){
+for(const [id,name,card,canFall] of [['ch2-57','Tasque Manager','Tasque & Tasque Manager',false],['ch2-81','Werewerewire','Werewerewire',false],['ch2-83','Mauswheel','Mauswheel',false],['ch2-89','Tasque Manager','Tasque Manager',false],['ch2-60','Spamton','Spamton',true]] as const){
  test(`${name} opens and plays a full turn`,async({page})=>{
   test.setTimeout(90000);
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));

@@ -6,6 +6,7 @@ import {monsterParent} from './battle';
 import {actSimulChapter2,initChapter2ActTables,resetChapter2Actors,spellMenuSetupChapter2} from './chapter2';
 import {nextAct,subst} from './controller';
 import {snd} from './sound';
+import {withHook} from './rules';
 import {sourceText} from '../host/text';
 
 export interface ControllerScripts{
@@ -51,6 +52,7 @@ function hasActors(s:GmInstance,rt:GmRuntime){
 function startActors(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;g.currentactingchar=0;
  if(g.acting[0]===0)nextAct(rt,s);
+ if(g.actingsingle[0]===1&&g.actingsingle[1]===0&&g.actingsingle[2]===0)for(const [e,h] of withHook(rt,'soleFirstActor'))h(e,rt);
  if(g.acting[0]===1&&g.actingsimul[0]===1)actSimulChapter2(rt,s);
 }
 function afterCreate(s:GmInstance,rt:GmRuntime){

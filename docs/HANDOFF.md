@@ -684,6 +684,29 @@ New scripts go in `tools/oracle-scripts.mjs`.
   solo's clock: the original reads the audio position (`audio_sound_get_track_position`), which drifts about a frame
   against the game; `rt.soundTrackPosition` is the host's hook, with frames since the solo started as the fallback.
 
+### 19b. The band (62), the Dojo rematch (89) public, case-insensitive site paths (2026-10-18)
+
+- Sweet, K_K and Cap'n (62): Sweet (`trio-sweet.ts`), `obj_musical_controller` (dance reports, the milk scene,
+  Sweet's S-Action scene) and the ending's music video (`musical-ending.ts`) are written and registered. The three
+  4000-frame recordings match. Development entry (`developmentEncounter`) until a recording covers the S-Action
+  scene and the ending (`tests/remake-band.test.ts` plays them without errors).
+- Sweet's solo clock: the original reads the audio position, which runs about 1% fast and in uneven steps (none, or
+  three), so a beat can play a frame early, late, twice, or not at all. The parity test rebuilds the clock from the
+  recording: exact at each snapshot, corrected where the recording's random draws show a beat played or not, and
+  cached as `.tools/oracle/<run>.solo.json` (`SOLO_CALIBRATE=1` goes on from the cache; about a minute per run).
+  The app uses frames since the solo started (`rt.soundTrackPosition` is the host's hook).
+- Engine: `scr_monsterdefeat`'s Chapter 2 extras, `damage` floors at 1 HP while Sweet is there
+  (`keepsEnemiesAtOneHp`), `obj_healanim`'s counters on the instance and K_K's flash shift (`healFlashShift`),
+  `scr_endturn`'s single-actor case (`soleFirstActor`), `scr_mnendturn` wins on flag 39 (Chapter 2 on), ellipses,
+  `button3_h`, and quoted sprite names (`s_kk*`) reach the bundle.
+- The Dojo's Tasque Manager rematch (89) is public: flag 39 (her quiz's end) wins at the end of the turn.
+- Site paths ignore case: `site/404.html` (written into `dist-pages` by `tools/build-pages.mjs` with the site's
+  pages) sends `/UnderRune/PLAY` to `/UnderRune/play/`; the portfolio repository (KaanAlper.github.io) sends
+  `/underrune/...` in any case here, and its own pages and routes ignore case too.
+- Rouxls (63): `src/remake/bosses/rouxls/` (enemy, Thrash Machine, mini-game, laser head, stomping feet, falling
+  blocks) is written but not registered yet. Other heads and feet are named errors (the recording and the app use
+  the laser head and stomping feet).
+
 ### 19. Requested next (after the release above)
 
 - **General chat**, from Supabase. Separate rooms for UNDERTALE and DELTARUNE. It sits left of the leaderboard on
@@ -723,7 +746,9 @@ New scripts go in `tools/oracle-scripts.mjs`.
 
 1. Run `npm run build:pages`.
 2. In `.tools/gh-pages-deploy`, run `git fetch`, then `git reset --hard origin/gh-pages`.
-3. Copy `dist-pages/index.html` and `dist-pages/play`, and touch `.nojekyll`.
+3. Copy `dist-pages/index.html`, `dist-pages/404.html`, `dist-pages/preview.png` and `dist-pages/play`, and touch
+   `.nojekyll`. (`404.html` sends any case of a page's path to the page; the portfolio site's `404.html`, in
+   KaanAlper.github.io, does the same for `/underrune` itself.)
 4. Commit, then `git push origin HEAD:gh-pages`.
 5. Check `gh api repos/KaanAlper/UnderRune/pages/builds/latest`.
 

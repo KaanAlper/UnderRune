@@ -210,6 +210,7 @@ function heroHit(s:GmInstance,rt:GmRuntime){
   if(m)m.hurtamt=damage;
  }
  for(const [enemy,resolved] of withHook(rt,'onFightResolved'))resolved(enemy,s,rt,t,damage);
+ if(g.monsterhp[t]<=0&&withHook(rt,'keepsEnemiesAtOneHp').length)g.monsterhp[t]=1;
  if(g.monsterhp[t]<=0&&m&&defeatable(rt))monsterDefeat(m,rt);
 }
 /** Alarm 4: the spell or item takes effect. */
@@ -423,6 +424,7 @@ export function damageEnemy(s:GmInstance,rt:GmRuntime,enemy:number,amount:number
  if(amount>0&&m){m.shakex=9;m.state=3;m.hurttimer=30;for(const [e,h] of withHook(rt,'onEnemyDamaged'))h(e,rt,amount);m.hurtamt=amount;}
  g.hittarget[enemy]+=1;
  if(amount===0&&m){m.hurtamt=0;if(m.hurttimer<=15&&m.candodge===1){m.dodgetimer=0;m.state=4;}}
+ if(g.monsterhp[enemy]<=0&&withHook(rt,'keepsEnemiesAtOneHp').length)g.monsterhp[enemy]=1;
  if(g.monsterhp[enemy]<=0&&m&&defeatable(rt))monsterDefeat(m,rt);
  if(g.monsterhp[enemy]<=0)for(const [e,h] of withHook(rt,'onDamagedToZero'))h(e,rt,enemy);
 }
@@ -906,25 +908,27 @@ export const spellPhase:GmObjectDef={name:'obj_spellphase',index:308,events:{
 
 // ---- Spell effects ----
 export const healAnim:GmObjectDef={name:'obj_healanim',index:301,sprite:'spr_sparestar_anim',visible:false,events:{
- create:s=>{s.target=42894289;s.starcount=0;s.t=0;s.particlesprite='spr_sparestar_anim';s.particlecolor=C.lime;s.star=[];},
+ create:s=>{s.target=42894289;s.starcount=0;s.t=0;s.particlesprite='spr_sparestar_anim';s.particlecolor=C.lime;},
  step:(s,rt)=>{
   s.t+=1;const target=rt.byId(s.target);
-  if(!target){for(let i=0;i<s.starcount;i++)destroyId(rt,s.star[i]);rt.destroy(s);return;}
+  if(!target){for(s.i=0;s.i<s.starcount;s.i+=1)destroyId(rt,s.star[s.i]);rt.destroy(s);return;}
   if(s.t===1){
    s.x=target.x;s.y=target.y;s.imageXscale=target.imageXscale;s.imageYscale=target.imageYscale;s.sprite=target.sprite;
    s.sw=rt.spriteWidth(s);s.sh=rt.spriteHeight(s);
-   if(HERO_DEFS.some(d=>target.object===d)){s.sw=target.mywidth;s.sh=target.myheight;}
+   s.herocheck=HERO_DEFS.some(d=>target.object===d)?1:0;if(s.herocheck===1){s.sw=target.mywidth;s.sh=target.myheight;}
    oflashOf(target,rt);
+   // An enemy drawn away from its origin moves every white flash onto itself (Chapter 2's K_K).
+   const shift=hooksOf(target).healFlashShift;if(shift)for(const f of rt.withInstances(oflash)){f.x+=shift[0];f.y+=shift[1];}
   }
-  if(s.t>=1&&s.t<=5)for(let i=0;i<2;i++){
+  if(s.t>=1&&s.t<=5)for(s.i=0;s.i<2;s.i+=1){
    const y=s.y+rt.random.random(s.sh),x=s.x+rt.random.random(s.sw);
-   const st=rt.create(marker,x,y);s.star[s.starcount]=st.id;
+   const st=rt.create(marker,x,y);gmArray(s,'star')[s.starcount]=st.id;
    st.imageAngle=rt.random.random(360);st.depth=-10;st.imageXscale=2;st.imageYscale=2;st.imageAlpha=2;st.imageSpeed=0.25;
    st.hspeed=2-rt.random.random(2);st.vspeed=-3-rt.random.random(2);st.friction=0.2;st.sprite=s.particlesprite;st.imageBlend=s.particlecolor;
    s.starcount+=1;
   }
   if(s.t>=5&&s.t<=30){
-   for(let i=0;i<s.starcount;i++){const st=rt.byId(s.star[i]);if(!st)continue;st.imageAngle-=10;st.imageAlpha=st.imageAlpha-0.1;if(st.imageAlpha<=0)rt.destroy(st);}
+   for(s.i=0;s.i<s.starcount;s.i+=1){const st=rt.byId(s.star[s.i]);if(!st)continue;st.imageAngle-=10;st.imageAlpha=st.imageAlpha-0.1;if(st.imageAlpha<=0)rt.destroy(st);}
    if(s.t>=30)rt.destroy(s);
   }
  },

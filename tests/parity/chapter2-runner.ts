@@ -14,6 +14,7 @@ import {setHudMeasure} from '../../src/remake/deltarune/controller';
  * PARITY_SURVEY=1 (list every differing variable once), PARITY_STATE=all (archived objects too),
  * PARITY_STATE_ONLY=obj,... (compare only these). */
 export const START=process.env.PARITY_START?Number(process.env.PARITY_START):40;
+const START_FRAME=START;
 /** Objects outside the battle the snapshot has; they are not restored. */
 const WORLD=['obj_mainchara','obj_darkcontroller','obj_overworldheart','obj_caterpillarchara','obj_gamecontroller','obj_time','obj_event_manager','obj_event_manager_debug','obj_jean_debug','obj_debugProfiler'];
 /** Sound instance numbers come from the reference runtime's audio backend (100000 plus two per sound played); the
@@ -25,14 +26,31 @@ export const chapter2RecordingReady=(run:string,chapter=2)=>fs.existsSync(`${run
  fs.existsSync(`extracted/chapter${chapter}_windows/sprites.json`)&&fs.existsSync(`extracted/chapter${chapter}_windows/code`);
 
 /** afterRestore fixes what the snapshots leave out (they record no xstart/ystart). */
-export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects:Record<string,GmObjectDef>},extraSoundHandles:Record<string,string[]>={},chapter=2,afterRestore?:(rt:GmRuntime)=>void){
- const code=`extracted/chapter${chapter}_windows/code/`;
- // The language fallbacks, and every plain literal as `<code file>#<n>` (as the asset build provides them).
- setSourceText(Object.assign({},...fs.readdirSync(code).filter(f=>f.endsWith('.gml')).map(f=>{
-  const source=fs.readFileSync(code+f,'utf8'),file=f.slice(0,-4);
-  return {...localizationDefaults(source),...Object.fromEntries(codeLiterals(source).map((text,n)=>[file+'#'+n,text]))};
- })));
- const trace=new Map<number,TraceLine>(fs.readFileSync(run+'.ndjson','utf8').trim().split('\n').map(l=>{const x=JSON.parse(l) as TraceLine;return [x.f,x];}));
+/** The chapter's source text (language fallbacks and every plain literal as `<code file>#<n>`, as the asset build
+ * provides them) and each recording's trace, read once per process: short runs from later snapshots reuse them. */
+const sourceTexts=new Map<number,Record<string,string>>(),traces=new Map<string,Map<number,TraceLine>>();
+function chapterText(chapter:number){
+ let text=sourceTexts.get(chapter);
+ if(!text){
+  const code=`extracted/chapter${chapter}_windows/code/`;
+  text=Object.assign({},...fs.readdirSync(code).filter(f=>f.endsWith('.gml')).map(f=>{
+   const source=fs.readFileSync(code+f,'utf8'),file=f.slice(0,-4);
+   return {...localizationDefaults(source),...Object.fromEntries(codeLiterals(source).map((t,n)=>[file+'#'+n,t]))};
+  })) as Record<string,string>;
+  sourceTexts.set(chapter,text);
+ }
+ return text;
+}
+function readTrace(run:string){
+ let trace=traces.get(run);
+ if(!trace){trace=new Map<number,TraceLine>(fs.readFileSync(run+'.ndjson','utf8').trim().split('\n').map(l=>{const x=JSON.parse(l) as TraceLine;return [x.f,x];}));traces.set(run,trace);}
+ return trace;
+}
+/** `range` runs part of the recording: from a later full snapshot (its start) to an end frame. */
+export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects:Record<string,GmObjectDef>},extraSoundHandles:Record<string,string[]>={},chapter=2,afterRestore?:(rt:GmRuntime)=>void,range:{start?:number;end?:number;quiet?:boolean}={}){
+ const START=range.start??START_FRAME;
+ setSourceText(chapterText(chapter));
+ const trace=readTrace(run);
  const replay=JSON.parse(fs.readFileSync(run+'.inputs.json','utf8')) as Replay,dump=JSON.parse(fs.readFileSync(`${run}-f${START}.json`,'utf8')) as Dump;
  const index=JSON.parse(fs.readFileSync(`extracted/chapter${chapter}_windows/index.json`,'utf8'));
  const SPRITES:string[]=index.sprites.map((s:{name:string})=>s.name);
@@ -69,7 +87,7 @@ export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects
  for(const i of rt.instances)for(const k of Object.keys(i))if(/sprite/.test(k)&&k!=='sprite'&&!NOT_SPRITES.has(k))i[k]=Array.isArray(i[k])?i[k].map(name):name(i[k]);
  const tracked=new Set(Object.keys(objects).filter(n=>!skipped.has(n)));
  afterRestore?.(rt);
- const end=process.env.PARITY_END?Number(process.env.PARITY_END):Math.max(...trace.keys());
+ const end=range.end??(process.env.PARITY_END?Number(process.env.PARITY_END):Math.max(...trace.keys()));
  if(process.env.PARITY_DEBUG)(globalThis as any).__parityRt=rt;
  if(process.env.PARITY_LIFE){
   const watched=process.env.PARITY_LIFE,where=()=>new Error().stack!.split('\n').slice(3,6).map(l=>l.trim().replace(/\(.*[\/]/,'(')).join(' < ');
@@ -93,7 +111,7 @@ export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects
   return problems.length?{frame:f,what:'state differs:\n '+shown}:undefined;
  };
  const result=runParity(rt,trace,START,end,tracked,['hp','tension','turntimer','myfight','mnfight','inv'],skippedIds,replay,afterFrame);
- console.log(`${run.split('/').pop()} ${START}-${end}`,result,'not restored:',[...skipped].join(' '));
+ if(!range.quiet)console.log(`${run.split('/').pop()} ${START}-${end}`,result,'not restored:',[...skipped].join(' '));
  if(survey.size)console.log(`state survey (${survey.size}):\n`+[...survey.values()].join('\n'));
  return result;
 }

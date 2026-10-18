@@ -13,6 +13,8 @@ const playable:readonly SourceEncounter[]=[
  {id:'ch2-83',chapter:2,name:'Mauswheel',party:[1,2,3],hp:1753,attack:10,defense:0,music:'battle',practice:false},
  // Spamton, before NEO, in Cyber City's alley: Kris alone.
  {id:'ch2-60',chapter:2,name:'Spamton',party:[1],hp:600,attack:8,defense:0,music:'spamton_battle',practice:false},
+ // The Dojo's Tasque Manager rematch: her quiz decides it (three strikes or the last phase end the battle).
+ {id:'ch2-89',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:false},
  // The Dojo's final round: two Werewerewires.
  {id:'ch2-94',chapter:2,name:'Werewerewire',party:[1,2,3],hp:1753,attack:11,defense:0,music:'battle',practice:false},
  {id:'ch1-2',chapter:1,name:'Lancer',party:[1,2],auto:[2],hp:540,attack:5,defense:1,music:'lancerfight',practice:false},
@@ -35,8 +37,8 @@ export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);
 const development:readonly SourceEncounter[]=[
  // Queen, in her mansion's top floor: being checked against her recordings.
  {id:'ch2-59',chapter:2,name:'Queen',party:[1,2,3],hp:1510,attack:10,defense:0,music:'queen_boss',practice:false},
- // The Dojo's Tasque Manager rematch: its quiz ending still differs from the recordings.
- {id:'ch2-89',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:false},
+ // Sweet, K_K and Cap'n: the band's songs keep to the solo track's clock (a frame clock in the remake).
+ {id:'ch2-62',chapter:2,name:"Sweet & K_K & Cap'n",party:[1,2,3],hp:120,attack:8,defense:0,music:'cyber_battle',practice:false},
 ];
 export const developmentEncounter=(id:string)=>sourceEncounter(id)??development.find(p=>p.id===id);
 export const availableEncounters=(chapter:number)=>playable.filter(p=>p.chapter===chapter);

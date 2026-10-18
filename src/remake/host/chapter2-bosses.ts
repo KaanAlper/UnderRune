@@ -35,7 +35,7 @@ import {SPAMTON_ENCOUNTERS,createSpamton,setupSpamtonMonster} from '../bosses/sp
 /** scr_encountersetup for the ported encounters: enemies (object, type, x, y), the opening line and optional hero
  * positions. */
 type EncounterSetup={monsters:readonly (readonly [string,number,number,number])[];intro:string;kind:string;heroes?:readonly (readonly [number,number])[]};
-const ENCOUNTERS:Record<number,EncounterSetup>={...FIELD_ENCOUNTERS,59:QUEEN_ENCOUNTERS[59],58:{...RIVAL_ENCOUNTERS[58],kind:'story'},82:{...RIVAL_ENCOUNTERS[82],kind:'story'},60:{...SPAMTON_ENCOUNTERS[60],kind:'story'}};
+const ENCOUNTERS:Record<number,EncounterSetup>={...FIELD_ENCOUNTERS,59:QUEEN_ENCOUNTERS[59],58:{...RIVAL_ENCOUNTERS[58],kind:'story'},82:{...RIVAL_ENCOUNTERS[82],kind:'story'},62:{...RIVAL_ENCOUNTERS[62],kind:'story'},60:{...SPAMTON_ENCOUNTERS[60],kind:'story'}};
 export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapter2Registry(rt,{metadata,room:options.room}),{object}=registry;
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object),iceHexagon,iceSpell,sleepMist]);

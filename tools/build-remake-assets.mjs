@@ -28,7 +28,7 @@ async function sources(dir) {
   return files;
 }
 // Enemy ports belong to a source chapter. New Chapter 2 primitives must not pull their sprites into Chapter 1.
-const bossChapters={lancer:1,clover:1,kround:1,jevil:1,king:1,'spamton-neo':2,'chapter2-field':2,'chapter2-rivals':2,queen:2,spamton:2,'roaring-knight':3};
+const bossChapters={lancer:1,clover:1,kround:1,jevil:1,king:1,'spamton-neo':2,'chapter2-field':2,'chapter2-rivals':2,queen:2,spamton:2,rouxls:2,'roaring-knight':3};
 const remakeRoot=path.join(root,'src','remake');
 const chapterSources=(await sources(remakeRoot)).filter(file=>{
  const parts=path.relative(remakeRoot,file).split(path.sep);
@@ -37,7 +37,7 @@ const chapterSources=(await sources(remakeRoot)).filter(file=>{
 const text = (await Promise.all(chapterSources.map(f => fs.readFile(f, 'utf8')))).join('\n');
 // GameMaker 2 stores backgrounds (bg_) as sprites too.
 const objectMetadata=JSON.parse(await fs.readFile(path.join(root,'src','remake','host',`chapter${chapter}-resources.json`),'utf8').catch(error=>{if(chapter===1&&error.code==='ENOENT')return '[]';throw error;}));
-const names = remakeSpriteDependencies(text,objectMetadata);
+const names = remakeSpriteDependencies(text,objectMetadata,new Set(index.sprites.map(s=>s.name)));
 // Sprite fonts the code names through font_add_sprite_ext, and bitmap fonts by name.
 // Sprite fonts made with font_add_sprite_ext: damage numbers, and global.hpfont (its map is the digits plus - and +).
 const spriteFonts = {damagefont: {sprite: 'spr_numbersfontbig', map: '0123456789', proportional: true, sep: 0}, hpfont: {sprite: 'spr_numbersfontsmall', map: '0123456789-+', proportional: false, sep: 2}};

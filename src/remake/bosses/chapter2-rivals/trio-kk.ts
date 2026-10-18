@@ -28,6 +28,7 @@ export function createKKEnemy(object:(name:string)=>GmObjectDef):GmObjectDef{
   if(sw.actCounter===3&&!sw.letsdance3&&c.happyfeetscene===0){sw.letsdance3=true;c.ralseiportrait=1;g.battlemsg[0]=O('37_0');}
  }
  return defineEnemy({name:base.name,index:base.index,depth:base.depth??0,sprite:base.sprite},{
+  hooks:{healFlashShift:[18,18]},
   create:(s,rt)=>{
    enemyObjectInit(s,rt);const c=rt.first(object('obj_battlecontroller'))!;c.hidemercy=1;s.depth=c.depth-2;
    Object.assign(s,{talkmax:180,imageSpeed:1/6,hurtsprite:'spr_kk_hurt',sparedsprite:'spr_diamondm_spared',recruitable:0,timer:0,timerB:0,down:0});
