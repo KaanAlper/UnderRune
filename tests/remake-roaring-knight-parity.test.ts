@@ -9,7 +9,7 @@ import type {GmRuntime} from '../src/remake/gm/runtime';
 // The recordings cover his first nine turns (to the sword vortex); the later phases and the roar have no recording yet.
 /** Variables holding the reference runtime's resource handles (surfaces and sounds are numbered by its renderer and
  * audio backend), not compared. */
-const RESOURCE_HANDLES:Record<string,string[]>={obj_knight_rotating_slash:['my_surface'],obj_knight_circle:['my_surface'],obj_afterimage_screen:['my_surface'],obj_knight_pointing_cone:['surf','starsurf'],obj_tracking_swords_manager:['hell_surface'],obj_roaringknight_boxsplitter_attack:['hell_surface'],obj_knight_split_growtangle:['source_surf','half_box_a','half_box_b'],obj_knight_split_growtangle_effect:['surf'],obj_dbulletcontroller:['starsound']};
+const RESOURCE_HANDLES:Record<string,string[]>={obj_knight_roaring2:['my_surface','ball_surface','star_surface','terrible_surface','sound'],obj_knight_rotating_slash:['my_surface'],obj_knight_circle:['my_surface'],obj_afterimage_screen:['my_surface'],obj_knight_pointing_cone:['surf','starsurf'],obj_tracking_swords_manager:['hell_surface'],obj_roaringknight_boxsplitter_attack:['hell_surface'],obj_knight_split_growtangle:['source_surf','half_box_a','half_box_b'],obj_knight_split_growtangle_effect:['surf'],obj_dbulletcontroller:['starsound']};
 /** What the snapshots leave out: the Knight bobs around ystart, where the encounter placed him, and his afterimages
  * (fadeSpeed 0.02) drift right at 2 pixels a frame. */
 function restoreMotion(rt:GmRuntime){
@@ -18,12 +18,15 @@ function restoreMotion(rt:GmRuntime){
   if(i.object.name==='obj_afterimage'&&i.fadeSpeed===0.02)i.hspeed=2;
  }
 }
-const runs=fs.existsSync('.tools/oracle')?fs.readdirSync('.tools/oracle').filter(f=>/^ch3-115-s11-god[a-z-]*\.ndjson$/.test(f)).map(f=>f.replace(/\.ndjson$/,'')):[];
+// The long recordings (-zlong, -menulong, -actlong: his later phases, the roar and the ending) take minutes each; they
+// run with LONG_PARITY=1.
+const LONG=process.env.LONG_PARITY==='1';
+const runs=fs.existsSync('.tools/oracle')?fs.readdirSync('.tools/oracle').filter(f=>/^ch3-115-s11-god[a-z-]*\.ndjson$/.test(f)&&(LONG||!/long\.ndjson$/.test(f))).map(f=>f.replace(/\.ndjson$/,'')):[];
 for(const name of runs){
  const RUN='.tools/oracle/'+name;
  describe.skipIf(!chapter2RecordingReady(RUN,3))(`Roaring Knight against the original (local recording ${name})`,()=>{
   it('matches every recorded frame',()=>{
    expect(runChapter2Recording(RUN,rt=>installChapter3BossHost(rt,{room:'room_battletest'}),RESOURCE_HANDLES,3,restoreMotion).mismatch).toBeUndefined();
-  },300000);
+  },3600000);
  });
 }

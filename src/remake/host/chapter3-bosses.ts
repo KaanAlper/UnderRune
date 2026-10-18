@@ -8,6 +8,7 @@ import {battleBalloon2,growtangle2,battleCleanup} from '../deltarune/chapter2-ob
 import {animator,recruitAnim} from '../deltarune/chapter2-enemy';
 import {createSmallFace,installSmallFaceWriter} from '../deltarune/small-face';
 import {afterimageCut,doom,lerpvar} from '../deltarune/shared-effects';
+import {fadeOut} from '../deltarune/fades';
 import {KNIGHT_ENCOUNTER,setupKnightMonster} from '../bosses/roaring-knight/setup';
 import {createKnight} from '../bosses/roaring-knight/knight';
 import {createStars} from '../bosses/roaring-knight/stars';
@@ -25,7 +26,7 @@ import {sourceText} from './text';
 export function installChapter3BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapterRegistry(rt,{chapter:3,metadata,room:options.room}),{object}=registry;
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object)]);
- registry.register([doom,lerpvar,afterimageCut]);
+ registry.register([doom,lerpvar,afterimageCut,fadeOut]);
  const slashEffects=createSlashEffects(object);
  const attacks=[createStars(object),createTrackingSwords(object),createFlurry(object),createSwordTunnel(object),createRotatingSlash(object,slashEffects),createSwordVortex(object),createRoar(object,slashEffects),{pattern:()=>false,objects:slashEffects.objects}];
  registry.register([createChapter2BulletController(object,attacks.map(a=>a.pattern)),createBattleMarker(object),...attacks.flatMap(a=>a.objects)]);
@@ -37,7 +38,9 @@ export function installChapter3BossHost(rt:GmRuntime,options:{room:string}){
   if(!def)throw Error(`Encounter ${n} needs ${name}`);
   for(const [i,[hx,hy]] of KNIGHT_ENCOUNTER.heroes.entries()){g.heromakex[i]=r.view.x+hx;g.heromakey[i]=r.view.y+hy;}
   g.monsterinstancetype=[def,0,0];g.monstertype=[type,0,0];g.monstermakex[0]=r.view.x+x;g.monstermakey[0]=r.view.y+y;
-  g.battlemsg[0]=sourceText('scr_encountersetup_slash_scr_encountersetup_gml_'+KNIGHT_ENCOUNTER.intro);return true;
+  g.battlemsg[0]=sourceText('scr_encountersetup_slash_scr_encountersetup_gml_'+KNIGHT_ENCOUNTER.intro);
+  // The fountain scene (obj_ch3_PTB02) marks the Knight's battle for the failure screen.
+  g.tempflag[93]=1;return true;
  }};
  registry.finalize();installSmallFaceWriter(rt,object);
  return {objects:registry.objects,enter:(_enemy:GmInstance)=>{}};

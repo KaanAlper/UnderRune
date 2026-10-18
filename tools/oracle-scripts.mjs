@@ -55,5 +55,5 @@ export function actScript(totalFrames){
  }
  return script;
 }
-// Separate filename for a longer FIGHT replay: existing short acceptance recordings remain intact.
-export const SCRIPTS={z:zScript,zlong:zScript,menu:menuScript,act:actScript};
+// Separate filenames for longer replays (zlong, menulong, actlong): the short acceptance recordings remain intact.
+export const SCRIPTS={z:zScript,zlong:zScript,menu:menuScript,menulong:menuScript,act:actScript,actlong:actScript};

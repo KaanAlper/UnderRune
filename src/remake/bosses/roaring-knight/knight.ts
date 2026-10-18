@@ -13,6 +13,7 @@ import {bulletSpawner,isPhase,msgNext,msgSet,turnTimer} from '../../deltarune/ch
 import {anyFaceNext,enemyDrawIdleGeneric,enemyHurt,enemyObjectInit,recordDefeat,speaker,terminateWriter} from '../../deltarune/chapter2-enemy';
 import {spellMenuSetupChapter2} from '../../deltarune/chapter2';
 import {guardPeek} from '../../deltarune/guard-peek';
+import {scrFadeout} from '../../deltarune/fades';
 import {snd} from '../../deltarune/sound';
 import {sourceText} from '../../host/text';
 
@@ -230,7 +231,7 @@ export function createKnight(object:(name:string)=>GmObjectDef,fountain:GmObject
   if(s.end_cutscene_version===1){
    s.endtimer++;
    if(s.endtimer===32){
-    const f=rt.create(object('obj_fadeout'),rt.view.x-200,rt.view.y-200);s.__fadeouter=f.id;f.fadespeed=1/15;f.depth=3;
+    scrFadeout(s,rt,15);
     for(const o of named(rt,'obj_fadeout')){o.imageBlend=C.white;o.x-=40;o.length*=2;}
    }
    if(s.endcon===1&&s.endtimer>45){
@@ -362,9 +363,18 @@ export function createKnight(object:(name:string)=>GmObjectDef,fountain:GmObject
    softensHit:(e,_rt,d)=>e.myattackchoice===2&&(e.difficulty===1||e.difficulty===3)?round(d*0.66):undefined,
    knocksOutHard:(_e,_rt,slot)=>slot!==0,
    preventsGameOver:()=>true,preventsTurnRevive:()=>true,
+   // His battle ends without the victory screen: won once his ending's results are in (endcon 2), lost on a first
+   // party wipe; either way once the panel has slid away.
+   battleOutcome:(e,rt)=>{
+    const c=findController(rt);if(!c||c.intro!==2||c.bp>0)return undefined;
+    if(e.endcon===2)return 'victory';
+    if(e.endcon===1&&e.end_cutscene_version===0&&rt.globals.fighting===0)return 'defeat';
+    return undefined;
+   },
    blocksFight:e=>e.blocking===1&&lt(e.damagereduction,0.1),
    onFightBlocked:e=>{e.blockanim=1;},
    scalesFightDamage:(e,hero,rt,d)=>fightDamage(e,hero,rt,d),
+   scalesRudeBuster:(e,_rt,d)=>Math.ceil(d*(e.damagereduction+0.65)),
    onEnemyDamaged:(e,_rt,amount)=>{if(amount>=100)e.stronghurtanim=1;},
    defeatSprite:(_e,hero)=>hero.object.name==='obj_herosusie'?'spr_susie_dw_fell':undefined,
   },
@@ -437,7 +447,7 @@ function redirect(k:GmInstance,b:GmInstance,rt:GmRuntime,maxHp=false){
 }
 /** scr_get_knight_total_attempts: how many save slots have fought him before (dr.ini's URA values); the host knows. */
 function knightAttempts(rt:GmRuntime):number{
- const attempts=rt.globals.knightattempts;
+ const attempts=rt.globals.secretbossattempts;
  if(typeof attempts!=='number')throw Error("The Knight's previous attempts (scr_get_knight_total_attempts) are not set by the host");
  return attempts;
 }

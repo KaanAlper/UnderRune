@@ -10,7 +10,7 @@ import {burstBolt,basicAttack} from './player-effects';
 import {battleTextDefault,writer} from './writer';
 import {optionalSourceText as lang,sourceText} from '../host/text';
 import {attackPhase,button1_p,button2_p,button3_p,itemShift,mercyAdd,monsterDefeat,monsterPop,subst,winCombat} from './controller';
-import {teaAmountChapter2,sideBPhase} from './chapter2';
+import {spellMenuSetupChapter2,teaAmountChapter2,sideBPhase} from './chapter2';
 import {forChapter,hooksOf,rules,withHook} from './rules';
 import {castSleepMist,castIceShock} from './noelle-spells';
 
@@ -393,14 +393,23 @@ function healShow(h:GmInstance,rt:GmRuntime,amount:number){
 }
 /** scr_healitemspell, run by the caster: heals party slot `star`. */
 export function healItem(s:GmInstance,rt:GmRuntime,amount:number){
- const g=rt.globals;heal(s,rt,s.star,amount);g.spelldelay=15;
+ const g=rt.globals;amount=healByEquipment(s,rt,amount);heal(s,rt,s.star,amount);g.spelldelay=15;
  const h=rt.byId(g.charinstance[s.star]);return h?healShow(h,rt,amount):undefined;
 }
 /** scr_healallitemspell, run by the caster. */
 export function healAllItem(s:GmInstance,rt:GmRuntime,amount:number){
- const g=rt.globals;healAll(s,rt,amount);
+ const g=rt.globals;amount=healByEquipment(s,rt,amount);healAll(s,rt,amount);
  for(s.i=0;s.i<3;s.i+=1){const h=rt.byId(g.charinstance[s.i]);if(h)healShow(h,rt,amount);}
  g.spelldelay=20;
+}
+/** scr_heal_amount_modify_by_equipment (Chapter 3 on): an eighth more (rounded up) for each of the caster's armour
+ * slots holding armour 26. Earlier chapters heal the amount as it is. */
+function healByEquipment(s:GmInstance,rt:GmRuntime,amount:number){
+ if(!forChapter(rt,SPELLS,'scr_spell').healsByEquipment)return amount;
+ const g=rt.globals,who=g.char[s.caster];let add=0;
+ if(g.chararmor1[who]===26)add+=Math.ceil(amount/8);
+ if(g.chararmor2[who]===26)add+=Math.ceil(amount/8);
+ return amount+add;
 }
 /** scr_damage_enemy, run by the caster: damage number (kept in the caster's dm), recoil, and defeat at 0 HP. */
 export function damageEnemy(s:GmInstance,rt:GmRuntime,enemy:number,amount:number){
@@ -442,6 +451,11 @@ interface SpellRules{
  dualHeal(magic:number):number;
  /** Spells only this chapter has. */
  readonly extra:Readonly<Record<number,(s:GmInstance,rt:GmRuntime)=>void>>;
+ /** Chapter 3: heals grow with the caster's armour (scr_heal_amount_modify_by_equipment). */
+ readonly healsByEquipment?:boolean;
+ /** Chapter 3: what Pacify does to the types it cannot put to sleep (they handle it themselves); those listed also
+  * get the sleep effect. Chapter 2 leaves types 52 and 43 unported. */
+ readonly immuneSleepEffect?:readonly number[];
 }
 const notPorted=(what:string)=>()=>{throw Error(`scr_spell: ${what} is not ported yet`);};
 const SPELLS:Record<number,SpellRules>={
@@ -456,6 +470,16 @@ const SPELLS:Record<number,SpellRules>={
    for(const [obj,used] of withHook(rt,'onUltimatHeal'))used(obj,rt);
   },
  }},
+ 3:{pacifyImmune:[19,3,52,43],pacifyEffect:true,spareOwnEnding:[3,52],dualHeal:m=>Math.ceil(m*5.5),healsByEquipment:true,immuneSleepEffect:[52],extra:{
+  8:castSleepMist,9:(s,rt)=>castIceShock(s,rt,()=>retargetSpell(s,rt)),10:notPorted("Noelle's SnowGrave (10)"),
+  // ULTRAHEAL: grows with each cast this chapter (flag 1045, up to 5), then the spell menu is rebuilt.
+  11:(s,rt)=>{
+   const g=rt.globals;g.flag[1045]=(g.flag[1045]??0)+1;if(g.flag[1045]>5)g.flag[1045]=5;
+   s.healnum=Math.ceil(healByEquipment(s,rt,g.battlemag[s.caster]*1.5+5+g.flag[1045]));heal(s,rt,s.star,s.healnum);
+   const h=rt.byId(g.charinstance[s.star]);if(h){h.healnum=s.healnum;healShow(h,rt,h.healnum);}
+   g.spelldelay=15;spellMenuSetupChapter2(rt,s);
+  },
+ }},
 };
 /** Pacify on a tired enemy, as that enemy (scr_spell runs it in a with block). */
 function pacified(m:GmInstance,s:GmInstance,rt:GmRuntime,r:SpellRules){
@@ -467,7 +491,8 @@ function pacified(m:GmInstance,s:GmInstance,rt:GmRuntime,r:SpellRules){
   g.flag[51+m.myself]=3;rt.userEvent(m,10);monsterDefeat(m,rt);
   return;
  }
- if(r.pacifyEffect&&(type===52||type===43))throw Error(`scr_spell: Pacify on monster type ${type} is not ported yet`);
+ if(r.immuneSleepEffect){if(r.immuneSleepEffect.includes(type)){const p=rt.create(pacifySpell,g.monsterx[m.myself],g.monstery[m.myself]);m._pspell=p.id;p.con=20;p.target=m.id;}}
+ else if(r.pacifyEffect&&(type===52||type===43))throw Error(`scr_spell: Pacify on monster type ${type} is not ported yet`);
  m.pacifycon=1;g.spelldelay=999;
 }
 /** scr_spell, run by the hero: what each spell, SPARE (100) and item (200 + id) does. The spell's values are the
@@ -490,7 +515,7 @@ export function castSpell(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
    g.spelldelay=30;break;
   }
   case 2:{
-   s.healnum=g.battlemag[caster]*5;heal(s,rt,s.star,s.healnum);
+   s.healnum=healByEquipment(s,rt,g.battlemag[caster]*5);heal(s,rt,s.star,s.healnum);
    const h=heroOf(s.star);if(h){h.healnum=s.healnum;healShow(h,rt,h.healnum);}
    g.spelldelay=15;break;
   }
@@ -511,6 +536,7 @@ export function castSpell(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
    if(s.cancelattack===0){
     g.spelldelay=70;
     s.damage=spell===4?Math.ceil(g.battlemag[caster]*5+g.battleat[caster]*11-g.monsterdf[s.star]*3):Math.ceil(g.battlemag[caster]*6+g.battleat[caster]*13-g.monsterdf[s.star]*6);
+    if(spell===4)for(const [e,h] of withHook(rt,'scalesRudeBuster'))s.damage=h(e,rt,s.damage);
     if(g.automiss[s.star]===1)s.damage=0;
     const sus=rt.first(heroSusie)!;
     const a=rt.create(rudeBusterAnim,sus.x,sus.y);s.attack=a.id;a.damage=s.damage;a.star=s.star;a.caster=s.caster;a.target=g.monsterinstance[s.star];if(spell===5)a.red=1;
@@ -589,22 +615,41 @@ const itemsChapter2:ItemUse=(s,rt,spell)=>{
   case 232:{const h=rt.byId(g.charinstance[s.star]);if(h)h.poisonamount=60;rt.sound?.('snd_hurt1');const a=healItem(s,rt,40);if(a)a.particlecolor=0xff00ff;break;}
  }
 };
-const ITEMS:Record<number,ItemUse>={1:itemsChapter1,2:itemsChapter2};
+/** Chapter 3: the dining set's dishes, a bigger Revivemint pack (207), and teas gone rotten. */
+const itemsChapter3:ItemUse=(s,rt,spell)=>{
+ switch(spell){
+  case 207:healAllItem(s,rt,150);break;
+  case 218:case 219:case 220:case 221:healItem(s,rt,10);break;
+  case 234:healItem(s,rt,100);break;
+  case 235:break;
+  case 236:healItem(s,rt,20);break;
+  case 237:healItem(s,rt,80);break;
+  case 238:healAllItem(s,rt,100);break;
+  case 239:healItem(s,rt,140);break;
+  default:itemsChapter2(s,rt,spell);
+ }
+};
+const ITEMS:Record<number,ItemUse>={1:itemsChapter1,2:itemsChapter2,3:itemsChapter3};
 /** scr_spelltext: the battle line for a spell or item, in global.msg. */
-/** scr_spelltext's one-line spells and items: line numbers per chapter. Chapter 2 adds its new spells and items (whose
+/** scr_spelltext's one-line spells and items: line numbers per chapter (or a key from another script). Chapter 2 adds its new spells and items (whose
  * lines also reset msgno; one has a second page). */
 const SPELL_LINES1:Record<number,number>={1:14,2:18,4:43,5:47,6:51,201:78,202:82,205:179,206:183,207:187,208:191,209:194,210:197,211:200,212:203,213:206,214:209,215:212};
-const SPELL_TEXT:Record<number,{lines:Record<number,number>;before?:(g:Record<string,any>,spell:number,L:(n:number)=>string)=>void}>={
+const SPELL_TEXT:Record<number,{lines:Record<number,number|string>;before?:(g:Record<string,any>,spell:number,L:(n:number)=>string)=>void}>={
  1:{lines:SPELL_LINES1},
  2:{lines:{...SPELL_LINES1,8:55,9:59,10:63,11:67,202:100,215:230,216:233,217:236,218:240,219:243,220:246,221:249,222:252,223:255,224:258,225:261,226:264,227:267,228:270,229:273,230:276,231:279,232:282,233:298},
   before:(g,spell,L)=>{if(spell>=216&&spell<=233)g.msgno=0;if(spell===217){g.msg[1]=L(237);g.msgno=1;}}},
 };
+// Chapter 3 renames UltimatHeal, gives the teas one rotten line (scr_text 1463), and adds the dining set's dishes.
+const ROTTEN_TEA='scr_text_slash_scr_text_gml_10567_0';
+SPELL_TEXT[3]={lines:{...SPELL_TEXT[2].lines,11:68,218:ROTTEN_TEA,219:ROTTEN_TEA,220:ROTTEN_TEA,221:ROTTEN_TEA,234:303,235:306,236:309,237:312,238:315,239:318},
+ before:SPELL_TEXT[2].before};
 export function spellText(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
  const g=rt.globals,L=(n:number)=>lang(`scr_spelltext_slash_scr_spelltext_gml_${n}_0`),name=g.charname[g.char[caster]];
  s.spell=spell;s.caster=caster;s.star=g.chartarget[caster];s.spelltext=' ';
  const text=forChapter(rt,SPELL_TEXT,'scr_spelltext');text.before?.(g,spell,L);
  const one=text.lines;
- if(one[spell]!==undefined){g.msg[0]=subst(L(one[spell]),name);return;}
+ // A line number in scr_spelltext, or another script's key.
+ const line=one[spell];if(line!==undefined){g.msg[0]=subst(typeof line==='string'?lang(line):L(line),name);return;}
  if(spell===3){
   g.msg[0]=subst(L(23),name);retargetSpell(s,rt);
   if(g.monster[s.star]===1&&g.monsterstatus[s.star]!==1){g.msg[0]=subst(L(33),name);if(g.mercymod[s.star]>=100)g.msg[0]=subst(L(36),name);}

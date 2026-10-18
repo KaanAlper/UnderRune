@@ -1,6 +1,7 @@
 // Small Chapter 2 script differences. The shared controller still owns turn progression and phase creation.
 import {gmArray,type GmInstance,type GmRuntime} from '../gm/runtime';
 import {C,mergeColor} from '../gm/graphics';
+import {clamp,round} from '../gm/math';
 import {monsterParent} from './battle';
 import {actSimulChapter2,initChapter2ActTables,resetChapter2Actors,spellMenuSetupChapter2} from './chapter2';
 import {nextAct,subst} from './controller';
@@ -96,7 +97,6 @@ function levelUp(rt:GmRuntime){
  if(g.flag[65]%2===0)g.maxhp[2]+=1;
  if(g.flag[65]%10===0){g.at[1]+=1;g.at[2]+=1;g.mag[2]+=1;g.at[3]+=1;g.mag[3]+=1;g.flag[66]++;}
  if(haveChar(rt,4)){g.flag[919]++;g.maxhp[4]+=4;g.hp[4]+=4;if(g.flag[65]%4===0){g.at[4]+=1;g.mag[4]+=1;}}
- const clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
  g.maxhp[1]=clamp(g.maxhp[1],10,160);g.maxhp[2]=clamp(g.maxhp[2],10,190);g.maxhp[3]=clamp(g.maxhp[3],10,140);g.maxhp[4]=clamp(g.maxhp[4],10,999);
  for(let i=1;i<5;i++)g.hp[i]=Math.min(g.hp[i],g.maxhp[i]);
 }
@@ -105,13 +105,19 @@ function afterVictory(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;if(g.gold<0)g.gold=0;
  if(g.flag[38]===1){const w=rt.byId(s.lastbattlewriter);if(w)rt.destroy(w);}
 }
+/** scr_spellinfo's Noelle and Susie spells after Chapter 1: [name, battle name, short and long description, target,
+ * cost] key numbers. */
+type SpellRows=(rt:GmRuntime)=>Record<number,[number,number,number,number,number,number]>;
+const spellRows2:SpellRows=rt=>({8:[96,97,98,99,0,80],9:[107,108,109,110,2,40],10:[121,122,123,124,0,rt.globals.maxtension*2],11:[147,148,149,150,1,250]});
+/** Chapter 3 renames UltimatHeal to UltraHeal, which gets cheaper with each cast (flag 1045). */
+const spellRows3:SpellRows=rt=>({...spellRows2(rt),11:[152,153,149,155,1,225-round((rt.globals.flag[1045]??0)*2.5)]});
+const spellInfoExtra=(rows:SpellRows)=>(s:GmInstance,rt:GmRuntime,id:number)=>{
+ const row=rows(rt)[id];if(!row)return;const [name,battle,desc,long,target,cost]=row,T=(n:number)=>sourceText(`scr_spellinfo_slash_scr_spellinfo_gml_${n}_0`);
+ Object.assign(s,{spellname:T(name),spellnameb:T(battle),spelldescb:T(desc),spelldesc:T(long),spelltarget:target,cost,spellusable:0});
+ if((id===9||id===10)&&rt.globals.charweapon[4]===13)s.cost*=0.5;
+};
 export const controllerScripts2:ControllerScripts={
- spellInfoExtra:(s,rt,id)=>{
-  const rows:Record<number,[number,number,number,number,number,number]>={8:[96,97,98,99,0,80],9:[107,108,109,110,2,40],10:[121,122,123,124,0,rt.globals.maxtension*2],11:[147,148,149,150,1,250]};
-  const row=rows[id];if(!row)return;const [name,battle,desc,long,target,cost]=row,T=(n:number)=>sourceText(`scr_spellinfo_slash_scr_spellinfo_gml_${n}_0`);
-  Object.assign(s,{spellname:T(name),spellnameb:T(battle),spelldescb:T(desc),spelldesc:T(long),spelltarget:target,cost,spellusable:0});
-  if((id===9||id===10)&&rt.globals.charweapon[4]===13)s.cost*=0.5;
- },
+ spellInfoExtra:spellInfoExtra(spellRows2),
  spellRows:6,text:sourceText,healingUsable:0,ultimateDescription:93,replaceItems:true,victoryRows:5,tensionGoldMultiplier:2,
  mergedSpells:rt=>rt.globals.flag[34]===0,
  initActs:(_s,rt)=>initChapter2ActTables(rt),resetActors,undoAct,
@@ -129,6 +135,7 @@ export const controllerScripts2:ControllerScripts={
 export const controllerScripts3:ControllerScripts={
  ...controllerScripts2,
  ultimateDescription:'scr_spellinfo_slash_scr_spellinfo_gml_93_0_b',
+ spellInfoExtra:spellInfoExtra(spellRows3),
  afterCreate:afterCreate3,
  victoryText:()=>{throw Error("Chapter 3's victory message is not ported");},
  victoryLevelUp:()=>{throw Error("Chapter 3's victory level-up is not ported");},

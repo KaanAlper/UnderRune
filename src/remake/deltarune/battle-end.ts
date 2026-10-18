@@ -7,10 +7,13 @@
 import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {le,lt} from '../gm/math';
-import {battleBack,marker,sndFreeAll} from './battle';
+import {battleBack,marker,partyWears,sndFreeAll} from './battle';
 import {KEY,button1_p,held,pressed} from './keys';
 import {writer} from './writer';
 import {forChapter} from './rules';
+import {scrLerpvar} from './shared-effects';
+import {scrFadeout} from './fades';
+import {scriptDelayedOn,setVar} from './chapter2-battle';
 import {sourceText} from '../host/text';
 
 /** scr_tempload: the game reloads where it last saved; for the host, the battle starts again. */
@@ -62,6 +65,9 @@ export const fadeOut:GmObjectDef={name:'obj_fadeout',index:143,depth:-99999,spri
  roomEnd:(s,rt)=>rt.destroy(s),
 }};
 
+/** obj_gameover_init per chapter: from Chapter 3 the 4-Z skip fades to white before the retry, and in the Knight's
+ * battle (tempflag 93) the soul does not break: it floats up to the top of the screen. */
+const GAME_OVER_INIT:Readonly<Record<number,{later:boolean}>>={1:{later:false},2:{later:false},3:{later:true}};
 /** Where the soul's six shards start, from its top left corner. */
 const SHARDS=[[-2,0],[0,3],[2,6],[8,0],[10,3],[12,6]];
 /** obj_gameover_init: the last battle frame for a second, then the soul alone in the dark; it cracks, then shatters.
@@ -70,13 +76,19 @@ export const gameOverInit:GmObjectDef={name:'obj_gameover_init',index:135,depth:
  create:(s,rt)=>{
   const g=rt.globals;s.imageSpeed=0;s.visible=false;
   const bg=rt.create(marker,0,0);bg.sprite=g.screenshot;bg.imageSpeed=0;s.bg=bg.id;
-  s.timer=0;s.Z_COUNT=0;g.interact=0;
+  s.timer=0;s.Z_COUNT=0;
+  if(forChapter(rt,GAME_OVER_INIT,'obj_gameover_init').later){s.special=0;s.timerb=0;s.knight_mode=g.tempflag[93]===1?1:0;}
+  g.interact=0;
  },
  step:(s,rt)=>{
   const g=rt.globals;s.timer+=1;
   if(s.timer===1)sndFreeAll(rt);
   if(s.timer===30){const bg=rt.byId(s.bg);if(bg)rt.destroy(bg);s.visible=true;s.x=g.heartx;s.y=g.hearty;}
   if(s.timer===31)rt.deleteSprite(g.screenshot);
+  const later=forChapter(rt,GAME_OVER_INIT,'obj_gameover_init').later;
+  if(later&&s.knight_mode){
+   if(s.timer===80){scrLerpvar(s,rt,'x',s.x,312,30,2,'out');scrLerpvar(s,rt,'y',s.y,rt.view.y+80,30,2,'out');}
+  }else{
   if(s.timer===50){rt.sound?.('snd_break1');s.sprite='spr_heartbreak';s.x-=2;}
   if(s.timer===90){
    rt.sound?.('snd_break2');s.visible=false;
@@ -85,8 +97,16 @@ export const gameOverInit:GmObjectDef={name:'obj_gameover_init',index:135,depth:
    if(g.tempflag[3]>=1)s.timer+=15;
   }
   if(s.timer===140)rt.create(fadeOut,0,0);
-  if(s.timer>=80&&s.timer<150){if(button1_p(rt))s.Z_COUNT+=1;if(s.Z_COUNT>=4)rt.pendingRoom=RETRY_ROOM;}
-  if(s.timer===150)rt.pendingRoom='PLACE_FAILURE';
+  if(s.timer>=80&&s.timer<150){
+   if(button1_p(rt))s.Z_COUNT+=1;
+   if(s.Z_COUNT>=4){
+    if(!later)rt.pendingRoom=RETRY_ROOM;
+    else{s.timer=-999;s.timerb++;const f=scrFadeout(s,rt,30);f.imageBlend=C.white;f.depth=-99999999;rt.sourceAudio?rt.sourceAudio.effect('snd_dtrans_lw',1,0.7):rt.sound?.('snd_dtrans_lw');}
+   }
+  }
+  }
+  if(later&&s.timerb>0){s.timerb++;if(s.timerb===40)rt.pendingRoom=RETRY_ROOM;}
+  if(s.timer===150&&(!later||s.special===0))rt.pendingRoom='PLACE_FAILURE';
  },
 }};
 
@@ -114,6 +134,10 @@ interface FailureRules{
  whiteFadeSound:string|null;
  /** EVENT 26, after NO, before the last line. */
  giveUp(s:GmInstance,rt:GmRuntime):void;
+ /** Chapter 3: the choice's words slide up into place (choice_y_offset). */
+ readonly choiceSlides?:boolean;
+ /** Chapter 3: the Knight's own failure screen, which runs instead of the usual one (knight_mode). */
+ step?(s:GmInstance,rt:GmRuntime):void;
 }
 const FAILURE:Record<number,FailureRules>={
  1:{
@@ -133,7 +157,7 @@ const FAILURE:Record<number,FailureRules>={
   giveUp:()=>{},
  },
  2:{
-  create:(s,rt)=>{s.text_timer=30;const bg=rt.create(gameOverBg,0,20);bg.depth=100000-(bg.y*10+rt.spriteHeight(bg)*10);},
+  create:(s,rt)=>{s.text_timer=30;gameOverTitle(rt);},
   open:(s,rt)=>{
    const g=rt.globals;sndFreeAll(rt);
    if(s.text_timer>0){s.text_timer--;return;}
@@ -159,7 +183,72 @@ const FAILURE:Record<number,FailureRules>={
   giveUp:(_s,rt)=>{destroyAll(rt,gameOverBg);rt.globals.typer=667;},
  },
 };
+FAILURE[3]={...FAILURE[2],choiceSlides:true,
+ create:(s,rt)=>{s.text_timer=30;knightFailureCreate(s,rt);if(!s.knight_mode)gameOverTitle(rt);},
+ step:(s,rt)=>{if(s.knight_mode)knightFailureStep(s,rt);},
+};
 const failure=(rt:GmRuntime)=>forChapter(rt,FAILURE,'DEVICE_FAILURE');
+function gameOverTitle(rt:GmRuntime){const bg=rt.create(gameOverBg,0,20);bg.depth=100000-(bg.y*10+rt.spriteHeight(bg)*10);}
+/** Chapter 3's failure screen after losing to the Roaring Knight (tempflag 93): a small soul at the top, and when he
+ * has been fought before (scr_get_knight_total_attempts), his own screen instead of the usual one: advice that
+ * depends on how many times he has won (knight_battle_losses; whether the Shadow Mantle was worn; once, after the
+ * party had him to 80%), then GO BACK (fight again) or GO FORWARD (move on). */
+function knightFailureCreate(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals;s.knight_mode=0;s.knight_mode_con=-1;
+ if(g.tempflag[93]!==1)return;
+ const m=rt.create(marker,156,40);s.thismarker=m.id;m.sprite='spr_heart';m.imageSpeed=0;s.heart_marker=m.id;m.depth=s.depth-1000;m.imageXscale=0.5;m.imageYscale=0.5;
+ if(!(g.secretbossattempts>0))return;
+ s.EVENT=-1;s.knight_mode=1;s.knight_mode_con=0;sndFreeAll(rt);music(rt,'AUDIO_DRONE',true);g.typer=667;g.fc=0;g.flag[6]=0;
+ if('knight_battle_losses' in g){
+  g.knight_battle_losses++;
+  if(g.knight_battle_losses>=2){s.knight_mode_con=20;if(partyWears(rt,23)===0)s.knight_mode_con=40;}
+  if(g.knight_battle_losses>=3){
+   let unique=false;
+   if(g.tempflag[96]===1){g.tempflag[96]=0;unique=(g.flag[1263]??0)===0;}
+   if(unique){g.flag[1263]=1;s.knight_mode_con=30;}else s.knight_mode_con=50;
+  }
+ }else g.knight_battle_losses=1;
+ g.flag[1264]=g.knight_battle_losses;
+}
+/** Each line at (70, 80) after the last is read; some wait 30 frames more (scr_delay_var). */
+const KNIGHT_LINES:Readonly<Record<number,readonly [needsQuiet:boolean,next:number,key:string,delayTo?:number]>>={
+ 0:[false,1,'290_0'],1:[true,2,'300_0',3],3:[true,4,'310_0',5],5:[true,6,'320_0',7],7:[true,8,'330_0',50],
+ 20:[false,21,'341_0'],21:[true,50,'350_0'],30:[true,32,'362_0'],32:[true,33,'371_0'],33:[true,34,'380_0'],34:[true,50,'389_0'],
+ 40:[true,41,'400_0'],41:[true,42,'409_0'],42:[true,43,'418_0'],43:[true,50,'427_0']};
+function knightFailureStep(s:GmInstance,rt:GmRuntime){
+ const g=rt.globals,quiet=()=>!rt.exists(writer);
+ const line=KNIGHT_LINES[s.knight_mode_con];
+ if(line&&(!line[0]||quiet())){
+  s.knight_mode_con=line[1];if(line[3]!==undefined)scriptDelayedOn(s,rt,setVar,30,'knight_mode_con',line[3]);
+  g.msg[0]=sourceText('DEVICE_FAILURE_slash_Step_0_gml_'+line[2]);rt.create(writer,70,80);
+ }
+ if(s.knight_mode_con===50&&quiet()){
+  s.knight_mode_con=51;scriptDelayedOn(s,rt,setVar,30,'knight_mode_con',52);
+  const m=rt.byId(s.heart_marker);if(m)scrLerpvar(m,rt,'image_alpha',1,0,15);
+  const c=rt.create(deviceChoice,100,120);
+  c.NAME[0][0]=sourceText('DEVICE_FAILURE_slash_Step_0_gml_406_0').replace(/#/g,'\n');c.NAME[1][0]=sourceText('DEVICE_FAILURE_slash_Step_0_gml_407_0').replace(/#/g,'\n');
+  c.NAMEX[0][0]=70;c.NAMEX[1][0]=190;c.NAMEY[0][0]=180;c.NAMEY[1][0]=180;c.XMAX=1;c.CURX=-1;c.IDEALX=190;c.IDEALY=180;c.fadebuffer=20;
+  scrLerpvar(c,rt,'choice_y_offset',20,0,20);
+ }
+ if(s.knight_mode_con===52&&quiet()){
+  g.flag[6]=0;
+  if(g.choice===0){s.knight_mode_con=53;destroyAll(rt,writer);}
+  if(g.choice===1){s.knight_mode_con=55;destroyAll(rt,writer);}
+ }
+ // GO BACK: a white fade, and the fight again with everyone healed.
+ if(s.knight_mode_con===53&&quiet()){
+  s.knight_mode_con=54;scriptDelayedOn(s,rt,setVar,30,'knight_mode_con',60);sndFreeAll(rt);
+  const f=scrFadeout(s,rt,30);f.imageBlend=C.white;g.darkzone=1;g.plot=320;g.interact=0;g.tempflag[90]=4;
+  for(let i=0;i<4;i++)g.hp[i]=g.maxhp[i];
+ }
+ // GO FORWARD: a black fade, and the story goes on without the fight.
+ if(s.knight_mode_con===55&&quiet()){
+  s.knight_mode_con=56;scriptDelayedOn(s,rt,setVar,30,'knight_mode_con',60);scrFadeout(s,rt,30);
+  g.darkzone=1;g.plot=320;g.interact=0;g.tempflag[90]=1;sndFreeAll(rt);g.flag[1047]=2;for(let i=0;i<4;i++)g.hp[i]=1;
+ }
+ // room_goto(room_dw_snow_zone): the host retries the battle, or leaves it.
+ if(s.knight_mode_con===60)rt.pendingRoom=g.tempflag[90]===4?RETRY_ROOM:GAME_END_ROOM;
+}
 
 /** DEVICE_FAILURE: the failure screen's script, one EVENT after another (alarm 4 moves to the next). */
 export const deviceFailure:GmObjectDef={name:'DEVICE_FAILURE',index:319,depth:10,events:{
@@ -193,6 +282,7 @@ export const deviceFailure:GmObjectDef={name:'DEVICE_FAILURE',index:319,depth:10
    g.tempflag[3]+=1;
   }
   if(s.EVENT===10){rt.pendingRoom=RETRY_ROOM;s.EVENT=11;}
+  r.step?.(s,rt);
   if(s.EVENT===26){sndFreeAll(rt);r.giveUp(s,rt);g.msg[0]=sourceText('DEVICE_FAILURE_slash_Step_0_gml_103_0');s.EVENT=27;s.W=rt.create(writer,60,80).id;}
   if(s.EVENT===27&&!rt.exists(writer)){music(rt,'AUDIO_DARKNESS',false);s.EVENT=28;s.DARK_WAIT=0;}
   if(s.EVENT===28){
@@ -228,6 +318,7 @@ export const deviceChoice:GmObjectDef={name:'DEVICE_CHOICE',index:317,sprite:'IM
   s.XMAX=1;s.CURX=-1;s.IDEALX=150;s.IDEALY=180;
   s.HEARTX=150;s.HEARTY=s.NAMEY[0][0];
   Object.assign(s,{DRAWHEART:1,ONEBUFFER:0,TWOBUFFER:0,FINISH:0,fadebuffer:10});
+  if(failure(rt).choiceSlides)s.choice_y_offset=0;
  },
  step:(s,rt)=>{
   const g=rt.globals;
@@ -253,7 +344,7 @@ export const deviceChoice:GmObjectDef={name:'DEVICE_CHOICE',index:317,sprite:'IM
   s.xfade=Math.min(1,(10-s.fadebuffer)/10);
   if(s.DRAWHEART===1)rt.drawSprite('IMAGE_SOUL_BLUR',0,s.HEARTX+s.xoff,s.HEARTY+s.yoff,1,1,0,C.white,0.6*s.xfade);
   d.alpha=s.xfade;
-  for(let i=0;i<=s.XMAX;i++){d.color=s.CURX===i?C.yellow:C.white;rt.drawText(s.NAMEX[i][0],s.NAMEY[i][0],s.NAME[i][0].replace(/#/g,'\n'));}
+  for(let i=0;i<=s.XMAX;i++){d.color=s.CURX===i?C.yellow:C.white;rt.drawText(s.NAMEX[i][0],s.NAMEY[i][0]+(failure(rt).choiceSlides?s.choice_y_offset:0),s.NAME[i][0].replace(/#/g,'\n'));}
   d.alpha=1;
  },
 }};

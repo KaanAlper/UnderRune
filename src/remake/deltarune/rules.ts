@@ -131,6 +131,8 @@ export interface BattleHooks{
  softensHit?(enemy:GmInstance,rt:GmRuntime,damage:number):number|undefined;
  /** A hero knocked out in this slot drops to -999 HP (damage text type 12) instead of minus half their max HP. */
  knocksOutHard?(enemy:GmInstance,rt:GmRuntime,slot:number):boolean;
+ /** The battle ends its own way (no victory screen, no game over): its outcome once that ending is over. */
+ battleOutcome?(enemy:GmInstance,rt:GmRuntime):'victory'|'defeat'|undefined;
  /** No game over when the whole party is down (the battle ends its own way). */
  preventsGameOver?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** Chapter 3's FIGHT: the enemy blocks the hits now (no slash; onFightBlocked instead). */
@@ -139,6 +141,8 @@ export interface BattleHooks{
  onFightBlocked?(enemy:GmInstance,rt:GmRuntime):void;
  /** Chapter 3's FIGHT damage as the enemy changes it (the Knight's damage reduction). */
  scalesFightDamage?(enemy:GmInstance,hero:GmInstance,rt:GmRuntime,damage:number):number;
+ /** Chapter 3's Rude Buster damage as the enemy changes it (the Knight's damage reduction). */
+ scalesRudeBuster?(enemy:GmInstance,rt:GmRuntime,damage:number):number;
  /** scr_damage_enemy hurt this enemy (amount over 0), after its hurt state is set. */
  onEnemyDamaged?(enemy:GmInstance,rt:GmRuntime,amount:number):void;
  /** Downed heroes stay down at the end of the enemy turn (scr_mnendturn heals them by an eighth otherwise). */

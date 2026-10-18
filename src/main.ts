@@ -19,7 +19,7 @@ import {assetUrl} from './game/url';
 import {loadRemakeAssets} from './remake/host/assets';
 import {setSourceText} from './remake/host/text';
 import {createJevilPractice,JEVIL_PATTERNS,type JevilPractice} from './remake/host/practice';
-import {EngineBattle} from './remake/host/engine';
+import {EngineBattle,type Session} from './remake/host/engine';
 import {sourceEncounter,developmentEncounter,availabilityLabel,availableEncounters} from './remake/host/encounters';
 // Local dev server only: ?dev=1 also opens ported encounters that are not public yet. Production builds drop this.
 const devUnlock=import.meta.env.DEV&&new URLSearchParams(location.search).has('dev');
@@ -64,6 +64,8 @@ let leaderboard:LeaderboardPanel|null=null,leaderboardApi:LeaderboardApi|null=nu
  * start the next battle); game overs so far per battle (global.tempflag[3], which outlives a retry). */
 let victory:VictoryCard|null=null,outcomeShownAt=0,endingFaded=false;
 const gameOvers=new Map<string,number>();
+/** Per battle, what its retries keep (EngineBattle.session). */
+const sessions=new Map<string,Session>();
 /** UNDERTALE's game over theme plays on the failure screen in place of the chapter's own music, when it is installed. */
 const GAME_OVER_THEME:Record<string,string>={AUDIO_DRONE:'mus_gameover',AUDIO_DEFEAT:'mus_gameover'};
 function updatePreferences(){document.body.classList.toggle('reduced',prefs.reducedEffects);element('mute').textContent=prefs.muted?'SOUND OFF':'SOUND ON';element('mute').setAttribute('aria-pressed',String(prefs.muted));element('effects').textContent=prefs.reducedEffects?'CRT OFF':'CRT ON';element('effects').setAttribute('aria-pressed',String(prefs.reducedEffects));savePrefs(storage,prefs);}
@@ -103,7 +105,7 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
   // The game calls randomize() when it starts: every battle gets its own random seed (tests and comparisons fix it).
   // ?seed=N repeats a run exactly (comparisons with the original's recordings).
   const fixedSeed=new URLSearchParams(location.search).get('seed'),seed=fixedSeed!==null?Number(fixedSeed)>>>0:crypto.getRandomValues(new Uint32Array(1))[0];
-  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost,chapterHost,scoring:publicMode,rage:chosenRoute?.rage??false,gameOvers:gameOvers.get(record.id)??0});input.setConfirmReleaseMode(chosenRoute?.confirmRelease??'logical');{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();remakeReleased.clear();
+  remake=publicPractice?createJevilPractice(remakeAssets.bank,equipment!.chapters[1],loadout,pattern,seed):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost,chapterHost,scoring:publicMode,rage:chosenRoute?.rage??false,gameOvers:gameOvers.get(record.id)??0,secretBossAttempts:prefs.fought.includes(record.id)?1:0,session:sessions.get(record.id)});input.setConfirmReleaseMode(chosenRoute?.confirmRelease??'logical');{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();remakeReleased.clear();
   remakeView=new BattleView(remakeCtx,remakeAssets.draw);remakeMenu=false;
   remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.soundGetPitch=handle=>audio.sourceGetPitch(handle);remake.rt.stopAllSounds=()=>audio.stop();
   remake.rt.sourceAudio={effect:(name,pitch,volume)=>audio.sourceEffect(name,pitch,false,volume),volume:(handle,value,frames)=>audio.sourceVolume(handle,value,frames),free:handle=>audio.sourceFree(handle),music:name=>{const theme=GAME_OVER_THEME[name],track=theme&&audio.has(theme)?theme:name;audio.play(track);return track;},loop:handle=>audio.sourceSetLoop(handle),pause:handle=>audio.sourceTrackPause(handle),resume:handle=>audio.sourceTrackResume(handle),position:(handle,seconds)=>audio.sourcePosition(handle,seconds),playing:handle=>audio.sourcePlaying(handle)};
@@ -184,9 +186,10 @@ function showOutcome(){
  if(!remake?.outcome)return;
  const record=menuRecords()[selection];
  if(remake.outcome==='victory'&&!prefs.completed.includes(record.id)){prefs.completed.push(record.id);savePrefs(storage,prefs);}
+ if(remake instanceof EngineBattle&&!prefs.fought.includes(record.id)){prefs.fought.push(record.id);savePrefs(storage,prefs);}
  // A game over ends with the player's own choice on the failure screen: try again, or back to the menu.
  if(remake instanceof EngineBattle&&remake.afterDefeat){
-  gameOvers.set(remake.id,remake.rt.globals.tempflag[3]);
+  gameOvers.set(remake.id,remake.rt.globals.tempflag[3]);sessions.set(remake.id,remake.session());
   if(remake.afterDefeat==='retry'&&publicLoadout)void launchRemake(record,publicLoadout).catch(showError);else goMenu();
   return;
  }

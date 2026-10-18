@@ -208,7 +208,7 @@ export function createRotatingSlash(object:Objects,effects:SlashEffects){
     d.alpha=1;
    }
   }
-  for(const sl of rt.all(slash)){
+  for(const sl of rt.withInstances(slash)){
    const hx=lengthdirX(640,sl.direction),hy=lengthdirY(640,sl.direction),hxo=lengthdirX(sl.width,sl.direction+90),hyo=lengthdirY(sl.width,sl.direction+90);
    const color=makeColorRgb(255,(1-sl.imageAlpha)*255,(1-sl.imageAlpha)*255),x=sl.x-ox,y=sl.y-oy;
    if(sl.slashdir)rt.drawTriangleColor(x-hx*sl.imageAlpha,y-hy*sl.imageAlpha,x+hx+hxo,y+hy+hyo,x+hx-hxo,y+hy-hyo,color,color,color);

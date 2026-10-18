@@ -115,7 +115,7 @@ function itemInfo1(s:GmInstance,id:number){
  s.itemnameb=lang(`scr_iteminfo_slash_scr_iteminfo_gml_${it[0]}_0`);s.itemdescb=lang(`scr_iteminfo_slash_scr_iteminfo_gml_${it[1]}_0`);
  s.itemtarget=it[2];s.value=it[3];s.usable=it[4];
 }
-const ITEM_INFO:Record<number,(s:GmInstance,id:number,rt:GmRuntime)=>void>={1:itemInfo1,2:(s,id,rt)=>itemInfoChapter2(s,rt,id)};
+const ITEM_INFO:Record<number,(s:GmInstance,id:number,rt:GmRuntime)=>void>={1:itemInfo1,2:(s,id,rt)=>itemInfoChapter2(s,rt,id),3:(s,id,rt)=>itemInfoChapter2(s,rt,id)};
 export function itemInfo(s:GmInstance,id:number,rt?:GmRuntime){if(rt)forChapter(rt,ITEM_INFO,'scr_iteminfo')(s,id,rt);else itemInfo1(s,id);}
 export function itemInfoTemp(s:GmInstance,slot:number,rt:GmRuntime){
  gmArray(s,'tempitemnameb',()=>grid(13,3,' '));gmArray(s,'tempitemdescb',()=>grid(13,3,' '));gmArray(s,'tempitemvalue',()=>grid(13,3,0));gmArray(s,'tempitemusable',()=>grid(13,3,0));

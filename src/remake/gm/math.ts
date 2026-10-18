@@ -2,6 +2,8 @@
 export const f32=Math.fround;
 const RAD=Math.PI/180;
 /** utils.h clampFloat: truncate to 6 decimals (int64 cast). */
+/** clamp: the low bound first, then the high one (so a high bound below the low one wins). */
+export const clamp=(v:number,lo:number,hi:number)=>{if(lo>v)v=lo;if(v>hi)v=hi;return v;};
 export const clamp6=(v:number)=>Math.trunc(v*1e6)/1e6;
 export function lengthdirX(len:number,dir:number){const r=len*Math.cos(dir*RAD);return Math.abs(r)<1e-4?0:r;}
 export function lengthdirY(len:number,dir:number){const r=-len*Math.sin(dir*RAD);return Math.abs(r)<1e-4?0:r;}

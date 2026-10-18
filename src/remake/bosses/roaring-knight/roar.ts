@@ -270,7 +270,7 @@ export function createRoar(object:(name:string)=>GmObjectDef,effects:SlashEffect
    s.colorize=6;scrLerpvar(s,rt,'player_suck',s.player_suck,0,24);scrLerpvar(s,rt,'ball_speed',s.ball_speed,1,24);scrLerpvar(s,rt,'bobble_freq',3,1,16);
    s.sprite='spr_roaringknight_front_flourish';s.imageIndex=0;s.imageSpeed=0;s.knight_sprite='spr_roaringknight_front_flourish';s.knight_sprite_speed=0;
    scrLerpvar(s,rt,'knight_sprite_image',5.99,0,12);
-   const list=rt.ds('list',s.bullet_list) as number[];for(const b of rt.all(star)){b.friction=0.5;list.push(b.id);}
+   const list=rt.ds('list',s.bullet_list) as number[];for(const b of rt.withInstances(star)){b.friction=0.5;list.push(b.id);}
   }
   if(s.roaring_timer>=182){
    const list=rt.ds('list',s.bullet_list) as number[];
@@ -316,12 +316,12 @@ export function createRoar(object:(name:string)=>GmObjectDef,effects:SlashEffect
   rt.drawBlendMode('normal');
   // The stars and their bursts.
   surfaces.target(s.star_surface);surfaces.clear(C.black,0);
-  const each=(test:(b:GmInstance)=>boolean)=>{for(const b of rt.all(star)){if(test(b))continue;rt.userEvent(b,b.con===0?0:1);}};
+  const each=(test:(b:GmInstance)=>boolean)=>{for(const b of rt.withInstances(star)){if(test(b))continue;rt.userEvent(b,b.con===0?0:1);}};
   each(b=>b.imageBlend===C.white);
   each(b=>b.imageBlend===DKGRAY);
   rt.drawAlphaWrite(false);rt.drawSprite('spr_knight_line_grate',0,0,s.star_flicker,2,2,0,C.black,1);s.star_flicker=2-s.star_flicker;rt.drawAlphaWrite(true);
   each(b=>(b.imageBlend===DKGRAY||b.imageXscale>1)&&b.con<1);
-  for(const c of rt.all(starchild())){
+  for(const c of rt.withInstances(starchild())){
    rt.drawBlendMode('add');
    const glow=pingpong(c.timer,2)/4,cxs=c.x-vx,cys=c.y-vy;
    outlineExt(rt,c.sprite!,c.imageIndex,cxs,cys,c.imageXscale,c.imageYscale,c.imageAngle,C.white,glow*c.imageAlpha,c.imageXscale);
@@ -329,7 +329,7 @@ export function createRoar(object:(name:string)=>GmObjectDef,effects:SlashEffect
    rt.drawBlendMode('normal');
    c.imageAlpha=clamp01(remap(45,60,1,0,c.timer));if(lt(c.imageAlpha,1))c.active=0;if(eq(c.imageAlpha,0))rt.destroy(c);
   }
-  for(const a of rt.all(afterimage))rt.drawSprite(a.sprite,a.imageIndex,a.x-vx,a.y-vy,a.imageXscale,a.imageYscale,a.imageAngle,C.white,a.imageAlpha);
+  for(const a of rt.withInstances(afterimage))rt.drawSprite(a.sprite,a.imageIndex,a.x-vx,a.y-vy,a.imageXscale,a.imageYscale,a.imageAngle,C.white,a.imageAlpha);
   // The giant Knight over the pit, rippling as the pull builds.
   surfaces.target(s.my_surface);surfaces.clear(C.black,0);d.color=C.black;rt.drawRect(0,0,vw,vh,false);
   if(!s.hsv_switch)s.hsv++;else s.hsv--;
@@ -341,7 +341,7 @@ export function createRoar(object:(name:string)=>GmObjectDef,effects:SlashEffect
   }
   surfaces.draw(s.star_surface,0,0);
   rt.drawBlendMode('normal');
-  for(const a of rt.all(afterimageGrow))rt.drawSprite(a.sprite,a.imageIndex,a.x-vx,a.y-vy,a.imageXscale,a.imageYscale,a.imageAngle,C.white,a.imageAlpha);
+  for(const a of rt.withInstances(afterimageGrow))rt.drawSprite(a.sprite,a.imageIndex,a.x-vx,a.y-vy,a.imageXscale,a.imageYscale,a.imageAngle,C.white,a.imageAlpha);
   if(s.line_timer>-1){
    rt.drawAlphaWrite(false);
    const x=vw*0.5-lengthdirX(280,-63),y=vh*0.5-lengthdirY(280,-63),stretch=4+8*(1-Math.min(s.line_timer,16)/16);

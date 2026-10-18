@@ -4,6 +4,7 @@ import {spriteBank} from '../src/remake/gm/sprites';
 import {defaultLoadout,type EquipmentSource} from '../src/game/loadout';
 import {EngineBattle} from '../src/remake/host/engine';
 import {installChapter2BossHost} from '../src/remake/host/chapter2-bosses';
+import {installChapter3BossHost} from '../src/remake/host/chapter3-bosses';
 import {KEY,battleBack,gameOver} from '../src/remake/deltarune/battle';
 import {deviceChoice,endBattle,gameOverBg} from '../src/remake/deltarune/battle-end';
 import {writer} from '../src/remake/deltarune/writer';
@@ -89,4 +90,40 @@ describe.skipIf(!fs.existsSync(ch2)||!fs.existsSync('public/generated/remake/ch2
    expect(b.afterDefeat).toBe('menu');
   }finally{setSourceText(JSON.parse(fs.readFileSync('public/generated/remake/ch1/bundle.json','utf8')).text);}
  });
+});
+
+const ch3='extracted/chapter3_windows/code/';
+describe.skipIf(!fs.existsSync(ch3)||!fs.existsSync('public/generated/remake/ch3/bundle.json'))('losing to the Roaring Knight',()=>{
+ const withChapter3=(run:()=>void)=>{
+  setSourceText(JSON.parse(fs.readFileSync('public/generated/remake/ch3/bundle.json','utf8')).text);
+  try{run();}finally{setSourceText(JSON.parse(fs.readFileSync('public/generated/remake/ch1/bundle.json','utf8')).text);}
+ };
+ const knight=(options:{secretBossAttempts:number;session?:ReturnType<EngineBattle['session']>})=>{
+  const b=new EngineBattle(loadSprites(3),equipment,defaultLoadout(),'ch3-115',11,{development:true,chapterHost:installChapter3BossHost,...options});
+  step(b,45);return b;
+ };
+ it('keeps the soul whole, and after an earlier fight shows his own screen: GO BACK fights again',()=>withChapter3(()=>{
+  const b=knight({secretBossAttempts:1}),rt=b.rt,g=rt.globals;
+  gameOver(rt);step(b,60);
+  const init=live(b,'obj_gameover_init')[0];expect(init.knight_mode).toBe(1);
+  step(b,40);expect(init.sprite).toBe('spr_heart');expect(live(b,'obj_marker').some(m=>m.sprite==='spr_heartshards')).toBe(false);
+  step(b,51);expect(rt.room.name).toBe('PLACE_FAILURE');
+  const screen=live(b,'DEVICE_FAILURE')[0];expect(screen.knight_mode).toBe(1);expect(rt.exists(gameOverBg)).toBe(false);
+  expect(g.knight_battle_losses).toBe(1);expect(g.flag[1264]).toBe(1);
+  until(b,()=>rt.exists(deviceChoice),3000);
+  expect(rt.first(deviceChoice)!.NAME.map((n:string[])=>n[0])).toEqual(['DEVICE_FAILURE_slash_Step_0_gml_406_0','DEVICE_FAILURE_slash_Step_0_gml_407_0'].map(k=>sourceText(k).replace(/#/g,'\n')));
+  step(b,25);press(b,KEY.left);press(b,KEY.z);
+  until(b,()=>!!b.outcome,200);
+  expect(b.afterDefeat).toBe('retry');
+  // The retry keeps his count: the second loss gives the next advice.
+  const again=knight({secretBossAttempts:1,session:b.session()});gameOver(again.rt);step(again,152);
+  expect(again.rt.globals.knight_battle_losses).toBe(2);expect([21,41]).toContain(live(again,'DEVICE_FAILURE')[0].knight_mode_con);
+ }));
+ it('the first time, shows the usual GAME OVER screen with the small soul above it',()=>withChapter3(()=>{
+  const b=knight({secretBossAttempts:0}),rt=b.rt;
+  gameOver(rt);step(b,151);
+  expect(rt.room.name).toBe('PLACE_FAILURE');
+  expect(live(b,'DEVICE_FAILURE')[0].knight_mode).toBe(0);expect(rt.exists(gameOverBg)).toBe(true);
+  expect(live(b,'obj_marker').some(m=>m.sprite==='spr_heart'&&m.imageXscale===0.5)).toBe(true);
+ }));
 });

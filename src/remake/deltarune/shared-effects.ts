@@ -43,15 +43,17 @@ export const lerpvar:GmObjectDef={name:'obj_lerpvar',index:929,depth:0,events:{
  step:(s,rt)=>{
   const t=rt.byId(s.target);
   if(!t){rt.destroy(s);return;}
-  const field=gmField(s.varname);
-  if(s.init===0){if(typeof s.pointa==='string')s.pointa=t[field];s.init=1;}
+  // variable_instance_get/set ignore a name that is not a string (the Knight's roar eases a number by mistake).
+  const named=typeof s.varname==='string',field=named?gmField(s.varname):'';
+  const set=(v:number)=>{if(named)t[field]=v;};
+  if(s.init===0){if(typeof s.pointa==='string')s.pointa=named?t[field]:undefined;s.init=1;}
   if(!forChapter(rt,LERPVAR,'obj_lerpvar').paused(s,rt))s.time+=1;
   const k=s.time/s.maxtime;
-  if(s.easetype===0)t[field]=s.pointa+(s.pointb-s.pointa)*k;
+  if(s.easetype===0)set(s.pointa+(s.pointb-s.pointa)*k);
   else{
-   if(s.easeinout==='out')t[field]=lerpEaseOut(s.pointa,s.pointb,k,s.easetype);
-   if(s.easeinout==='in')t[field]=lerpEaseIn(s.pointa,s.pointb,k,s.easetype);
-   if(s.easeinout==='inout')t[field]=lerpEaseInout(s.pointa,s.pointb,k,s.easetype);
+   if(s.easeinout==='out')set(lerpEaseOut(s.pointa,s.pointb,k,s.easetype));
+   if(s.easeinout==='in')set(lerpEaseIn(s.pointa,s.pointb,k,s.easetype));
+   if(s.easeinout==='inout')set(lerpEaseInout(s.pointa,s.pointb,k,s.easetype));
   }
   if(ge(s.time,s.maxtime))rt.destroy(s);
  },

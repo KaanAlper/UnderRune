@@ -1,5 +1,5 @@
 // Shared source screen fades: their opacity changes in Draw, including the source fade-out's reversible mode.
-import type {GmObjectDef} from '../gm/runtime';
+import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {eq,le} from '../gm/math';
 import {C} from '../gm/graphics';
 export const fadeOut:GmObjectDef={name:'obj_fadeout',index:193,depth:-99999,sprite:'spr_pixel_white',events:{
@@ -9,3 +9,8 @@ export const fadeOut:GmObjectDef={name:'obj_fadeout',index:193,depth:-99999,spri
   if(eq(s.fadein,1)&&le(s.imageAlpha,0))rt.destroy(s);
  },
 }};
+/** scr_fadeout, run by `s`: a fade to black over `frames` frames, from above the view's top left (kept in
+ * s.__fadeouter). */
+export function scrFadeout(s:GmInstance,rt:GmRuntime,frames:number){
+ const f=rt.create(fadeOut,rt.view.x-200,rt.view.y-200);s.__fadeouter=f.id;f.fadespeed=1/frames;f.depth=3;return f;
+}

@@ -72,7 +72,7 @@ test('local Jevil source practice uses equipment and rematches as practice',asyn
 
 test('no-native unsupported encounters offer truthful preparation without a fake fight',async({page})=>{
  await withoutNative(page);await chapterMenu(page,3);
- for(const [id,name] of [['ch3-115','Roaring Knight'],['ch3-mantle','ERAM']]){
+ for(const [id,name] of [['ch3-114','Rouxls'],['ch3-mantle','ERAM']]){
   await boss(page,id,name);const prep=page.getByRole('dialog',{name,exact:true});await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();await expect(prep.locator('.prep-intro')).toContainText('original engine is unavailable');await prep.getByRole('button',{name:'Close preparation'}).click();await expect(page.locator('#pause')).toBeHidden();await expect(page.locator('#practice')).toBeDisabled();await expect(page.locator('#native')).toHaveCount(0);
  }
 });

@@ -5,7 +5,7 @@
 // stars aim at), obj_fake_gt (the box drawn shaking in its place) and obj_afterimage_blend.
 import type {GmInstance,GmObjectDef,GmRuntime} from '../../gm/runtime';
 import {C,mergeColor} from '../../gm/graphics';
-import {eq,le,lengthdirX,lengthdirY,lerp,lt,pointDirection,round} from '../../gm/math';
+import {clamp,eq,le,lengthdirX,lengthdirY,lerp,lt,pointDirection,round} from '../../gm/math';
 import {afterimage,damage,damageAll,growtangle,heart,regularBullet} from '../../deltarune/battle';
 import {bulletInit} from '../../deltarune/battle';
 import {snd} from '../../deltarune/sound';
@@ -28,8 +28,8 @@ export function createStars(object:Objects){
   create:(s,rt)=>{s.target=object('obj_heart').index;s.depth=soul(rt).depth-5;s.smoothing=0.125;s.max_speed=4;},
   step:(s,rt)=>{
    const h=soul(rt);s.xdiff=h.x-s.x;s.ydiff=h.y-s.y;
-   const clamp=(v:number)=>Math.max(1,Math.min(s.max_speed,v));
-   s.x=moveTowards(s.x,h.x,clamp(Math.abs(s.xdiff)*s.smoothing));s.y=moveTowards(s.y,h.y,clamp(Math.abs(s.ydiff)*s.smoothing));
+   const clampSpeed=(v:number)=>clamp(v,1,s.max_speed);
+   s.x=moveTowards(s.x,h.x,clampSpeed(Math.abs(s.xdiff)*s.smoothing));s.y=moveTowards(s.y,h.y,clampSpeed(Math.abs(s.ydiff)*s.smoothing));
   },
  }};
  /** obj_fake_gt: the box, hidden and drawn here with a shake offset. */
@@ -159,10 +159,10 @@ export function createStars(object:Objects){
    for(const h of rt.all(heart))rt.drawSprite(h.sprite,h.imageIndex,h.x-vx,h.y-vy);
    if(rt.exists(starDef)){
     surfaces.target(s.starsurf);rt.drawBlendMode('normal');surfaces.clear(C.black,0);
-    for(const star of rt.all(starDef))if(star.imageXscale>0.5)rt.userEvent(star,0);
+    for(const star of rt.withInstances(starDef))if(star.imageXscale>0.5)rt.userEvent(star,0);
     rt.drawBlendMode('subtract');rt.drawSprite('spr_knight_line_grate',0,0,s.star_flicker,2,2,0,C.black,1);s.star_flicker=2-s.star_flicker;
     rt.drawBlendMode('normal');
-    for(const star of rt.all(starDef))if(star.imageXscale<=0.5)rt.userEvent(star,0);
+    for(const star of rt.withInstances(starDef))if(star.imageXscale<=0.5)rt.userEvent(star,0);
     surfaces.target(s.surf);rt.drawAlphaTest(true);rt.drawBlendMode('normal-preserve-alpha');surfaces.draw(s.starsurf,0,0);
    }
    rt.drawAlphaTest(false);rt.drawBlendMode('add');surfaces.target(null);surfaces.draw(s.surf,vx,vy);rt.drawBlendMode('normal');
@@ -285,7 +285,7 @@ export function createStars(object:Objects){
     if(s.speed>s.minspeed)s.speed=moveTowards(s.speed,s.minspeed,s.deceleration);
     if(s.con===0&&s.delay>0){
      s.timer++;
-     if(s.timer>=s.delay){if(!onscreenTolerance(rt,s,10))rt.destroy(s);s.timer=0;s.con=1;}
+     if(s.timer>=s.delay){if(!onscreenTolerance(s,rt,s,10))rt.destroy(s);s.timer=0;s.con=1;}
     }
    }
    if(s.con>=1&&s.con<=3){

@@ -24,13 +24,13 @@ const playable:readonly SourceEncounter[]=[
  // Susie fights on Lancer's side; Kris and Ralsei face them both.
  {id:'ch1-31',chapter:1,name:'Susie & Lancer',party:[1,3],hp:800,attack:6,defense:1,music:'lancer_susie',practice:false},
  {id:'ch1-40',chapter:1,name:'King',party:[1,2,3],hp:2800,attack:8,defense:0,music:'kingboss',practice:false},
+ // Chapter 3's secret boss, after the fountain scene (obj_ch3_PTB02).
+ {id:'ch3-115',chapter:3,name:'Roaring Knight',party:[1,2,3],hp:7300,attack:40,defense:0,music:'knight',practice:false},
 ];
 export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);
 /** Explicit local verification entry points. Public launches always use sourceEncounter. */
 /** Reserved for EngineBattle fixtures that still need end-to-end verification before public launch. */
 const development:readonly SourceEncounter[]=[
- // Chapter 3's Roaring Knight: being ported (docs/superpowers/plans/2026-10-17-roaring-knight.md).
- {id:'ch3-115',chapter:3,name:'Roaring Knight',party:[1,2,3],hp:7300,attack:40,defense:0,music:'knight',practice:false},
  // The Dojo's Tasque Manager rematch: its quiz ending still differs from the recordings.
  {id:'ch2-89',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:false},
 ];

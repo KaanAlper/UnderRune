@@ -58,3 +58,33 @@ Nothing is public until the three recordings match to the end.
    - All three recordings match to the end.
    - A browser test opens the card and plays a turn.
    - Then the encounter becomes public.
+
+## Result (2026-10-18)
+
+- **Recordings.** Three short runs (`z`, `menu`, `act`, 4000 frames: his first nine turns) and three long ones
+  (`zlong`, `menulong`, `actlong`, 24,000 frames: phases 2 to 4, the charge, the roar and the ending, reached at
+  frames 14,320, 17,580 and 16,040) match every frame and every full dump. The long runs are slow (minutes each),
+  so they run only with `LONG_PARITY=1`.
+- **What the long runs found.**
+  - `with` over an object with three or more instances visits them newest first (two: in order). The roar's star
+    list is built that way (`rt.withInstances`).
+  - GML `clamp` applies the low bound, then the high one, so a high bound below the low one wins
+    (`gm/math.ts clamp`); `scr_heartclamp` depends on it when the box shrinks to nothing.
+  - `variable_instance_set` and `_get` ignore a name that is not a string; the roar eases a number by mistake
+    (`obj_lerpvar`).
+  - `scr_onscreen_tolerance` leaves its arguments in the caller's `obj` and `spacer`.
+  - Dumps leave out stopped (negative) alarms.
+- **Ending.** After the roar his first hit starts `end_cutscene_version` 1: a white fade, then `endcon` 2. The host
+  ends the battle there as a win (`battleOutcome` hook). Losing the first time (`endcon` 1, no attempts yet) ends it
+  as a loss without a game over, as the fountain scene takes over in the game.
+- **Failure screen.** Chapter 3's `obj_gameover_init` keeps the soul whole in his battle (`tempflag[93]`) and floats it
+  up; its 4-Z skip fades to white. When he has been fought before (`secretbossattempts`, from the player's saved
+  `fought` list), `DEVICE_FAILURE` runs his own screen: advice by `knight_battle_losses` (kept across retries with
+  flags 1263 and 1264), then GO BACK or GO FORWARD.
+- **Items and spells.** Chapter 3's `scr_spell`, `scr_iteminfo`, `scr_spelltext` and `scr_spellinfo`: heals grow
+  with armour 26 on the caster, UltraHeal grows and gets cheaper with each cast (flag 1045), the teas are rotten,
+  and the TV dinner items are new. Rude Buster takes his damage reduction (`scalesRudeBuster`).
+- **Not reachable in normal play.** Phase 1 turns 6 to 9 (attacks 152, 16, 17, 105) are never chosen; they stop
+  with a named error.
+- **Public.** `ch3-115` is in the playable list; `build:pages` builds and publishes the Chapter 3 bundle and his
+  music.

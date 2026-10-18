@@ -71,6 +71,14 @@ export function compareFrame(rt:GmRuntime,line:TraceLine,tracked:Set<string>,glo
  return undefined;
 }
 
+/** PARITY_TRAP=object,frame,field: logs who writes the field of that object's instances during that frame's step. */
+function trapField(rt:GmRuntime,frame:number,spec:string){
+ const [name,at,field]=spec.split(',');if(Number(at)!==frame)return;
+ for(const i of rt.instances.filter(i=>i.live&&i.object.name===name)){
+  const proto=Object.getPrototypeOf(i),desc=Object.getOwnPropertyDescriptor(proto,field);let own=(i as any)[field];
+  Object.defineProperty(i,field,{configurable:true,get:()=>desc?.get?desc.get.call(i):own,set:v=>{console.log('TRAP',name,field,'=',v,new Error().stack?.split(String.fromCharCode(10)).slice(2,7).join(' | '));if(desc?.set)desc.set.call(i,v);else own=v;}});
+ }
+}
 /** Runs the remake from `start` (a snapshot frame: after its step, before its draw) to `end`, stopping at the first mismatch. */
 /** afterFrame: runs after each matching frame (for checks that need more than the trace, like full dumps); a
  * mismatch it returns stops the run there. */
@@ -79,7 +87,9 @@ export function runParity(rt:GmRuntime,trace:Map<number,TraceLine>,start:number,
  let frame=start;
  for(;frame<end;frame++){
   // obj_time (a world object, not restored) counts global.time in its Begin Step.
-  rt.draw();if(replay)replayInput(rt,replay,frame);rt.globals.time=(rt.globals.time??0)+1;rt.step();
+  rt.draw();if(replay)replayInput(rt,replay,frame);rt.globals.time=(rt.globals.time??0)+1;
+  if(process.env.PARITY_TRAP)trapField(rt,frame+1,process.env.PARITY_TRAP);
+  rt.step();
   if(process.env.PARITY_DEBUG){const watch=process.env.PARITY_DEBUG.split(','),m=rt.instances.filter(i=>i.live&&watch.includes(i.object.name));console.log(frame+1,'mnfight',rt.globals.mnfight,'myfight',rt.globals.myfight,'pressed',[...rt.input.pressed].join(),m.map(i=>i.object.name+':'+JSON.stringify(Object.fromEntries((process.env.PARITY_VARS??'').split(',').filter(k=>k in i).map(k=>[k,i[k]])))).join(' '));}
   const line=trace.get(frame+1);if(!line)return {matched:frame-start,mismatch:{frame:frame+1,what:'Missing reference frame '+(frame+1)}};
   // scr_endcombat: the game hands over to obj_endbattle (the walk back to the room); the remake ends the battle there.
@@ -147,7 +157,7 @@ export function compareState(rt:GmRuntime,dump:Dump,checked:Set<string>,res:Reso
    diff('depth',o.depth,d.depth);diff('sprite',o.sprite??null,d.sprite.name);diff('image_index',o.imageIndex,d.sprite.imageIndex);diff('image_speed',o.imageSpeed,d.sprite.imageSpeed);
    diff('image_xscale',o.imageXscale,d.scale.x);diff('image_yscale',o.imageYscale,d.scale.y);diff('image_angle',o.imageAngle,d.angle);
    diff('image_alpha',o.imageAlpha,d.alpha);diff('image_blend',o.imageBlend,d.blend);diff('visible',o.visible,d.visible);
-   for(let a=0;a<12;a++)diff(`alarm[${a}]`,o.alarm[a],d.alarms[a]??-1);
+   for(let a=0;a<12;a++)diff(`alarm[${a}]`,o.alarm[a]<0?-1:o.alarm[a],d.alarms[a]??-1); // The dumps leave out stopped (negative) alarms.
    for(const [key,value] of Object.entries(d.selfVariables)){
     if(typeof value==='string'&&value.startsWith('<method:'))continue;
     // The reference runtime writes creator (the calling instance) on every instance_create; GameMaker does not, and

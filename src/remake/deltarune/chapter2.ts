@@ -3,7 +3,7 @@ import type {GmInstance,GmRuntime} from '../gm/runtime';
 import {monsterParent} from './battle';
 import {sourceText} from '../host/text';
 import {spellInfoAll} from './controller';
-import {withHook} from './rules';
+import {forChapter,withHook} from './rules';
 
 /** scr_gamestart, without scr_levelup progression or equipment bonuses. Index 0 is the empty slot. */
 export function chapter2StartStats(includeNoelle=false){const stats={hp:[0,120,140,100],maxhp:[0,120,140,100],at:[0,12,16,10],df:[0,2,2,2],mag:[0,0,1,9]};if(includeNoelle){stats.hp.push(90);stats.maxhp.push(90);stats.at.push(3);stats.df.push(1);stats.mag.push(11);}return stats;}
@@ -11,20 +11,28 @@ export function sideBPhase(rt:GmRuntime){
  const flag=rt.globals.flag;if(flag[916]!==0)return 0;
  const n=flag[915];return n>=20?4:n>=7?3:n>=4?2:n>0?1:0;
 }
-// scr_iteminfo's name/description key numbers, target, shop value, battle consumption and replacement.
-const ITEMS_CH2:Record<number,[number,number,number,number,number,number?]>={
+// scr_iteminfo's name/description key numbers (or another script's keys), target, shop value, battle consumption and
+// replacement.
+type ItemRow=[name:number|string,desc:number|string,target:number,value:number,usable:number,replaceable?:number];
+const ITEMS_CH2:Record<number,ItemRow>={
  1:[15,16,1,25,1],2:[22,23,1,400,1],3:[29,30,0,400,0],4:[36,37,2,1,0],5:[43,44,1,5,1],6:[50,51,2,150,1],7:[58,59,2,5,1],
  8:[65,66,1,70,1],9:[72,73,1,10,1],10:[79,80,1,10,1],11:[86,87,2,70,1],12:[93,94,1,40,1],13:[100,101,1,40,1],14:[107,108,1,10,1],15:[114,115,1,50,1],
  16:[121,122,1,100,1],17:[128,129,0,300,0],18:[135,136,1,10,1],19:[142,143,1,10,1],20:[149,150,1,10,1],21:[156,157,1,10,1],22:[163,164,1,110,1,8],
  23:[171,172,1,200,1],24:[178,179,1,200,1],25:[185,186,2,180,1],26:[192,193,1,160,1],27:[199,200,2,100,1],28:[206,207,2,300,1],29:[213,214,2,1000,1],
  30:[220,221,2,100,1],31:[227,228,2,4000,1],32:[234,235,1,110,1],33:[241,242,0,100,0],
 };
+// Chapter 3: the teas have gone rotten (their names from scr_text), and the dining set's dishes are new.
+const ROTTEN_TEA:ItemRow=['scr_text_slash_scr_text_gml_10542_0','scr_text_slash_scr_text_gml_10547_0',1,2,1];
+const ITEMS_CH3:Record<number,ItemRow>={...ITEMS_CH2,18:ROTTEN_TEA,19:ROTTEN_TEA,20:ROTTEN_TEA,21:ROTTEN_TEA,
+ 34:[249,250,1,200,1],35:[256,257,1,0,1],36:[263,264,1,2,1],37:[270,271,1,180,1],38:[277,278,2,600,1],39:[284,285,1,600,1]};
+/** Per chapter: the items, and what Revivemint pack (7) heals the team. */
+const ITEM_TABLES:Record<number,{items:Record<number,ItemRow>;teamHeal:number}>={2:{items:ITEMS_CH2,teamHeal:140},3:{items:ITEMS_CH3,teamHeal:150}};
 export function itemInfoChapter2(s:GmInstance,rt:GmRuntime,id:number){
  Object.assign(s,{usable:0,replaceable:0,value:0,itemtarget:0,itemnameb:' ',itemdescb:' '});
  if(id===0){s.itemdescb='---';return;}
- const item=ITEMS_CH2[id];if(!item)throw Error(`Chapter 2 item ${id} is not in scr_iteminfo`);
- const L=(n:number)=>sourceText(`scr_iteminfo_slash_scr_iteminfo_gml_${n}_0`);
- s.itemnameb=L(item[0]);s.itemdescb=id===7?L(59).replace('~1','140'):L(item[1]);
+ const table=forChapter(rt,ITEM_TABLES,'scr_iteminfo'),item=table.items[id];if(!item)throw Error(`Chapter ${rt.globals.chapter} item ${id} is not in scr_iteminfo`);
+ const L=(n:number|string)=>sourceText(typeof n==='string'?n:`scr_iteminfo_slash_scr_iteminfo_gml_${n}_0`);
+ s.itemnameb=L(item[0]);s.itemdescb=id===7?L(59).replace('~1',String(table.teamHeal)):L(item[1]);
  s.itemtarget=item[2];s.value=id===33?Math.floor(200/rt.globals.chapter):item[3];s.usable=item[4];s.replaceable=item[5]??0;
 }
 /** scr_teaamount. Self tea heals only 10 outside battle, 40 minimum during a battle. */

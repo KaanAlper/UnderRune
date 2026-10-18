@@ -639,7 +639,21 @@ New scripts go in `tools/oracle-scripts.mjs`.
   order: Queen (59), the rivals (58, 62, 63, 82), GIGA Queen (84), Spamton (normal), Noelle's remaining parts, the
   Dojo's 89. Record each with `z`, `menu` and `act` before making it public.
 
-### 18. Requested next (after the release above)
+### 18. Roaring Knight public (2026-10-18)
+
+- Encounter 115 matches all six recordings (three of his first nine turns, three to the ending; the long ones run
+  with `LONG_PARITY=1`) and is public. Details and what the long runs found: `docs/superpowers/plans/
+  2026-10-17-roaring-knight.md`, "Result".
+- Engine rules learned (they apply to every chapter): `with` over three or more instances runs newest first
+  (`rt.withInstances`); GML `clamp` takes the low bound first (`gm/math.ts clamp`); `variable_instance_set` ignores a
+  name that is not a string.
+- Text keys: a complete key now brings only its own line into the bundle; only a prefix ending in `_gml_` brings
+  the whole event (`tools/remake-text-keys.mjs`). Before this, naming one `scr_text` line would have pulled in all
+  of `scr_text` (about 3,400 lines).
+- Debugging aid: `PARITY_TRAP=object,frame,field` logs every write to that field during that frame, with the stack.
+- Next: the remaining Chapter 2 bosses, in the order above.
+
+### 19. Requested next (after the release above)
 
 - **General chat**, from Supabase. Separate rooms for UNDERTALE and DELTARUNE. It sits left of the leaderboard on
   the main menu. It uses the leaderboard's player name, and resets weekly (pg_cron) to keep the database small.

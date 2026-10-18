@@ -1,6 +1,6 @@
 // NEO's final-form suction, swallowed soul and final volley. Draw events retain their timing and random work.
 import {resolveEvent,moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../../gm/runtime';
-import {eq,ge,gt,le,lt,lengthdirX,lengthdirY,pointDirection,pointDistance} from '../../gm/math';
+import {clamp,eq,ge,gt,le,lt,lengthdirX,lengthdirY,pointDirection,pointDistance} from '../../gm/math';
 import {C,mergeColor} from '../../gm/graphics';
 import {bulletInit,damageAll,damageProportional} from '../../deltarune/battle';
 import {sndPitchTime} from '../../deltarune/chapter2-battle';
@@ -10,7 +10,6 @@ import {snd} from '../../deltarune/sound';
 import type {HookedDef} from '../../deltarune/rules';
 
 const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
-const clamp=(v:number,a:number,b:number)=>Math.max(a,Math.min(b,v));
 const inverse=(a:number,b:number,v:number)=>eq(a,b)?0:(v-a)/(b-a);
 const towards=(a:number,b:number,v:number)=>eq(a,b)?a:gt(a,b)?Math.max(a-v,b):Math.min(a+v,b);
 export function createNeoFinale(object:(name:string)=>GmObjectDef):GmObjectDef[]{

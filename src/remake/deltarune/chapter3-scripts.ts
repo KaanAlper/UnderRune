@@ -3,7 +3,7 @@
 // bullets made by bullets (scr_childbullet), afterimages (scr_afterimage, scr_custom_afterimage), the precise soul
 // hit (scr_precise_hit), beams (scr_draw_beam_color) and sprite outlines (scr_draw_outline).
 import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
-import {eq,gt,lt,lengthdirX,lengthdirY,lerp} from '../gm/math';
+import {clamp,eq,gt,lt,lengthdirX,lengthdirY,lerp} from '../gm/math';
 import {rectangleMeets,pointMeets} from '../gm/collision';
 import {afterimage,afterimageGrow,growtangle,heart} from './battle';
 import {gmlScript} from './chapter2-battle';
@@ -20,7 +20,7 @@ export function loopExt(value:number,lo:number,hi:number){
 export const loop=(value:number,range:number)=>loopExt(value,0,range);
 /** scr_pingpong: `value` going 0..range..0. */
 export function pingpong(value:number,range:number){if(eq(range,0))return value;let v=loop(value,range*2);if(gt(v,range))v=range*2-v;return v;}
-export const clamp01=(v:number)=>Math.max(0,Math.min(1,v));
+export const clamp01=(v:number)=>clamp(v,0,1);
 /** remap: `value`'s place between a and b, carried to between c and d (scr_inverselerp, then lerp). */
 export function remap(a:number,b:number,c:number,d:number,value:number){return lerp(c,d,(value-a)/(b-a));}
 /** angle_difference: the signed turn from `src` to `dest`, -180 to 180. */
@@ -34,8 +34,10 @@ export function gtMaxx(rt:GmRuntime){const b=rt.first(growtangle);return b?b.x+r
 export function gtMinx(rt:GmRuntime){const b=rt.first(growtangle);return b?b.x-rt.spriteWidth(b)/2:undefined;}
 export function gtMaxy(rt:GmRuntime){const b=rt.first(growtangle);return b?b.y+rt.spriteHeight(b)/2:undefined;}
 export function gtMiny(rt:GmRuntime){const b=rt.first(growtangle);return b?b.y-rt.spriteHeight(b)/2:undefined;}
-/** scr_onscreen_tolerance: whether the instance's sprite is within `spacer` of the view. */
-export function onscreenTolerance(rt:GmRuntime,o:GmInstance,spacer:number){
+/** scr_onscreen_tolerance, run by `caller`: whether `o`'s sprite is within `spacer` of the view. The script keeps its
+ * arguments in the caller's obj and spacer. */
+export function onscreenTolerance(caller:GmInstance,rt:GmRuntime,o:GmInstance,spacer:number){
+ caller.obj=o.id;caller.spacer=spacer;
  const vx=rt.view.x,vy=rt.view.y;
  return !(lt(o.x+rt.spriteWidth(o)+spacer,vx)||gt(o.x-spacer,vx+640)||lt(o.y+rt.spriteHeight(o)+spacer,vy)||gt(o.y-spacer,vy+480));
 }
@@ -115,7 +117,7 @@ export function approach(value:number,goal:number,step:number){
 export function heartClamp(rt:GmRuntime,mx=0,my=0){
  const b=rt.first(growtangle);if(!b)return;
  for(const h of rt.all(heart)){
-  const xt=b.imageXscale*2+1,yt=b.imageYscale*2+1,clamp=(v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
+  const xt=b.imageXscale*2+1,yt=b.imageYscale*2+1;
   h.x=clamp(h.x,getBox(rt,2)+xt+mx,getBox(rt,0)-(20+xt+mx));h.y=clamp(h.y,getBox(rt,1)+yt+my,getBox(rt,3)-(20+yt+my));
  }
 }

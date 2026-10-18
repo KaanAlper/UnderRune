@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "tsc --noEmit && vite build",
-    "build:pages": "tsc --noEmit && node tools/build-remake-assets.mjs && node tools/build-remake-assets.mjs 2 && vite build --mode pages && node tools/build-pages.mjs",
+    "build:pages": "tsc --noEmit && node tools/build-remake-assets.mjs && node tools/build-remake-assets.mjs 2 && node tools/build-remake-assets.mjs 3 && vite build --mode pages && node tools/build-pages.mjs",
     "preview": "vite preview --host 127.0.0.1 --port 4173 --strictPort",
     "test:tools": "node --test tests/*.test.mjs",
     "test": "vitest run",

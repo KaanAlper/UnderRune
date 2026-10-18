@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';
 
-// Local verification only: Chapter 3 stays unavailable in production until the full recordings pass.
-test('Roaring Knight development card opens and completes its first Stars turn',async({page})=>{
+// The Knight's card, through the development entry point (the public one is the same battle).
+test('Roaring Knight card opens and completes its first Stars turn',async({page})=>{
  test.setTimeout(90000);
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto((process.env.UNDERRUNE_DEV_URL??'/')+'?demo=1&dev=1&seed=11');

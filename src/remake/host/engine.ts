@@ -21,6 +21,11 @@ import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
 import {chapter2StartStats} from '../deltarune/chapter2';
 import {chapter3StartStats} from '../deltarune/chapter3';
+import {withHook} from '../deltarune/rules';
+/** Globals and flags a retry keeps: the Knight's failure screen counts his wins (knight_battle_losses, flag 1264) and
+ * shows one message only once (flag 1263). */
+const SESSION={globals:['knight_battle_losses'],flags:[1263,1264]} as const;
+export type Session={globals:Record<string,unknown>;flags:Record<number,number>};
 import type {installNeoHost} from './neo';
 import type {installChapter2BossHost} from './chapter2-bosses';
 import {initializeChapter2SmallFaces} from '../deltarune/chapter2-enemy';
@@ -77,7 +82,7 @@ export class EngineBattle{
  /** After a game over, what the player chose: try again (scr_tempload) or leave (the game's end). */
  afterDefeat:'retry'|'menu'|null=null;
  readonly scoring:BattleRunTracker|null;result:RunRecord|null=null;
- constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;chapterHost?:ChapterHost;chapter2Host?:ChapterHost;scoring?:boolean;rage?:boolean;gameOvers?:number}={}){
+ constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;chapterHost?:ChapterHost;chapter2Host?:ChapterHost;scoring?:boolean;rage?:boolean;gameOvers?:number;secretBossAttempts?:number;session?:Session}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
   if(!encounter||!setup)throw Error('This battle is not available yet.');
   if(id==='ch2-61'&&!options.neoHost)throw Error('Load the Chapter 2 source host before starting NEO.');
@@ -122,6 +127,16 @@ export class EngineBattle{
   if(this.scoring)rt.onBattleMode=mode=>this.scoring!.mode(mode);
   // global.tempflag[3] counts game overs; it outlives scr_tempload, and the failure screen is quicker after the first.
   rt.globals.tempflag[3]=options.gameOvers??0;
+  // scr_get_knight_total_attempts: how many times this secret boss has been fought before (save slots in dr.ini).
+  rt.globals.secretbossattempts=options.secretBossAttempts??0;
+  if(options.session){Object.assign(rt.globals,options.session.globals);for(const [i,v] of Object.entries(options.session.flags))rt.globals.flag[Number(i)]=v;}
+ }
+ /** What outlives a retry, as it does in the game (which returns to the room without loading): see SESSION. */
+ session():Session{
+  const g=this.rt.globals,out:Session={globals:{},flags:{}};
+  for(const k of SESSION.globals)if(k in g)out.globals[k]=g[k];
+  for(const i of SESSION.flags)if(g.flag[i]!==undefined)out.flags[i]=g.flag[i];
+  return out;
  }
  get enemy():GmInstance|undefined{return this.rt.byId(this.rt.globals.monsterinstance[0]);}
  /** A short label for the status line: whose turn it is. */
@@ -147,6 +162,7 @@ export class EngineBattle{
   if(before===2&&g.mnfight===0&&!this.ending)this.turn+=1;
   const room=rt.pendingRoom;
   if(room==='battle_end'&&!this.ending)this.end('victory');
+  if(!this.ending)for(const [e,h] of withHook(rt,'battleOutcome')){const how=h(e,rt);if(how){this.end(how);this.outcome=how;break;}}
   if(this.ending==='victory'&&!rt.exists(endBattle))this.outcome='victory';
   if(isGameOverRoom(room)){rt.pendingRoom=null;if(!this.ending)this.end('defeat');gotoGameOverRoom(rt,room!);}
   if(room===RETRY_ROOM||room===GAME_END_ROOM){this.afterDefeat=room===RETRY_ROOM?'retry':'menu';this.outcome='defeat';}
