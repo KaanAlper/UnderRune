@@ -239,6 +239,10 @@ export class GmRuntime{
  drawRect(x1:number,y1:number,x2:number,y2:number,outline=false){this.gfx?.rect(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,outline);}
  drawLine(x1:number,y1:number,x2:number,y2:number,width?:number){if(!this.gfx)return;if(!this.gfx.line)throw Error('Graphics backend does not support line drawing');if(width===undefined)this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha);else this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,width);}
  drawLineColor(x1:number,y1:number,x2:number,y2:number,color1:number,color2:number){if(!this.gfx)return;if(!this.gfx.lineColor)throw Error('Graphics backend does not support gradient lines');this.gfx.lineColor(x1,y1,x2,y2,color1,color2,this.drawState.alpha);}
+ drawAlphaWrite(enabled:boolean){if(!this.gfx)return;if(!this.gfx.alphaWrite)throw Error('Renderer cannot mask alpha writes');this.gfx.alphaWrite(enabled);}
+ /** A rectangle or triangle drawn with blending disabled at alpha 0: it clears what it covers. */
+ drawEraseRect(x1:number,y1:number,x2:number,y2:number){if(!this.gfx)return;if(!this.gfx.eraseRect)throw Error('Renderer cannot erase');this.gfx.eraseRect(x1,y1,x2,y2);}
+ drawEraseTriangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number){if(!this.gfx)return;if(!this.gfx.eraseTriangle)throw Error('Renderer cannot erase');this.gfx.eraseTriangle(x1,y1,x2,y2,x3,y3);}
  drawAlphaTest(enabled:boolean){if(!this.gfx)return;if(!this.gfx.alphaTest)throw Error('Graphics backend does not support alpha testing');this.gfx.alphaTest(enabled);}
  /** draw_set_blend_mode and its gpu_set_blendmode forms (nothing without a renderer that has them). */
  drawBlendMode(mode:import('./graphics').BlendMode){if(!this.gfx)return;if(!this.gfx.blendMode)throw Error('Renderer lacks blend modes');this.gfx.blendMode(mode);}

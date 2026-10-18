@@ -30,6 +30,11 @@ export interface GmGraphics{
   * and either dest_alpha (add) or zero (copy) for the destination. Canvas raster fallbacks require alpha
   * testing or a verified raw source when a blend factor observes RGB at zero source alpha. */
  blendMode?(mode:BlendMode):void;
+ /** gpu_set_colorwriteenable's alpha channel: false keeps the target's alpha as it is. */
+ alphaWrite?(enabled:boolean):void;
+ /** With blending disabled and alpha 0, a shape clears what it covers (to transparent black). */
+ eraseRect?(x1:number,y1:number,x2:number,y2:number):void;
+ eraseTriangle?(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number):void;
  /** Discard source fragments with zero alpha before blending (default reference value zero). */
  alphaTest?(enabled:boolean):void;
  /** draw_surface_ext: a surface at room coordinates (view-relative on the screen). */
@@ -46,7 +51,7 @@ export interface GmGraphics{
  text(x:number,y:number,text:string,style:TextStyle):void;
 }
 /** GameMaker blend modes the remake draws with. */
-export type BlendMode='normal'|'add'|'subtract'|'add-preserve-alpha'|'normal-preserve-alpha'|'dest-alpha-add'|'dest-alpha-copy';
+export type BlendMode='normal'|'add'|'subtract'|'add-preserve-alpha'|'normal-preserve-alpha'|'dest-alpha-add'|'dest-alpha-copy'|'multiply';
 /** GML draw state (draw_set_color, draw_set_alpha, draw_set_font, draw_set_halign/valign). */
 export interface DrawState{color:number;alpha:number;font:string;halign:HAlign;valign:HAlign}
 export const C={white:0xffffff,black:0,red:0x0000ff,lime:0x00ff00,green:0x008000,aqua:0xffff00,purple:0x800080,gray:0x808080,ltgray:0xc0c0c0,yellow:0x00ffff,orange:0x40a0ff};

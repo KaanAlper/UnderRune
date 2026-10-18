@@ -16,6 +16,8 @@ import {createFlurry} from '../bosses/roaring-knight/flurry';
 import {createSwordTunnel} from '../bosses/roaring-knight/sword-tunnel';
 import {createRotatingSlash} from '../bosses/roaring-knight/rotating-slash';
 import {createSwordVortex} from '../bosses/roaring-knight/sword-vortex';
+import {createSlashEffects} from '../bosses/roaring-knight/slash-effects';
+import {createRoar} from '../bosses/roaring-knight/roar';
 import {createBlockVfx,createFadeToWhite,createFountain} from '../bosses/roaring-knight/fountain';
 import {createBattleMarker} from '../deltarune/guard-peek';
 import {sourceText} from './text';
@@ -24,7 +26,8 @@ export function installChapter3BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapterRegistry(rt,{chapter:3,metadata,room:options.room}),{object}=registry;
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object)]);
  registry.register([doom,lerpvar,afterimageCut]);
- const attacks=[createStars(object),createTrackingSwords(object),createFlurry(object),createSwordTunnel(object),createRotatingSlash(object),createSwordVortex(object)];
+ const slashEffects=createSlashEffects(object);
+ const attacks=[createStars(object),createTrackingSwords(object),createFlurry(object),createSwordTunnel(object),createRotatingSlash(object,slashEffects),createSwordVortex(object),createRoar(object,slashEffects),{pattern:()=>false,objects:slashEffects.objects}];
  registry.register([createChapter2BulletController(object,attacks.map(a=>a.pattern)),createBattleMarker(object),...attacks.flatMap(a=>a.objects)]);
  const fountain=createFountain(object),blockVfx=createBlockVfx(object),fadeToWhite=createFadeToWhite(object);
  registry.register([fountain,blockVfx,fadeToWhite,createKnight(object,fountain,blockVfx,fadeToWhite)]);

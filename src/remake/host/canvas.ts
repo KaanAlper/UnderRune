@@ -28,6 +28,7 @@ export class CanvasGraphics implements GmGraphics{
  private fogs=new Map<string,HTMLCanvasElement>();
  /** Ordinary screen drawing keeps its existing fast Canvas path. Offscreen targets retain GPU RGBA bytes. */
  private composite:GlobalCompositeOperation='source-over';
+ private writeAlpha=true;
  private mode:BlendMode='normal';
  private testAlpha=false;
  private raster:CanvasRenderingContext2D|null=null;
@@ -55,6 +56,24 @@ export class CanvasGraphics implements GmGraphics{
   this.ctx.globalCompositeOperation=this.composite;
  }
  alphaTest(enabled:boolean){this.testAlpha=enabled;}
+ alphaWrite(enabled:boolean){this.writeAlpha=enabled;}
+ /** Clears the covered pixels of the current target (room coordinates on the screen, surface coordinates otherwise). */
+ private erase(inside:(x:number,y:number)=>boolean,left:number,top:number,right:number,bottom:number){
+  const ctx=this.ctx,w=ctx.canvas.width,h=ctx.canvas.height,l=Math.max(0,Math.floor(left-this.vx)),t=Math.max(0,Math.floor(top-this.vy)),r=Math.min(w,Math.ceil(right-this.vx)),b=Math.min(h,Math.ceil(bottom-this.vy));
+  if(r<=l||b<=t)return;
+  const image=(this.targetSurface===null?undefined:this.surfacePixels.get(this.targetSurface))??ctx.getImageData(0,0,w,h),d=image.data;
+  for(let y=t;y<b;y++)for(let x=l;x<r;x++)if(inside(x+.5+this.vx,y+.5+this.vy)){const i=(y*w+x)*4;d[i]=0;d[i+1]=0;d[i+2]=0;d[i+3]=0;}
+  if(this.targetSurface!==null)this.surfacePixels.set(this.targetSurface,image);
+  ctx.putImageData(image,0,0);
+ }
+ eraseRect(x1:number,y1:number,x2:number,y2:number){
+  const l=Math.min(x1,x2),t=Math.min(y1,y2),r=Math.max(x1,x2)+1,b=Math.max(y1,y2)+1;this.erase(()=>true,l,t,r,b);
+ }
+ eraseTriangle(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number){
+  const det=(x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);if(!det)return;
+  this.erase((x,y)=>{const u=((x-x1)*(y3-y1)-(y-y1)*(x3-x1))/det,v=((x2-x1)*(y-y1)-(y2-y1)*(x-x1))/det;return u>=0&&v>=0&&u+v<=1;},
+   Math.min(x1,x2,x3),Math.min(y1,y2,y3),Math.max(x1,x2,x3),Math.max(y1,y2,y3));
+ }
  private bounds(key:string,args:unknown[]):Bounds|null{
   const a=args as number[],box=(left:number,top:number,right:number,bottom:number):Bounds=>({left:left-this.vx,top:top-this.vy,right:right-this.vx,bottom:bottom-this.vy});
   if(key==='sprite'||key==='spriteFog'){
@@ -109,7 +128,13 @@ export class CanvasGraphics implements GmGraphics{
  }
  private pixel(dst:Uint8ClampedArray,i:number,r:number,g:number,b:number,sa:number){
   if(this.testAlpha&&sa===0)return;
-  const da=dst[i+3]/255;
+  const da=dst[i+3]/255,keepAlpha=this.writeAlpha?-1:dst[i+3];
+  this.blendPixel(dst,i,r,g,b,sa,da);
+  if(keepAlpha>=0)dst[i+3]=keepAlpha;
+ }
+ private blendPixel(dst:Uint8ClampedArray,i:number,r:number,g:number,b:number,sa:number,da:number){
+  // bm_zero, bm_src_color: the target times the source colour (alpha times the source's alpha).
+  if(this.mode==='multiply'){dst[i]=Math.round(dst[i]*r/255);dst[i+1]=Math.round(dst[i+1]*g/255);dst[i+2]=Math.round(dst[i+2]*b/255);dst[i+3]=Math.round(dst[i+3]*sa);return;}
   if(this.mode==='subtract'){
    dst[i]=Math.round(dst[i]*(1-r/255));dst[i+1]=Math.round(dst[i+1]*(1-g/255));dst[i+2]=Math.round(dst[i+2]*(1-b/255));dst[i+3]=Math.round(dst[i+3]*(1-sa));return;
   }
