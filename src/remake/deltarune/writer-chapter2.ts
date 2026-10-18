@@ -77,7 +77,7 @@ function create(s:GmInstance,rt:GmRuntime){
  for(s.i=0;s.i<7;s.i++){gmArray(s,'specx')[s.i]=s.i*6;gmArray(s,'specy')[s.i]=s.i*6;}
  s.mystring=rt.globals.msg[0];for(s.j=0;s.j<100;s.j++)gmArray(s,'nstring')[s.j]=rt.globals.msg[s.j];s.length=s.mystring.length;s.alarm[0]=s.rate;
  if(lt(s.rate,3))s.alarm[2]=1;else textSound2(s,rt);
- if(later)for(let i=0;i<9;i++)gmArray(s,'object_made')[i]=0;
+ if(later)for(s.i=0;s.i<9;s.i++)gmArray(s,'object_made')[s.i]=0;
 }
 function alarm0(s:GmInstance,rt:GmRuntime){
  const later=wch(rt).later;let playsound=false;
