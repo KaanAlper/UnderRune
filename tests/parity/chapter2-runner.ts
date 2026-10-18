@@ -29,7 +29,7 @@ export const chapter2RecordingReady=(run:string,chapter=2)=>fs.existsSync(`${run
 /** The chapter's source text (language fallbacks and every plain literal as `<code file>#<n>`, as the asset build
  * provides them) and each recording's trace, read once per process: short runs from later snapshots reuse them. */
 const sourceTexts=new Map<number,Record<string,string>>(),traces=new Map<string,Map<number,TraceLine>>();
-function chapterText(chapter:number){
+export function chapterText(chapter:number){
  let text=sourceTexts.get(chapter);
  if(!text){
   const code=`extracted/chapter${chapter}_windows/code/`;
@@ -47,7 +47,7 @@ function readTrace(run:string){
  return trace;
 }
 /** `range` runs part of the recording: from a later full snapshot (its start) to an end frame. */
-export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects:Record<string,GmObjectDef>},extraSoundHandles:Record<string,string[]>={},chapter=2,afterRestore?:(rt:GmRuntime)=>void,range:{start?:number;end?:number;quiet?:boolean}={}){
+export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects:Record<string,GmObjectDef>},extraSoundHandles:Record<string,string[]>={},chapter=2,afterRestore?:(rt:GmRuntime)=>void,range:{start?:number;end?:number;quiet?:boolean;idOffset?:number}={}):ReturnType<typeof runParity>{
  const START=range.start??START_FRAME;
  setSourceText(chapterText(chapter));
  const trace=readTrace(run);
@@ -77,8 +77,9 @@ export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects
   i.imageXscale=d.scale.x;i.imageYscale=d.scale.y;i.imageAngle=d.angle;i.imageAlpha=d.alpha;i.imageBlend=d.blend;i.visible=d.visible;
   for(const [a,v] of Object.entries(d.alarms))i.alarm[Number(a)]=v;
  }
- rt.nextId=Math.max(...dump.instances.map(d=>d.instanceId))+1;
- // Later snapshots omit the allocation counter (destroyed IDs still consume it). Diagnostic restarts must supply it.
+ // Snapshots omit the allocation counter: destroyed instances and GML structs (Vector2 and the like) consume it too.
+ // It starts after the highest id here, then (see the end) moves by what the first created instance shows.
+ rt.nextId=Math.max(...dump.instances.map(d=>d.instanceId))+1+(range.idOffset??0);
  if(process.env.PARITY_NEXT_ID)rt.nextId=Number(process.env.PARITY_NEXT_ID);
  // The snapshot keeps sprite variables (single or arrays) as sprite numbers; the remake uses names.
  const name=(v:unknown)=>typeof v==='number'&&SPRITES[v]?SPRITES[v]:v;
@@ -113,5 +114,11 @@ export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects
  const result=runParity(rt,trace,START,end,tracked,['hp','tension','turntimer','myfight','mnfight','inv'],skippedIds,replay,afterFrame);
  if(!range.quiet)console.log(`${run.split('/').pop()} ${START}-${end}`,result,'not restored:',[...skipped].join(' '));
  if(survey.size)console.log(`state survey (${survey.size}):\n`+[...survey.values()].join('\n'));
+ // A first difference made only of shifted ids: the counter was further on. Run again with it there.
+ const shifted=result.mismatch?.what.match(/ \S+ (\d+): id (\d+)/);
+ if(shifted&&range.idOffset===undefined&&!process.env.PARITY_NEXT_ID){
+  const offset=Number(shifted[1])-Number(shifted[2]);
+  if(offset!==0)return runChapter2Recording(run,install,extraSoundHandles,chapter,afterRestore,{...range,idOffset:offset});
+ }
  return result;
 }

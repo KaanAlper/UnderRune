@@ -707,6 +707,33 @@ New scripts go in `tools/oracle-scripts.mjs`.
   blocks) is written but not registered yet. Other heads and feet are named errors (the recording and the app use
   the laser head and stomping feet).
 
+### 19c. Rouxls (63) verified and public (2026-10-18)
+
+- Continued Claude's pending Rouxls work after reviewing both the recent commits and the entire working-tree diff.
+  Knight was already finished and was not changed.
+- Registered the enemy, house board and Thrash Machine with the Chapter 2 host. The public encounter uses Kris
+  and Ralsei, the laser head and stomping feet. Other machine-part combinations remain named errors and are not
+  selectable. The music is included in the Pages build. Removed the older duplicate falling-block definition.
+- The three short original recordings and the 10000-frame board recording match. The latter did not finish the
+  mini-game, so `tests/remake-rouxls.test.ts` supplies legal direction/Z inputs to place houses and reach its result.
+  Replayed those inputs independently in the original game: `ch2-63-s11-god-boardwinlong`, 5200 frames, matches
+  frame by frame and at full-state snapshots through the ending. The recorded board result is a loss (flag 435=1);
+  Rouxls still ends the encounter in victory, as in the source. Native win/tie endings are not yet recorded.
+- That longer recording exposed a shared healing-animation bug: host aliases made object identity checks fail.
+  `obj_healanim` now recognizes the exact native Kris/Susie/Ralsei object names, preserving custom hero bounds;
+  Noelle retains the source's sprite bounds. Eight focused regression cases cover aliased and ordinary objects.
+- Browser coverage opens the public card and plays Take House and all three attack types (blocks, laser, stomp).
+  No missing sprites or page errors were observed. A fresh app battle also reaches victory through legal inputs.
+- Test fixture for rival projectile comparisons now registers the canonical Rouxls objects (102 cases pass).
+  `tools/oracle-record.mjs --inputs=FILE --label=NAME` can replay a saved input sequence without changing the
+  installed game; a separate validated label is mandatory for custom inputs.
+- Verification: 116 focused tests, 42 tool/graphics tests, TypeScript, the public-card browser test and the visual
+  tour pass. `npm run build:pages` and the public-card full-turn test against that static build also pass.
+  A broader all-boss suite was stopped before completion; its three stale falling-block fixture failures
+  were corrected and the entire 102-case projectile file rerun successfully. Do not call that broad run green.
+- Next pending boss task in Claude's list: GIGA Queen (84). Band (62) still needs its publication acceptance;
+  Queen/Berdly publication and the chat/leaderboard UI tasks remain separate work.
+
 ### 19. Requested next (after the release above)
 
 - **General chat**, from Supabase. Separate rooms for UNDERTALE and DELTARUNE. It sits left of the leaderboard on

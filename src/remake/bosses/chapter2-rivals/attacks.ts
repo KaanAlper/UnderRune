@@ -76,18 +76,11 @@ export function createRivalAttacks(object:ObjectLookup):GmObjectDef[]{
    d.timer=round(angleDifference(135,pointDirection(s.x,s.y,s.xx,s.yy))/10);if(!s.first_set)d.imageBlend=0x808080;
   }s.init=1;},
  }};
- const block:GmObjectDef={...object('obj_rouxls_fallingblock'),parent:collideBullet,events:{
-  create:s=>{bulletInit(s);s.destroyonhit=0;s.bottomhit=0;},
-  step:(s,rt)=>{const b=rt.first(growtangle)!;if(!s.bottomhit&&gt(s.y+s.vspeed,b.y+rt.spriteWidth(b)/2-20)){
-   s.y=b.y+rt.spriteWidth(b)/2-20;b.y+=4;s.direction=rt.random.randomRange(30,150);s.speed=rt.random.random(3);
-   const d=rt.first(shake)??rt.create(shake,0,0);s.d=d.id;d.shakex=2;d.shakey=2;snd(rt,'snd_screenshake');s.bottomhit=1;
-  }if(gt(s.y,rt.view.y+580))rt.destroy(s);},
- }};
  const note:GmObjectDef={...object('obj_musicalbattlenote'),events:{
   create:(s,rt)=>{s.imageBlend=rt.random.choose(0x808080);s.gravity=.2;s.vspeed=-rt.random.randomRange(1,2);const speed=rt.random.randomRange(.5,1.5);s.hspeed=speed*rt.random.choose(1,-1);s.imageXscale=2;s.imageYscale=2;},
   step:(s,rt)=>{if(gt(s.vspeed,2))rt.destroy(s);},
  }};
- return [tornado,flyer,storm,block,note];
+ return [tornado,flyer,storm,note];
 }
 
 /** The body of source obj_dbulletcontroller types 8 and 10, after its shared timer/bounds prelude. */

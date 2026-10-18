@@ -95,6 +95,8 @@ export interface BattleHooks{
  readonly keepsEnemiesAtOneHp?:boolean;
  /** Where a heal's white flash goes from this enemy's origin (obj_healanim moves every flash by it). */
  readonly healFlashShift?:readonly [number,number];
+ /** While this enemy is in the battle, the party's FIGHT damage numbers draw above everything (Rouxls's board). */
+ readonly fightNumbersOnTop?:boolean;
  /** This bullet (exactly this object, not its children) can be grazed while inactive (the Knight's tunnel swords). */
  readonly grazedWhileInactive?:boolean;
  /** The enemy turn is over (obj_battlecontroller Alarm 2): true when the enemy takes over instead of the next turn

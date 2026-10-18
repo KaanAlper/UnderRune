@@ -1,7 +1,9 @@
 import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {monsterPop} from './controller';
 import {forChapter} from './rules';
-export type Chapter2BulletRunner=(self:GmInstance,rt:GmRuntime)=>boolean;
+/** A boss's bullet patterns: true when it handled the controller's type. `destroy` runs in the controller's Destroy
+ * event (Rouxls's falling blocks end his saber pose there). */
+export type Chapter2BulletRunner=((self:GmInstance,rt:GmRuntime)=>boolean)&{destroy?:(self:GmInstance,rt:GmRuntime)=>void};
 /** The source controller's shared prelude; pattern ownership is delegated to independent encounter factories. */
 /** Chapter 3's bullet maker also starts with a random base direction (basedir), a counter and four empty end texts. */
 const BULLET_MAKER:Readonly<Record<number,{later:boolean}>>={2:{later:false},3:{later:true}};
@@ -21,5 +23,6 @@ export function createChapter2BulletController(object:(name:string)=>GmObjectDef
    }
    s.btimer+=1;for(const run of patterns)if(run(s,rt))return;throw Error(`Chapter 2 bullet pattern ${s.type} is not registered`);
   },
+  destroy:(s,rt)=>{for(const run of patterns)run.destroy?.(s,rt);},
  }};
 }

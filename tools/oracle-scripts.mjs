@@ -69,5 +69,20 @@ export function choiceScript(totalFrames){
  }
  return script;
 }
+/** For ACTs that open a board to place things on (Rouxls's houses): a 400-frame cycle in which Kris opens ACT on the
+ * first enemy and picks its second ACT, the second party member DEFENDs, then the cursor walks a widening spiral with
+ * Z after each step (so it lands on tiles that can be taken), and Z every 8 frames reads on. */
+export function boardScript(totalFrames){
+ const {script,press,release}=events();
+ const tap=(f,key)=>{if(f<totalFrames){press(f,key);release(f+1,key);}};
+ const spiral=[RIGHT,DOWN,LEFT,LEFT,UP,UP,RIGHT,RIGHT,RIGHT,DOWN,DOWN,DOWN,LEFT,LEFT,LEFT,LEFT];
+ for(let base=30,cycle=0;base<totalFrames;base+=400,cycle++){
+  const seq=[RIGHT,Z,Z,RIGHT,Z,LEFT,Z,Z];
+  for(let i=0;i<spiral.length;i++)seq.push(spiral[(i+cycle*3)%spiral.length],Z);
+  seq.forEach((key,i)=>tap(base+i*8,key));
+  for(let f=base+seq.length*8+8;f<base+400;f+=8)tap(f,Z);
+ }
+ return script;
+}
 // Separate filenames for longer replays (zlong, menulong, actlong): the short acceptance recordings remain intact.
-export const SCRIPTS={z:zScript,zlong:zScript,menu:menuScript,menulong:menuScript,act:actScript,actlong:actScript,choice:choiceScript,choicelong:choiceScript};
+export const SCRIPTS={z:zScript,zlong:zScript,menu:menuScript,menulong:menuScript,act:actScript,actlong:actScript,choice:choiceScript,choicelong:choiceScript,board:boardScript,boardlong:boardScript};

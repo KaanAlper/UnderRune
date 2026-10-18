@@ -17,6 +17,8 @@ const playable:readonly SourceEncounter[]=[
  {id:'ch2-89',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:false},
  // The Dojo's final round: two Werewerewires.
  {id:'ch2-94',chapter:2,name:'Werewerewire',party:[1,2,3],hp:1753,attack:11,defense:0,music:'battle',practice:false},
+ // Rouxls's river battle, with the laser head and stomping feet of the default Thrash Machine.
+ {id:'ch2-63',chapter:2,name:'Rouxls',party:[1,3],hp:600,attack:9,defense:0,music:'rouxls_battle',practice:false},
  {id:'ch1-2',chapter:1,name:'Lancer',party:[1,2],auto:[2],hp:540,attack:5,defense:1,music:'lancerfight',practice:false},
  {id:'ch1-8',chapter:1,name:'Clover',party:[1,3],hp:270,attack:6,defense:1,music:'battle',practice:false},
  // getsusieevent rejoins Ralsei, then Susie. Her gamestart charauto remains set until prisonevent.

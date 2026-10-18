@@ -6,6 +6,7 @@ import {bulletInit,heart,growtangle} from '../src/remake/deltarune/battle';
 import {createRivalAttacks,runBerdlyBulletController} from '../src/remake/bosses/chapter2-rivals/attacks';
 import {createRouxlsPowerOrb} from '../src/remake/bosses/chapter2-rivals/rouxls-orb';
 import {createBerdlySpearblast} from '../src/remake/bosses/chapter2-rivals/spearblast';
+import {createRouxlsAttacks} from '../src/remake/bosses/rouxls/attacks';
 import {executeNeoSource,type NeoSourceHost} from '../src/remake/bosses/spamton-neo/body-source';
 
 function fixture(seed=11){
@@ -14,6 +15,7 @@ function fixture(seed=11){
  const defs=new Map<string,GmObjectDef>([[heart.name,heart],[growtangle.name,growtangle]]);
  const object=(name:string)=>{let def=defs.get(name);if(!def){def={name,index:3000+defs.size};defs.set(name,def);}return def;};
  for(const def of createRivalAttacks(object))defs.set(def.name,def);
+ for(const def of createRouxlsAttacks(object).objects)defs.set(def.name,def);
  const orb=createRouxlsPowerOrb(object);defs.set(orb.name,orb);
  for(const def of createBerdlySpearblast(object))defs.set(def.name,def);
  rt.restore(heart,99998,260,180);rt.restore(growtangle,99997,320,170);

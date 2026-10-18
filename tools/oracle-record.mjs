@@ -2,6 +2,7 @@
 // one trace line per frame (every object, the RNG state and chosen globals).
 // Requires the app dev server (npm run dev). Output: .tools/oracle/<id>-s<seed>.ndjson
 // Usage: node tools/oracle-record.mjs ch1-25 [--seed=11] [--frames=1800] [--dumps=683,700] [--god] [--script=z|menu]
+// --inputs=FILE --label=NAME replays previously generated legal keys under a separate recording name.
 import {chromium} from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -25,6 +26,10 @@ export {zScript};
 // --script=NAME: the key script (tools/oracle-scripts.mjs); z by default.
 const scriptName=rest.find(a=>a.startsWith('--script='))?.split('=')[1]??'z';
 if(!SCRIPTS[scriptName])throw Error(`Unknown key script ${scriptName}`);
+const inputFile=rest.find(a=>a.startsWith('--inputs='))?.slice('--inputs='.length);
+const label=rest.find(a=>a.startsWith('--label='))?.slice('--label='.length)??scriptName;
+if(!/^[a-z][a-z0-9-]*$/.test(label))throw Error('Invalid recording label');
+if(inputFile&&!rest.some(a=>a.startsWith('--label=')))throw Error('Custom inputs need a separate --label');
 
 const browser = await chromium.launch({headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH ?? 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe', args: ['--enable-unsafe-swiftshader']});
 try {
@@ -32,7 +37,7 @@ try {
   await page.addInitScript(() => { window.__ev = []; addEventListener('message', e => { if (e.data?.source === 'underrune-native') window.__ev.push(e.data.type); }); });
   await page.goto(`http://127.0.0.1:5173/native/?oracle=1&seed=${seed}`);
   await page.waitForFunction(() => window.__ev.includes('ready'));
-  const inputs=SCRIPTS[scriptName](frames);
+  const inputs=inputFile?JSON.parse(await fs.readFile(path.resolve(root,inputFile),'utf8')):SCRIPTS[scriptName](frames);
   // Move through a square starting in the first attack, then test slow movement and diagonals.
   // Frame numbers are replay indices (input at index N affects the state traced at N+1).
   if(moving){
@@ -46,7 +51,7 @@ try {
   await page.evaluate(([id, ini, oracle]) => postMessage({source: 'underrune-host', type: 'start', id, ini, oracle}, location.origin), [id, ini, oracle]);
   await page.waitForFunction(() => window.__ev.includes('ended') || window.__ev.includes('failed'), null, {timeout: frames / 30 * 1000 * 4 + 120000});
   const trace = await page.evaluate(() => window.__runner.FS.readFile('/saves/trace.ndjson', {encoding: 'utf8'}));
-  const runName=`${id}-s${seed}${god ? '-god' : ''}${moving?'-moving':''}${jevilTurn>=0?'-j'+jevilTurn:''}${scriptName!=='z'?'-'+scriptName:''}`;
+  const runName=`${id}-s${seed}${god ? '-god' : ''}${moving?'-moving':''}${jevilTurn>=0?'-j'+jevilTurn:''}${label!=='z'?'-'+label:''}`;
   const out = path.join(root, '.tools', 'oracle', runName+'.ndjson');
   await fs.mkdir(path.dirname(out), {recursive: true});
   await fs.writeFile(out, trace);

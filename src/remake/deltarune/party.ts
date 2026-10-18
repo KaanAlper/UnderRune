@@ -188,6 +188,7 @@ function heroHit(s:GmInstance,rt:GmRuntime){
  if(s.cancelattack!==0)return;
  const t=g.chartarget[me],m=rt.byId(g.monsterinstance[t]);
  const dm=rt.create(dmgWriter,g.monsterx[t],g.monstery[t]-g.hittarget[t]*20+20);s.dm=dm.id;dm.type=s.char===4?6:s.char-1;dm.delay=8;
+ if(withHook(rt,'fightNumbersOnTop').length)dm.depth=-999999;
  let damage=round(g.battleat[me]*s.points/20-g.monsterdf[t]*3);
  if(g.monstertype[t]===19)damage=Math.ceil(damage*0.3);
  if(damage<0)damage=0;
@@ -915,7 +916,7 @@ export const healAnim:GmObjectDef={name:'obj_healanim',index:301,sprite:'spr_spa
   if(s.t===1){
    s.x=target.x;s.y=target.y;s.imageXscale=target.imageXscale;s.imageYscale=target.imageYscale;s.sprite=target.sprite;
    s.sw=rt.spriteWidth(s);s.sh=rt.spriteHeight(s);
-   s.herocheck=HERO_DEFS.some(d=>target.object===d)?1:0;if(s.herocheck===1){s.sw=target.mywidth;s.sh=target.myheight;}
+   s.herocheck=[heroKris,heroSusie,heroRalsei].some(d=>isHero(target,d.name))?1:0;if(s.herocheck===1){s.sw=target.mywidth;s.sh=target.myheight;}
    oflashOf(target,rt);
    // An enemy drawn away from its origin moves every white flash onto itself (Chapter 2's K_K).
    const shift=hooksOf(target).healFlashShift;if(shift)for(const f of rt.withInstances(oflash)){f.x+=shift[0];f.y+=shift[1];}
