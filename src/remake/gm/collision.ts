@@ -116,18 +116,54 @@ export function rectangleMeets(bank:SpriteBank,i:Collidable,x1:number,y1:number,
  for(let y=Math.floor(top);y<Math.ceil(bottom);y++)for(let x=Math.floor(left);x<Math.ceil(right);x++)if(pointIn(s,i,x+.5,y+.5))return true;
  return false;
 }
-/** Collision_rectOverlapsInstance's separating-axis test of a world rectangle against a rotated collision box. */
-function rectMeetsBox(s:SpriteData,i:Collidable,x1:number,y1:number,x2:number,y2:number){
+/** collision_line against one instance, as the reference does it: the segment against the box (nudged inside on its
+ * right and bottom), clipped to the box's sides, then its height checked. Lines against precise masks are not ported
+ * (none of the ported battles asks for one). */
+export function lineMeets(bank:SpriteBank,i:Collidable,x1:number,y1:number,x2:number,y2:number,usePrecise:boolean){
+ if(bank.collisionCompat){x1=bankersRound(x1);y1=bankersRound(y1);x2=bankersRound(x2);y2=bankersRound(y2);}
+ const b=bbox(bank,i),s=collisionSprite(bank,i);if(!b||!s)return false;
+ const eps=1e-5;
+ if(!needsSat(s,i)){if(!segmentMeetsRect(x1,y1,x2,y2,b.left,b.top,b.right-eps,b.bottom-eps))return false;}
+ else{
+  const o=localBox(s,i),[ax,ay]=o.toLocal(x1,y1),[bx,by]=o.toLocal(x2,y2);
+  if(!segmentMeetsRect(ax,ay,bx,by,o.lx0,o.ly0,o.lx1-eps,o.ly1-eps))return false;
+ }
+ let xl=x1,yl=y1,xr=x2,yr=y2;if(xl>xr){[xl,xr]=[xr,xl];[yl,yr]=[yr,yl];}
+ const dx=xr-xl,dy=yr-yl;
+ if(Math.abs(dx)>0.0001){
+  if(b.left>xl){const t=(b.left-xl)/dx;xl=b.left;yl=yl+t*dy;}
+  if(xr>b.right){const t=(b.right-xl)/(xr-xl);yr=yl+t*(yr-yl);xr=b.right;}
+ }
+ if(b.top>Math.max(yl,yr)||Math.min(yl,yr)>=b.bottom)return false;
+ if(!usePrecise||!precise(s))return true;
+ throw Error('collision_line against a precise mask is not ported');
+}
+/** Collision_segmentVsAARectClip: whether the segment crosses the rectangle (Liang-Barsky). */
+function segmentMeetsRect(x1:number,y1:number,x2:number,y2:number,rx1:number,ry1:number,rx2:number,ry2:number){
+ let enter=0,exit=1;const dx=x2-x1,dy=y2-y1,p=[-dx,dx,-dy,dy],q=[x1-rx1,rx2-x1,y1-ry1,ry2-y1];
+ for(let k=0;k<4;k++){
+  if(Math.abs(p[k])<1e-9){if(q[k]<0)return false;continue;}
+  const t=q[k]/p[k];if(p[k]<0){if(t>enter)enter=t;}else if(t<exit)exit=t;
+  if(enter>exit)return false;
+ }
+ return true;
+}
+/** Collision_instanceOBB: the collision box in the instance's own frame, and the world-to-local transform. */
+function localBox(s:SpriteData,i:Collidable){
  const m=margins(s);let lx0=i.imageXscale*(m.l-s.originX),lx1=i.imageXscale*(m.r-s.originX),ly0=i.imageYscale*(m.t-s.originY),ly1=i.imageYscale*(m.b-s.originY);
  if(lx0>lx1)[lx0,lx1]=[lx1,lx0];
  if(ly0>ly1)[ly0,ly1]=[ly1,ly0];
- const rad=i.imageAngle*Math.PI/180,cs=Math.cos(rad),sn=Math.sin(rad);
- let uMin=0,uMax=0,vMin=0,vMax=0;
+ const r=rotated(i),rad=i.imageAngle*Math.PI/180,cs=r?Math.cos(rad):1,sn=r?Math.sin(rad):0;
+ return {lx0,lx1,ly0,ly1,toLocal:(wx:number,wy:number):[number,number]=>{const dx=wx-i.x,dy=wy-i.y;return [dx*cs-dy*sn,dx*sn+dy*cs];}};
+}
+/** Collision_rectOverlapsInstance's separating-axis test of a world rectangle against a rotated collision box. */
+function rectMeetsBox(s:SpriteData,i:Collidable,x1:number,y1:number,x2:number,y2:number){
+ const o=localBox(s,i);let uMin=0,uMax=0,vMin=0,vMax=0;
  [[x1,y1],[x2,y1],[x1,y2],[x2,y2]].forEach(([wx,wy],c)=>{
-  const dx=wx-i.x,dy=wy-i.y,u=dx*cs-dy*sn,v=dx*sn+dy*cs;
+  const [u,v]=o.toLocal(wx,wy);
   if(c===0){uMin=uMax=u;vMin=vMax=v;}else{if(u<uMin)uMin=u;else if(u>uMax)uMax=u;if(v<vMin)vMin=v;else if(v>vMax)vMax=v;}
  });
- return !(uMin>=lx1||lx0>=uMax||vMin>=ly1||ly0>=vMax);
+ return !(uMin>=o.lx1||o.lx0>=uMax||vMin>=o.ly1||o.ly0>=vMax);
 }
 /** distance_to_object: the gap between `self`'s box and the nearest of `others`' boxes (0 when `self` has no sprite;
  * 1e10 when none of the others has a box). */

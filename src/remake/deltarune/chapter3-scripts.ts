@@ -5,7 +5,7 @@
 import type {GmInstance,GmObjectDef,GmRuntime} from '../gm/runtime';
 import {eq,gt,lt,lengthdirX,lengthdirY,lerp} from '../gm/math';
 import {rectangleMeets,pointMeets} from '../gm/collision';
-import {afterimage,growtangle,heart} from './battle';
+import {afterimage,afterimageGrow,growtangle,heart} from './battle';
 
 /** scr_movetowards: a step of at most `step` from `from` towards `to`. */
 export function moveTowards(from:number,to:number,step:number){return eq(from,to)?from:gt(from,to)?Math.max(from-step,to):Math.min(from+step,to);}
@@ -43,6 +43,22 @@ export function childBullet(parent:GmInstance,rt:GmRuntime,x:number,y:number,def
  for(const k of ['damage','grazepoints','timepoints','inv','target','grazed','grazetimer'])if(!eq(parent[k],-1))c[k]=parent[k];
  c.element=parent.element;return c;
 }
+/** scr_bullet_inherit (Chapter 3), run by `caller`: the recipient takes its set (not -1) hit fields, fresh graze
+ * fields, its element, and from the bullet maker its creator. */
+export function bulletInherit(caller:GmInstance,recipient:GmInstance){
+ if(!recipient.live)return;
+ for(const k of ['damage','grazepoints','timepoints','inv','target'])if(!eq(caller[k],-1))recipient[k]=caller[k];
+ if(!eq(caller.grazed,-1))recipient.grazed=0;
+ if(!eq(caller.grazetimer,-1))recipient.grazetimer=0;
+ if(caller.object.name==='obj_dbulletcontroller'){recipient.creatorid=caller.creatorid;recipient.creator=caller.creator;}
+ recipient.element=caller.element;
+}
+/** scr_anglechange: the turn from `angle` towards `target`, at most `step` degrees either way. */
+export const angleChange=(angle:number,target:number,step:number)=>Math.max(-step,Math.min(step,angleDifference(target,angle)));
+/** scr_darksize: the Dark World's double size. */
+export function darkSize(s:GmInstance){s.imageXscale=2;s.imageYscale=2;}
+/** scr_afterimage_grow, run by `s`: a copy that grows as it fades, kept in s.afterimage. */
+export function afterimageGrowOf(s:GmInstance,rt:GmRuntime){return customAfterimage(s,rt,afterimageGrow,0);}
 /** scr_afterimage, run by `s`: a still copy at its depth, kept in s.afterimage. */
 export function scrAfterimage(s:GmInstance,rt:GmRuntime){return customAfterimage(s,rt,afterimage,0);}
 /** scr_custom_afterimage: the same with another afterimage object, one depth behind. */
