@@ -67,7 +67,7 @@ test('local Jevil source practice uses equipment and rematches as practice',asyn
  await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('paused');await page.keyboard.press('p');await expect(page.locator('#status')).toContainText('Diamond rain');
  await page.keyboard.press('r');await expect(page.locator('#status')).toContainText('Diamond rain / PRACTICE');
  await expect(page.locator('#outcome')).toBeVisible({timeout:18000});await page.locator('#outcome-again').click();await expect(page.locator('#outcome')).toBeHidden();await expect(page.locator('#status')).toContainText('PRACTICE');
- await page.locator('#back').click();await page.locator('#back').click();await (await choose(page,'ch1-2','Lancer')).focus();await expect(page.locator('#practice')).toBeDisabled();await page.keyboard.press('t');await expect(prep).toBeHidden();
+ await page.locator('#back').click();await page.locator('#back').click();await (await choose(page,'ch1-2','Lancer')).focus();await expect(page.locator('#practice')).toBeEnabled();await expect(select.locator('option')).toHaveCount(2);
 });
 
 test('no-native unsupported encounters offer truthful preparation without a fake fight',async({page})=>{

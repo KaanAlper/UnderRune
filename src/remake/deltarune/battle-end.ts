@@ -13,7 +13,7 @@ import {writer} from './writer';
 import {forChapter} from './rules';
 import {scrLerpvar} from './shared-effects';
 import {scrFadeout} from './fades';
-import {scriptDelayedOn,setVar} from './chapter2-battle';
+import {scriptDelayed,scriptDelayedOn,setVar} from './chapter2-battle';
 import {sourceText} from '../host/text';
 
 /** scr_tempload: the game reloads where it last saved; for the host, the battle starts again. */
@@ -83,6 +83,10 @@ export const gameOverInit:GmObjectDef={name:'obj_gameover_init',index:135,depth:
  step:(s,rt)=>{
   const g=rt.globals;s.timer+=1;
   if(s.timer===1)sndFreeAll(rt);
+  if(s.timer>=2&&button1_p(rt)){
+   s.Z_COUNT+=1;
+   if(s.Z_COUNT>=2){rt.pendingRoom=RETRY_ROOM;return;}
+  }
   if(s.timer===30){const bg=rt.byId(s.bg);if(bg)rt.destroy(bg);s.visible=true;s.x=g.heartx;s.y=g.hearty;}
   if(s.timer===31)rt.deleteSprite(g.screenshot);
   const later=forChapter(rt,GAME_OVER_INIT,'obj_gameover_init').later;
@@ -262,6 +266,15 @@ export const deviceFailure:GmObjectDef={name:'DEVICE_FAILURE',index:319,depth:10
  alarm4:s=>{s.EVENT+=1;},
  step:(s,rt)=>{
   const g=rt.globals,r=failure(rt);
+  if(button1_p(rt)){
+   let skipped=false;
+   for(const w of rt.withInstances(writer))if(w.pos<w.length){w.skippable=1;w.skipme=1;skipped=true;}
+   if(!skipped&&!rt.exists(deviceChoice)){
+    if('text_timer' in s&&s.text_timer>1)s.text_timer=1;
+    if(s.alarm[4]>1)s.alarm[4]=1;
+    for(const d of rt.all(scriptDelayed))if(d.alarm[0]>1)d.alarm[0]=1;
+   }
+  }
   if(s.EVENT===1)r.open(s,rt);
   if(s.EVENT===0)s.EVENT=1;
   if(s.EVENT===2&&!rt.exists(writer)){

@@ -5,10 +5,9 @@ import {GmRuntime,type GmInstance,type GmObjectDef} from '../gm/runtime';
 import type {SpriteBank} from '../gm/sprites';
 import {validateLoadout,type EquipmentSource,type Loadout} from '../../game/loadout';
 import * as b from '../deltarune/battle';
-import {battleControllerFull} from '../deltarune/controller';
-import {attackPhase} from '../deltarune/controller';
+import {battleControllerFull,endCombat,findController,attackPhase} from '../deltarune/controller';
 import {encounterSetup,monsterSetup,partyGlobals,type EquippedStats} from '../deltarune/encounter';
-import {battleText,battleTextDefault,destroyWriters,enemyBalloon,writer} from '../deltarune/writer';
+import {battleText,battleTextDefault,destroyWriters,enemyBalloon,face,writer} from '../deltarune/writer';
 import {defeatRun} from '../deltarune/party';
 import {cloverEnemy} from '../bosses/clover';
 import {checkersEnemy} from '../bosses/kround';
@@ -43,6 +42,7 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:
  // The band plays in Cyber City's music room (obj_ch2_cyber01 starts them); the battle needs nothing of it.
  'ch2-62':{n:62,room:'room_battletest',backdrop:true},
  'ch2-63':{n:63,room:'room_battletest',backdrop:true},
+ 'ch2-84':{n:84,room:'room_battletest',backdrop:true},
  'ch2-81':{n:81,room:'room_dw_mansion_east_4f_b',backdrop:true},
  'ch2-83':{n:83,room:'room_dw_city_mice3_transformed_new2F',backdrop:true},
  'ch2-89':{n:89,room:'room_dw_castle_dojo',backdrop:true},
@@ -165,6 +165,26 @@ export class EngineBattle{
  step(){
   if(this.paused||this.outcome)return;
   const rt=this.rt,g=rt.globals,before=g.mnfight;
+  const confirmSkip=rt.input.pressed.has(b.KEY.z)||rt.input.pressed.has(b.KEY.enter);
+  if(confirmSkip){
+   const c=findController(rt);
+   if(this.ending==='victory'||g.myfight===7||(c&&(c.victory===1||c.victoried===1))){
+    destroyWriters(rt);for(const f of rt.all(face))rt.destroy(f);for(const eb of rt.all(endBattle))rt.destroy(eb);
+    if(c){c.intro=2;c.bp=0;if(rt.pendingRoom!=='battle_end')endCombat(c,rt);}
+    if(!this.ending)this.end('victory');
+    this.outcome='victory';return;
+   }
+   const postBattle=g.mnfight===-1||g.mnfight===7||(g.monster[0]===0&&g.monster[1]===0&&g.monster[2]===0)||rt.instances.some(i=>i.live&&(('endcon' in i&&i.endcon>0)||('talked' in i&&i.talked===-1)||('sparecon' in i&&i.sparecon>0)||('kris_cutscene' in i&&i.kris_cutscene>0)));
+   if(postBattle){
+    for(const w of rt.all(writer)){w.skippable=1;if(w.pos<w.length)w.skipme=1;}
+    for(const i of rt.instances){
+     if(!i.live)continue;
+     if('wintimer' in i&&'talked' in i&&i.talked===-1&&i.wintimer<89)i.wintimer=89;
+     if('endtimer' in i&&'endcon' in i&&i.endcon===1.5&&i.endtimer<150)i.endtimer=150;
+     if('endtime' in i&&'endcon' in i&&i.endcon===1&&i.endtime<89)i.endtime=89;
+    }
+   }
+  }
   g.time+=1;rt.step();
   this.scoring?.frame(g);
   if(before===2&&g.mnfight===0&&!this.ending)this.turn+=1;
