@@ -45,6 +45,8 @@ export interface GmGraphics{
  surfaceCopy?(id:number,x:number,y:number,source:number|null):void;
  /** Surface crop, independent of sprite origins, with scale, tint and alpha. */
  surfacePart?(id:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;
+ /** Exact additive, unit-scale rows into a same-size offscreen target. False requests the ordinary part fallback. */
+ surfaceAddRows?(id:number,offsets:Float64Array,blend:number,alpha:number):boolean;
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean):void;
  /** draw_ellipse: the ellipse inside the rectangle (x1,y1)-(x2,y2). */
  ellipse?(x1:number,y1:number,x2:number,y2:number,color:number,alpha:number,outline:boolean):void;

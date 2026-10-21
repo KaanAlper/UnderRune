@@ -307,6 +307,7 @@ export class GmRuntime{
   draw:(id:number,x:number,y:number,alpha?:number,blend?:number)=>void;
   copy:(id:number,x:number,y:number,source:number|null)=>void;
   part:(id:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number)=>void;
+  addRows?:(id:number,offsets:Float64Array,blend:number,alpha:number)=>boolean;
   /** surface_exists. */
   exists:(id:number)=>boolean;
   /** surface_resize. */
@@ -461,7 +462,15 @@ export class GmRuntime{
    // Instances destroyed during this frame keep their place in the layer until cleanup, without drawing.
    // As in the runner, a change to a layer while it draws (an instance arriving, which goes first, or leaving) moves
    // the ones after it: drawing goes on from the same position.
-   const layer=()=>this.instances.filter(i=>i.depth===depth&&(i.live||this.destroyedInstances.has(i))).sort((a,b)=>b.layerEntry-a.layerEntry);
+   // The layer is listed again only when something could have changed it: a new instance or a depth change (both
+   // move the layer-entry counter; destroyed instances keep their place). Re-listing it for every member made a
+   // crowded frame cost n².
+   let listed:GmInstance[]=[],listedAt=-1;
+   const layer=()=>{
+    const at=GmInstance.layerEntries*65536+this.instances.length;
+    if(at!==listedAt){listed=this.instances.filter(i=>i.depth===depth&&(i.live||this.destroyedInstances.has(i))).sort((a,b)=>b.layerEntry-a.layerEntry);listedAt=at;}
+    return listed;
+   };
    const count=layer().length;
    for(let j=0;j<count;j++){
     const els=layer();if(j>=els.length)break;

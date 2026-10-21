@@ -975,7 +975,7 @@ export const pacifySpell:GmObjectDef={name:'obj_pacifyspell',index:298,events:{
 /** Per chapter: from Chapter 2 Rude Buster also works outside battle (battlemode 0: Susie absent from the battle, or
  * not fighting), where it flies at its target's middle and only flashes it. (GIGA Queen's shield, which takes the bolt
  * in Chapter 2, belongs to her port.) */
-const RUDE_BUSTER:Record<number,{battlemode:boolean}>={1:{battlemode:false},2:{battlemode:true},3:{battlemode:true}};
+const RUDE_BUSTER:Record<number,{battlemode:boolean;flightTiming:boolean}>={1:{battlemode:false,flightTiming:false},2:{battlemode:true,flightTiming:false},3:{battlemode:true,flightTiming:true}};
 export const rudeBusterAnim:GmObjectDef={name:'obj_rudebuster_anim',index:303,sprite:'spr_susie_rudebuster',events:{
  create:(s,rt)=>{
   s.t=0;s.imageSpeed=0;s.target=9897887;s.imageXscale=2;s.imageYscale=2;s.damage=1;s.caster=0;s.star=0;
@@ -1022,7 +1022,7 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
    s.bolt_timer+=1;
    if(button1_p(rt)&&s.bolt_timer>=4&&s.chosen_bolt===0)s.chosen_bolt=s.bolt_timer;
    s.dir=pointDirection(s.x,s.y,s.cx,s.cy);s.direction=s.direction+angleDifference(s.dir,s.direction)/4;s.imageAngle=s.direction;
-   if(pointDistance(s.x,s.y,s.cx,s.cy)<=40){s.final_bolt=s.chosen_bolt;s.visible=false;s.explode=1;s.t=1;}
+   if(pointDistance(s.x,s.y,s.cx,s.cy)<=40){s.final_bolt=forChapter(rt,RUDE_BUSTER,'obj_rudebuster_bolt').flightTiming?s.bolt_timer:s.chosen_bolt;s.visible=false;s.explode=1;s.t=1;}
   }
   if(s.explode===1){
    if(s.t===1){
@@ -1034,7 +1034,7 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
      if(Math.abs(s.chosen_bolt-s.final_bolt)<=2){s.bonus_anim=1;rt.sound?.('snd_scytheburst');}
     }
     if(s.red===1)s.damage+=90;
-    if(inBattle){g.hittarget[s.star]=0;const redirected=withHook(rt,'interceptSpellDamage').some(([enemy,intercept])=>intercept(enemy,s,rt,s.star,s.damage,4));if(!redirected)damageEnemy(s,rt,s.star,s.damage);if(g.monstertype[0]!==20)boltFlash(s,rt);}
+    if(inBattle){g.hittarget[s.star]=0;for(const [e,h] of withHook(rt,'scalesRudeBusterImpact'))s.damage=h(e,rt,s.damage);const redirected=withHook(rt,'interceptSpellDamage').some(([enemy,intercept])=>intercept(enemy,s,rt,s.star,s.damage,4));if(!redirected)damageEnemy(s,rt,s.star,s.damage);if(g.monstertype[0]!==20)boltFlash(s,rt);}
     else boltFlash(s,rt);
     rt.sound?.('snd_rudebuster_hit');
     const burst=gmArray(s,'burst');

@@ -19,6 +19,7 @@ export function installSourceSurfaces(rt:GmRuntime){
   draw:(id,x,y,alpha=1,blend=0xffffff)=>{if(!surfaces.has(id))throw Error('Missing source surface');if(rt.gfx&&!rt.gfx.surfaceDraw)throw Error('Renderer cannot draw surfaces');rt.gfx?.surfaceDraw?.(id,x,y,alpha,blend);},
   copy:(id,x,y,source)=>{if(!surfaces.has(id)||(source!==null&&!surfaces.has(source)))throw Error('Missing source surface');if(rt.gfx&&!rt.gfx.surfaceCopy)throw Error('Renderer cannot copy surfaces');rt.gfx?.surfaceCopy?.(id,x,y,source);},
   part:(id,left,top,width,height,x,y,xscale,yscale,blend,alpha)=>{if(!surfaces.has(id))throw Error('Missing source surface');if(rt.gfx&&!rt.gfx.surfacePart)throw Error('Renderer cannot draw surface regions');rt.gfx?.surfacePart?.(id,left,top,width,height,x,y,xscale,yscale,blend,alpha);},
+  addRows:(id,offsets,blend,alpha)=>{if(!surfaces.has(id))throw Error('Missing source surface');return rt.gfx?.surfaceAddRows?.(id,offsets,blend,alpha)??false;},
   deleteSprite:name=>rt.deleteSprite(name),
  };
 }

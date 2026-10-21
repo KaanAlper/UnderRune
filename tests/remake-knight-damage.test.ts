@@ -30,6 +30,19 @@ for(const packed of [false,true])it(`Knight exploding star children hurt the par
  expect(b.party.every(c=>g.hp[c]<before[c]),JSON.stringify({before,after:g.hp,active:child.active})).toBe(true);
  expect(child.live).toBe(false);
 });
+for(const amount of [209,240])it(`halves the ${amount} HP Rude Buster impact against Knight after timing bonuses`,()=>{
+ const {rt,g,objects}=fixture(false),k=rt.first(objects.obj_knight_enemy)!;
+ const bolt=rt.create(objects.obj_rudebuster_bolt,100,100);Object.assign(bolt,{target:k.id,star:0,damage:amount,explode:1,t:1,cx:k.x,cy:k.y});
+ const hp=g.monsterhp[0];resolveEvent(bolt.object,'step')!(bolt,rt);
+ expect(hp-g.monsterhp[0]).toBe(amount===209?104:120);
+ expect(bolt.damage).toBe(amount===209?104:120);
+});
+it('uses the Chapter 3 flight timer for the Rude Buster bonus before halving the Knight impact',()=>{
+ const {rt,g,objects}=fixture(false),k=rt.first(objects.obj_knight_enemy)!,bolt=rt.create(objects.obj_rudebuster_bolt,100,100);
+ Object.assign(bolt,{target:k.id,star:0,damage:240,t:1,cx:100,cy:100,bolt_timer:10,chosen_bolt:5});
+ const hp=g.monsterhp[0];resolveEvent(bolt.object,'step')!(bolt,rt);
+ expect(bolt.final_bolt).toBe(11);expect(bolt.bonus_anim).toBe(0);expect(hp-g.monsterhp[0]).toBe(125);
+});
 for(const packed of [false,true])for(const scale of [.35,.57,.95])it(`first Stars explosion emits six damaging fragments at scale ${scale} (${packed?'browser':'source'})`,()=>{
  const {b,rt,g,objects,bank}=fixture(packed),h=rt.create(heart,310,160);
  const parent=rt.create(objects.obj_knight_pointing_star,h.x+10,h.y+10);

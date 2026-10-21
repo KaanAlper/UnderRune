@@ -154,6 +154,8 @@ export interface BattleHooks{
  aimsRudeBuster?(enemy:GmInstance,rt:GmRuntime,bolt:GmInstance):boolean;
  /** Chapter 3's Rude Buster damage as the enemy changes it (the Knight's damage reduction). */
  scalesRudeBuster?(enemy:GmInstance,rt:GmRuntime,damage:number):number;
+ /** Rude Buster's impact adjustment, after its timing bonus and Red Buster bonus. */
+ scalesRudeBusterImpact?(enemy:GmInstance,rt:GmRuntime,damage:number):number;
  /** scr_damage_enemy took the enemy in `slot` to 0 HP or below (Berdly ends his battle then: endcon 1). */
  onDamagedToZero?(enemy:GmInstance,rt:GmRuntime,slot:number):void;
  /** scr_damage_enemy hurt this enemy (amount over 0), after its hurt state is set. */

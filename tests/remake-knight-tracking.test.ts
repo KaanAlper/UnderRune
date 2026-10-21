@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import {describe,it,expect} from 'vitest';
+import {describe,it,expect,vi} from 'vitest';
 import {GmInstance,GmRuntime,resolveEvent,type GmEvent} from '../src/remake/gm/runtime';
 import {afterimageGrow,bulletInit,partyWears,tensionHeal} from '../src/remake/deltarune/battle';
 import {createChapterRegistry} from '../src/remake/host/chapter2';
@@ -23,6 +23,17 @@ function run(f:ReturnType<typeof fixture>,name:string,event:GmEvent,instance=f.m
 function state(f:ReturnType<typeof fixture>){return f.rt.instances.map(s=>Object.fromEntries(Object.entries(s).filter(([,v])=>typeof v!=='function').map(([k,v])=>[k,k==='object'?v.name:k==='layerEntry'?v-f.base:v])));}
 
 describe('Knight tracking swords',()=>{
+ it('shares box coordinate lookups while preserving every composited slash and RNG',()=>{
+  const f=fixture(),calls:unknown[][]=[];
+  f.rt.sourceSurfaces={create:()=>1,target:()=>{},clear:()=>{},capture:()=>'',free:()=>{},deleteSprite:()=>{},draw:()=>{},copy:()=>{},part:()=>{},exists:()=>true,resize:()=>{}};
+  for(let n=0;n<3;n++)f.rt.restore(f.object('obj_tracking_sword_slash'),99992+n,300+n,150,{imageIndex:n});
+  const first=vi.spyOn(f.rt,'first'),rng=f.rt.random.snapshot();
+  vi.spyOn(f.rt,'drawSprite').mockImplementation((...args)=>{calls.push(args);});
+  run(f,'obj_tracking_swords_manager','draw');
+  expect(calls.map(c=>c.slice(0,4))).toEqual([['spr_pxwhite2',2,57,55],['spr_pxwhite2',1,56,55],['spr_pxwhite2',0,55,55]]);
+  expect(f.rt.random.snapshot()).toEqual(rng);
+  expect(first.mock.calls.filter(([def])=>def.name==='obj_growtangle')).toHaveLength(2);
+ });
  it('shadows regular-bullet Step through the installed host and expires the slash after three Draws',()=>{
   const rt=new GmRuntime(loadSprites(3),{seed:11});rt.globals={chapter:3};
   const {objects}=installChapter3BossHost(rt,{room:'room_battletest'}),s=rt.create(objects.obj_tracking_sword_slash,320,170);

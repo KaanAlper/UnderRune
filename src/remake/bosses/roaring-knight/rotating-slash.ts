@@ -34,6 +34,7 @@ export function createRotatingSlash(object:Objects,effects:SlashEffects){
   const markx=5+rt.random.random(3),marky=2+rt.random.random(1);
   mark(100,C.red,markx,marky,4);
   mark(99,C.black,marky*0.85,marky*0.85,4);
+  const left=getBox(rt,2),right=getBox(rt,0),top=getBox(rt,1),bottom=getBox(rt,3);
   for(const flip of [0,180]){
    for(let n=0,count=4+rt.random.irandom(3);n<count;n++){
     const time=12+rt.random.irandom(8),offset=-20+rt.random.random(60);
@@ -41,7 +42,7 @@ export function createRotatingSlash(object:Objects,effects:SlashEffects){
     p.speed=6+rt.random.random(4);p.imageAngle=sl.imageAngle+flip+rt.random.randomRange(-10,10);p.direction=p.imageAngle;
     for(let k=0;k<50;k++){
      p.x+=lengthdirX(5,p.direction);p.y+=lengthdirY(5,p.direction);
-     if(p.x<getBox(rt,2)||p.x>getBox(rt,0)||p.y<getBox(rt,1)||p.y>getBox(rt,3))break;
+     if(p.x<left||p.x>right||p.y<top||p.y>bottom)break;
     }
     p.x+=lengthdirX(offset,p.direction);p.y+=lengthdirY(offset,p.direction);
     if(flip===0){p.depth+=101;p.sprite='spr_knight_slash_mark';p.imageBlend=C.red;}

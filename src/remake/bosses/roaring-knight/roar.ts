@@ -336,10 +336,12 @@ export function createRoar(object:(name:string)=>GmObjectDef,effects:SlashEffect
   if(!s.hsv_switch)s.hsv++;else s.hsv--;
   if(s.hsv>=288)s.hsv_switch=1;if(s.hsv<=128)s.hsv_switch=0;
   rt.drawBlendMode('add');
+  const color=makeColorHsv(s.hsv%255,255,255);
+  const offsets=new Float64Array(vh);
   for(s.a=0;s.a<vh;s.a++){
-   const color=makeColorHsv(s.hsv%255,255,255),offset=Math.sin((s.a+time)*0.1)*4*s.intensity+Math.sin((s.a+time)*0.35)*0.5*s.intensity;
-   surfaces.part(s.ball_surface,0,s.a,vw,1,offset,s.a,1,1,color,s.ball_darkness);
+   offsets[s.a]=Math.sin((s.a+time)*0.1)*4*s.intensity+Math.sin((s.a+time)*0.35)*0.5*s.intensity;
   }
+  if(!surfaces.addRows?.(s.ball_surface,offsets,color,s.ball_darkness))for(let row=0;row<vh;row++)surfaces.part(s.ball_surface,0,row,vw,1,offsets[row],row,1,1,color,s.ball_darkness);
   surfaces.draw(s.star_surface,0,0);
   rt.drawBlendMode('normal');
   for(const a of rt.withInstances(afterimageGrow))rt.drawSprite(a.sprite,a.imageIndex,a.x-vx,a.y-vy,a.imageXscale,a.imageYscale,a.imageAngle,C.white,a.imageAlpha);
@@ -360,7 +362,7 @@ export function createRoar(object:(name:string)=>GmObjectDef,effects:SlashEffect
  /** The giant Knight, row by row: the rows waver while he gathers power (intensify over 1.5 adds a shifted copy). */
  function giant(s:GmInstance,rt:GmRuntime,ox:number,oy:number){
   const spr=rt.bank.get(s.knight_sprite);if(!spr)throw Error(`Missing sprite ${s.knight_sprite}`);
-  const bl=spr.left,bt=spr.top,time=rt.globals.time,rowY=(a:number)=>oy+s.fake_y+a*2+Math.sin(s.bobble_count*0.1)*s.bobble_amp-10-bt*2;
+  const bl=spr.left,bt=spr.top,time=rt.globals.time,bobble=Math.sin(s.bobble_count*0.1)*s.bobble_amp,rowY=(a:number)=>oy+s.fake_y+a*2+bobble-10-bt*2;
   if(s.intensify>1.5)for(s.a=0;s.a<spr.height;s.a+=1){
    const wave=Math.sin((s.a+time*4)*0.15)*(s.intensify-1.5)*8;
    rt.drawSpritePart(s.knight_sprite,s.knight_sprite_image,bl,s.a,70,1,ox+s.fake_x-70+(s.a%2===0?wave:-wave),rowY(s.a),2,2,s.imageBlend,s.fake_alpha*0.75);

@@ -3,6 +3,7 @@
 // bitmap or sprite fonts. Coordinates are room coordinates; the view offset is applied here.
 import type {BlendMode,GmGraphics,TextStyle} from '../gm/graphics';
 import type {NineSlice} from '../gm/sprites';
+import {compositeAddRows} from './row-pixel-kernel';
 
 export interface FrameRef{page:number;sx:number;sy:number;sw:number;sh:number;tx:number;ty:number;tw:number;th:number;alphaZeroRgb?:'black'}
 export interface SpriteFrames{originX:number;originY:number;width:number;height:number;frames:(FrameRef|null)[];nineSlice?:NineSlice|null}
@@ -15,6 +16,7 @@ interface Bounds{left:number;top:number;right:number;bottom:number}
 /** GameMaker colours are 0xBBGGRR. */
 export const css=(c:number)=>`rgb(${c&255},${(c>>8)&255},${(c>>16)&255})`;
 const frameAt=(s:SpriteFrames,frame:number)=>{const n=s.frames.length;return n?s.frames[((Math.floor(frame)%n)+n)%n]:null;};
+const MULTIPLY_BYTES=Uint8Array.from({length:65536},(_,i)=>Math.round((i>>8)*(i&255)/255));
 
 export class CanvasGraphics implements GmGraphics{
  private surfaces=new Map<number,HTMLCanvasElement>();
@@ -38,11 +40,17 @@ export class CanvasGraphics implements GmGraphics{
  private rasterSize:{width:number;height:number}|null=null;
  private opaqueFrames=new WeakMap<FrameRef,boolean>();
  private framePixels=new WeakMap<FrameRef,ImageData>();
+ private solidImages=new WeakSet<ImageData>();
+ /** Only proven fully opaque Canvas targets may use native multiply/add compositing. */
+ private gpuOpaque=new Set<number>();
+ private byteTints=new Map<string,Uint8Array>();
+ private radialPatches=new Map<string,ImageData>();
+ private radialPatchBytes=0;
  constructor(ctx:CanvasRenderingContext2D,assets:DrawAssets,readonly view:{x:number;y:number}){
   this.screen=ctx;this.pages=[...assets.pages];this.assets={...assets,pages:this.pages,sprite:name=>this.generated.get(name)??assets.sprite(name)};
   // Scope complete drawing operations, including nine-slice, fonts, fog and cropped/tiled sprites. Nested
   // calls reuse the same raster target; captures, target changes and resource lifetime methods stay direct.
-  for(const key of ['sprite','spritePart','spriteFog','spriteTiled','rect','line','lineColor','circle','triangle','triangleColor','text'] as const){
+  for(const key of ['sprite','spritePart','spriteFog','spriteTiled','rect','line','lineColor','circle','circleColor','triangle','triangleColor','text'] as const){
    const draw=this[key].bind(this) as (...args:unknown[])=>void;
    Object.defineProperty(this,key,{value:(...args:unknown[])=>this.paint(()=>draw(...args),()=>this.bounds(key,args),key,args)});
   }
@@ -58,7 +66,7 @@ export class CanvasGraphics implements GmGraphics{
  }
  private get vx(){return this.targetSurface===null?this.view.x:0;}
  private get vy(){return this.targetSurface===null?this.view.y:0;}
- surfaceCreate(id:number,width:number,height:number){const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d')!.imageSmoothingEnabled=false;this.surfaces.set(id,canvas);this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);}
+ surfaceCreate(id:number,width:number,height:number){const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d',{willReadFrequently:true})!.imageSmoothingEnabled=false;this.surfaces.set(id,canvas);this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.delete(id);}
  surfaceTarget(id:number|null){if(id!==null&&!this.surfaces.has(id))throw Error('Missing surface');this.targetSurface=id;this.targetContext.globalCompositeOperation=this.composite;}
  blendMode(mode:BlendMode){
   this.mode=mode;this.composite=mode==='add'?'lighter':'source-over';
@@ -70,10 +78,11 @@ export class CanvasGraphics implements GmGraphics{
  private erase(inside:(x:number,y:number)=>boolean,left:number,top:number,right:number,bottom:number){
   const ctx=this.targetContext,w=ctx.canvas.width,h=ctx.canvas.height,l=Math.max(0,Math.floor(left-this.vx)),t=Math.max(0,Math.floor(top-this.vy)),r=Math.min(w,Math.ceil(right-this.vx)),b=Math.min(h,Math.ceil(bottom-this.vy));
   if(r<=l||b<=t)return;
-  const image=(this.targetSurface===null?undefined:this.surfacePixels.get(this.targetSurface))??ctx.getImageData(0,0,w,h),d=image.data;
-  for(let y=t;y<b;y++)for(let x=l;x<r;x++)if(inside(x+.5+this.vx,y+.5+this.vy)){const i=(y*w+x)*4;d[i]=0;d[i+1]=0;d[i+2]=0;d[i+3]=0;}
-  if(this.targetSurface!==null){this.surfacePixels.set(this.targetSurface,image);this.dirtySurfaces.add(this.targetSurface);}
-  else ctx.putImageData(image,0,0);
+  // The screen is read back only where it is covered (a whole-screen readback costs milliseconds).
+  const screen=this.targetSurface===null,image=screen?ctx.getImageData(l,t,r-l,b-t):this.pixels(this.targetSurface!),d=image.data,iw=screen?r-l:w,ox=screen?l:0,oy=screen?t:0;
+  for(let y=t;y<b;y++)for(let x=l;x<r;x++)if(inside(x+.5+this.vx,y+.5+this.vy)){const i=((y-oy)*iw+x-ox)*4;d[i]=0;d[i+1]=0;d[i+2]=0;d[i+3]=0;}
+  if(!screen){this.dirtySurfaces.add(this.targetSurface!);}
+  else ctx.putImageData(image,l,t);
  }
  eraseRect(x1:number,y1:number,x2:number,y2:number){
   const l=Math.min(x1,x2),t=Math.min(y1,y2),r=Math.max(x1,x2)+1,b=Math.max(y1,y2)+1;this.erase(()=>true,l,t,r,b);
@@ -93,7 +102,7 @@ export class CanvasGraphics implements GmGraphics{
   }
   if(key==='spritePart'){const x=a[6],y=a[7],right=x+a[4]*a[8],bottom=y+a[5]*a[9];return box(Math.min(x,right)-1,Math.min(y,bottom)-1,Math.max(x,right)+1,Math.max(y,bottom)+1);}
   if(key==='rect'||key==='line'||key==='lineColor'){const pad=key==='line'?(a[6]??1)/2+1:1;return box(Math.min(a[0],a[2])-pad,Math.min(a[1],a[3])-pad,Math.max(a[0],a[2])+pad+1,Math.max(a[1],a[3])+pad+1);}
-  if(key==='circle')return box(a[0]-a[2]-1,a[1]-a[2]-1,a[0]+a[2]+1,a[1]+a[2]+1);
+  if(key==='circle'||key==='circleColor')return box(a[0]-a[2]-1,a[1]-a[2]-1,a[0]+a[2]+1,a[1]+a[2]+1);
   if(key==='triangle'||key==='triangleColor')return box(Math.min(a[0],a[2],a[4])-1,Math.min(a[1],a[3],a[5])-1,Math.max(a[0],a[2],a[4])+1,Math.max(a[1],a[3],a[5])+1);
   return null; // Tiling and text can span the target; glyph overhangs are not bounded by advances.
  }
@@ -116,10 +125,17 @@ export class CanvasGraphics implements GmGraphics{
  private readFrame(f:FrameRef){
   let image=this.framePixels.get(f);if(image)return image;
   const canvas=document.createElement('canvas');canvas.width=f.sw;canvas.height=f.sh;const c=canvas.getContext('2d',{willReadFrequently:true})!;
-  c.drawImage(this.assets.pages[f.page],f.sx,f.sy,f.sw,f.sh,0,0,f.sw,f.sh);image=c.getImageData(0,0,f.sw,f.sh);this.framePixels.set(f,image);return image;
+  c.drawImage(this.assets.pages[f.page],f.sx,f.sy,f.sw,f.sh,0,0,f.sw,f.sh);image=c.getImageData(0,0,f.sw,f.sh);this.framePixels.set(f,image);
+  let solid=true;for(let i=3;i<image.data.length;i+=4)if(image.data[i]!==255){solid=false;break;}if(solid)this.solidImages.add(image);return image;
  }
  private directSprite(key:string,args:unknown[]){
   if(this.targetContext.imageSmoothingEnabled)return false;
+  if(key==='spritePart'){
+   const a=args as number[],s=this.assets.sprite(args[0] as string);if(!s||a[11]<=0||a[4]<=0||a[5]<=0)return true;
+   const f=frameAt(s,a[1]);if(!f)return true;
+   const tw=f.tw||f.sw,th=f.th||f.sh,l=Math.max(a[2],f.tx),t=Math.max(a[3],f.ty),r=Math.min(a[2]+a[4],f.tx+tw),b=Math.min(a[3]+a[5],f.ty+th);
+   if(r>l&&b>t)this.sample(this.readFrame(f),(l-f.tx)*f.sw/tw,(t-f.ty)*f.sh/th,(r-l)*f.sw/tw,(b-t)*f.sh/th,a[6]+(l-a[2])*a[8],a[7]+(t-a[3])*a[9],a[8]*tw/f.sw,a[9]*th/f.sh,a[10],a[11]);return true;
+  }
   if(key==='spriteTiled'){
    const s=this.assets.sprite(args[0] as string);if(!s)return true;
    const a=args as number[],f=frameAt(s,a[7]??0),w=s.width*a[3],h=s.height*a[4];if(!f||w<=0||h<=0)return true;
@@ -134,6 +150,32 @@ export class CanvasGraphics implements GmGraphics{
   // Point-filtered, axis-aligned quads need no Canvas raster/readback. Atlas trimming, origins, mirrored
   // scale, tint and source alpha are applied to raw texels before the same GPU blend equations.
   this.sample(this.readFrame(f),0,0,f.sw,f.sh,a[2]+(f.tx-s.originX)*a[4],a[3]+(f.ty-s.originY)*a[5],a[4]*(f.tw||f.sw)/f.sw,a[5]*(f.th||f.sh)/f.sh,a[7],a[8]);return true;
+ }
+ /** A rotated, point-filtered sprite straight from its raw texels: each covered pixel centre is mapped back into the
+  * frame (the inverse of translate, rotate, scale), tinted and blended. It replaces drawing it on a scratch canvas
+  * and reading that back, which cost a readback per sprite (the Knight's slashes draw dozens a frame). */
+ private rotatedSprite(key:string,args:unknown[],bounds:()=>Bounds|null){
+  if(key!=='sprite'||this.targetContext.imageSmoothingEnabled)return false;
+  const s=this.assets.sprite(args[0] as string);if(!s||s.nineSlice?.enabled)return false;
+  const a=args as number[],f=frameAt(s,a[1]);if(!f)return true;
+  const xs=a[4],ys=a[5],alpha=Math.max(0,Math.min(1,a[8]));if(!xs||!ys||alpha<=0)return true;
+  const area=bounds();if(!area)return false;
+  const target=this.targetContext,w=target.canvas.width,h=target.canvas.height;
+  const left=Math.max(0,Math.floor(area.left)),top=Math.max(0,Math.floor(area.top)),right=Math.min(w,Math.ceil(area.right)),bottom=Math.min(h,Math.ceil(area.bottom));
+  if(right<=left||bottom<=top)return true;
+  const tex=this.readFrame(f),src=tex.data,tw=f.tw||f.sw,th=f.th||f.sh,ux=f.sw/tw,uy=f.sh/th;
+  const rad=-a[6]*Math.PI/180,co=Math.cos(rad),si=Math.sin(rad),tx=a[2]-this.vx,ty=a[3]-this.vy;
+  const tr=(a[7]&255)/255,tg=((a[7]>>8)&255)/255,tb=((a[7]>>16)&255)/255;
+  const screen=this.targetSurface===null,image=screen?target.getImageData(left,top,right-left,bottom-top):this.pixels(this.targetSurface!),dst=image.data,iw=screen?right-left:w,ox=screen?left:0,oy=screen?top:0;
+  for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
+   const dx=x+.5-tx,dy=y+.5-ty,lx=(dx*co+dy*si)/xs,ly=(-dx*si+dy*co)/ys;
+   const u=Math.floor((lx+s.originX-f.tx)*ux),v=Math.floor((ly+s.originY-f.ty)*uy);
+   if(u<0||v<0||u>=f.sw||v>=f.sh)continue;
+   const j=(v*f.sw+u)*4,sa=src[j+3]/255*alpha;if(sa===0)continue;
+   this.pixel(dst,((y-oy)*iw+x-ox)*4,Math.round(src[j]*tr),Math.round(src[j+1]*tg),Math.round(src[j+2]*tb),sa);
+  }
+  if(!screen){this.dirtySurfaces.add(this.targetSurface!);return true;}
+  target.putImageData(image,left,top);return true;
  }
  private pixel(dst:Uint8ClampedArray,i:number,r:number,g:number,b:number,sa:number){
   if(this.testAlpha&&sa===0)return;
@@ -154,42 +196,83 @@ export class CanvasGraphics implements GmGraphics{
  }
  private paint(draw:()=>void,bounds:()=>Bounds|null,key:string,args:unknown[]){
   if(this.raster||(this.targetSurface===null&&(this.mode==='normal'||this.mode==='add'))){draw();return;}
+  if(this.opaqueSurfacePass(draw,key,args))return;
   if(!this.testAlpha&&(this.mode==='add-preserve-alpha'||this.mode==='normal-preserve-alpha'))throw Error('Custom blend drawing requires alpha testing in the Canvas backend');
   this.checkRasterSource(key,args);
+  if(this.targetSurface!==null&&key==='rect'&&args.slice(0,4).every(Number.isInteger)&&!args[6]&&args[5]===1&&this.mode==='normal'&&this.writeAlpha){
+   const a=args as number[],image=this.pixels(this.targetSurface),data=new Uint32Array(image.data.buffer),l=Math.max(0,Math.ceil(Math.min(a[0],a[2])-.5)),t=Math.max(0,Math.ceil(Math.min(a[1],a[3])-.5)),r=Math.min(image.width,Math.ceil(Math.max(a[0],a[2])+.5)),b=Math.min(image.height,Math.ceil(Math.max(a[1],a[3])+.5));
+   const color=(0xff000000|a[4])>>>0;for(let y=t;y<b;y++)if(r>l)data.fill(color,y*image.width+l,y*image.width+r);this.dirtySurfaces.add(this.targetSurface);return;
+  }
   if(this.targetSurface!==null&&(key==='triangleColor'||key==='triangle'&&!args[8])){
    const a=args as number[];this.surfaceTriangle(a[0],a[1],a[2],a[3],a[4],a[5],a[6],key==='triangle'?a[6]:a[7],key==='triangle'?a[6]:a[8],key==='triangle'?a[7]:a[9]);return;
   }
   if(this.directSprite(key,args))return;
+  if(this.rotatedSprite(key,args,bounds))return;
   const target=this.targetContext,w=target.canvas.width,h=target.canvas.height;
   if(!w||!h)return;
   const area=bounds(),left=Math.max(0,Math.floor(area?.left??0)),top=Math.max(0,Math.floor(area?.top??0)),right=Math.min(w,Math.ceil(area?.right??w)),bottom=Math.min(h,Math.ceil(area?.bottom??h)),sw=right-left,sh=bottom-top;
   if(sw<=0||sh<=0)return;
-  const scratch=this.scratch??(this.scratch=document.createElement('canvas'));
-  if(scratch.width!==sw||scratch.height!==sh){scratch.width=sw;scratch.height=sh;}
-  const source=scratch.getContext('2d',{willReadFrequently:true})!;
-  source.setTransform(1,0,0,1,0,0);source.clearRect(0,0,sw,sh);source.setTransform(1,0,0,1,-left,-top);source.globalCompositeOperation='source-over';source.imageSmoothingEnabled=target.imageSmoothingEnabled;
-  this.raster=source;this.rasterSize={width:w,height:h};
-  try{draw();}finally{this.raster=null;this.rasterSize=null;}
-  const patch=source.getImageData(0,0,sw,sh),src=patch.data;
-  const image=(this.targetSurface===null?undefined:this.surfacePixels.get(this.targetSurface))??target.getImageData(0,0,w,h),dst=image.data;
+  // The roar repeats the same full-screen radial mask every frame. Cache its exact Canvas raster,
+  // keeping native quantization and edge coverage while avoiding repeated gradient raster/readback.
+  const radialKey=key==='circleColor'?[...args,left,top,sw,sh,this.vx,this.vy].join(':'):undefined;
+  let patch=radialKey?this.radialPatches.get(radialKey):undefined;
+  if(!patch){
+   const scratch=this.scratch??(this.scratch=document.createElement('canvas'));
+   if(scratch.width!==sw||scratch.height!==sh){scratch.width=sw;scratch.height=sh;}
+   const source=scratch.getContext('2d',{willReadFrequently:true})!;
+   source.setTransform(1,0,0,1,0,0);source.clearRect(0,0,sw,sh);source.setTransform(1,0,0,1,-left,-top);source.globalCompositeOperation='source-over';source.imageSmoothingEnabled=target.imageSmoothingEnabled;
+   this.raster=source;this.rasterSize={width:w,height:h};
+   try{draw();}finally{this.raster=null;this.rasterSize=null;}
+   patch=source.getImageData(0,0,sw,sh);
+   if(radialKey&&patch.data.byteLength<=8*1024*1024){
+    while(this.radialPatches.size>=8||this.radialPatchBytes+patch.data.byteLength>8*1024*1024){const oldest=this.radialPatches.keys().next().value!;this.radialPatchBytes-=this.radialPatches.get(oldest)!.data.byteLength;this.radialPatches.delete(oldest);}
+    this.radialPatches.set(radialKey,patch);this.radialPatchBytes+=patch.data.byteLength;
+   }
+  }else if(radialKey){this.radialPatches.delete(radialKey);this.radialPatches.set(radialKey,patch);}
+  const src=patch.data;
+  // The screen is read back only under the patch (a whole-screen readback costs milliseconds).
+  const screen=this.targetSurface===null,image=screen?target.getImageData(left,top,sw,sh):this.pixels(this.targetSurface!),dst=image.data,iw=screen?sw:w,ox=screen?left:0,oy=screen?top:0;
+  if(this.mode==='multiply'){
+   // RGBA8 multiplication is exact with a byte lookup, without a method call and mode dispatch per fragment.
+   const mul=MULTIPLY_BYTES,write=this.writeAlpha;
+   for(let row=0;row<sh;row++)for(let col=0;col<sw;col++){
+    const j=(row*sw+col)*4;if(src[j+3]===0)continue;const i=((top+row-oy)*iw+left+col-ox)*4;
+    dst[i]=mul[(dst[i]<<8)|src[j]];dst[i+1]=mul[(dst[i+1]<<8)|src[j+1]];dst[i+2]=mul[(dst[i+2]<<8)|src[j+2]];if(write)dst[i+3]=mul[(dst[i+3]<<8)|src[j+3]];
+   }
+   if(!screen)this.dirtySurfaces.add(this.targetSurface!);else target.putImageData(image,left,top);return;
+  }
   // Native gl_common.c uses ZERO, ONE_MINUS_SRC_COLOR for bm_subtract. Both separate-alpha modes use
   // SRC_ALPHA, DST_ALPHA for alpha; Canvas source-atop has different RGB factors and cannot represent them.
   for(let row=0;row<sh;row++)for(let col=0;col<sw;col++){
-   const j=(row*sw+col)*4,i=((top+row)*w+left+col)*4,sa=src[j+3]/255;
+   const j=(row*sw+col)*4,i=((top+row-oy)*iw+left+col-ox)*4,sa=src[j+3]/255;
    // Source validation above proves zero-alpha samples here are outside the covered geometry whenever
    // the blend mode depends on RGB even at zero alpha. Ordinary blending also leaves these pixels alone.
    if(sa===0)continue;
    this.pixel(dst,i,src[j],src[j+1],src[j+2],sa);
   }
-  if(this.targetSurface!==null){this.surfacePixels.set(this.targetSurface,image);this.dirtySurfaces.add(this.targetSurface);return;}
-  // Passing the whole ImageData with a dirty rectangle still copies the whole backing array in Chromium.
-  // Upload a compact patch so a small sprite does not transfer a full room-sized surface.
-  for(let row=0;row<sh;row++){const start=((top+row)*w+left)*4;src.set(dst.subarray(start,start+sw*4),row*sw*4);}
-  target.putImageData(patch,left,top);
+  if(!screen){this.dirtySurfaces.add(this.targetSurface!);return;}
+  target.putImageData(image,left,top);
  }
  private pixels(id:number){
+  this.gpuOpaque.delete(id);
   const surface=this.surfaces.get(id);if(!surface)throw Error('Missing surface');
   let pixels=this.surfacePixels.get(id);if(!pixels){pixels=surface.getContext('2d')!.getImageData(0,0,surface.width,surface.height);this.surfacePixels.set(id,pixels);}return pixels;
+ }
+ /** Opaque full-target tiles and fully covering opaque gradients have the same RGBA equations in Canvas.
+  * Keep consecutive passes on the GPU; the next raw operation reads them back once through pixels(). */
+ private opaqueSurfacePass(draw:()=>void,key:string,args:unknown[]){
+  if(this.targetSurface===null||!this.writeAlpha)return false;
+  const id=this.targetSurface,c=this.targetContext,a=args as number[],w=c.canvas.width,h=c.canvas.height;
+  if(this.mode!=='normal'&&this.dirtySurfaces.has(id))return false;
+  if(key==='spriteTiled'&&(this.mode==='normal'||this.mode==='add')&&a[3]===1&&a[4]===1&&a[5]===0xffffff&&a[6]===1){
+   const s=this.assets.sprite(args[0] as string),f=s&&frameAt(s,a[7]??0);
+   if(!s||!f||f.tx!==0||f.ty!==0||f.sw!==s.width||f.sh!==s.height||f.tw!==f.sw||f.th!==f.sh||!this.solidImages.has(this.readFrame(f)))return false;
+   if(this.mode==='add'&&!this.gpuOpaque.has(id))return false;
+  }else if(key==='circleColor'&&this.mode==='multiply'&&a[5]===1&&this.gpuOpaque.has(id)){
+   if(a[2]<=Math.hypot(Math.max(Math.abs(a[0]),Math.abs(w-a[0])),Math.max(Math.abs(a[1]),Math.abs(h-a[1])))+1)return false;
+  }else return false;
+  c.save();c.globalCompositeOperation=this.mode==='multiply'?'multiply':this.mode==='add'?'lighter':'source-over';draw();c.restore();
+  this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.add(id);return true;
  }
  /** Offscreen primitives already have a raw target. Rasterize there with the same pixel-center/top-left rule,
   * avoiding a temporary Canvas, readback and second blend pass for the Knight's full-screen cone. */
@@ -214,11 +297,16 @@ export class CanvasGraphics implements GmGraphics{
  }
  surfaceCopy(id:number,x:number,y:number,source:number|null){
   const target=this.surfaces.get(id);if(!target)throw Error('Missing surface');
-  const src=source===null?this.screen.getImageData(0,0,this.screen.canvas.width,this.screen.canvas.height):this.pixels(source),dst=this.pixels(id),data=src.data.slice();
+  const tx=Math.trunc(x),ty=Math.trunc(y);
+  if(source===null&&this.screen.getContextAttributes().alpha===false&&tx<=0&&ty<=0&&tx+this.screen.canvas.width>=target.width&&ty+this.screen.canvas.height>=target.height){
+   const c=target.getContext('2d')!;c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.drawImage(this.screen.canvas,tx,ty);c.restore();
+   this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.add(id);return;
+  }
+  const src=source===null?this.screen.getImageData(0,0,this.screen.canvas.width,this.screen.canvas.height):this.pixels(source),dst=this.pixels(id),data=src===dst?src.data.slice():src.data;
   x=Math.trunc(x);y=Math.trunc(y);
   const left=Math.max(0,x),top=Math.max(0,y),right=Math.min(dst.width,x+src.width),bottom=Math.min(dst.height,y+src.height);
-  for(let yy=top;yy<bottom;yy++)for(let xx=left;xx<right;xx++){
-   const i=(yy*dst.width+xx)*4,j=((yy-y)*src.width+xx-x)*4;dst.data.set(data.subarray(j,j+4),i);
+  for(let yy=top;yy<bottom&&right>left;yy++){
+   const i=(yy*dst.width+left)*4,j=((yy-y)*src.width+left-x)*4;dst.data.set(data.subarray(j,j+(right-left)*4),i);
   }
   if(right>left&&bottom>top)this.dirtySurfaces.add(id);
  }
@@ -233,22 +321,58 @@ export class CanvasGraphics implements GmGraphics{
   this.surfacePart(id,0,0,surface.width,surface.height,x,y,1,1,blend,alpha);
  }
  surfacePart(id:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number){
+  // As in surfaceDraw: on the opaque screen, normal and additive drawing of an untinted part composite the same
+  // visible RGB on the GPU (nearest sampling), without reading the screen back.
+  if(this.opaqueScreenBlend(blend)&&width>0&&height>0&&xscale&&yscale){
+   const surface=this.surfaces.get(id);if(!surface)throw Error('Missing surface');
+   this.flushSurface(id);
+   const c=this.screen;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.imageSmoothingEnabled=false;
+   c.translate(x-this.vx,y-this.vy);c.scale(xscale,yscale);c.drawImage(surface,left,top,width,height,0,0,width,height);c.restore();return;
+  }
   this.sample(this.pixels(id),left,top,width,height,x,y,xscale,yscale,blend,alpha);
  }
+ surfaceAddRows(id:number,offsets:Float64Array,blend:number,alpha:number){
+  if(this.raster||this.targetSurface===null||this.targetSurface===id||this.mode!=='add'||!this.writeAlpha)return false;
+  const source=this.pixels(id),destination=this.pixels(this.targetSurface);
+  if(!compositeAddRows(source,destination,offsets,blend,alpha))return false;
+  this.dirtySurfaces.add(this.targetSurface);return true;
+ }
+ /** Drawing on the game's opaque presentation target in normal or additive mode, untinted: Canvas compositing gives
+  * the same visible RGB as the raw blend (the screen is filled black every frame). */
+ private opaqueScreenBlend(blend:number){
+  return this.targetSurface===null&&this.screen.getContextAttributes().alpha===false&&!this.testAlpha&&this.writeAlpha&&blend===0xffffff&&(this.mode==='normal'||this.mode==='add');
+ }
  private sample(source:ImageData,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number){
+  if(alpha<=0&&(this.mode==='normal'||this.mode==='add'))return;
   if(width<=0||height<=0||!xscale||!yscale)return;
   const target=this.targetContext,w=target.canvas.width,h=target.canvas.height;x-=this.vx;y-=this.vy;
   const x2=x+width*xscale,y2=y+height*yscale,l=Math.max(0,Math.ceil(Math.min(x,x2)-.5)),t=Math.max(0,Math.ceil(Math.min(y,y2)-.5)),r=Math.min(w,Math.ceil(Math.max(x,x2)-.5)),b=Math.min(h,Math.ceil(Math.max(y,y2)-.5));if(r<=l||b<=t)return;
-  const dst=this.targetSurface===null?target.getImageData(0,0,w,h):this.pixels(this.targetSurface),pixels=source===dst?source.data.slice():source.data;
+  // The screen is read back only under the drawn rectangle (a whole-screen readback costs milliseconds).
+  const screen=this.targetSurface===null,dst=screen?target.getImageData(l,t,r-l,b-t):this.pixels(this.targetSurface!),pixels=source===dst?source.data.slice():source.data,iw=screen?r-l:w,ox=screen?l:0,oy=screen?t:0;
   const ar=Math.max(0,Math.min(1,alpha)),tr=(blend&255)/255,tg=((blend>>8)&255)/255,tb=((blend>>16)&255)/255;
   const columns=new Int32Array(r-l);for(let xx=l;xx<r;xx++)columns[xx-l]=Math.max(0,Math.min(source.width-1,Math.floor(left+(xx+.5-x)/xscale)))*4;
   const data=dst.data,mode=this.mode,subtract=mode==='subtract',multiply=mode==='multiply',destSource=mode==='dest-alpha-add'||mode==='dest-alpha-copy',destZero=mode==='dest-alpha-copy',destAlpha=mode==='dest-alpha-add',add=mode==='add'||mode==='add-preserve-alpha',separate=mode==='add-preserve-alpha'||mode==='normal-preserve-alpha',test=this.testAlpha,write=this.writeAlpha;
+  const tintKey=blend+':'+(mode==='add'?ar:1),ta=mode==='add'?ar:1;let tint=this.byteTints.get(tintKey);
+  if(!tint){tint=new Uint8Array(768);for(let n=0;n<256;n++){tint[n]=Math.round(n*tr*ta);tint[n+256]=Math.round(n*tg*ta);tint[n+512]=Math.round(n*tb*ta);}if(this.byteTints.size>=256)this.byteTints.clear();this.byteTints.set(tintKey,tint);}
+  // Opaque atlas tiles (the roar's five full-screen flow passes) need no floating-point alpha math.
+  if(this.solidImages.has(source)&&ar===1&&blend===0xffffff&&write&&(mode==='normal'||mode==='add')){
+   for(let yy=t;yy<b;yy++){
+    const row=Math.max(0,Math.min(source.height-1,Math.floor(top+(yy+.5-y)/yscale)))*source.width*4;let i=((yy-oy)*iw+l-ox)*4;
+    for(let col=0;col<columns.length;col++,i+=4){const j=row+columns[col];if(add){data[i]+=pixels[j];data[i+1]+=pixels[j+1];data[i+2]+=pixels[j+2];}else{data[i]=pixels[j];data[i+1]=pixels[j+1];data[i+2]=pixels[j+2];}data[i+3]=255;}
+   }
+   if(!screen)this.dirtySurfaces.add(this.targetSurface!);else target.putImageData(dst,l,t);return;
+  }
   // Surface textures use nearest sampling. Keep raw RGB even when the sampled alpha is zero: subtract and
   // destination-alpha factors may read it, unlike Canvas drawImage's premultiplied intermediate.
   for(let yy=t;yy<b;yy++){
-   const sy=Math.max(0,Math.min(source.height-1,Math.floor(top+(yy+.5-y)/yscale))),row=sy*source.width*4;let i=(yy*w+l)*4;
+   const sy=Math.max(0,Math.min(source.height-1,Math.floor(top+(yy+.5-y)/yscale))),row=sy*source.width*4;let i=((yy-oy)*iw+l-ox)*4;
    for(let col=0;col<columns.length;col++,i+=4){
-    const j=row+columns[col],sa=pixels[j+3]/255*ar;if(test&&sa===0)continue;
+    const j=row+columns[col],sa=pixels[j+3]/255*ar;if(sa===0&&(test||(!subtract&&!multiply&&!destSource&&!separate)))continue;
+    if((sa===1&&mode==='normal')||(pixels[j+3]===255&&mode==='add')){
+     if(add){data[i]+=tint[pixels[j]];data[i+1]+=tint[256+pixels[j+1]];data[i+2]+=tint[512+pixels[j+2]];}
+     else{data[i]=tint[pixels[j]];data[i+1]=tint[256+pixels[j+1]];data[i+2]=tint[512+pixels[j+2]];}
+     if(write)data[i+3]=add?Math.round(255*sa*sa+data[i+3]):255;continue;
+    }
     const red=pixels[j]*tr,green=pixels[j+1]*tg,blue=pixels[j+2]*tb,da=data[i+3]/255;
     if(subtract){data[i]=Math.round(data[i]*(1-red/255));data[i+1]=Math.round(data[i+1]*(1-green/255));data[i+2]=Math.round(data[i+2]*(1-blue/255));if(write)data[i+3]=Math.round(data[i+3]*(1-sa));}
     else if(multiply){data[i]=Math.round(data[i]*red/255);data[i+1]=Math.round(data[i+1]*green/255);data[i+2]=Math.round(data[i+2]*blue/255);if(write)data[i+3]=Math.round(data[i+3]*sa);}
@@ -259,10 +383,8 @@ export class CanvasGraphics implements GmGraphics{
     }
    }
   }
-  if(this.targetSurface!==null){this.dirtySurfaces.add(this.targetSurface);return;}
-  const patch=target.createImageData(r-l,b-t);
-  for(let row=0;row<b-t;row++){const start=((t+row)*w+l)*4;patch.data.set(dst.data.subarray(start,start+(r-l)*4),row*(r-l)*4);}
-  target.putImageData(patch,l,t);
+  if(!screen){this.dirtySurfaces.add(this.targetSurface!);return;}
+  target.putImageData(dst,l,t);
  }
  /** A GPU interpolates all three vertex colors at pixel centers, including skew triangles. */
  triangleColor(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,c1:number,c2:number,c3:number,alpha:number){
@@ -285,6 +407,7 @@ export class CanvasGraphics implements GmGraphics{
  surfaceClear(color:number,alpha:number){
   const ctx=this.targetContext;
   if(this.targetSurface!==null){
+   this.gpuOpaque.delete(this.targetSurface);
    const image=this.surfacePixels.get(this.targetSurface)??ctx.createImageData(ctx.canvas.width,ctx.canvas.height),data=image.data,a=Math.round(Math.max(0,Math.min(1,alpha))*255);
    // Transparent black is the common per-frame clear for effect surfaces. Reuse its backing store.
    if(color===0&&a===0)data.fill(0);
@@ -298,7 +421,7 @@ export class CanvasGraphics implements GmGraphics{
   const surface=this.surfaces.get(id);if(!surface)throw Error('Missing sprite surface');const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d')!.drawImage(surface,left,top,width,height,0,0,width,height);
   const page=this.pages.length;this.pages.push(canvas);this.generatedPages.set(name,page);this.generated.set(name,{originX,originY,width,height,frames:[{page,sx:0,sy:0,sw:width,sh:height,tx:0,ty:0,tw:width,th:height}]});
  }
- surfaceFree(id:number){this.surfaces.delete(id);this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);}
+ surfaceFree(id:number){this.surfaces.delete(id);this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.delete(id);}
  screenSprite(name:string,width:number,height:number){
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d')!.drawImage(this.screen.canvas,0,0,width,height,0,0,width,height);
   const page=this.pages.length;this.pages.push(canvas);this.generatedPages.set(name,page);this.generated.set(name,{originX:0,originY:0,width,height,frames:[{page,sx:0,sy:0,sw:width,sh:height,tx:0,ty:0,tw:width,th:height}]});
@@ -396,7 +519,7 @@ export class CanvasGraphics implements GmGraphics{
  }
  surfaceResize(id:number,width:number,height:number){
   const s=this.surfaces.get(id);if(!s)throw Error('Missing surface');
-  if(s.width!==width||s.height!==height){s.width=width;s.height=height;this.surfacePixels.delete(id);}
+  if(s.width!==width||s.height!==height){s.width=width;s.height=height;this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.delete(id);}
  }
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean){
   if(r<=0)return;const c=this.targetContext;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.beginPath();c.arc(x-this.vx,y-this.vy,r,0,Math.PI*2);

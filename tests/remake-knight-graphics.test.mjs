@@ -4,6 +4,50 @@ import {existsSync} from 'node:fs';
 import {chromium} from '@playwright/test';
 import {createServer} from 'vite';
 
+test('clearing a previously opaque Canvas surface invalidates its native-compositing eligibility',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const c=document.createElement('canvas');c.width=4;c.height=4;
+  const g=new CanvasGraphics(c.getContext('2d',{alpha:false}),{pages:[],sprite:()=>undefined,font:()=>undefined},{x:0,y:0});
+  g.surfaceClear(0xffffff,1);g.surfaceCreate(1,4,4);g.surfaceCopy(1,0,0,null);g.surfaceTarget(1);g.surfaceClear(0,0);g.blendMode('multiply');g.circleColor(2,2,10,0x808080,0x808080,1);
+  return Array.from(g.ctx.getImageData(0,0,4,4).data);
+ });assert.deepEqual(result,Array(64).fill(0));
+});
+
+test('batched additive surface rows match ordinary rows byte for byte with tint, alpha and clipping',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const canvas=document.createElement('canvas');canvas.width=8;canvas.height=5;
+  const g=new CanvasGraphics(canvas.getContext('2d'),{pages:[],sprite:()=>undefined,font:()=>undefined},{x:0,y:0});
+  for(const n of [1,2,3])g.surfaceCreate(n,8,5);g.surfaceTarget(1);g.surfaceClear(0x205080,.73);g.rect(2,1,4,3,0x80c040,1,false);
+  const offsets=new Float64Array([-1.6,-.5,0,.5,1.6]);
+  for(const n of [2,3]){g.surfaceTarget(n);g.surfaceClear(0x401070,.4);}
+  g.blendMode('add');g.surfaceTarget(2);for(let row=0;row<5;row++)g.surfacePart(1,0,row,8,1,offsets[row],row,1,1,0xf1a453,.9807852804032304);
+  const expected=Array.from(g.ctx.getImageData(0,0,8,5).data);g.surfaceTarget(3);
+  const batched=g.surfaceAddRows?.(1,offsets,0xf1a453,.9807852804032304)??false;
+  return {batched,expected,actual:Array.from(g.ctx.getImageData(0,0,8,5).data)};
+ });assert.equal(result.batched,true);assert.deepEqual(result.actual,result.expected);
+});
+
+test('roar gradients multiply the authoritative surface pixels and survive later raw draws',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const c=document.createElement('canvas');c.width=8;c.height=8;
+  const g=new CanvasGraphics(c.getContext('2d'),{pages:[],sprite:()=>undefined,font:()=>undefined},{x:0,y:0});
+  g.surfaceCreate(1,8,8);g.surfaceTarget(1);g.surfaceClear(0xffffff,1);g.blendMode('multiply');g.circleColor(4,4,8,0x808080,0x808080,1);
+  g.blendMode('normal');g.rect(0,0,0,0,0xffffff,1,false);
+  return Array.from(g.ctx.getImageData(4,4,1,1).data);
+ });assert.deepEqual(result,[128,128,128,255]);
+});
+
+test('cropped sprite rows and opaque surface fills avoid scratch Canvas readbacks',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const c=document.createElement('canvas'),atlas=document.createElement('canvas');c.width=8;c.height=8;atlas.width=2;atlas.height=2;const a=atlas.getContext('2d');a.fillStyle='red';a.fillRect(0,0,2,2);
+  const sprite={originX:0,originY:0,width:4,height:4,frames:[{page:0,sx:0,sy:0,sw:2,sh:2,tx:1,ty:1,tw:2,th:2}]};
+  const g=new CanvasGraphics(c.getContext('2d'),{pages:[atlas],sprite:()=>sprite,font:()=>undefined},{x:0,y:0});g.surfaceCreate(1,8,8);g.surfaceTarget(1);g.surfaceClear(0,0);g.spritePart('hero',0,1,1,2,1,0,0,2,2,0xffffff,1);
+  const create=document.createElement.bind(document);let canvases=0;document.createElement=(name,...args)=>{if(name==='canvas')canvases++;return create(name,...args);};
+  try{g.spritePart('hero',0,1,2,2,1,0,2,2,2,0xffffff,1);g.rect(0,4,3,5,0x00ff00,1,false);}finally{document.createElement=create;}
+  return {canvases,pixels:Array.from(g.ctx.getImageData(0,0,4,6).data)};
+ });assert.equal(result.canvases,0);assert.deepEqual(result.pixels,Array.from({length:24},(_,i)=>i<16?[255,0,0,255]:[0,255,0,255]).flat());
+});
+
 test('multiline failure choices draw with the same native glyph stride as their measured bounds',async()=>{
  const result=await page.evaluate(async()=>{
   const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const atlas=document.createElement('canvas');atlas.width=1;atlas.height=4;atlas.getContext('2d').fillRect(0,0,1,4);

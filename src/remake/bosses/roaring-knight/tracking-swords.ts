@@ -144,8 +144,9 @@ export function createTrackingSwords(object:(name:string)=>GmObjectDef){
    const surfaces=rt.sourceSurfaces;if(!surfaces)throw Error('Tracking swords Draw needs source surfaces');
    if(!surfaces.exists(s.hell_surface))s.hell_surface=surfaces.create(150,150);
    surfaces.target(s.hell_surface);surfaces.clear(C.black,0);rt.drawBlendMode('add');
-   for(const a of rt.withInstances(slash))rt.drawSprite(a.sprite,a.imageIndex,a.x-gtMinx(rt)!,a.y-gtMiny(rt)!,a.imageXscale,a.imageYscale,a.imageAngle,C.white,a.imageAlpha);
-   rt.drawBlendMode('normal');surfaces.target(null);surfaces.draw(s.hell_surface,gtMinx(rt)!,gtMiny(rt)!);
+   const left=gtMinx(rt)!,top=gtMiny(rt)!;
+   for(const a of rt.withInstances(slash))rt.drawSprite(a.sprite,a.imageIndex,a.x-left,a.y-top,a.imageXscale,a.imageYscale,a.imageAngle,C.white,a.imageAlpha);
+   rt.drawBlendMode('normal');surfaces.target(null);surfaces.draw(s.hell_surface,left,top);
   },
   cleanup:(s,rt)=>{if(rt.sourceSurfaces?.exists(s.hell_surface))rt.sourceSurfaces.free(s.hell_surface);},
  }};

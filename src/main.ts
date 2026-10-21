@@ -34,7 +34,8 @@ import {GmInstance} from './remake/gm/runtime';
 import {choiceAt,deviceChoice,pointChoice} from './remake/deltarune/battle-end';
 import {VictoryCard,victoryLines} from './game/battle-result';
 // During development, reading an instance variable nothing has set stops the battle with its name (as GameMaker does).
-GmInstance.strict=import.meta.env.DEV;
+// Development builds check every variable read (a Proxy, which slows drawing); ?nostrict measures them as the site runs.
+GmInstance.strict=import.meta.env.DEV&&!new URLSearchParams(location.search).has('nostrict');
 const element=<T extends HTMLElement>(id:string)=>document.getElementById(id)! as T;
 const canvas=element<HTMLCanvasElement>('screen'),ctx=canvas.getContext('2d')!;
 const overlay=element('interactions'),status=element('status'),loading=element('loading'),error=element('error');
@@ -247,7 +248,7 @@ function step(){
  updateControls();
 }
 function loop(time:number){
- const dt=last?(time-last)/1000:0;last=time;clock.advance(dt,step);
+ const dt=last?(time-last)/1000:0;last=time;clock.advance(dt,step,scene==='remake'?2:5);
  if(renderer){if(scene==='theater'&&theaterView)theaterView.draw(ctx,theater);else if(scene==='intro')renderer.intro(frame);else if(scene==='room')renderer.room(chapter,catalog.length);else if(scene==='menu')renderer.clear();else if(scene==='remake'&&remake){
   ctx.drawImage(remakeCanvas,0,0);if(!(remake instanceof EngineBattle)){assets.text(ctx,'JEVIL / ATTACK PRACTICE',320,12,1,'#b899ff','center');assets.text(ctx,JEVIL_PATTERNS[remake.pattern].name.toUpperCase(),320,306,1,'#c5bed2','center');
    const g=remake.rt.globals;for(let i=0;i<3;i++){const x=25+i*205;assets.text(ctx,['KRIS','SUSIE','RALSEI'][i],x,359,1,['#69bcff','#f68bd6','#82e4a3'][i]);assets.text(ctx,`HP ${Math.max(0,g.hp[i+1])} / ${g.maxhp[i+1]}`,x,385,1);assets.text(ctx,`DF ${g.battledf[i]}`,x,410,1,'#a7a0b5');}assets.text(ctx,`TP ${Math.floor(g.tension)}%`,320,442,1,'#ffb05e','center');

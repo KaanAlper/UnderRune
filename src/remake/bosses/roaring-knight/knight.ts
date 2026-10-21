@@ -376,6 +376,7 @@ export function createKnight(object:(name:string)=>GmObjectDef,fountain:GmObject
    onFightBlocked:e=>{e.blockanim=1;},
    scalesFightDamage:(e,hero,rt,d)=>fightDamage(e,hero,rt,d),
    scalesRudeBuster:(e,_rt,d)=>Math.ceil(d*(e.damagereduction+0.65)),
+   scalesRudeBusterImpact:(_e,_rt,d)=>round(d/2),
    onEnemyDamaged:(e,_rt,amount)=>{if(amount>=100)e.stronghurtanim=1;},
    defeatSprite:(_e,hero)=>hero.object.name==='obj_herosusie'?'spr_susie_dw_fell':undefined,
   },
