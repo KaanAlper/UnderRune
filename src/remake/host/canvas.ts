@@ -40,12 +40,28 @@ export class CanvasGraphics implements GmGraphics{
  private rasterSize:{width:number;height:number}|null=null;
  private opaqueFrames=new WeakMap<FrameRef,boolean>();
  private framePixels=new WeakMap<FrameRef,ImageData>();
+ private frameSpans=new WeakMap<ImageData,Int32Array>();
+ private stackedFrames=new WeakMap<FrameRef,Map<number,ImageData>>();
  private solidImages=new WeakSet<ImageData>();
  /** Only proven fully opaque Canvas targets may use native multiply/add compositing. */
  private gpuOpaque=new Set<number>();
  private byteTints=new Map<string,Uint8Array>();
  private radialPatches=new Map<string,ImageData>();
  private radialPatchBytes=0;
+ private triCanvas:HTMLCanvasElement|null=null;
+ private triCtx:CanvasRenderingContext2D|null=null;
+ private pendingCircles=new Map<number,[number,number,number,number,number][]>();
+ private distMaps=new Map<string,{dist:Uint16Array;maxD:number}>();
+ private surfacePeriod=new Map<number,string>();
+ private sampleClip:{r:number;b:number}|null=null;
+ private clearedZero=new Set<number>();
+ private pendingTiles=new Map<number,{args:unknown[];count:number}>();
+ private readonly aLut=new Uint8Array(256);
+ private readonly dLut=new Float64Array(256);
+ private readonly sRLut=new Float64Array(256);
+ private readonly sGLut=new Float64Array(256);
+ private readonly sBLut=new Float64Array(256);
+ private readonly wLut=new Uint8Array(256);
  constructor(ctx:CanvasRenderingContext2D,assets:DrawAssets,readonly view:{x:number;y:number}){
   this.screen=ctx;this.pages=[...assets.pages];this.assets={...assets,pages:this.pages,sprite:name=>this.generated.get(name)??assets.sprite(name)};
   // Scope complete drawing operations, including nine-slice, fonts, fog and cropped/tiled sprites. Nested
@@ -58,7 +74,95 @@ export class CanvasGraphics implements GmGraphics{
  private get targetContext(){return this.raster??(this.targetSurface===null?this.screen:this.surfaces.get(this.targetSurface)!.getContext('2d')!);}
  /** Public context reads observe all queued surface draws; internal drawing keeps raw RGBA authoritative. */
  get ctx(){if(!this.raster&&this.targetSurface!==null)this.flushSurface(this.targetSurface);return this.targetContext;}
+ private flushTiles(id:number){
+  const item=this.pendingTiles.get(id);if(!item)return;
+  this.pendingTiles.delete(id);
+  const {args,count}=item,s=this.assets.sprite(args[0] as string);if(!s)return;
+  const a=args as number[],f=frameAt(s,a[7]??0),w=s.width*a[3],h=s.height*a[4];if(!f||w<=0||h<=0)return;
+  const base=this.readFrame(f);let image=base;
+  if(count>1){
+   let map=this.stackedFrames.get(f);if(!map){map=new Map();this.stackedFrames.set(f,map);}
+   let stacked=map.get(count);
+   if(!stacked){
+    stacked=new ImageData(f.sw,f.sh);const src=base.data,dst=stacked.data;
+    for(let i=0;i<src.length;i+=4){
+     const aByte=src[i+3];if(aByte===0)continue;
+     const sa=aByte/255,rStep=Math.round(src[i]*sa),gStep=Math.round(src[i+1]*sa),bStep=Math.round(src[i+2]*sa),saSq=sa*sa;
+     let r=rStep,g=gStep,b=bStep,al=Math.round(255*saSq);
+     for(let k=1;k<count;k++){r=Math.min(255,r+rStep);g=Math.min(255,g+gStep);b=Math.min(255,b+bStep);al=Math.min(255,Math.round(255*(saSq+al/255)));}
+     dst[i]=r;dst[i+1]=g;dst[i+2]=b;dst[i+3]=al;
+    }
+    this.frameSpans.set(stacked,this.frameSpans.get(base)!);
+    map.set(count,stacked);
+   }
+   image=stacked;
+  }
+  const prevSurf=this.targetSurface,prevMode=this.mode,prevWrite=this.writeAlpha;
+  this.targetSurface=id;this.mode='normal';this.writeAlpha=true;
+  try{
+   const vx=0,vy=0,surface=this.surfaces.get(id)!,width=surface.width,height=surface.height,startX=a[1]-Math.ceil((a[1]-vx)/w)*w,startY=a[2]-Math.ceil((a[2]-vy)/h)*h;
+   const pKey=`${w}:${h}`;
+   if(Number.isInteger(w)&&Number.isInteger(h)&&(w<width||h<height)){
+    const pw=Math.min(width,w),ph=Math.min(height,h);
+    this.sampleClip={r:pw,b:ph};
+    try{for(let y=startY;y<vy+ph;y+=h)for(let x=startX;x<vx+pw;x+=w)this.sample(image,0,0,f.sw,f.sh,x+f.tx*a[3],y+f.ty*a[4],a[3]*(f.tw||f.sw)/f.sw,a[4]*(f.th||f.sh)/f.sh,0xffffff,1,false,count>1);}finally{this.sampleClip=null;}
+    const u32=new Uint32Array(this.pixels(id).data.buffer);
+    for(let y=0;y<ph;y++){const row=y*width;for(let x=pw;x<width;x+=pw)u32.copyWithin(row+x,row,row+Math.min(pw,width-x));}
+    for(let y=ph;y<height;y++)u32.copyWithin(y*width,(y%ph)*width,(y%ph)*width+width);
+    this.dirtySurfaces.add(id);this.surfacePeriod.set(id,pKey);
+   }else{
+    for(let y=startY;y<vy+height;y+=h)for(let x=startX;x<vx+width;x+=w)this.sample(image,0,0,f.sw,f.sh,x+f.tx*a[3],y+f.ty*a[4],a[3]*(f.tw||f.sw)/f.sw,a[4]*(f.th||f.sh)/f.sh,0xffffff,1,false,count>1);
+   }
+  }finally{this.targetSurface=prevSurf;this.mode=prevMode;this.writeAlpha=prevWrite;}
+ }
+ private flushCircles(id:number){
+  this.flushTiles(id);
+  const list=this.pendingCircles.get(id);if(!list||!list.length)return;
+  this.pendingCircles.delete(id);this.surfacePeriod.delete(id);
+  const image=this.pixels(id),w=image.width,h=image.height,cx0=list[0][0],cy0=list[0][1];
+  let sameCenter=true;for(let i=1;i<list.length;i++)if(list[i][0]!==cx0||list[i][1]!==cy0){sameCenter=false;break;}
+  if(sameCenter){
+   const key=`${cx0}:${cy0}:${w}:${h}`;let entry=this.distMaps.get(key);
+   if(!entry){
+    const dist=new Uint16Array(w*h);let maxD=0;
+    for(let y=0,p=0;y<h;y++){const dy=y+.5-cy0,dy2=dy*dy;for(let x=0;x<w;x++,p++){const dx=x+.5-cx0,d=Math.min(65535,Math.round(Math.sqrt(dx*dx+dy2)*8));dist[p]=d;if(d>maxD)maxD=d;}}
+    if(this.distMaps.size>=8)this.distMaps.clear();
+    entry={dist,maxD};this.distMaps.set(key,entry);
+   }
+   const {dist,maxD}=entry,lutR=new Uint8Array(maxD+1).fill(255),lutG=new Uint8Array(maxD+1).fill(255),lutB=new Uint8Array(maxD+1).fill(255),mul=MULTIPLY_BYTES;
+   for(const [,,r,c1,c2] of list){
+    if(r<=0)continue;
+    const r1=c1&255,g1=(c1>>8)&255,b1=(c1>>16)&255,r2=c2&255,g2=(c2>>8)&255,b2=(c2>>16)&255,r8=r*8,limit=Math.min(maxD,Math.floor(r8));
+    for(let d=0;d<=limit;d++){
+     const t=d/r8,cr=Math.round(r1+(r2-r1)*t),cg=Math.round(g1+(g2-g1)*t),cb=Math.round(b1+(b2-b1)*t);
+     lutR[d]=mul[(lutR[d]<<8)|cr];lutG[d]=mul[(lutG[d]<<8)|cg];lutB[d]=mul[(lutB[d]<<8)|cb];
+    }
+   }
+   const data=image.data,u32=new Uint32Array(data.buffer,data.byteOffset,w*h),n=w*h;
+   for(let p=0,i=0;p<n;p++,i+=4){
+    if((u32[p]&0x00ffffff)===0)continue;
+    const d=dist[p];data[i]=mul[(data[i]<<8)|lutR[d]];data[i+1]=mul[(data[i+1]<<8)|lutG[d]];data[i+2]=mul[(data[i+2]<<8)|lutB[d]];
+   }
+   this.dirtySurfaces.add(id);return;
+  }
+  const mul=MULTIPLY_BYTES,data=image.data;
+  for(const [cx,cy,r,c1,c2] of list){
+   if(r<=0)continue;
+   const r1=c1&255,g1=(c1>>8)&255,b1=(c1>>16)&255,r2=c2&255,g2=(c2>>8)&255,b2=(c2>>16)&255;
+   const l=Math.max(0,Math.floor(cx-r)),t=Math.max(0,Math.floor(cy-r)),right=Math.min(w,Math.ceil(cx+r)),b=Math.min(h,Math.ceil(cy+r)),rSq=r*r;
+   for(let y=t;y<b;y++){
+    const dy=y+.5-cy,dy2=dy*dy;
+    for(let x=l;x<right;x++){
+     const dx=x+.5-cx,d2=dx*dx+dy2;if(d2>rSq)continue;
+     const u=Math.sqrt(d2)/r,cr=Math.round(r1+(r2-r1)*u),cg=Math.round(g1+(g2-g1)*u),cb=Math.round(b1+(b2-b1)*u),i=(y*w+x)*4;
+     data[i]=mul[(data[i]<<8)|cr];data[i+1]=mul[(data[i+1]<<8)|cg];data[i+2]=mul[(data[i+2]<<8)|cb];
+    }
+   }
+  }
+  this.dirtySurfaces.add(id);
+ }
  private flushSurface(id:number){
+  this.flushCircles(id);
   if(!this.dirtySurfaces.has(id))return;
   const surface=this.surfaces.get(id),pixels=this.surfacePixels.get(id);
   if(!surface||!pixels)throw Error('Missing dirty surface');
@@ -81,7 +185,7 @@ export class CanvasGraphics implements GmGraphics{
   // The screen is read back only where it is covered (a whole-screen readback costs milliseconds).
   const screen=this.targetSurface===null,image=screen?ctx.getImageData(l,t,r-l,b-t):this.pixels(this.targetSurface!),d=image.data,iw=screen?r-l:w,ox=screen?l:0,oy=screen?t:0;
   for(let y=t;y<b;y++)for(let x=l;x<r;x++)if(inside(x+.5+this.vx,y+.5+this.vy)){const i=((y-oy)*iw+x-ox)*4;d[i]=0;d[i+1]=0;d[i+2]=0;d[i+3]=0;}
-  if(!screen){this.dirtySurfaces.add(this.targetSurface!);}
+  if(!screen){this.dirtySurfaces.add(this.targetSurface!);this.surfacePeriod.delete(this.targetSurface!);}
   else ctx.putImageData(image,l,t);
  }
  eraseRect(x1:number,y1:number,x2:number,y2:number){
@@ -126,7 +230,14 @@ export class CanvasGraphics implements GmGraphics{
   let image=this.framePixels.get(f);if(image)return image;
   const canvas=document.createElement('canvas');canvas.width=f.sw;canvas.height=f.sh;const c=canvas.getContext('2d',{willReadFrequently:true})!;
   c.drawImage(this.assets.pages[f.page],f.sx,f.sy,f.sw,f.sh,0,0,f.sw,f.sh);image=c.getImageData(0,0,f.sw,f.sh);this.framePixels.set(f,image);
-  let solid=true;for(let i=3;i<image.data.length;i+=4)if(image.data[i]!==255){solid=false;break;}if(solid)this.solidImages.add(image);return image;
+  const d=image.data,spans=new Int32Array(f.sh*2);let solid=true;
+  for(let y=0;y<f.sh;y++){
+   let minX=f.sw,maxX=-1,row=y*f.sw*4;
+   for(let x=0;x<f.sw;x++){const a=d[row+x*4+3];if(a!==255)solid=false;if(a!==0){if(x<minX)minX=x;maxX=x;}}
+   spans[y*2]=minX;spans[y*2+1]=maxX;
+  }
+  this.frameSpans.set(image,spans);
+  if(solid)this.solidImages.add(image);return image;
  }
  private directSprite(key:string,args:unknown[]){
   if(this.targetContext.imageSmoothingEnabled)return false;
@@ -140,23 +251,34 @@ export class CanvasGraphics implements GmGraphics{
    const s=this.assets.sprite(args[0] as string);if(!s)return true;
    const a=args as number[],f=frameAt(s,a[7]??0),w=s.width*a[3],h=s.height*a[4];if(!f||w<=0||h<=0)return true;
    const image=this.readFrame(f),vx=this.vx,vy=this.vy,ctx=this.targetContext,width=ctx.canvas.width,height=ctx.canvas.height,startX=a[1]-Math.ceil((a[1]-vx)/w)*w,startY=a[2]-Math.ceil((a[2]-vy)/h)*h;
+   const id=this.targetSurface,pKey=`${w}:${h}`,period=id!==null&&!this.raster?this.surfacePeriod.get(id):undefined;
+   if(id!==null&&(period==='0:0'||period===pKey)&&Number.isInteger(w)&&Number.isInteger(h)&&(w<width||h<height)){
+    const pw=Math.min(width,w),ph=Math.min(height,h);
+    this.sampleClip={r:pw,b:ph};
+    try{for(let y=startY;y<vy+ph;y+=h)for(let x=startX;x<vx+pw;x+=w)this.sample(image,0,0,f.sw,f.sh,x+f.tx*a[3],y+f.ty*a[4],a[3]*(f.tw||f.sw)/f.sw,a[4]*(f.th||f.sh)/f.sh,a[5],a[6]);}finally{this.sampleClip=null;}
+    const u32=new Uint32Array(this.pixels(id).data.buffer);
+    for(let y=0;y<ph;y++){const row=y*width;for(let x=pw;x<width;x+=pw)u32.copyWithin(row+x,row,row+Math.min(pw,width-x));}
+    for(let y=ph;y<height;y++)u32.copyWithin(y*width,(y%ph)*width,(y%ph)*width+width);
+    this.dirtySurfaces.add(id);this.surfacePeriod.set(id,pKey);return true;
+   }
+   if(id!==null)this.surfacePeriod.delete(id);
    // Keep each tile's rectangular coverage, including verified black RGB at alpha zero. Destination-alpha
    // factors must still run for those texels; merging tiles through Canvas source-over would lose them.
    for(let y=startY;y<vy+height;y+=h)for(let x=startX;x<vx+width;x+=w)this.sample(image,0,0,f.sw,f.sh,x+f.tx*a[3],y+f.ty*a[4],a[3]*(f.tw||f.sw)/f.sw,a[4]*(f.th||f.sh)/f.sh,a[5],a[6]);return true;
   }
-  if(key!=='sprite'||args[6]!==0)return false;
-  const s=this.assets.sprite(args[0] as string);if(!s||s.nineSlice?.enabled)return false;
+  if((key!=='sprite'&&key!=='spriteFog')||args[6]!==0)return false;
+  const s=this.assets.sprite(args[0] as string);if(!s||(key==='sprite'&&s.nineSlice?.enabled))return false;
   const a=args as number[],f=frameAt(s,a[1]);if(!f)return true;
   // Point-filtered, axis-aligned quads need no Canvas raster/readback. Atlas trimming, origins, mirrored
   // scale, tint and source alpha are applied to raw texels before the same GPU blend equations.
-  this.sample(this.readFrame(f),0,0,f.sw,f.sh,a[2]+(f.tx-s.originX)*a[4],a[3]+(f.ty-s.originY)*a[5],a[4]*(f.tw||f.sw)/f.sw,a[5]*(f.th||f.sh)/f.sh,a[7],a[8]);return true;
+  this.sample(this.readFrame(f),0,0,f.sw,f.sh,a[2]+(f.tx-s.originX)*a[4],a[3]+(f.ty-s.originY)*a[5],a[4]*(f.tw||f.sw)/f.sw,a[5]*(f.th||f.sh)/f.sh,a[7],a[8],key==='spriteFog');return true;
  }
  /** A rotated, point-filtered sprite straight from its raw texels: each covered pixel centre is mapped back into the
   * frame (the inverse of translate, rotate, scale), tinted and blended. It replaces drawing it on a scratch canvas
   * and reading that back, which cost a readback per sprite (the Knight's slashes draw dozens a frame). */
  private rotatedSprite(key:string,args:unknown[],bounds:()=>Bounds|null){
-  if(key!=='sprite'||this.targetContext.imageSmoothingEnabled)return false;
-  const s=this.assets.sprite(args[0] as string);if(!s||s.nineSlice?.enabled)return false;
+  if((key!=='sprite'&&key!=='spriteFog')||this.targetContext.imageSmoothingEnabled)return false;
+  const s=this.assets.sprite(args[0] as string);if(!s||(key==='sprite'&&s.nineSlice?.enabled))return false;
   const a=args as number[],f=frameAt(s,a[1]);if(!f)return true;
   const xs=a[4],ys=a[5],alpha=Math.max(0,Math.min(1,a[8]));if(!xs||!ys||alpha<=0)return true;
   const area=bounds();if(!area)return false;
@@ -165,14 +287,22 @@ export class CanvasGraphics implements GmGraphics{
   if(right<=left||bottom<=top)return true;
   const tex=this.readFrame(f),src=tex.data,tw=f.tw||f.sw,th=f.th||f.sh,ux=f.sw/tw,uy=f.sh/th;
   const rad=-a[6]*Math.PI/180,co=Math.cos(rad),si=Math.sin(rad),tx=a[2]-this.vx,ty=a[3]-this.vy;
-  const tr=(a[7]&255)/255,tg=((a[7]>>8)&255)/255,tb=((a[7]>>16)&255)/255;
+  const fog=key==='spriteFog',fr=a[7]&255,fg=(a[7]>>8)&255,fb=(a[7]>>16)&255,tr=fr/255,tg=fg/255,tb=fb/255;
   const screen=this.targetSurface===null,image=screen?target.getImageData(left,top,right-left,bottom-top):this.pixels(this.targetSurface!),dst=image.data,iw=screen?right-left:w,ox=screen?left:0,oy=screen?top:0;
-  for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
-   const dx=x+.5-tx,dy=y+.5-ty,lx=(dx*co+dy*si)/xs,ly=(-dx*si+dy*co)/ys;
-   const u=Math.floor((lx+s.originX-f.tx)*ux),v=Math.floor((ly+s.originY-f.ty)*uy);
-   if(u<0||v<0||u>=f.sw||v>=f.sh)continue;
-   const j=(v*f.sw+u)*4,sa=src[j+3]/255*alpha;if(sa===0)continue;
-   this.pixel(dst,((y-oy)*iw+x-ox)*4,Math.round(src[j]*tr),Math.round(src[j+1]*tg),Math.round(src[j+2]*tb),sa);
+  const normalWrite=this.mode==='normal'&&this.writeAlpha,addWrite=this.mode==='add'&&this.writeAlpha,saSq255=255*alpha*alpha;
+  for(let y=top;y<bottom;y++){
+   const dy=y+.5-ty,dySi=dy*si,dyCo=dy*co;
+   for(let x=left;x<right;x++){
+    const dx=x+.5-tx,lx=(dx*co+dySi)/xs,ly=(-dx*si+dyCo)/ys;
+    const u=Math.floor((lx+s.originX-f.tx)*ux),v=Math.floor((ly+s.originY-f.ty)*uy);
+    if(u<0||v<0||u>=f.sw||v>=f.sh)continue;
+    const j=(v*f.sw+u)*4,aByte=src[j+3];if(aByte===0)continue;
+    const sa=aByte===255?alpha:aByte/255*alpha;if(sa===0)continue;
+    const r=fog?fr:Math.round(src[j]*tr),g=fog?fg:Math.round(src[j+1]*tg),b=fog?fb:Math.round(src[j+2]*tb),i=((y-oy)*iw+x-ox)*4;
+    if(sa===1&&normalWrite){dst[i]=r;dst[i+1]=g;dst[i+2]=b;dst[i+3]=255;continue;}
+    if(aByte===255&&addWrite){dst[i]=Math.round(r*sa+dst[i]);dst[i+1]=Math.round(g*sa+dst[i+1]);dst[i+2]=Math.round(b*sa+dst[i+2]);dst[i+3]=Math.round(saSq255+dst[i+3]);continue;}
+    this.pixel(dst,i,r,g,b,sa);
+   }
   }
   if(!screen){this.dirtySurfaces.add(this.targetSurface!);return true;}
   target.putImageData(image,left,top);return true;
@@ -196,6 +326,30 @@ export class CanvasGraphics implements GmGraphics{
  }
  private paint(draw:()=>void,bounds:()=>Bounds|null,key:string,args:unknown[]){
   if(this.raster||(this.targetSurface===null&&(this.mode==='normal'||this.mode==='add'))){draw();return;}
+  if(this.targetSurface!==null){
+   const id=this.targetSurface;
+   if(key==='spriteTiled'&&!this.targetContext.imageSmoothingEnabled&&!this.testAlpha&&this.writeAlpha){
+    const a=args as number[],s=this.assets.sprite(args[0] as string),f=s&&frameAt(s,a[7]??0);
+    if(s&&f&&a[3]>0&&a[4]>0&&a[5]===0xffffff&&a[6]===1&&f.tx>=0&&f.ty>=0&&f.tx+(f.tw||f.sw)<=s.width&&f.ty+(f.th||f.sh)<=s.height){
+     if(this.mode==='normal'&&this.clearedZero.has(id)){
+      this.clearedZero.delete(id);this.pendingTiles.set(id,{args:[...args],count:1});return;
+     }
+     const pending=this.pendingTiles.get(id);
+     if(this.mode==='add'&&pending&&pending.args[0]===args[0]&&pending.args[1]===a[1]&&pending.args[2]===a[2]&&pending.args[3]===a[3]&&pending.args[4]===a[4]&&(pending.args[7]??0)===(a[7]??0)){
+      pending.count++;return;
+     }
+    }
+   }
+   this.clearedZero.delete(id);
+   if(key==='circleColor'&&this.mode==='multiply'&&this.writeAlpha&&(args as number[])[5]===1){
+    this.flushTiles(id);
+    const a=args as number[];let list=this.pendingCircles.get(id);
+    if(!list){list=[];this.pendingCircles.set(id,list);}
+    list.push([a[0]-this.vx,a[1]-this.vy,a[2],a[3],a[4]]);return;
+   }
+   this.flushCircles(id);
+   if(key!=='spriteTiled')this.surfacePeriod.delete(id);
+  }
   if(this.opaqueSurfacePass(draw,key,args))return;
   if(!this.testAlpha&&(this.mode==='add-preserve-alpha'||this.mode==='normal-preserve-alpha'))throw Error('Custom blend drawing requires alpha testing in the Canvas backend');
   this.checkRasterSource(key,args);
@@ -254,6 +408,7 @@ export class CanvasGraphics implements GmGraphics{
   target.putImageData(image,left,top);
  }
  private pixels(id:number){
+  this.flushCircles(id);
   this.gpuOpaque.delete(id);
   const surface=this.surfaces.get(id);if(!surface)throw Error('Missing surface');
   let pixels=this.surfacePixels.get(id);if(!pixels){pixels=surface.getContext('2d')!.getImageData(0,0,surface.width,surface.height);this.surfacePixels.set(id,pixels);}return pixels;
@@ -263,15 +418,9 @@ export class CanvasGraphics implements GmGraphics{
  private opaqueSurfacePass(draw:()=>void,key:string,args:unknown[]){
   if(this.targetSurface===null||!this.writeAlpha)return false;
   const id=this.targetSurface,c=this.targetContext,a=args as number[],w=c.canvas.width,h=c.canvas.height;
-  if(this.mode!=='normal'&&this.dirtySurfaces.has(id))return false;
-  if(key==='spriteTiled'&&(this.mode==='normal'||this.mode==='add')&&a[3]===1&&a[4]===1&&a[5]===0xffffff&&a[6]===1){
-   const s=this.assets.sprite(args[0] as string),f=s&&frameAt(s,a[7]??0);
-   if(!s||!f||f.tx!==0||f.ty!==0||f.sw!==s.width||f.sh!==s.height||f.tw!==f.sw||f.th!==f.sh||!this.solidImages.has(this.readFrame(f)))return false;
-   if(this.mode==='add'&&!this.gpuOpaque.has(id))return false;
-  }else if(key==='circleColor'&&this.mode==='multiply'&&a[5]===1&&this.gpuOpaque.has(id)){
-   if(a[2]<=Math.hypot(Math.max(Math.abs(a[0]),Math.abs(w-a[0])),Math.max(Math.abs(a[1]),Math.abs(h-a[1])))+1)return false;
-  }else return false;
-  c.save();c.globalCompositeOperation=this.mode==='multiply'?'multiply':this.mode==='add'?'lighter':'source-over';draw();c.restore();
+  if(this.mode!=='normal'||this.dirtySurfaces.has(id)||key!=='circleColor'||a[5]!==1)return false;
+  if(!this.gpuOpaque.has(id)&&a[2]<=Math.hypot(Math.max(Math.abs(a[0]),Math.abs(w-a[0])),Math.max(Math.abs(a[1]),Math.abs(h-a[1])))+1)return false;
+  c.save();c.globalCompositeOperation='source-over';draw();c.restore();
   this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.add(id);return true;
  }
  /** Offscreen primitives already have a raw target. Rasterize there with the same pixel-center/top-left rule,
@@ -282,21 +431,36 @@ export class CanvasGraphics implements GmGraphics{
   const left=Math.max(0,Math.floor(Math.min(x1,x2,x3))),top=Math.max(0,Math.floor(Math.min(y1,y2,y3))),right=Math.min(image.width,Math.ceil(Math.max(x1,x2,x3))),bottom=Math.min(image.height,Math.ceil(Math.max(y1,y2,y3)));
   const edge=(ax:number,ay:number,bx:number,by:number)=>det>0?(by<ay||(by===ay&&bx>ax)):(ay<by||(ay===by&&ax>bx));
   const e1=edge(x2,y2,x3,y3),e2=edge(x3,y3,x1,y1),e3=edge(x1,y1,x2,y2),flat=c1===c2&&c2===c3,solid=flat&&alpha>=1&&this.mode==='normal'&&this.writeAlpha;
-  const red=c1&255,green=(c1>>8)&255,blue=(c1>>16)&255;
+  const red=c1&255,green=(c1>>8)&255,blue=(c1>>16)&255,r2=c2&255,g2=(c2>>8)&255,b2=(c2>>16)&255,r3=c3&255,g3=(c3>>8)&255,b3=(c3>>16)&255;
   // triangleColor's intermediate RGBA8 raster quantizes alpha before blending.
-  const sa=Math.round(Math.min(1,alpha)*255)/255;
-  for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
-   const b=((x+.5-x1)*(y3-y1)-(y+.5-y1)*(x3-x1))/det,d=((x2-x1)*(y+.5-y1)-(y2-y1)*(x+.5-x1))/det,a=1-b-d;
-   if(a<0||b<0||d<0||a===0&&!e1||b===0&&!e2||d===0&&!e3)continue;
-   const i=(y*image.width+x)*4;
-   if(solid){data[i]=red;data[i+1]=green;data[i+2]=blue;data[i+3]=255;}
-   else if(flat)this.pixel(data,i,red,green,blue,sa);
-   else this.pixel(data,i,Math.round((c1&255)*a+(c2&255)*b+(c3&255)*d),Math.round(((c1>>8)&255)*a+((c2>>8)&255)*b+((c3>>8)&255)*d),Math.round(((c1>>16)&255)*a+((c2>>16)&255)*b+((c3>>16)&255)*d),sa);
+  const sa=Math.round(Math.min(1,alpha)*255)/255,addWrite=this.mode==='add'&&this.writeAlpha,saSq255=255*sa*sa;
+  for(let y=top;y<bottom;y++){
+   const py=y+.5;let minX=right,maxX=left-1;
+   for(const [ax,ay,bx,by] of [[x1,y1,x2,y2],[x2,y2,x3,y3],[x3,y3,x1,y1]])if((ay<=py&&py<=by)||(by<=py&&py<=ay)){
+    if(ay===by){minX=Math.min(minX,ax,bx);maxX=Math.max(maxX,ax,bx);}else{const ix=ax+(py-ay)*(bx-ax)/(by-ay);minX=Math.min(minX,ix);maxX=Math.max(maxX,ix);}
+   }
+   const xl=Math.max(left,Math.floor(minX)-1),xr=Math.min(right,Math.ceil(maxX)+1);
+   for(let x=xl;x<xr;x++){
+    const b=((x+.5-x1)*(y3-y1)-(py-y1)*(x3-x1))/det,d=((x2-x1)*(py-y1)-(y2-y1)*(x+.5-x1))/det,a=1-b-d;
+    if(a<0||b<0||d<0||a===0&&!e1||b===0&&!e2||d===0&&!e3)continue;
+    const i=(y*image.width+x)*4;
+    if(solid){data[i]=red;data[i+1]=green;data[i+2]=blue;data[i+3]=255;}
+    else if(flat){
+     if(addWrite){data[i]=Math.round(red*sa+data[i]);data[i+1]=Math.round(green*sa+data[i+1]);data[i+2]=Math.round(blue*sa+data[i+2]);data[i+3]=Math.round(saSq255+data[i+3]);}
+     else this.pixel(data,i,red,green,blue,sa);
+    }else{
+     const r=Math.round(red*a+r2*b+r3*d),g=Math.round(green*a+g2*b+g3*d),bl=Math.round(blue*a+b2*b+b3*d);
+     if(addWrite){data[i]=Math.round(r*sa+data[i]);data[i+1]=Math.round(g*sa+data[i+1]);data[i+2]=Math.round(bl*sa+data[i+2]);data[i+3]=Math.round(saSq255+data[i+3]);}
+     else this.pixel(data,i,r,g,bl,sa);
+    }
+   }
   }
   this.dirtySurfaces.add(id);
  }
  surfaceCopy(id:number,x:number,y:number,source:number|null){
   const target=this.surfaces.get(id);if(!target)throw Error('Missing surface');
+  if(source!==null)this.flushCircles(source);
+  this.pendingTiles.delete(id);this.pendingCircles.delete(id);this.surfacePeriod.delete(id);this.clearedZero.delete(id);
   const tx=Math.trunc(x),ty=Math.trunc(y);
   if(source===null&&this.screen.getContextAttributes().alpha===false&&tx<=0&&ty<=0&&tx+this.screen.canvas.width>=target.width&&ty+this.screen.canvas.height>=target.height){
    const c=target.getContext('2d')!;c.save();c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.globalCompositeOperation='source-over';c.drawImage(this.screen.canvas,tx,ty);c.restore();
@@ -321,20 +485,32 @@ export class CanvasGraphics implements GmGraphics{
   this.surfacePart(id,0,0,surface.width,surface.height,x,y,1,1,blend,alpha);
  }
  surfacePart(id:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number){
-  // As in surfaceDraw: on the opaque screen, normal and additive drawing of an untinted part composite the same
+  // As in surfaceDraw: on the opaque screen, normal and additive drawing of a part composite the same
   // visible RGB on the GPU (nearest sampling), without reading the screen back.
-  if(this.opaqueScreenBlend(blend)&&width>0&&height>0&&xscale&&yscale){
+  if(this.opaqueScreenBlend(0xffffff)&&width>0&&height>0&&xscale&&yscale){
    const surface=this.surfaces.get(id);if(!surface)throw Error('Missing surface');
    this.flushSurface(id);
+   let src:HTMLCanvasElement=surface,sx=left,sy=top;
+   if(blend!==0xffffff){
+    const tw=Math.ceil(width),th=Math.ceil(height),canvas=this.triCanvas??(this.triCanvas=document.createElement('canvas'));
+    if(canvas.width<tw)canvas.width=tw;if(canvas.height<th)canvas.height=th;
+    const tc=this.triCtx??(this.triCtx=canvas.getContext('2d')!);
+    tc.save();tc.globalCompositeOperation='copy';tc.drawImage(surface,left,top,width,height,0,0,width,height);
+    tc.globalCompositeOperation='multiply';tc.fillStyle=css(blend);tc.fillRect(0,0,width,height);
+    tc.globalCompositeOperation='destination-in';tc.drawImage(surface,left,top,width,height,0,0,width,height);tc.restore();
+    src=canvas;sx=0;sy=0;
+   }
    const c=this.screen;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.imageSmoothingEnabled=false;
-   c.translate(x-this.vx,y-this.vy);c.scale(xscale,yscale);c.drawImage(surface,left,top,width,height,0,0,width,height);c.restore();return;
+   c.translate(x-this.vx,y-this.vy);c.scale(xscale,yscale);c.drawImage(src,sx,sy,width,height,0,0,width,height);c.restore();return;
   }
+  if(this.targetSurface!==null){this.surfacePeriod.delete(this.targetSurface);this.clearedZero.delete(this.targetSurface);}
   this.sample(this.pixels(id),left,top,width,height,x,y,xscale,yscale,blend,alpha);
  }
  surfaceAddRows(id:number,offsets:Float64Array,blend:number,alpha:number){
   if(this.raster||this.targetSurface===null||this.targetSurface===id||this.mode!=='add'||!this.writeAlpha)return false;
   const source=this.pixels(id),destination=this.pixels(this.targetSurface);
   if(!compositeAddRows(source,destination,offsets,blend,alpha))return false;
+  this.surfacePeriod.delete(this.targetSurface);this.clearedZero.delete(this.targetSurface);
   this.dirtySurfaces.add(this.targetSurface);return true;
  }
  /** Drawing on the game's opaque presentation target in normal or additive mode, untinted: Canvas compositing gives
@@ -342,38 +518,108 @@ export class CanvasGraphics implements GmGraphics{
  private opaqueScreenBlend(blend:number){
   return this.targetSurface===null&&this.screen.getContextAttributes().alpha===false&&!this.testAlpha&&this.writeAlpha&&blend===0xffffff&&(this.mode==='normal'||this.mode==='add');
  }
- private sample(source:ImageData,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number){
+ private sample(source:ImageData,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number,fog=false,preblended=false){
   if(alpha<=0&&(this.mode==='normal'||this.mode==='add'))return;
   if(width<=0||height<=0||!xscale||!yscale)return;
-  const target=this.targetContext,w=target.canvas.width,h=target.canvas.height;x-=this.vx;y-=this.vy;
-  const x2=x+width*xscale,y2=y+height*yscale,l=Math.max(0,Math.ceil(Math.min(x,x2)-.5)),t=Math.max(0,Math.ceil(Math.min(y,y2)-.5)),r=Math.min(w,Math.ceil(Math.max(x,x2)-.5)),b=Math.min(h,Math.ceil(Math.max(y,y2)-.5));if(r<=l||b<=t)return;
+  const target=this.targetContext,w=target.canvas.width,h=target.canvas.height,clipR=this.sampleClip?.r??w,clipB=this.sampleClip?.b??h;x-=this.vx;y-=this.vy;
+  const x2=x+width*xscale,y2=y+height*yscale,l=Math.max(0,Math.ceil(Math.min(x,x2)-.5)),t=Math.max(0,Math.ceil(Math.min(y,y2)-.5)),r=Math.min(clipR,Math.ceil(Math.max(x,x2)-.5)),b=Math.min(clipB,Math.ceil(Math.max(y,y2)-.5));if(r<=l||b<=t)return;
   // The screen is read back only under the drawn rectangle (a whole-screen readback costs milliseconds).
   const screen=this.targetSurface===null,dst=screen?target.getImageData(l,t,r-l,b-t):this.pixels(this.targetSurface!),pixels=source===dst?source.data.slice():source.data,iw=screen?r-l:w,ox=screen?l:0,oy=screen?t:0;
-  const ar=Math.max(0,Math.min(1,alpha)),tr=(blend&255)/255,tg=((blend>>8)&255)/255,tb=((blend>>16)&255)/255;
-  const columns=new Int32Array(r-l);for(let xx=l;xx<r;xx++)columns[xx-l]=Math.max(0,Math.min(source.width-1,Math.floor(left+(xx+.5-x)/xscale)))*4;
+  const ar=Math.max(0,Math.min(1,alpha)),fr=blend&255,fg=(blend>>8)&255,fb=(blend>>16)&255,tr=fr/255,tg=fg/255,tb=fb/255;
   const data=dst.data,mode=this.mode,subtract=mode==='subtract',multiply=mode==='multiply',destSource=mode==='dest-alpha-add'||mode==='dest-alpha-copy',destZero=mode==='dest-alpha-copy',destAlpha=mode==='dest-alpha-add',add=mode==='add'||mode==='add-preserve-alpha',separate=mode==='add-preserve-alpha'||mode==='normal-preserve-alpha',test=this.testAlpha,write=this.writeAlpha;
-  const tintKey=blend+':'+(mode==='add'?ar:1),ta=mode==='add'?ar:1;let tint=this.byteTints.get(tintKey);
-  if(!tint){tint=new Uint8Array(768);for(let n=0;n<256;n++){tint[n]=Math.round(n*tr*ta);tint[n+256]=Math.round(n*tg*ta);tint[n+512]=Math.round(n*tb*ta);}if(this.byteTints.size>=256)this.byteTints.clear();this.byteTints.set(tintKey,tint);}
-  // Opaque atlas tiles (the roar's five full-screen flow passes) need no floating-point alpha math.
-  if(this.solidImages.has(source)&&ar===1&&blend===0xffffff&&write&&(mode==='normal'||mode==='add')){
-   for(let yy=t;yy<b;yy++){
-    const row=Math.max(0,Math.min(source.height-1,Math.floor(top+(yy+.5-y)/yscale)))*source.width*4;let i=((yy-oy)*iw+l-ox)*4;
-    for(let col=0;col<columns.length;col++,i+=4){const j=row+columns[col];if(add){data[i]+=pixels[j];data[i+1]+=pixels[j+1];data[i+2]+=pixels[j+2];}else{data[i]=pixels[j];data[i+1]=pixels[j+1];data[i+2]=pixels[j+2];}data[i+3]=255;}
+  const skipZero=test||(!subtract&&!multiply&&!destSource&&!separate),normalWrite=mode==='normal'&&write,saSq=ar*ar,invAr=1-ar;
+  if(!fog&&!preblended&&xscale===1&&yscale===1&&left===0&&top===0&&x===0&&y===0&&l===0&&t===0&&ox===0&&oy===0&&source.width===iw&&r===iw&&b===source.height&&ar===1&&blend===0xffffff&&write&&mode==='add'&&skipZero){
+   const src32=new Uint32Array(pixels.buffer,pixels.byteOffset,iw*b),n=iw*b;
+   for(let p=0,i=0;p<n;p++,i+=4){
+    if(src32[p]===0)continue;
+    const aByte=pixels[i+3];if(aByte===0)continue;
+    if(aByte===255){data[i]+=pixels[i];data[i+1]+=pixels[i+1];data[i+2]+=pixels[i+2];data[i+3]=255;continue;}
+    const sa=aByte/255;
+    data[i]=Math.round(pixels[i]*sa+data[i]);data[i+1]=Math.round(pixels[i+1]*sa+data[i+1]);data[i+2]=Math.round(pixels[i+2]*sa+data[i+2]);
+    data[i+3]=Math.round(255*(sa*sa+data[i+3]/255));
    }
    if(!screen)this.dirtySurfaces.add(this.targetSurface!);else target.putImageData(dst,l,t);return;
   }
+  const columns=new Int32Array(r-l);for(let xx=l;xx<r;xx++)columns[xx-l]=Math.max(0,Math.min(source.width-1,Math.floor(left+(xx+.5-x)/xscale)))*4;
+  const ta=add?ar:1,tintKey=blend+':'+ta;let tint=this.byteTints.get(tintKey);
+  if(!tint){tint=new Uint8Array(768);for(let n=0;n<256;n++){tint[n]=Math.round(n*tr*ta);tint[n+256]=Math.round(n*tg*ta);tint[n+512]=Math.round(n*tb*ta);}if(this.byteTints.size>=256)this.byteTints.clear();this.byteTints.set(tintKey,tint);}
+  // Opaque atlas tiles (the roar's five full-screen flow passes and the star cone's four flow passes) need no floating-point alpha math.
+  if(!fog&&!preblended&&this.solidImages.has(source)&&ar===1&&blend===0xffffff&&write&&(mode==='normal'||mode==='add'||mode==='add-preserve-alpha')){
+   const preserve=mode==='add-preserve-alpha';
+   for(let yy=t;yy<b;yy++){
+    const row=Math.max(0,Math.min(source.height-1,Math.floor(top+(yy+.5-y)/yscale)))*source.width*4;let i=((yy-oy)*iw+l-ox)*4;
+    for(let col=0;col<columns.length;col++,i+=4){const j=row+columns[col];if(add){data[i]+=pixels[j];data[i+1]+=pixels[j+1];data[i+2]+=pixels[j+2];}else{data[i]=pixels[j];data[i+1]=pixels[j+1];data[i+2]=pixels[j+2];}if(!preserve)data[i+3]=255;}
+   }
+   if(!screen)this.dirtySurfaces.add(this.targetSurface!);else target.putImageData(dst,l,t);return;
+  }
+  if(!fog&&!preblended&&blend===0&&ar===1&&mode==='normal'&&!write&&skipZero){
+   const dst32=new Uint32Array(data.buffer,data.byteOffset,dst.width*dst.height),spans=this.frameSpans.get(source);
+   for(let yy=t;yy<b;yy++){
+    const sy=Math.max(0,Math.min(source.height-1,Math.floor(top+(yy+.5-y)/yscale)));
+    if(spans&&spans[sy*2]>spans[sy*2+1])continue;
+    const row=sy*source.width*4;let p=(yy-oy)*iw+l-ox;
+    for(let col=0;col<columns.length;col++,p++){
+     if((dst32[p]&0x00ffffff)===0)continue;
+     const j=row+columns[col],aByte=pixels[j+3];if(aByte===0)continue;
+     if(aByte===255){dst32[p]&=0xff000000;continue;}
+     const i=p*4,df=1-aByte/255;data[i]=Math.round(data[i]*df);data[i+1]=Math.round(data[i+1]*df);data[i+2]=Math.round(data[i+2]*df);
+    }
+   }
+   if(!screen)this.dirtySurfaces.add(this.targetSurface!);else target.putImageData(dst,l,t);return;
+  }
+  const aLut=this.aLut,dLut=this.dLut,sR=this.sRLut,sG=this.sGLut,sB=this.sBLut,wLut=this.wLut;
+  const useLut=normalWrite&&ar<1&&(r-l)*(b-t)>256;
+  if(useLut){
+   const wAr=255*ar;
+   for(let v=0;v<256;v++){
+    const dv=v*invAr;dLut[v]=dv;aLut[v]=Math.min(255,Math.round(255*(saSq+(v/255)*invAr)));
+    sR[v]=(fog?fr:v*tr)*ar;sG[v]=(fog?fg:v*tg)*ar;sB[v]=(fog?fb:v*tb)*ar;wLut[v]=Math.round(wAr+dv);
+   }
+  }
+  const spans=skipZero?this.frameSpans.get(source):undefined,whiteTint=blend===0xffffff;
   // Surface textures use nearest sampling. Keep raw RGB even when the sampled alpha is zero: subtract and
   // destination-alpha factors may read it, unlike Canvas drawImage's premultiplied intermediate.
   for(let yy=t;yy<b;yy++){
-   const sy=Math.max(0,Math.min(source.height-1,Math.floor(top+(yy+.5-y)/yscale))),row=sy*source.width*4;let i=((yy-oy)*iw+l-ox)*4;
-   for(let col=0;col<columns.length;col++,i+=4){
-    const j=row+columns[col],sa=pixels[j+3]/255*ar;if(sa===0&&(test||(!subtract&&!multiply&&!destSource&&!separate)))continue;
-    if((sa===1&&mode==='normal')||(pixels[j+3]===255&&mode==='add')){
-     if(add){data[i]+=tint[pixels[j]];data[i+1]+=tint[256+pixels[j+1]];data[i+2]+=tint[512+pixels[j+2]];}
-     else{data[i]=tint[pixels[j]];data[i+1]=tint[256+pixels[j+1]];data[i+2]=tint[512+pixels[j+2]];}
-     if(write)data[i+3]=add?Math.round(255*sa*sa+data[i+3]):255;continue;
+   const sy=Math.max(0,Math.min(source.height-1,Math.floor(top+(yy+.5-y)/yscale)));
+   let cStart=0,cEnd=columns.length;
+   if(spans){
+    const minU=spans[sy*2],maxU=spans[sy*2+1];if(minU>maxU)continue;
+    if(xscale>0){
+     cStart=Math.max(0,Math.floor(x+(minU-left)*xscale-.5-l));
+     cEnd=Math.min(cEnd,Math.ceil(x+(maxU+1-left)*xscale-.5-l)+1);
     }
-    const red=pixels[j]*tr,green=pixels[j+1]*tg,blue=pixels[j+2]*tb,da=data[i+3]/255;
+   }
+   const row=sy*source.width*4;let i=((yy-oy)*iw+l+cStart-ox)*4;
+   for(let col=cStart;col<cEnd;col++,i+=4){
+    const j=row+columns[col],aByte=pixels[j+3];if(aByte===0&&skipZero)continue;
+    if(preblended){data[i]=pixels[j];data[i+1]=pixels[j+1];data[i+2]=pixels[j+2];data[i+3]=aByte;continue;}
+    const sa=aByte===255?ar:aByte/255*ar;if(sa===0&&skipZero)continue;
+    const r0=fog?255:pixels[j],g0=fog?255:pixels[j+1],b0=fog?255:pixels[j+2];
+    if((sa===1&&(mode==='normal'||mode==='normal-preserve-alpha'))||(aByte===255&&(mode==='add'||mode==='add-preserve-alpha'))){
+     if(add){data[i]+=tint[r0];data[i+1]+=tint[256+g0];data[i+2]+=tint[512+b0];}
+     else{data[i]=tint[r0];data[i+1]=tint[256+g0];data[i+2]=tint[512+b0];}
+     if(write){
+      if(mode==='normal')data[i+3]=255;
+      else if(mode==='add')data[i+3]=Math.round(255*saSq+data[i+3]);
+      else if(sa!==1)data[i+3]=Math.round(255*(sa*(data[i+3]/255)));
+     }
+     continue;
+    }
+    if(aByte===255&&normalWrite){
+     if(useLut){
+      if(whiteTint&&r0===255&&g0===255&&b0===255){
+       data[i]=wLut[data[i]];data[i+1]=wLut[data[i+1]];data[i+2]=wLut[data[i+2]];data[i+3]=aLut[data[i+3]];continue;
+      }
+      data[i]=Math.round(sR[r0]+dLut[data[i]]);data[i+1]=Math.round(sG[g0]+dLut[data[i+1]]);data[i+2]=Math.round(sB[b0]+dLut[data[i+2]]);
+      data[i+3]=aLut[data[i+3]];
+      continue;
+     }
+     const red=fog?fr:r0*tr,green=fog?fg:g0*tg,blue=fog?fb:b0*tb,da=data[i+3]/255;
+     data[i]=Math.round(red*ar+data[i]*invAr);data[i+1]=Math.round(green*ar+data[i+1]*invAr);data[i+2]=Math.round(blue*ar+data[i+2]*invAr);
+     data[i+3]=Math.round(255*(saSq+da*invAr));
+     continue;
+    }
+    const red=fog?fr:r0*tr,green=fog?fg:g0*tg,blue=fog?fb:b0*tb,da=data[i+3]/255;
     if(subtract){data[i]=Math.round(data[i]*(1-red/255));data[i+1]=Math.round(data[i+1]*(1-green/255));data[i+2]=Math.round(data[i+2]*(1-blue/255));if(write)data[i+3]=Math.round(data[i+3]*(1-sa));}
     else if(multiply){data[i]=Math.round(data[i]*red/255);data[i+1]=Math.round(data[i+1]*green/255);data[i+2]=Math.round(data[i+2]*blue/255);if(write)data[i+3]=Math.round(data[i+3]*sa);}
     else{
@@ -390,29 +636,50 @@ export class CanvasGraphics implements GmGraphics{
  triangleColor(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,c1:number,c2:number,c3:number,alpha:number){
   x1-=this.vx;x2-=this.vx;x3-=this.vx;y1-=this.vy;y2-=this.vy;y3-=this.vy;
   const det=(x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);if(!det||alpha<=0)return;
+  if(!this.raster&&this.targetSurface===null&&c2===c3&&c1!==c2){
+   const dx=x3-x2,dy=y3-y2,len2=dx*dx+dy*dy;
+   if(len2>0){
+    const t=((x1-x2)*dx+(y1-y2)*dy)/len2,px=x2+t*dx,py=y2+t*dy;
+    if(px!==x1||py!==y1){
+     const ctx=this.targetContext;ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
+     const g=ctx.createLinearGradient(x1,y1,px,py);g.addColorStop(0,css(c1));g.addColorStop(1,css(c2));
+     ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.lineTo(x3,y3);ctx.closePath();ctx.fillStyle=g;ctx.fill();ctx.restore();return;
+    }
+   }
+  }
   const ctx=this.targetContext,left=Math.max(0,Math.floor(Math.min(x1,x2,x3))),top=Math.max(0,Math.floor(Math.min(y1,y2,y3))),right=Math.min(this.rasterSize?.width??ctx.canvas.width,Math.ceil(Math.max(x1,x2,x3))),bottom=Math.min(this.rasterSize?.height??ctx.canvas.height,Math.ceil(Math.max(y1,y2,y3)));
-  if(right<=left||bottom<=top)return;
-  const canvas=document.createElement('canvas');canvas.width=right-left;canvas.height=bottom-top;const c=canvas.getContext('2d')!,image=c.createImageData(canvas.width,canvas.height),data=image.data;
+  const tw=right-left,th=bottom-top;if(tw<=0||th<=0)return;
+  const canvas=this.triCanvas??(this.triCanvas=document.createElement('canvas'));
+  if(canvas.width<tw)canvas.width=tw;if(canvas.height<th)canvas.height=th;
+  const c=this.triCtx??(this.triCtx=canvas.getContext('2d')!),image=new ImageData(tw,th),data=image.data;
   const edge=(ax:number,ay:number,bx:number,by:number)=>det>0?(by<ay||(by===ay&&bx>ax)):(ay<by||(ay===by&&ax>bx));
   const e1=edge(x2,y2,x3,y3),e2=edge(x3,y3,x1,y1),e3=edge(x1,y1,x2,y2);
-  for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
-   const b=((x+.5-x1)*(y3-y1)-(y+.5-y1)*(x3-x1))/det,d=((x2-x1)*(y+.5-y1)-(y2-y1)*(x+.5-x1))/det,a=1-b-d;
-   if(a<0||b<0||d<0||a===0&&!e1||b===0&&!e2||d===0&&!e3)continue;
-   const i=((y-top)*canvas.width+x-left)*4;
-   for(let ch=0;ch<3;ch++)data[i+ch]=Math.round(((c1>>(ch*8))&255)*a+((c2>>(ch*8))&255)*b+((c3>>(ch*8))&255)*d);
-   data[i+3]=Math.round(Math.min(1,alpha)*255);
+  const r1=c1&255,g1=(c1>>8)&255,b1=(c1>>16)&255,r2=c2&255,g2=(c2>>8)&255,b2=(c2>>16)&255,r3=c3&255,g3=(c3>>8)&255,b3=(c3>>16)&255,sa=Math.round(Math.min(1,alpha)*255);
+  for(let y=top;y<bottom;y++){
+   const py=y+.5;let minX=right,maxX=left-1;
+   for(const [ax,ay,bx,by] of [[x1,y1,x2,y2],[x2,y2,x3,y3],[x3,y3,x1,y1]])if((ay<=py&&py<=by)||(by<=py&&py<=ay)){
+    if(ay===by){minX=Math.min(minX,ax,bx);maxX=Math.max(maxX,ax,bx);}else{const ix=ax+(py-ay)*(bx-ax)/(by-ay);minX=Math.min(minX,ix);maxX=Math.max(maxX,ix);}
+   }
+   const xl=Math.max(left,Math.floor(minX)-1),xr=Math.min(right,Math.ceil(maxX)+1);
+   for(let x=xl;x<xr;x++){
+    const b=((x+.5-x1)*(y3-y1)-(py-y1)*(x3-x1))/det,d=((x2-x1)*(py-y1)-(y2-y1)*(x+.5-x1))/det,a=1-b-d;
+    if(a<0||b<0||d<0||a===0&&!e1||b===0&&!e2||d===0&&!e3)continue;
+    const i=((y-top)*tw+x-left)*4;
+    data[i]=Math.round(r1*a+r2*b+r3*d);data[i+1]=Math.round(g1*a+g2*b+g3*d);data[i+2]=Math.round(b1*a+b2*b+b3*d);data[i+3]=sa;
+   }
   }
-  c.putImageData(image,0,0);ctx.save();ctx.globalAlpha=1;ctx.drawImage(canvas,left,top);ctx.restore();
+  c.putImageData(image,0,0);ctx.save();ctx.globalAlpha=1;ctx.drawImage(canvas,0,0,tw,th,left,top,tw,th);ctx.restore();
  }
  surfaceClear(color:number,alpha:number){
   const ctx=this.targetContext;
   if(this.targetSurface!==null){
+   this.pendingTiles.delete(this.targetSurface);this.pendingCircles.delete(this.targetSurface);
    this.gpuOpaque.delete(this.targetSurface);
    const image=this.surfacePixels.get(this.targetSurface)??ctx.createImageData(ctx.canvas.width,ctx.canvas.height),data=image.data,a=Math.round(Math.max(0,Math.min(1,alpha))*255);
    // Transparent black is the common per-frame clear for effect surfaces. Reuse its backing store.
-   if(color===0&&a===0)data.fill(0);
-   else for(let i=0;i<data.length;i+=4){data[i]=color&255;data[i+1]=(color>>8)&255;data[i+2]=(color>>16)&255;data[i+3]=a;}
-   this.surfacePixels.set(this.targetSurface,image);this.dirtySurfaces.add(this.targetSurface);return;
+   if(color===0&&a===0){data.fill(0);this.clearedZero.add(this.targetSurface);}
+   else{new Uint32Array(data.buffer).fill(((a<<24)|(color&0xffffff))>>>0);this.clearedZero.delete(this.targetSurface);}
+   this.surfacePixels.set(this.targetSurface,image);this.dirtySurfaces.add(this.targetSurface);this.surfacePeriod.set(this.targetSurface,'0:0');return;
   }
   ctx.save();ctx.globalCompositeOperation='source-over';ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.globalAlpha=alpha;ctx.fillStyle=css(color);ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.restore();
  }
@@ -421,7 +688,7 @@ export class CanvasGraphics implements GmGraphics{
   const surface=this.surfaces.get(id);if(!surface)throw Error('Missing sprite surface');const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d')!.drawImage(surface,left,top,width,height,0,0,width,height);
   const page=this.pages.length;this.pages.push(canvas);this.generatedPages.set(name,page);this.generated.set(name,{originX,originY,width,height,frames:[{page,sx:0,sy:0,sw:width,sh:height,tx:0,ty:0,tw:width,th:height}]});
  }
- surfaceFree(id:number){this.surfaces.delete(id);this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.delete(id);}
+ surfaceFree(id:number){this.surfaces.delete(id);this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.delete(id);this.pendingTiles.delete(id);this.pendingCircles.delete(id);this.surfacePeriod.delete(id);this.clearedZero.delete(id);}
  screenSprite(name:string,width:number,height:number){
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.getContext('2d')!.drawImage(this.screen.canvas,0,0,width,height,0,0,width,height);
   const page=this.pages.length;this.pages.push(canvas);this.generatedPages.set(name,page);this.generated.set(name,{originX:0,originY:0,width,height,frames:[{page,sx:0,sy:0,sw:width,sh:height,tx:0,ty:0,tw:width,th:height}]});
@@ -519,7 +786,7 @@ export class CanvasGraphics implements GmGraphics{
  }
  surfaceResize(id:number,width:number,height:number){
   const s=this.surfaces.get(id);if(!s)throw Error('Missing surface');
-  if(s.width!==width||s.height!==height){s.width=width;s.height=height;this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.delete(id);}
+  if(s.width!==width||s.height!==height){s.width=width;s.height=height;this.surfacePixels.delete(id);this.dirtySurfaces.delete(id);this.gpuOpaque.delete(id);this.pendingTiles.delete(id);this.pendingCircles.delete(id);this.surfacePeriod.delete(id);this.clearedZero.delete(id);}
  }
  circle(x:number,y:number,r:number,color:number,alpha:number,outline:boolean){
   if(r<=0)return;const c=this.targetContext;c.save();c.globalAlpha=Math.max(0,Math.min(1,alpha));c.beginPath();c.arc(x-this.vx,y-this.vy,r,0,Math.PI*2);
