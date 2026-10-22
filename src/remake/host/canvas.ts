@@ -593,6 +593,9 @@ export class CanvasGraphics implements GmGraphics{
    for(let col=cStart;col<cEnd;col++,i+=4){
     const j=row+columns[col],aByte=pixels[j+3];if(aByte===0&&skipZero)continue;
     if(preblended){data[i]=pixels[j];data[i+1]=pixels[j+1];data[i+2]=pixels[j+2];data[i+3]=aByte;continue;}
+    // A zero-alpha mask contributes no RGB in either separate-alpha blend. It still clears
+    // destination alpha when enabled; do that directly instead of blending four channels.
+    if(aByte===0&&separate){if(write)data[i+3]=0;continue;}
     const sa=aByte===255?ar:aByte/255*ar;if(sa===0&&skipZero)continue;
     const r0=fog?255:pixels[j],g0=fog?255:pixels[j+1],b0=fog?255:pixels[j+2];
     if((sa===1&&(mode==='normal'||mode==='normal-preserve-alpha'))||(aByte===255&&(mode==='add'||mode==='add-preserve-alpha'))){

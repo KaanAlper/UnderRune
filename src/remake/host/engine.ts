@@ -28,7 +28,7 @@ import type {installNeoHost} from './neo';
 import type {installChapter2BossHost} from './chapter2-bosses';
 import {initializeChapter2SmallFaces} from '../deltarune/chapter2-enemy';
 import {BattleRunTracker,type RunRecord} from '../../game/battle-run';
-import {GAME_END_ROOM,RETRY_ROOM,endBattle,gotoGameOverRoom,isGameOverRoom} from '../deltarune/battle-end';
+import {GAME_END_ROOM,RETRY_ROOM,endBattle,gotoGameOverRoom,hasCommittedGiveUp,isGameOverRoom} from '../deltarune/battle-end';
 
 /** The encounters whose enemies run on the engine, with their scr_encountersetup number and room. */
 const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:(rt:GmRuntime)=>void}>={
@@ -193,7 +193,7 @@ export class EngineBattle{
   if(!this.ending)for(const [e,h] of withHook(rt,'battleOutcome')){const how=h(e,rt);if(how){this.end(how);this.outcome=how;break;}}
   if(this.ending==='victory'&&!rt.exists(endBattle))this.outcome='victory';
   if(isGameOverRoom(room)){rt.pendingRoom=null;if(!this.ending)this.end('defeat');gotoGameOverRoom(rt,room!);}
-  if(room===RETRY_ROOM||room===GAME_END_ROOM){this.afterDefeat=room===RETRY_ROOM?'retry':'menu';this.outcome='defeat';}
+  if(room===RETRY_ROOM||room===GAME_END_ROOM||(this.ending==='defeat'&&hasCommittedGiveUp(rt))){this.afterDefeat=room===RETRY_ROOM?'retry':'menu';this.outcome='defeat';}
  }
  /** Skip presentation only once the source has committed victory (including its reward setup). */
  private skipVictory(){

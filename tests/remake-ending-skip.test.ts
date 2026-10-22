@@ -96,4 +96,37 @@ describe.skipIf(!hasSourceText())('battle ending confirmation',()=>{
   const b=battle();b.rt.globals.chapter=chapter;gotoGameOverRoom(b.rt,'PLACE_FAILURE');
   expect(b.rt.first(deviceFailure)!.gamepad_controls).toEqual([32769,32770,32771,32772,32773,32775,32774,32776,32777,32778,32779,32780,32781,32782,32783,32784]);
  });
+ for(const chapter of [1,2,3])it(`returns chapter ${chapter}'s committed give-up to the menu without waiting for the closing voice`,()=>{
+  const b=battle();gameOver(b.rt);b.step();
+  b.rt.globals.chapter=chapter;gotoGameOverRoom(b.rt,'PLACE_FAILURE');
+  const failure=b.rt.first(deviceFailure)!;failure.EVENT=5;b.rt.globals.choice=1;
+  const result=b.result;b.rt.globals.flag[1045]=4;
+  b.step();
+  expect(b.afterDefeat).toBe('menu');expect(b.outcome).toBe('defeat');
+  expect(b.result).toBe(result);expect(b.result).toBeNull();
+  expect(b.session().flags[1045]).toBe(4);
+  expect(failure.EVENT).toBe(27);expect(b.rt.exists(writer)).toBe(true);
+ });
+ it('returns the Knight GO FORWARD choice to the menu after applying its source side effects',()=>{
+  const b=battle();gameOver(b.rt);b.step();
+  const g=b.rt.globals;g.chapter=3;g.tempflag[93]=1;g.secretbossattempts=1;
+  gotoGameOverRoom(b.rt,'PLACE_FAILURE');
+  const failure=b.rt.first(deviceFailure)!;failure.knight_mode_con=52;g.choice=1;
+  b.step();
+  expect(b.afterDefeat).toBe('menu');expect(b.outcome).toBe('defeat');
+  expect(failure.knight_mode_con).toBe(56);expect(g.tempflag[90]).toBe(1);expect(g.flag[1047]).toBe(2);
+  expect(b.session().globals.knight_battle_losses).toBe(1);
+ });
+ for(const state of [{chapter:1,event:1,choice:1},{chapter:2,event:3,choice:1},{chapter:3,event:5,choice:0},{chapter:3,event:-1,choice:1,knight:51},{chapter:3,event:-1,choice:0,knight:52}]){
+  it(`keeps the failure screen for an uncommitted or retry choice ${JSON.stringify(state)}`,()=>{
+   const b=battle();gameOver(b.rt);b.step();
+   const g=b.rt.globals;g.chapter=state.chapter;
+   if(state.knight!==undefined){g.tempflag[93]=1;g.secretbossattempts=1;}
+   gotoGameOverRoom(b.rt,'PLACE_FAILURE');
+   const failure=b.rt.first(deviceFailure)!;failure.EVENT=state.event;
+   if(state.knight!==undefined)failure.knight_mode_con=state.knight;
+   g.choice=state.choice;b.step();
+   expect(b.outcome).toBeNull();expect(b.afterDefeat).toBeNull();
+  });
+ }
 });

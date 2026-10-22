@@ -364,6 +364,15 @@ export const deviceChoice:GmObjectDef={name:'DEVICE_CHOICE',index:317,sprite:'IM
  },
 }};
 
+/** The browser leaves for its menu once NO / GO FORWARD is committed. The source ending keeps its own voice,
+ * music and fade timing; observing its state here does not advance it or consume input/randomness. */
+export function hasCommittedGiveUp(rt:GmRuntime):boolean{
+ if(rt.globals.choice!==1)return false;
+ return rt.all(deviceFailure).some(s=>'knight_mode' in s&&s.knight_mode===1
+  ?s.knight_mode_con===55||s.knight_mode_con===56
+  :s.EVENT===26||s.EVENT===27||s.EVENT===28);
+}
+
 /** For pointers (the host): which of the failure screen's choices is at (x, y) in the 320x240 view, if any. */
 export function choiceAt(rt:GmRuntime,x:number,y:number):number|null{
  const c=rt.first(deviceChoice);if(!c||c.FINISH!==0)return null;

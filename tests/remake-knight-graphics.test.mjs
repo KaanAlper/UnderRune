@@ -4,6 +4,29 @@ import {existsSync} from 'node:fs';
 import {chromium} from '@playwright/test';
 import {createServer} from 'vite';
 
+test('transparent separate-alpha texels keep RGB and update alpha without per-channel rounding',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');
+  const canvas=document.createElement('canvas');canvas.width=8;canvas.height=8;
+  const g=new CanvasGraphics(canvas.getContext('2d'),{pages:[],sprite:()=>undefined,font:()=>undefined},{x:0,y:0});
+  g.surfaceCreate(1,8,8);g.surfaceCreate(2,8,8);g.surfaceTarget(1);g.surfaceClear(0x123456,0);
+  const rows=[];
+  for(const mode of ['normal-preserve-alpha','add-preserve-alpha'])for(const write of [true,false]){
+   g.surfaceTarget(2);g.surfaceClear(0xa06020,.5);g.blendMode(mode);g.alphaWrite(write);
+   // Warm the tint table before counting work in the transparent part of the explosion mask.
+   g.surfacePart(1,0,0,8,8,0,0,1,1,0xffffff,1);g.surfaceClear(0xa06020,.5);
+   const round=Math.round;let calls=0;Math.round=value=>{calls++;return round(value);};
+   try{g.surfacePart(1,0,0,8,8,0,0,1,1,0xffffff,1);}finally{Math.round=round;}
+   rows.push({mode,write,calls,pixels:Array.from(g.pixels(2).data)});
+  }
+  return rows;
+ });
+ for(const row of result){
+  assert.deepEqual(row.pixels,Array.from({length:64},()=>[32,96,160,row.write?0:128]).flat());
+  assert.equal(row.calls,0,`${row.mode}, alpha writes ${row.write}: transparent RGB still blended`);
+ }
+});
+
 test('clearing a previously opaque Canvas surface invalidates its native-compositing eligibility',async()=>{
  const result=await page.evaluate(async()=>{
   const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');const c=document.createElement('canvas');c.width=4;c.height=4;

@@ -36,9 +36,10 @@ test('NO on the failure screen, taken with the pointer, returns to the menu',asy
  // NO stands right of centre at (190, 180) in the failure screen's 320x240 view.
  const box=(await page.locator('#screen').boundingBox())!;
  await page.mouse.click(box.x+box.width*(196/320),box.y+box.height*(186/240));
- await page.waitForTimeout(400);await page.locator('#screen').screenshot({path:'test-results/battle-end-no.png'});
- for(let i=0;i<40&&!(await page.locator('#boss-select').isVisible());i++){await page.keyboard.press('z');await page.waitForTimeout(300);}
- await expect(page.locator('#boss-select')).toBeVisible({timeout:15000});
+ // Confirming NO is enough: the browser menu does not wait for the game's closing voice/music.
+ await expect(page.locator('#boss-select')).toBeVisible({timeout:1000});
+ await expect(page.locator('#outcome')).toBeHidden();
+ await page.locator('#screen').screenshot({path:'test-results/battle-end-no.png'});
 });
 
 test('a won battle fades out and shows the result',async({page})=>{
