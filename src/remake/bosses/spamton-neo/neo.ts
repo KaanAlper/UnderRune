@@ -599,6 +599,7 @@ export const spamtonNeo:HookedDef=defineEnemy({name:'obj_spamton_neo_enemy',inde
  acts,actsDone,afterStep:endings,
  monsterPosition:(s,rt)=>[s.x+rt.spriteWidth(s)/3,s.y+rt.spriteHeight(s)/2],
  hooks:{
+  canSkipEndingText:s=>s.endcon>0,
   drawActOverlay:(n,c,rt)=>{if(n.savemeactcon>0)rt.drawSprite(n.savemeactcon<=2?'spr_headralsei':n.savemeactcon<=4?'spr_headsusie':'spr_headnoelle',0,c.xx+30,c.yy+380,1,1,0,c.noeblend,1);},
   // A FIGHT hit electrifies him (obj_heroparent Alarm 1).
   onHeroHit:n=>{Object.assign(n,{partmode:40,shockthreshold:15,shocktimer:9999,hurttimer2:10});},

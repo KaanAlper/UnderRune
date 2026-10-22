@@ -40,9 +40,9 @@ test('public PLAY opens commands with the party, equipment and continuous battle
  expect(failures).toEqual([]);expect(native).toEqual([]);
 });
 test('unavailable encounters still open equipment previews without launching a fake fight',async({page})=>{
- // Every Chapter 1 boss is playable; Chapter 2's Queen is still in development.
- await menu(page,2);await boss(page,"ch2-59","Queen");
- const prep=page.getByRole('dialog',{name:'Queen',exact:true});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
+ // Unported encounters stay equipment previews rather than launching a substitute fight.
+ await menu(page,3);await boss(page,"ch3-114","Rouxls");
+ const prep=page.getByRole('dialog',{name:'Rouxls',exact:true});await expect(prep).toBeVisible();await expect(prep.getByRole('button',{name:'IN DEVELOPMENT',exact:true})).toBeDisabled();
  await prep.getByRole('button',{name:'Close preparation'}).click();await expect(page.locator('#practice')).toBeDisabled();
 });
 test('mobile preparation fits the viewport and retains touch controls',async({page})=>{

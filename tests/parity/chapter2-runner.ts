@@ -67,6 +67,8 @@ export function runChapter2Recording(run:string,install:(rt:GmRuntime)=>{objects
   textHeight:(name,text)=>{const f=fonts.get(name);return f?lines(text).length*Math.max(0,...f.glyphs.map(g=>g.h)):0;},
  };
  rt.globals=structuredClone(dump.globalVariables);
+ // Native DS maps are opaque ids in dumps; the English sprite map is built from the same sprite resources.
+ rt.globals.chemg_sprite_map=Object.fromEntries([...(rt.bank.names?.()??[])].map(name=>[name,name]));
  const {objects}=install(rt);
  const skipped=new Set<string>(),skippedIds=new Set<number>();
  for(const d of dump.instances){

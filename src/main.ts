@@ -109,7 +109,7 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
   remake=publicPractice?createPracticeBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,pattern,seed,{development:devUnlock,neoHost,chapterHost}):new EngineBattle(remakeAssets.bank,equipment!.chapters[record.chapter],loadout,record.id,seed,{development:devUnlock,neoHost,chapterHost,scoring:publicMode,rage:chosenRoute?.rage??false,gameOvers:gameOvers.get(record.id)??0,secretBossAttempts:prefs.fought.includes(record.id)?1:0,session:sessions.get(record.id)});input.setConfirmReleaseMode(chosenRoute?.confirmRelease??'logical');{const gfx=new CanvasGraphics(remakeCtx,remakeAssets.draw,remake.rt.view);remake.rt.gfx=gfx;setHudMeasure(text=>gfx.textWidth('fnt_mainbig',text));}remakePressed.clear();remakeReleased.clear();
   remakeView=new BattleView(remakeCtx,remakeAssets.draw);remakeMenu=false;
   remake.rt.sound=(name,pitch,restart)=>audio.sourceEffect(name,pitch,restart);remake.rt.soundLoop=name=>audio.sourceLoop(name);remake.rt.soundStop=handle=>audio.sourceStop(handle);remake.rt.soundPitch=(handle,pitch)=>audio.sourcePitch(handle,pitch);remake.rt.soundGetPitch=handle=>audio.sourceGetPitch(handle);remake.rt.stopAllSounds=()=>audio.stop();
-  remake.rt.sourceAudio={effect:(name,pitch,volume)=>audio.sourceEffect(name,pitch,false,volume),volume:(handle,value,frames)=>audio.sourceVolume(handle,value,frames),free:handle=>audio.sourceFree(handle),music:name=>{const theme=GAME_OVER_THEME[name],track=theme&&audio.has(theme)?theme:name;audio.play(track);return track;},loop:handle=>audio.sourceSetLoop(handle),pause:handle=>audio.sourceTrackPause(handle),resume:handle=>audio.sourceTrackResume(handle),position:(handle,seconds)=>audio.sourcePosition(handle,seconds),playing:handle=>audio.sourcePlaying(handle)};
+  remake.rt.sourceAudio={pitch:(handle,value)=>audio.sourcePitch(handle,value),effect:(name,pitch,volume)=>audio.sourceEffect(name,pitch,false,volume),volume:(handle,value,frames)=>audio.sourceVolume(handle,value,frames),free:handle=>audio.sourceFree(handle),music:name=>{const theme=GAME_OVER_THEME[name],track=theme&&audio.has(theme)?theme:name;audio.play(track);return track;},loop:handle=>audio.sourceSetLoop(handle),pause:handle=>audio.sourceTrackPause(handle),resume:handle=>audio.sourceTrackResume(handle),position:(handle,seconds)=>audio.sourcePosition(handle,seconds),playing:handle=>audio.sourcePlaying(handle)};
   remake.rt.globals.onChapter2TensionItemSound=(name:string,pitch:number,volume:number)=>audio.sourceEffect(name,pitch,false,volume);
   renderRemakeFrame();remakeTick=0;scene='remake';sceneKey='';audio.play(encounter.music);
  }catch(e){if(token===sessionToken)throw e;}finally{if(remakeLoad===controller)remakeLoad=null;if(token===sessionToken){busy=false;loading.hidden=true;input.clear();clock.reset();}}
@@ -179,7 +179,10 @@ function updateControls(){
   const rows=menuRecords();if(bossDeck){const mounted=!overlay.contains(bossDeck.element);if(mounted)overlay.replaceChildren(bossDeck.element);bossDeck.update(rows,selection,chapter,prefs.completed,id=>publicMode?!!playableEncounter(id):nativeIds.has(id)||!!playableEncounter(id),index=>{selection=index;sceneKey='';},()=>{if(scene!=='menu')return;audio.unlock();void startBattle(false);});if(mounted)bossDeck.focusSelected();}
   const selectedId=rows[selection].id,patterns=practicePatterns(selectedId);
   const select=element<HTMLSelectElement>('attack-select'),previous=patternEncounterId===selectedId?select.value:'0';patternEncounterId=selectedId;select.replaceChildren();for(const [i,a]of patterns.entries()){const opt=document.createElement('option');opt.value=String(i);opt.textContent=a.name;select.append(opt);}select.value=Number(previous)<patterns.length?previous:'0';
-  select.disabled=!playableEncounter(selectedId)?.practice;element<HTMLButtonElement>('practice').disabled=select.disabled;
+  select.disabled=!playableEncounter(selectedId)?.practice||!patterns.length;element<HTMLButtonElement>('practice').disabled=select.disabled;
+  const practiceLink=bossDeck?.element.querySelector<HTMLButtonElement>('.deck-practice');if(practiceLink)practiceLink.disabled=select.disabled;
+  element('practice-boss').textContent=rows[selection].name;
+  element('menu-tools').classList.toggle('practice-unavailable',select.disabled);
   status.textContent=`CHAPTER ${chapter} / ${rows.length} ENCOUNTERS${publicMode?' / '+availabilityLabel(chapter):''}`;
   element('controls-hint').textContent='LEFT / RIGHT CARDS · UP / DOWN ACTIONS · Z SELECT · X BACK';
  }
@@ -199,7 +202,7 @@ function showOutcome(){
  const battle=remake instanceof EngineBattle?remake:null,won=remake.outcome==='victory'&&!!battle;
  if(battle&&won){const card=new VictoryCard(battle.name,victoryLines(battle.turn,battle.result),!!battle.result&&!!leaderboardApi);victory=card;void placeRun(battle.result,card);}
  element('outcome-text').textContent=won?'':remake.outcome==='survived'?'* Pattern survived.':remake.outcome==='victory'?'* YOU WON!':'* The party fell.';element('outcome-text').hidden=won;
- element('outcome-again').textContent=(remake instanceof EngineBattle?'BATTLE AGAIN':'PRACTICE AGAIN')+' [Z]';element('outcome-menu').textContent='DEVICE_MENU [X]';
+ element('outcome-again').textContent=(remake instanceof EngineBattle?'BATTLE AGAIN':'PRACTICE AGAIN')+' [Z / ENTER]';element('outcome-menu').textContent='DEVICE_MENU [X]';
  element('outcome-score').hidden=!(remake instanceof EngineBattle&&remake.result);element('outcome').hidden=false;
  if(!won)audio.pause(true);
 }
@@ -286,7 +289,19 @@ element('pause').addEventListener('click',()=>{if(remake){setPaused(!remake.paus
 element('mute').addEventListener('click',()=>{prefs.muted=!prefs.muted;audio?.setMuted(prefs.muted);native?.mute(prefs.muted);updatePreferences();});
 element('effects').addEventListener('click',()=>{prefs.reducedEffects=!prefs.reducedEffects;updatePreferences();});
 element('practice').addEventListener('click',()=>void startBattle(true));
-const dialog=element<HTMLDialogElement>('about');function about(){if(remake){remake.paused=true;audio.pause(true);}native?.pause(true);input.clear();const available=[...new Set([...new Set(catalog.map(record=>record.chapter))].flatMap(chapter=>availableEncounters(chapter).map(encounter=>encounter.name)))].join(', ');element('source-summary').textContent=publicMode?`Public demo: theater, equipment preparation and ${available} battles, plus separate Jevil attack practice. More encounters are in development.`:`${catalog.length} encounters from 5 chapter packages. Available source battles: ${available}. Installed original battles stay on this computer.`;element('difference-note').textContent=native?'This battle runs the original game code from your DELTARUNE install on the open-source Butterscotch engine; no attack was rewritten. Every encounter is checked to load and reach combat.':'Browser battles and Jevil practice run source-ported GameMaker objects. Commands, attack selection and numerical rules come from the game; complete visual, sound and equipment-ability parity is still being verified. Encounters without an available source port remain in development.';dialog.showModal();sceneKey='';}
+function focusPractice(){const select=element<HTMLSelectElement>('attack-select');if(!select.disabled){input.clear();select.focus();}}
+element('menu-tools').addEventListener('keydown',event=>{
+ if(event.ctrlKey||event.metaKey||event.altKey)return;
+ const select=element<HTMLSelectElement>('attack-select'),button=element<HTMLButtonElement>('practice'),onSelect=event.target===select,key=event.key.toLowerCase();
+ if(!['z','enter','x','escape','arrowleft','arrowright','arrowup','arrowdown','t'].includes(key))return;
+ event.stopPropagation();input.clear();
+ if(key==='x'||key==='escape'){event.preventDefault();bossDeck?.focusSelected();}
+ else if(key==='z'||key==='enter'||key==='t'){event.preventDefault();if(!event.repeat){if(onSelect&&key!=='t')button.focus();else void startBattle(true);}}
+ else if(key==='arrowleft'){event.preventDefault();if(onSelect)bossDeck?.focusSelected();else select.focus();}
+ else if(key==='arrowright'){event.preventDefault();if(onSelect)button.focus();else bossDeck?.focusSelected();}
+ else if(!onSelect){event.preventDefault();if(key==='arrowup')select.focus();else bossDeck?.focusSelected();}
+});
+const dialog=element<HTMLDialogElement>('about');function about(){if(remake){remake.paused=true;audio.pause(true);}native?.pause(true);input.clear();const available=[...new Set([...new Set(catalog.map(record=>record.chapter))].flatMap(chapter=>availableEncounters(chapter).map(encounter=>encounter.name)))].join(', ');element('source-summary').textContent=publicMode?`Public demo: theater, equipment preparation and ${available} battles, with separate attack practice. More encounters are in development.`:`${catalog.length} encounters from 5 chapter packages. Available source battles: ${available}. Installed original battles stay on this computer.`;element('difference-note').textContent=native?'This battle runs the original game code from your DELTARUNE install on the open-source Butterscotch engine; no attack was rewritten. Every encounter is checked to load and reach combat.':'Browser battles and Jevil practice run source-ported GameMaker objects. Commands, attack selection and numerical rules come from the game; complete visual, sound and equipment-ability parity is still being verified. Encounters without an available source port remain in development.';dialog.showModal();sceneKey='';}
 element('credits').addEventListener('click',about);element('adaptation').addEventListener('click',about);element('close-about').addEventListener('click',()=>dialog.close());
 for(const button of document.querySelectorAll<HTMLButtonElement>('[data-key]')){
  const key=button.dataset.key!;button.addEventListener('pointerdown',e=>{e.preventDefault();button.setPointerCapture(e.pointerId);button.classList.add('down');if(scene==='native'&&native)native.key(key,true);else input.press(key);});
@@ -311,7 +326,7 @@ async function initialize(){
   // Optional local reference art for the device room; the drawn room is used when it is absent.
   if(!publicMode)await Promise.all(['bg','console','tvglow','vessel_d_0'].map(n=>assets.loadImage('/device-room/'+n+'.png').catch(()=>null)));
   theaterView=new TheaterView(assets);await Promise.all(theaterView.urls().map(u=>assets.loadImage(u).catch(()=>null)));
-  renderer=new Renderer(ctx,assets,publicMode);bossDeck=new BossDeck(assets,record=>{input.clear();leaderboard?.open(record.id);});audio=new AudioManager(prefs.muted,assets.manifest.music);if(publicMode){document.querySelector('.brand .dim')!.textContent='/ DEMO';dialog.querySelector('p')!.textContent='DELTARUNE browser boss battles, with a theater intro and equipment preparation.';}updatePreferences();loading.hidden=true;updateControls();if(!raf)raf=requestAnimationFrame(loop);
+  renderer=new Renderer(ctx,assets,publicMode);bossDeck=new BossDeck(assets,record=>{input.clear();leaderboard?.open(record.id);},focusPractice);audio=new AudioManager(prefs.muted,assets.manifest.music);if(publicMode){document.querySelector('.brand .dim')!.textContent='/ DEMO';dialog.querySelector('p')!.textContent='DELTARUNE browser boss battles, with a theater intro and equipment preparation.';}updatePreferences();loading.hidden=true;updateControls();if(!raf)raf=requestAnimationFrame(loop);
  }catch(e){showError(e);}
 }
 // Development builds only (removed from the site): browser tests reach a battle's end without playing it through.

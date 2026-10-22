@@ -1,6 +1,7 @@
 import {describe,expect,it} from 'vitest';
 import {GmRuntime,type GmObjectDef} from '../src/remake/gm/runtime';
 import {spriteBank} from '../src/remake/gm/sprites';
+import {inputName} from '../src/remake/deltarune/controller';
 import {bufferBoxingInput,consumeBoxingInput,decayBoxingInput,resetBoxingAction,type BoxingInputObjects} from '../src/remake/bosses/queen/boxing-input';
 const definition=(name:string,index:number):GmObjectDef=>({name,index});
 const objects:BoxingInputObjects={queen:definition('o_boxingqueen',1),enemy:definition('obj_gigaqueen_enemy',2),wireframe:definition('o_boxing_wireframe',3),arcadeBg:definition('obj_ch2_scene10_arcade_bg',4)};
@@ -13,6 +14,7 @@ function setup(){
  return {rt,s,q,e};
 }
 describe('GIGA Queen actual boxing controls',()=>{
+ it('uses the native English key labels in its tutorial text',()=>{expect([0,1,2,3,4,5,6].map(inputName)).toEqual(['[Down]','[Right]','[Up]','[Left]','[Z]','[X]','[C]']);});
  it.each([[90,-1],[13,-1],[88,1],[16,1]])('maps key %i to punch side %i', (key,side)=>{
   const {rt,s,e}=setup();rt.input.pressed.add(key);bufferBoxingInput(s,rt,objects,0);consumeBoxingInput(s,rt,objects);
   expect(s.punchcon).toBe(1);expect(s.lastpunchside).toBe(side);expect(e.didntpunchthisturn).toBe(0);

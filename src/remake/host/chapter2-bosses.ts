@@ -32,11 +32,12 @@ import {anyFaceNext,monsterAdd,speaker,terminateWriter} from '../deltarune/chapt
 import {QUEEN_ENCOUNTERS,setupQueenMonster} from '../bosses/queen/setup';
 import {SPAMTON_ENCOUNTERS,createSpamton,setupSpamtonMonster} from '../bosses/spamton';
 import {createRouxls} from '../bosses/rouxls';
+import {createGigaQueen,runGigaSoulBulletController} from '../bosses/giga-queen';
 
 /** scr_encountersetup for the ported encounters: enemies (object, type, x, y), the opening line and optional hero
  * positions. */
 type EncounterSetup={monsters:readonly (readonly [string,number,number,number])[];intro:string;kind:string;heroes?:readonly (readonly [number,number])[]};
-const ENCOUNTERS:Record<number,EncounterSetup>={...FIELD_ENCOUNTERS,59:QUEEN_ENCOUNTERS[59],58:{...RIVAL_ENCOUNTERS[58],kind:'story'},82:{...RIVAL_ENCOUNTERS[82],kind:'story'},62:{...RIVAL_ENCOUNTERS[62],kind:'story'},63:{...RIVAL_ENCOUNTERS[63],kind:'story'},60:{...SPAMTON_ENCOUNTERS[60],kind:'story'}};
+const ENCOUNTERS:Record<number,EncounterSetup>={...FIELD_ENCOUNTERS,59:QUEEN_ENCOUNTERS[59],84:QUEEN_ENCOUNTERS[84],58:{...RIVAL_ENCOUNTERS[58],kind:'story'},82:{...RIVAL_ENCOUNTERS[82],kind:'story'},62:{...RIVAL_ENCOUNTERS[62],kind:'story'},63:{...RIVAL_ENCOUNTERS[63],kind:'story'},60:{...SPAMTON_ENCOUNTERS[60],kind:'story'}};
 export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapter2Registry(rt,{metadata,room:options.room}),{object}=registry;
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object),iceHexagon,iceSpell,sleepMist]);
@@ -49,7 +50,8 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  const spamton=createSpamton(object);registry.register(spamton.objects);
  // Rouxls (63): his enemy, the Thrash Machine, his mini-game and attack objects.
  const rouxls=createRouxls(object);registry.register(rouxls.objects);
- registry.register([createChapter2BulletController(object,[createChapter2FieldBulletRunner(object),(s,r)=>runBerdlyBulletController(s,r,object),(s,r)=>runBerdlySpearblastController(s,r,object),spamton.pattern,rouxls.pattern])]);
+ registry.register(createGigaQueen(object));
+ registry.register([createChapter2BulletController(object,[createChapter2FieldBulletRunner(object),(s,r)=>runBerdlyBulletController(s,r,object),(s,r)=>runBerdlySpearblastController(s,r,object),(s,r)=>runGigaSoulBulletController(s,r,object),spamton.pattern,rouxls.pattern])]);
  // The rivals: Berdly on the coaster (58) and in the rematch (82).
  const dialogue={speaker,faceNext:anyFaceNext,terminateWriter:(s:GmInstance,r:GmRuntime)=>!!terminateWriter(s,r)};
  registry.register(createChapter2Rivals(object,{dialogue,monsterAdd,snowgraveScene:(s,r)=>berdlySnowgraveScene(s,r,dialogue,object,()=>{throw Error('scr_losechar (after SnowGrave) is not ported');})}));
@@ -66,6 +68,7 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
   for(const [i,[name,type,x,y]] of setup.monsters.entries()){
    const def=enemies[name];if(!def)throw Error(`Encounter ${n} needs ${name}`);g.monsterinstancetype[i]=def;g.monstertype[i]=type;g.monstermakex[i]=r.view.x+x;g.monstermakey[i]=r.view.y+y;
   }
+  if(n===82){g.monstermakex[1]=r.view.x+540;g.monstermakey[1]=r.view.y+84;g.monstermakex[2]=r.view.x+522;g.monstermakey[2]=r.view.y+214;}
   if(setup.heroes)for(const [i,[x,y]] of setup.heroes.entries()){g.heromakex[i]=r.view.x+x;g.heromakey[i]=r.view.y+y;}
   g.battlemsg[0]=sourceText('scr_encountersetup_slash_scr_encountersetup_gml_'+setup.intro);return true;
  }};

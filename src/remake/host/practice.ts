@@ -92,15 +92,15 @@ export const ROARING_KNIGHT_PATTERNS:readonly PracticePattern[]=[
  knightPattern('Tracking swords II',3,2),
  knightPattern('Narrow sword tunnel',3,3),
  knightPattern('Rotating slash III (Flurry)',3,4),
- knightPattern('Rotating slash & homing swords',1,6),
- knightPattern('Tracking swords ring',1,7),
  knightPattern('The Roar (Final Attack)',4,2),
 ];
 
 const sneoPattern=(name:string,rr:number,difficulty:number,faceattackcount?:number):PracticePattern=>({
  name,
  setup:(_rt,e)=>{
-  e.balloonorder=99;e.attackdebug=rr;e.difficultydebug=difficulty;e.difficulty=difficulty;
+  // NEO's port chooses rr in startTalk and does not read its native debug fields.
+  // Enter endTalk with the chosen attack so its original box/heart setup still runs.
+  e.rr=rr;e.difficulty=difficulty;e.talked=1;e.talkedcon=1;e.balloonend=1;
   if(faceattackcount!==undefined)e.faceattackcount=faceattackcount;
  },
 });
@@ -114,16 +114,13 @@ export const SPAMTON_NEO_PATTERNS:readonly PracticePattern[]=[
  sneoPattern('Eyes, nose & mouth I',7,0,0),
  sneoPattern('Heart on a chain II (Big heart)',2,2),
  sneoPattern('Shooty dance & flying heads',0,3),
- sneoPattern('Flying heads & big lasers',0,2),
  sneoPattern('Eyes, nose & mouth II',7,0,1),
  sneoPattern('Phone hands II',8.5,1),
  sneoPattern('Phone hands III',8.5,2),
  sneoPattern('Phone call II',8,1),
  sneoPattern('Chained heart & walls II',6,1),
  sneoPattern('Heart on a chain III',2,1),
- sneoPattern('Heart on a chain IV (Biters)',2,3),
  sneoPattern('Phone call III',8,3),
- sneoPattern('Football Pipis',1,0),
  sneoPattern('Power of NEO (Final Attack)',9,0),
 ];
 
@@ -150,7 +147,6 @@ const LANCER_1_PATTERNS:readonly PracticePattern[]=[
 const CLOVER_PATTERNS:readonly PracticePattern[]=[
  {name:'Splitting clubs',afterStep:rt=>{for(const dc of allByName(rt,'obj_dbulletcontroller'))if(!('__practiceFixed' in dc)){dc.__practiceFixed=true;dc.type=2;}}},
  {name:'Corner dark clubs (alternating)',afterStep:rt=>{for(const dc of allByName(rt,'obj_dbulletcontroller'))if(!('__practiceFixed' in dc)){dc.__practiceFixed=true;dc.type=4;}}},
- {name:'Corner dark clubs (random)',afterStep:rt=>{for(const dc of allByName(rt,'obj_dbulletcontroller'))if(!('__practiceFixed' in dc)){dc.__practiceFixed=true;dc.type=3;}}},
 ];
 
 const KROUND_PATTERNS:readonly PracticePattern[]=[
@@ -201,7 +197,7 @@ const TASQUE_MANAGER_DOJO_PATTERNS:readonly PracticePattern[]=[
  {name:'Order quiz IV',setup:rt=>{rt.globals.encounterno=57;const tm=byName(rt,'obj_tasque_manager_enemy');if(tm){tm.overrideAttack=1;tm.quizDifficulty=3;}}},
 ];
 
-type WerewerewireMode='sweeping'|'circles'|'sparks'|'hanging';
+type WerewerewireMode='sweeping'|'circles'|'sparks';
 function applyWerewerewireMode(rt:GmRuntime,w:GmInstance,mode:WerewerewireMode){
  for(const m of allByName(rt,'obj_move_to_point'))if(m.target===w.id)rt.destroy(m);
  if('___myrememberx' in w&&typeof w.___myrememberx==='number')w.x=w.___myrememberx;
@@ -209,14 +205,20 @@ function applyWerewerewireMode(rt:GmRuntime,w:GmInstance,mode:WerewerewireMode){
  Object.assign(w,{sprite:w.idlesprite,shootmode:0,shootcon:0,shoottimer:0,hangcon:0,hangvspeed:0,xmovement_finished:0});
  if(mode==='sweeping')w.rr=1;
  else if(mode==='circles')Object.assign(w,{rr:0,shootmode:1,shootcon:2,shoottimer:0,shootcount:0,sprite:'spr_werewerewire_attack_2',imageIndex:0,imageSpeed:0,stop_anim:1});
- else if(mode==='sparks')Object.assign(w,{rr:0,shootmode:1,shootcon:20,shoottimer:0,shootcount:0,sprite:'spr_werewerewire_attack_1',imageIndex:0,imageSpeed:0,stop_anim:1});
- else Object.assign(w,{rr:0,shootmode:0,hangcon:1,hangvspeed:0,xmovement_finished:0,targetx:rt.view.x+260,hangsparktimer:0,sprite:'spr_werewire_hang',imageIndex:0});
+ else Object.assign(w,{rr:0,shootmode:1,shootcon:20,shoottimer:0,shootcount:0,sprite:'spr_werewerewire_attack_1',imageIndex:0,imageSpeed:0,stop_anim:1});
 }
 const werewerewirePattern=(name:string,modes:readonly WerewerewireMode[]):PracticePattern=>({
  name,
  setup:rt=>{
   const wires=allByName(rt,'obj_werewerewire_enemy');
   for(const [i,w] of wires.entries())w.overrideRr=(modes[i]??modes[0])==='sweeping'?1:0;
+ },
+ beforeStep:rt=>{
+  if(!byName(rt,'obj_heart')||rt.globals.turntimer<40)return;
+  for(const [i,w] of allByName(rt,'obj_werewerewire_enemy').entries()){
+   const mode=modes[i]??modes[0];
+   if(mode!=='sweeping'&&'__practiceConfigured' in w&&w.shootmode===1&&w.shootcon===0)applyWerewerewireMode(rt,w,mode);
+  }
  },
  afterStep:rt=>{
   const hasHeart=Boolean(byName(rt,'obj_heart'));
@@ -235,7 +237,6 @@ const WEREWEREWIRE_PATTERNS:readonly PracticePattern[]=[
  werewerewirePattern('Sweeping lasers',['sweeping']),
  werewerewirePattern('Laser circles',['circles']),
  werewerewirePattern('Spark spread',['sparks']),
- werewerewirePattern('Vertical hanging lasers',['hanging']),
 ];
 
 const WEREWEREWIRE_DOJO_PATTERNS:readonly PracticePattern[]=[
@@ -244,7 +245,6 @@ const WEREWEREWIRE_DOJO_PATTERNS:readonly PracticePattern[]=[
  werewerewirePattern('Sweeping lasers & spark spread',['sweeping','sparks']),
  werewerewirePattern('Double laser circles',['circles','circles']),
  werewerewirePattern('Double spark spread',['sparks','sparks']),
- werewerewirePattern('Vertical hanging lasers',['hanging','sweeping']),
 ];
 
 const MAUSWHEEL_PATTERNS:readonly PracticePattern[]=[
@@ -297,7 +297,6 @@ const QUEEN_PATTERNS:readonly PracticePattern[]=[
  queenPattern('Laser grid II',8,4),
  queenPattern('Laser grid III',8,5),
  queenPattern('Buffer bullets',5,0,true),
- queenPattern('Image search',0,0),
  queenPattern('Final Attack (Giant mech)',1,0),
 ];
 
@@ -307,11 +306,27 @@ const TRIO_PATTERNS:readonly PracticePattern[]=[
  {name:'Musical bullets (solo)',setup:rt=>{const kk=byName(rt,'obj_kk_enemy'),capn=byName(rt,'obj_hatguy_enemy');if(kk)kk.dancing=true;if(capn)capn.dancing=true;}},
 ];
 
+const BERDLY_COASTER_PATTERNS:readonly PracticePattern[]=[
+ {name:'Tornado I',setup:(_rt,e)=>{e.attackorder=0;e.difficulty=0;e.balloonorder=99;}},
+ {name:'A+ grade papers',setup:(_rt,e)=>{e.attackorder=1;e.difficulty=0;e.balloonorder=99;}},
+ {name:'Halberd spear blast',setup:(_rt,e)=>{e.attackorder=2;e.difficulty=0;e.balloonorder=99;}},
+ {name:'Tornado II (diagonal box)',setup:(_rt,e)=>{e.attackorder=0;e.difficulty=1;e.balloonorder=99;}},
+];
+
+const BERDLY_CITY_PATTERNS:readonly PracticePattern[]=[
+ {name:'Tornado (diagonal box)',setup:(_rt,e)=>{e.turns=0;e.attack_phase=0;e.sideb_route=false;}},
+ {name:'A+ grade papers',setup:(_rt,e)=>{e.turns=0;e.attack_phase=1;e.sideb_route=false;}},
+ {name:'Halberd spear blast',setup:(_rt,e)=>{e.turns=0;e.attack_phase=2;e.sideb_route=false;}},
+ {name:'Halberd spear blast (Serious)',setup:(_rt,e)=>{e.turns=0;e.rr=0;e.sideb_route=true;}},
+];
+
 function skipGigaQueenIntro(rt:GmRuntime,e:GmInstance){
  for(const name of ['obj_thrash_transformation_transition','obj_bqueen_intro','obj_thrash_intro','obj_gigaqueen_intro_round','obj_gigaqueen_intro_fight']){
   for(const inst of allByName(rt,name))rt.destroy(inst);
  }
  rt.view.x=0;rt.view.y=0;
+ const panel=findController(rt);
+ if(panel){panel.gigaqueencon=0;panel.gigaqueeny=0;panel.gigaqueentimer=0;}
  const bg=byName(rt,'obj_3d_bg_effect');if(bg)bg.slow_down=0;
  e.balloonorder=1;
 }
@@ -357,12 +372,14 @@ const PRACTICE_PATTERNS:Readonly<Record<string,readonly PracticePattern[]>>={
  'ch1-31':SUSIE_LANCER_PATTERNS,
  'ch1-40':KING_PATTERNS,
  'ch2-57':TASQUE_MANAGER_PATTERNS,
+ 'ch2-58':BERDLY_COASTER_PATTERNS,
  'ch2-59':QUEEN_PATTERNS,
  'ch2-60':SPAMTON_PATTERNS,
  'ch2-61':SPAMTON_NEO_PATTERNS,
  'ch2-62':TRIO_PATTERNS,
  'ch2-63':ROUXLS_PATTERNS,
  'ch2-81':WEREWEREWIRE_PATTERNS,
+ 'ch2-82':BERDLY_CITY_PATTERNS,
  'ch2-83':MAUSWHEEL_PATTERNS,
  'ch2-84':GIGA_QUEEN_PATTERNS,
  'ch2-89':TASQUE_MANAGER_DOJO_PATTERNS,
@@ -371,7 +388,7 @@ const PRACTICE_PATTERNS:Readonly<Record<string,readonly PracticePattern[]>>={
 };
 
 export function practicePatterns(encounterId:string):readonly PracticePattern[]{
- return PRACTICE_PATTERNS[encounterId]??JEVIL_PATTERNS;
+ return PRACTICE_PATTERNS[encounterId]??[];
 }
 
 export interface PracticeSession{

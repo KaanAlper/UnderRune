@@ -83,9 +83,10 @@ export const gameOverInit:GmObjectDef={name:'obj_gameover_init',index:135,depth:
  step:(s,rt)=>{
   const g=rt.globals;s.timer+=1;
   if(s.timer===1)sndFreeAll(rt);
-  if(s.timer>=2&&button1_p(rt)){
-   s.Z_COUNT+=1;
-   if(s.Z_COUNT>=2){rt.pendingRoom=RETRY_ROOM;return;}
+  // Early confirm hurries the presentation into the normal retry/give-up dialogue. Once the
+  // soul is breaking, retain the source's four-press retry below, counting each press once.
+  if(s.timer>=2&&s.timer<80&&button1_p(rt)){
+   rt.deleteSprite(g.screenshot);rt.pendingRoom='PLACE_FAILURE';return;
   }
   if(s.timer===30){const bg=rt.byId(s.bg);if(bg)rt.destroy(bg);s.visible=true;s.x=g.heartx;s.y=g.hearty;}
   if(s.timer===31)rt.deleteSprite(g.screenshot);
@@ -261,6 +262,7 @@ export const deviceFailure:GmObjectDef={name:'DEVICE_FAILURE',index:319,depth:10
   Object.assign(s,{EVENT:0,TIMER:0,HEARTMADE:0,HSINER:0,OBMADE:0});
   g.flag[20]=0;g.flag[6]=1;g.typer=667;
   Object.assign(s,{FADEFACTOR:0,WHITEFADE:0,FADEUP:0,DARK_WAIT:0,restart:false,restart_timer:0});
+  s.gamepad_controls=[32769,32770,32771,32772,32773,32775,32774,32776,32777,32778,32779,32780,32781,32782,32783,32784];
   failure(rt).create(s,rt);
  },
  alarm4:s=>{s.EVENT+=1;},
@@ -272,7 +274,7 @@ export const deviceFailure:GmObjectDef={name:'DEVICE_FAILURE',index:319,depth:10
    if(!skipped&&!rt.exists(deviceChoice)){
     if('text_timer' in s&&s.text_timer>1)s.text_timer=1;
     if(s.alarm[4]>1)s.alarm[4]=1;
-    for(const d of rt.all(scriptDelayed))if(d.alarm[0]>1)d.alarm[0]=1;
+    for(const d of rt.all(scriptDelayed))if(d.target===s.id&&d.alarm[0]>1)d.alarm[0]=1;
    }
   }
   if(s.EVENT===1)r.open(s,rt);

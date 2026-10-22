@@ -213,7 +213,8 @@ export class GmRuntime{
   return rows;
  }
  private frameCount:(name:string)=>number|undefined;
- view={x:0,y:0,width:640,height:480};
+ // Native cameras retain float coordinates, like instance positions; each __view_set rounds its write.
+ view=(()=>{let x=0,y=0;return {get x(){return x;},set x(value:number){x=f32(value);},get y(){return y;},set y(value:number){y=f32(value);},width:640,height:480};})();
  /** The current room (GML room, room_width, room_height). */
  room={name:'',width:640,height:480};
  globals:Record<string,any>={};
@@ -312,7 +313,7 @@ export class GmRuntime{
   exists:(id:number)=>boolean;
   /** surface_resize. */
   resize:(id:number,width:number,height:number)=>void};
- sourceAudio?:{effect:(name:string,pitch?:number,volume?:number)=>number|undefined;volume:(handle:number|string,value:number,frames:number)=>void;free:(handle:number|string)=>void;music:(name:string)=>number|string;loop:(handle:number|string)=>void;pause:(handle:number|string)=>void;resume:(handle:number|string)=>void;position:(handle:number|string,seconds?:number)=>number|void;playing:(handle:number|string)=>boolean};
+ sourceAudio?:{pitch?:(handle:number|string,value:number)=>void;effect:(name:string,pitch?:number,volume?:number)=>number|undefined;volume:(handle:number|string,value:number,frames:number)=>void;free:(handle:number|string)=>void;music:(name:string)=>number|string;loop:(handle:number|string)=>void;pause:(handle:number|string)=>void;resume:(handle:number|string)=>void;position:(handle:number|string,seconds?:number)=>number|void;playing:(handle:number|string)=>boolean};
  /** Set by room_goto; the host decides what the room change means (game over, battle end). */
  pendingRoom:string|null=null;
  constructor(readonly bank:SpriteBank,options:{seed?:number;rng?:readonly number[];firstId?:number}={}){

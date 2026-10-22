@@ -42,6 +42,8 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:
  // The band plays in Cyber City's music room (obj_ch2_cyber01 starts them); the battle needs nothing of it.
  'ch2-62':{n:62,room:'room_battletest',backdrop:true},
  'ch2-63':{n:63,room:'room_battletest',backdrop:true},
+ 'ch2-58':{n:58,room:'room_battletest',backdrop:true},
+ 'ch2-82':{n:82,room:'room_battletest',backdrop:true},
  'ch2-84':{n:84,room:'room_battletest',backdrop:true},
  'ch2-81':{n:81,room:'room_dw_mansion_east_4f_b',backdrop:true},
  'ch2-83':{n:83,room:'room_dw_city_mice3_transformed_new2F',backdrop:true},
@@ -89,6 +91,7 @@ export class EngineBattle{
  /** After a game over, what the player chose: try again (scr_tempload) or leave (the game's end). */
  afterDefeat:'retry'|'menu'|null=null;
  readonly scoring:BattleRunTracker|null;result:RunRecord|null=null;
+ private scoreFinished=false;
  constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;chapterHost?:ChapterHost;chapter2Host?:ChapterHost;scoring?:boolean;rage?:boolean;gameOvers?:number;secretBossAttempts?:number;session?:Session}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
   if(!encounter||!setup)throw Error('This battle is not available yet.');
@@ -103,22 +106,24 @@ export class EngineBattle{
   const chapterHost=encounter.chapter>=2&&!neo?host!(rt,{room:setup.room}):undefined;
   rt.room.name=setup.room;
   if(neo){rt.view.x=1640;rt.room.width=2400;}
+  const charIds=encounter.party.includes(4)?[1,2,3,4]:[1,2,3];
   const equipped:Record<number,EquippedStats>={};
-  for(const c of [1,2,3]){
-   const slot=loadout.characters[c],w=gear(equipment.weapons,slot.weapon),a1=gear(equipment.armors,slot.armor[0]),a2=gear(equipment.armors,slot.armor[1]);
+  for(const c of charIds){
+   const slot=loadout.characters[c]??{weapon:0,armor:[0,0]},w=gear(equipment.weapons,slot.weapon),a1=gear(equipment.armors,slot.armor[0]),a2=gear(equipment.armors,slot.armor[1]);
    // Weapon 0 is "Game default": scr_gamestart's Wood Blade, Mane Ax and Red Scarf (ids 1, 2, 3; no stats).
-   equipped[c]={weapon:slot.weapon||c,armor:[...slot.armor],itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
+   equipped[c]={weapon:slot.weapon||(c===4?12:c),armor:[...slot.armor],itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
   }
   const char=[...encounter.party,0,0,0].slice(0,3);
-  partyGlobals(rt,{char,...forChapterStats(encounter.chapter),equipped,items:loadout.items,auto:encounter.auto});
+  const startStats=encounter.chapter===2&&encounter.party.includes(4)?chapter2StartStats(true):forChapterStats(encounter.chapter);
+  partyGlobals(rt,{char,...startStats,equipped,items:loadout.items,auto:encounter.auto});
   // global.batmusic: the battle's music, which some enemies pause (Ralsei's lullaby).
   rt.globals.batmusic=[encounter.music,encounter.music];
   if(encounter.chapter>=2){
    const g=rt.globals;g.fighting=0;g.sp=4;g.currentsong=[-1,-1];
-   g.chararmor1=[0,...[1,2,3].map(c=>loadout.characters[c].armor[0])];g.chararmor2=[0,...[1,2,3].map(c=>loadout.characters[c].armor[1])];
+   g.chararmor1=[0,...charIds.map(c=>loadout.characters[c]?.armor[0]??0)];g.chararmor2=[0,...charIds.map(c=>loadout.characters[c]?.armor[1]??0)];
    initializeChapter2SmallFaces(rt);
-   g.itemelement=Array.from({length:4},()=>[0,0,0]);g.itemelementamount=Array.from({length:4},()=>[0,0,0]);
-   for(const c of [1,2,3])for(let j=0;j<2;j++){const armor=gear(equipment.armors,loadout.characters[c].armor[j]);g.itemelement[c][j+1]=armor?.element??0;g.itemelementamount[c][j+1]=armor?.elementAmount??0;}
+   g.itemelement=Array.from({length:charIds.length+1},()=>[0,0,0]);g.itemelementamount=Array.from({length:charIds.length+1},()=>[0,0,0]);
+   for(const c of charIds)for(let j=0;j<2;j++){const armor=gear(equipment.armors,loadout.characters[c]?.armor[j]??0);g.itemelement[c][j+1]=armor?.element??0;g.itemelementamount[c][j+1]=armor?.elementAmount??0;}
    g.chemg_sprite_map=Object.fromEntries([...(bank.names?.()??[])].map(name=>[name,name]));
   }
   // Restore persistent spell progression before the controller builds the spell menus.
@@ -166,27 +171,22 @@ export class EngineBattle{
   if(this.paused||this.outcome)return;
   const rt=this.rt,g=rt.globals,before=g.mnfight;
   const confirmSkip=rt.input.pressed.has(b.KEY.z)||rt.input.pressed.has(b.KEY.enter);
+  // Only source-declared endings may consume confirm here. Generic fields such as endcon/sparecon
+  // also occur during attacks and ACTs, including phases which can return to combat.
   if(confirmSkip){
-   const c=findController(rt);
-   if(this.ending==='victory'||g.myfight===7||(c&&(c.victory===1||c.victoried===1))){
-    destroyWriters(rt);for(const f of rt.all(face))rt.destroy(f);for(const eb of rt.all(endBattle))rt.destroy(eb);
-    if(c){c.intro=2;c.bp=0;if(rt.pendingRoom!=='battle_end')endCombat(c,rt);}
-    if(!this.ending)this.end('victory');
-    this.outcome='victory';return;
-   }
-   const postBattle=g.mnfight===-1||g.mnfight===7||(g.monster[0]===0&&g.monster[1]===0&&g.monster[2]===0)||rt.instances.some(i=>i.live&&(('endcon' in i&&i.endcon>0)||('talked' in i&&i.talked===-1)||('sparecon' in i&&i.sparecon>0)||('kris_cutscene' in i&&i.kris_cutscene>0)));
-   if(postBattle){
-    for(const w of rt.all(writer)){w.skippable=1;if(w.pos<w.length)w.skipme=1;}
-    for(const i of rt.instances){
-     if(!i.live)continue;
-     if('wintimer' in i&&'talked' in i&&i.talked===-1&&i.wintimer<89)i.wintimer=89;
-     if('endtimer' in i&&'endcon' in i&&i.endcon===1.5&&i.endtimer<150)i.endtimer=150;
-     if('endtime' in i&&'endcon' in i&&i.endcon===1&&i.endtime<89)i.endtime=89;
-    }
+   if(this.ending==='victory'){this.skipVictory();return;}
+   const endingText=withHook(rt,'canSkipEndingText').some(([e,h])=>h(e,rt));
+   if(endingText){
+    destroyWriters(rt);
+    for(const i of rt.instances)if(i.live&&(i.object.name==='obj_battle_blcon'||i.object.name==='obj_battleblcon'))rt.destroy(i);
    }
   }
   g.time+=1;rt.step();
+  // Let the controller apply its normal rewards, revival and chapter hooks before removing its text.
+  const c=findController(rt);
   this.scoring?.frame(g);
+  if(c?.victoried===1)this.finishScore('victory');
+  if(confirmSkip&&c?.victoried===1){this.skipVictory();return;}
   if(before===2&&g.mnfight===0&&!this.ending)this.turn+=1;
   const room=rt.pendingRoom;
   if(room==='battle_end'&&!this.ending)this.end('victory');
@@ -195,6 +195,19 @@ export class EngineBattle{
   if(isGameOverRoom(room)){rt.pendingRoom=null;if(!this.ending)this.end('defeat');gotoGameOverRoom(rt,room!);}
   if(room===RETRY_ROOM||room===GAME_END_ROOM){this.afterDefeat=room===RETRY_ROOM?'retry':'menu';this.outcome='defeat';}
  }
+ /** Skip presentation only once the source has committed victory (including its reward setup). */
+ private skipVictory(){
+  const rt=this.rt,c=findController(rt);
+  destroyWriters(rt);for(const f of rt.all(face))rt.destroy(f);
+  if(c){c.intro=2;c.bp=0;if(rt.pendingRoom!=='battle_end')endCombat(c,rt);}
+  for(const eb of rt.all(endBattle))rt.destroy(eb);
+  if(!this.ending)this.end('victory');
+  this.outcome='victory';
+ }
  /** The run is scored when the battle itself ends, not after the ending plays. */
- private end(how:'victory'|'defeat'){this.ending=how;this.result=this.scoring?.finish(how,this.rt.globals)??null;}
+ private end(how:'victory'|'defeat'){this.ending=how;this.finishScore(how);}
+ private finishScore(how:'victory'|'defeat'){
+  if(this.scoreFinished)return;
+  this.scoreFinished=true;this.result=this.scoring?.finish(how,this.rt.globals)??null;
+ }
 }

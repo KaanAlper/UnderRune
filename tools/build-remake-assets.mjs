@@ -28,7 +28,7 @@ async function sources(dir) {
   return files;
 }
 // Enemy ports belong to a source chapter. New Chapter 2 primitives must not pull their sprites into Chapter 1.
-const bossChapters={lancer:1,clover:1,kround:1,jevil:1,king:1,'spamton-neo':2,'chapter2-field':2,'chapter2-rivals':2,queen:2,spamton:2,rouxls:2,'roaring-knight':3};
+const bossChapters={lancer:1,clover:1,kround:1,jevil:1,king:1,'spamton-neo':2,'chapter2-field':2,'chapter2-rivals':2,queen:2,'giga-queen':2,spamton:2,rouxls:2,'roaring-knight':3};
 const remakeRoot=path.join(root,'src','remake');
 const chapterSources=(await sources(remakeRoot)).filter(file=>{
  const parts=path.relative(remakeRoot,file).split(path.sep);

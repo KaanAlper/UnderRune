@@ -8,6 +8,7 @@ import * as party from '../deltarune/party';
 import * as effects from '../deltarune/player-effects';
 import * as writer from '../deltarune/writer';
 import * as choices from '../deltarune/choicer';
+import * as battleEnd from '../deltarune/battle-end';
 import {monsterSetup} from '../deltarune/encounter';
 import {spellMenuSetupChapter2} from '../deltarune/chapter2';
 import {sourceText} from './text';
@@ -35,7 +36,7 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
  };
  const streamNames=new Map<number,string>(),pitches=new Map<number|string,number>();let nextStream=-100;
  const audioHandle=(value:number|string)=>streamNames.get(Number(value))??value;
- rt.soundPitch??=(handle,pitch)=>{pitches.set(audioHandle(handle),pitch);};
+ rt.soundPitch??=(handle,pitch)=>{pitches.set(audioHandle(handle),pitch);rt.sourceAudio?.pitch?.(audioHandle(handle),pitch);};
  rt.soundGetPitch??=handle=>pitches.get(audioHandle(handle))??1;
  rt.soundFree??=handle=>{rt.sourceAudio?.free(audioHandle(handle));};
  installSourceSurfaces(rt);
@@ -95,7 +96,7 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
  for(const m of options.metadata)objects[m.name]=resource(m,true);
  const original:GmObjectDef[]=[];
  const collect=(value:any)=>{if(value&&typeof value==='object'&&typeof value.index==='number'&&typeof value.name==='string'){original.push(value);if(value.parent)collect(value.parent);}};
- for(const module of [battle,writer,controller,party,effects,choices])for(const value of Object.values(module))collect(value);
+ for(const module of [battle,writer,controller,party,effects,choices,battleEnd])for(const value of Object.values(module))collect(value);
  party.HERO_DEFS.forEach(collect);
  // Merge same-name wrapper events into a single definition. The actual Chapter 2
  // ancestry replaces the implementation wrapper's same-name parent chain.

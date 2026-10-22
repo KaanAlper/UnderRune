@@ -57,7 +57,7 @@ function startActors(s:GmInstance,rt:GmRuntime){
 }
 function afterCreate(s:GmInstance,rt:GmRuntime){
  const g=rt.globals;resetChapter2Actors(rt);spellMenuSetupChapter2(rt,s);
- Object.assign(s,{spellpage:0,t_siner:0,myfightreturntimer:1,messagepriority:-1,attackpriority:-1,hidemercy:0,cantspare:[0,0,0],gigaqueeny:0,gigaqueentimer:0,gigaqueencon:0});
+ Object.assign(s,{spellpage:0,t_siner:0,myfightreturntimer:1,messagepriority:-1,attackpriority:-1,hidemercy:0,gigaqueeny:0,gigaqueentimer:0,gigaqueencon:0});
  g.turntimer=120;
  for(const key of ['charpos','havechar','mmy'])if(s[key][3]===undefined)s[key][3]=key==='charpos'?-1:0;
  s.hpcolor[3]=C.yellow;gmArray(s,'hpcolorsoft');for(s.i=0;s.i<4;s.i++)s.hpcolorsoft[s.i]=mergeColor(s.hpcolor[s.i],C.white,0.5);
@@ -122,7 +122,7 @@ export const controllerScripts2:ControllerScripts={
  spellInfoExtra:spellInfoExtra(spellRows2),
  spellRows:6,text:sourceText,healingUsable:0,ultimateDescription:93,replaceItems:true,victoryRows:5,tensionGoldMultiplier:2,
  mergedSpells:rt=>rt.globals.flag[34]===0,
- initActs:(_s,rt)=>initChapter2ActTables(rt),resetActors,undoAct,
+ initActs:(s,rt)=>{s.cantspare=[0,0,0];initChapter2ActTables(rt);},resetActors,undoAct,
  beforeAttack:(s,rt)=>{for(s.__hiti=0;s.__hiti<3;s.__hiti++)rt.globals.hittarget[s.__hiti]=0;},
  hasActors,startActors,afterCreate,reward,afterVictory,
  victoryText:rt=>{

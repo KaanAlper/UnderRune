@@ -2,18 +2,29 @@ import {afterEach,describe,expect,it,vi} from 'vitest';
 import {LeaderboardApi,loadLeaderboardConfig} from '../src/game/leaderboard-api';
 import type {RunRecord} from '../src/game/battle-run';
 const config={url:'https://example.supabase.co',key:'sb_publishable_test'};
-const run:RunRecord={id:'cc198215-62e0-4f25-8e09-099465856204',encounter_id:'ch2:61',rules_version:'battle-v1',duration_ms:12000,damage:15,equipment:[{character:1,weapon:3,armor:[0,2]}],bag:[4,4],used_items:[4],no_item:false,no_armor:false};
+const run:RunRecord={id:'cc198215-62e0-4f25-8e09-099465856204',encounter_id:'ch2:61',rules_version:'battle-v2',duration_ms:12000,damage:15,equipment:[{character:1,weapon:3,armor:[0,2]}],bag:[4,4],used_items:[4],no_item:false,no_armor:false};
 const response=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status});
 const session={access_token:'user-token',refresh_token:'refresh-token',expires_at:Math.floor(Date.now()/1000)+3600};
 const memory=()=>{const map=new Map<string,string>();return {getItem:(key:string)=>map.get(key)??null,setItem:(key:string,value:string)=>{map.set(key,value);}};};
 afterEach(()=>{vi.unstubAllGlobals();vi.useRealTimers();});
 describe('shared leaderboard transport',()=>{
+ it('ranks current rules only, without mixing historical scores',async()=>{
+  const fetcher=vi.fn<typeof fetch>().mockImplementation(async()=>new Response('[]',{headers:{'content-range':'0-0/3'}}));
+  expect(await new LeaderboardApi(config,fetcher).rank(run)).toEqual({place:4,of:4});
+  expect(fetcher).toHaveBeenCalledTimes(2);
+  for(const [url] of fetcher.mock.calls)expect(new URL(String(url)).searchParams.get('rules_version')).toBe('eq.battle-v2');
+ });
+ it('does not compare an old pending run to the current board',async()=>{
+  const fetcher=vi.fn<typeof fetch>();
+  await expect(new LeaderboardApi(config,fetcher).rank({...run,rules_version:'battle-v1'})).rejects.toThrow(/rules version/i);
+  expect(fetcher).not.toHaveBeenCalled();
+ });
  it('combines every filter on the server before fixed pagination, preserving zero bounds',async()=>{
   const fetcher=vi.fn<typeof fetch>().mockResolvedValue(response([]));const api=new LeaderboardApi(config,fetcher);
   await api.list({encounterId:'ch2:61',minDamage:0,maxDamage:90,minSeconds:0,maxSeconds:12.5,noItem:true,noArmor:true,weapon:3,armor:2,bagItem:4,usedItem:5,offset:25});
   const url=new URL(String(fetcher.mock.calls[0][0]));
   expect(url.pathname).toBe('/rest/v1/leaderboard_runs');expect(url.searchParams.get('encounter_id')).toBe('eq.ch2:61');
-  expect(url.searchParams.get('rules_version')).toBe('eq.battle-v1');expect(url.searchParams.getAll('damage')).toEqual(['gte.0','lte.90']);
+  expect(url.searchParams.get('rules_version')).toBe('eq.battle-v2');expect(url.searchParams.getAll('damage')).toEqual(['gte.0','lte.90']);
   expect(url.searchParams.getAll('duration_ms')).toEqual(['gte.0','lte.12500']);expect(url.searchParams.get('no_item')).toBe('eq.true');expect(url.searchParams.get('no_armor')).toBe('eq.true');
   expect(url.searchParams.getAll('equipment')).toEqual(['cs.[{"weapon":3}]','cs.[{"armor":[2]}]']);expect(url.searchParams.get('bag')).toBe('cs.{4}');expect(url.searchParams.get('used_items')).toBe('cs.{5}');
   expect(url.searchParams.get('limit')).toBe('25');expect(url.searchParams.get('offset')).toBe('25');expect(url.searchParams.get('order')).toBe('damage.asc,duration_ms.asc,id.asc');

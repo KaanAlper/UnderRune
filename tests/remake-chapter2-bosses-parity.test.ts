@@ -13,6 +13,15 @@ import {MUSICAL_SCORE} from '../src/remake/bosses/chapter2-rivals/musical-score-
  * place he keeps in savey, and the coaster heroes bob around theirs. */
 function restoreStarts(rt:GmRuntime){
  const g=rt.globals;
+ // Camera offsets are not serialized: the boxing transition shifted it before the first snapshot.
+ const boxing=rt.instances.find(i=>i.live&&i.object.name==='obj_battlecontroller'&&i.gigaqueencon!==undefined);
+ if(rt.instances.some(i=>i.live&&i.object.name==='obj_thrash_transformation_transition')&&boxing)rt.view.y=boxing.yy-boxing.gigaqueeny;
+ // The native TP surface already occupies id 1 while hidden. Its GPU allocation is absent from the dump.
+ if(rt.instances.some(i=>i.live&&i.object.name==='obj_gigaqueen_enemy')){const bar=rt.instances.find(i=>i.live&&i.object.name==='obj_tensionbar');if(bar?.healthbar_surf===1)rt.sourceSurfaces?.create(96,250);}
+ for(const b of rt.instances.filter(i=>i.live&&i.object.name==='obj_bg_square'))b.ystart=115;
+ // Both boxers are created at the encounter enemy's coordinates before their Create events move them
+ // into the ring. Retry reads these built-ins; the first snapshot already contains their intro positions.
+ for(const b of rt.instances.filter(i=>i.live&&['o_boxingcontroller','o_boxingqueen'].includes(i.object.name))){b.xstart=g.monstermakex[0];b.ystart=g.monstermakey[0];}
  for(const q of rt.instances.filter(i=>i.live&&i.object.name==='obj_queen_enemy')){q.xstart=g.monstermakex[q.myself];q.ystart=g.monstermakey[q.myself];}
  for(const p of rt.instances.filter(i=>i.live&&i.object.name==='obj_berdlyplug_enemy'))p.ystart=p.savey;
  // The coaster heroes bob around their start: x = xstart + sin(siner / 6) * 3 while waiting (con 0).
@@ -90,8 +99,8 @@ function soloClock(run:string,play:Play):Clock{
  return clock;
 }
 /** Sound handles the bosses keep (the remake plays no sound in tests). */
-const SOUND_HANDLES:Record<string,string[]>={obj_queen_explodinghead:['laughsound']};
-const BOSS_ENCOUNTERS=new Set(['57','58','59','60','62','63','81','82','83','89','94']);
+const SOUND_HANDLES:Record<string,string[]>={obj_astream:['mystream','bstream'],o_boxingcontroller:['_xstream'],o_boxingqueen:['punchnoise','kickyell'],obj_queen_explodinghead:['laughsound']};
+const BOSS_ENCOUNTERS=new Set(['57','58','59','60','62','63','81','82','83','84','89','94']);
 // The long recordings (-zlong, -menulong, -actlong: to each battle's end) take minutes; they run with LONG_PARITY=1.
 const LONG=process.env.LONG_PARITY==='1';
 const runs=fs.existsSync('.tools/oracle')?fs.readdirSync('.tools/oracle').filter(f=>/^ch2-(\d+)-s11-god[a-z-]*\.ndjson$/.test(f)&&(LONG||!/long\.ndjson$/.test(f)))

@@ -1,5 +1,5 @@
 import {assetUrl} from './url';
-import type {RunRecord} from './battle-run';
+import {BATTLE_RULES_VERSION,type RunRecord} from './battle-run';
 
 export type LeaderboardFilters={encounterId:string;order?:'damage'|'time';minDamage?:number;maxDamage?:number;minSeconds?:number;maxSeconds?:number;noItem?:boolean;noArmor?:boolean;weapon?:number;armor?:number;bagItem?:number;usedItem?:number;offset?:number};
 export interface LeaderboardRow extends RunRecord{player_name:string;created_at:string}
@@ -63,7 +63,7 @@ export class LeaderboardApi{
  private requireConfig():Config{if(!this.config)throw Error('Shared leaderboard is not configured yet.');return this.config;}
  private headers(token?:string):Headers{const headers=new Headers({'apikey':this.requireConfig().key,'Content-Type':'application/json'});if(token)headers.set('Authorization',`Bearer ${token}`);return headers;}
  async list(filters:LeaderboardFilters,signal?:AbortSignal):Promise<LeaderboardRow[]>{
-  const config=this.requireConfig();const params=new URLSearchParams({select:'*',encounter_id:`eq.${filters.encounterId}`,rules_version:'eq.battle-v1',order:filters.order==='time'?'duration_ms.asc,damage.asc,id.asc':'damage.asc,duration_ms.asc,id.asc',limit:'25',offset:String(filters.offset??0)});
+  const config=this.requireConfig();const params=new URLSearchParams({select:'*',encounter_id:`eq.${filters.encounterId}`,rules_version:`eq.${BATTLE_RULES_VERSION}`,order:filters.order==='time'?'duration_ms.asc,damage.asc,id.asc':'damage.asc,duration_ms.asc,id.asc',limit:'25',offset:String(filters.offset??0)});
   if(!/^[a-zA-Z0-9][a-zA-Z0-9:_-]{0,79}$/.test(filters.encounterId)||filters.order!==undefined&&!['damage','time'].includes(filters.order))throw Error('Invalid leaderboard filter.');
   for(const [key,value,max,integer] of [['minDamage',filters.minDamage,100000000,true],['maxDamage',filters.maxDamage,100000000,true],['minSeconds',filters.minSeconds,86400,false],['maxSeconds',filters.maxSeconds,86400,false],['weapon',filters.weapon,65535,true],['armor',filters.armor,65535,true],['bagItem',filters.bagItem,65535,true],['usedItem',filters.usedItem,65535,true],['offset',filters.offset,1000000,true]] as const){
    if(value!==undefined&&(!Number.isFinite(value)||value<0||value>max||integer&&!Number.isInteger(value)))throw Error(`Invalid leaderboard filter: ${key}.`);
@@ -81,9 +81,10 @@ export class LeaderboardApi{
   * place, and how many runs there would be with it. Two counted reads; nothing is published. */
  async rank(run:RunRecord,signal?:AbortSignal):Promise<{place:number;of:number}>{
   const config=this.requireConfig();
+  if(run.rules_version!==BATTLE_RULES_VERSION)throw Error('This run uses a different battle rules version. Start a new battle to compare with the current board.');
   if(!/^[a-zA-Z0-9][a-zA-Z0-9:_-]{0,79}$/.test(run.encounter_id)||!Number.isSafeInteger(run.damage)||!Number.isSafeInteger(run.duration_ms))throw Error('Invalid leaderboard run.');
   const count=async(extra:Record<string,string>)=>{
-   const params=new URLSearchParams({select:'id',encounter_id:`eq.${run.encounter_id}`,rules_version:'eq.battle-v1',limit:'1',...extra});
+   const params=new URLSearchParams({select:'id',encounter_id:`eq.${run.encounter_id}`,rules_version:`eq.${BATTLE_RULES_VERSION}`,limit:'1',...extra});
    const headers=this.headers();headers.set('Prefer','count=exact');
    const response=await request(this.fetcher,`${config.url}/rest/v1/leaderboard_runs?${params}`,{headers},signal);if(!response.ok)throw await serviceError(response);
    const total=/\/(\d+)$/.exec(response.headers.get('content-range')??'')?.[1];if(total===undefined)throw Error('Leaderboard returned no count.');return Number(total);

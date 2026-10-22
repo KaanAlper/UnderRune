@@ -920,9 +920,11 @@ export const healAnim:GmObjectDef={name:'obj_healanim',index:301,sprite:'spr_spa
    oflashOf(target,rt);
    // An enemy drawn away from its origin moves every white flash onto itself (Chapter 2's K_K).
    const shift=hooksOf(target).healFlashShift;if(shift)for(const f of rt.withInstances(oflash)){f.x+=shift[0];f.y+=shift[1];}
+   hooksOf(target).onHealFlash?.(target,s,rt);
   }
   if(s.t>=1&&s.t<=5)for(s.i=0;s.i<2;s.i+=1){
-   const y=s.y+rt.random.random(s.sh),x=s.x+rt.random.random(s.sw);
+   const point=hooksOf(target).healParticlePosition?.(target,s,rt);
+   const y=point?point[1]:s.y+rt.random.random(s.sh),x=point?point[0]:s.x+rt.random.random(s.sw);
    const st=rt.create(marker,x,y);gmArray(s,'star')[s.starcount]=st.id;
    st.imageAngle=rt.random.random(360);st.depth=-10;st.imageXscale=2;st.imageYscale=2;st.imageAlpha=2;st.imageSpeed=0.25;
    st.hspeed=2-rt.random.random(2);st.vspeed=-3-rt.random.random(2);st.friction=0.2;st.sprite=s.particlesprite;st.imageBlend=s.particlecolor;

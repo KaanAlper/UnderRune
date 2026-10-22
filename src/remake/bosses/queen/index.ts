@@ -17,7 +17,9 @@ import {createQueenBulletController} from './controller';
 /** Full normal enemy events; attack dependencies are registered independently and readiness belongs to the host. */
 export function createQueenObjects(object:(name:string)=>GmObjectDef):GmObjectDef[]{
  const hooks:BattleHooks={
+  canSkipEndingText:s=>s.endcon>0,
   defeatedByDamage:false,
+  battleOutcome:s=>s.endcon===4&&(s.defeat_cutscene_version===0?s.endtimer>=1:s.endtimer>=42)?'victory':undefined,
   // Rude Buster flies at her shield while it is up.
   aimsRudeBuster:(_s,rt,bolt)=>{
    const shield=rt.first(object('obj_queenshield_enemy'));if(!shield)return false;

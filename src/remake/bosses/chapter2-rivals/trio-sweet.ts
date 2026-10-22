@@ -163,7 +163,7 @@ export function createSweetEnemy(object:(name:string)=>GmObjectDef):GmObjectDef{
   afterEnemyTurn:danceScene,
   acts:(s,rt)=>trioDanceActs(s,rt,object,'sweet'),actsDone:()=>{},
   // Only Kris ACTs this turn: in Japanese, his dance then reads as a lone one (the single-ACT lines).
-  hooks:{soleFirstActor:s=>{s.simultotal_funny=1;},keepsEnemiesAtOneHp:true},
+  hooks:{canSkipEndingText:s=>s.endcon>0,soleFirstActor:s=>{s.simultotal_funny=1;},keepsEnemiesAtOneHp:true},
   afterStep:ending,
   events:{
    alarm4:s=>{s.actcon++;},

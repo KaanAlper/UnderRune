@@ -17,6 +17,7 @@ import {endBattle} from './battle-end';
 import {pressed} from './keys';
 import {mercyAdd2} from './chapter2-battle';
 import {drawController2} from './controller-chapter2';
+import {snd} from './sound';
 import {controllerTail2,stepControllerMenus2} from './controller-menu2';
 import {controllerScripts2,controllerScripts3,type ControllerScripts} from './controller-script-parts';
 
@@ -38,7 +39,7 @@ export const button1_p=(rt:GmRuntime)=>pressed(rt,KEY.z,KEY.enter);
 export const button2_p=(rt:GmRuntime)=>pressed(rt,KEY.x,KEY.shift);
 export const button3_p=(rt:GmRuntime)=>pressed(rt,KEY.c,KEY.ctrl);
 /** scr_get_input_name on a keyboard: the key's name in brackets (4 confirm, 5 cancel, 6 menu). */
-export const inputName=(n:number)=>'['+['DOWN','RIGHT','UP','LEFT','Z','X','C'][n]+']';
+export const inputName=(n:number)=>'['+['Down','Right','Up','Left','Z','X','C'][n]+']';
 const grid=(rows:number,cols:number,v:unknown)=>Array.from({length:rows},()=>new Array(cols).fill(v));
 /** scr_84_get_subst_string: ~1, ~2 ... replaced by the arguments. */
 export function subst(str:string,...args:(string|number)[]){args.forEach((a,i)=>{str=str.split('~'+(i+1)).join(String(a));});return str;}
@@ -336,6 +337,7 @@ function create(s:GmInstance,rt:GmRuntime){
  rt.create(tensionBar,0,0);
  s.reset=0;s.timeron=1;s.noreturn=0;s.hpcolor=[C.aqua,0xff00ff,C.lime];
  controllerScripts(rt).afterCreate(s,rt);
+ for(const [e,h] of withHook(rt,'onControllerCreate'))h(e,s,rt);
 }
 
 /** The writer and portraits sit above the panel (depth 3) on the command row and below it (10) in a submenu. */
@@ -705,7 +707,7 @@ export const battleControllerFull:GmObjectDef={...controllerBase,parent:controll
  * and is drawn through a surface (its cutout rounds the fill) with the logo and percentage drawn last. */
 /** Chapter 3's tension bar: it can slide 90 up out of the way (yoffset, for Rouxls's button grid), and its pulse
  * counter (tsiner) runs on while no TP cost is shown. */
-const TENSION_BAR:Readonly<Record<number,{readonly slides:boolean}>>={1:{slides:false},2:{slides:false},3:{slides:true}};
+const TENSION_BAR:Readonly<Record<number,{readonly slides:boolean;readonly selectionProbe:boolean}>>={1:{slides:false,selectionProbe:false},2:{slides:false,selectionProbe:true},3:{slides:true,selectionProbe:false}};
 export const tensionBar:GmObjectDef={name:'obj_tensionbar',index:333,depth:1,sprite:'spr_tensionbar',events:{
  create:(s,rt)=>{
   const g=rt.globals;s.tsiner=0;g.tensionselect=0;s.apparent=g.tension;s.current=g.tension;s.change=0;s.changetimer=15;s.red=0;s.redtimer=0;
@@ -749,6 +751,7 @@ export const tensionBar:GmObjectDef={name:'obj_tensionbar',index:333,depth:1,spr
    if(gt(s.apparent,s.current)){fill(s.apparent,C.white);fill(s.current,orange);}
    if(eq(s.apparent,s.current))fill(s.current,orange);
   }
+  if(forChapter(rt,TENSION_BAR,'obj_tensionbar').selectionProbe){s.shit='tensionselect' in g?(g.tensionselect>=0?1:0):2;if(s.shit===2)snd(rt,'snd_splat');}
   if(g.tensionselect>0){
    s.tsiner+=1;d.color=C.white;d.alpha=Math.abs(Math.sin(s.tsiner/8)*0.5)+0.2;
    s.theight=sh-s.current/max*sh;s.theight2=s.theight+g.tensionselect/max*sh;

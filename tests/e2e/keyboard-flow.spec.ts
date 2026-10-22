@@ -14,6 +14,7 @@ for(const uppercase of [false,true])test(`Z X and arrows navigate theater, chapt
  // Chapter 2 opens on a playable card (Tasque Manager): its Leaderboard comes before Prepare party.
  await press('ArrowDown');await expect(page.getByRole('button',{name:'Leaderboard',exact:true})).toBeFocused();
  await press('ArrowDown');await expect(page.getByRole('button',{name:'Prepare party',exact:true})).toBeFocused();
+ await press('ArrowDown');await expect(page.getByRole('button',{name:'Attack practice',exact:true})).toBeFocused();
  await press('ArrowDown');await expect(page.getByRole('button',{name:'Previous encounters',exact:true})).toBeFocused();await press('z');await expect(card).not.toHaveAttribute('aria-label',first!);
  await press('ArrowDown');await expect(page.getByRole('button',{name:'Next encounters',exact:true})).toBeFocused();await press('z');await expect(card).toHaveAttribute('aria-label',first!);await press('x');await expect(card).toBeFocused();
  // Up reaches the native boss picker; its native arrows select encounters, X returns to the card.

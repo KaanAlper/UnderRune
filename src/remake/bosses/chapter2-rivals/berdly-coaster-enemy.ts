@@ -14,7 +14,7 @@ export function createBerdlyCoasterEnemy(object:(name:string)=>GmObjectDef):GmOb
  const text=(s:GmInstance,rt:GmRuntime,key:string)=>{msgSet(rt,0,T(key));battleTextDefault(rt,s);};
  const balloon=(s:GmInstance,rt:GmRuntime,key?:string)=>{if(key)msgSet(rt,0,T(key));enemyBlcon2(s,rt,s.x-10,rt.globals.monstery[s.myself],10);};
  return defineEnemy({name:base.name,index:base.index,depth:base.depth??0,sprite:base.sprite},{
-  hooks:{defeatedByDamage:false,onFightResolved:(s,_hero,rt,target)=>{if(target===s.myself&&rt.globals.monsterhp[target]<=0)s.endcon=1;},
+  hooks:{canSkipEndingText:s=>s.endcon>0,defeatedByDamage:false,onFightResolved:(s,_hero,rt,target)=>{if(target===s.myself&&rt.globals.monsterhp[target]<=0)s.endcon=1;},
    onDamagedToZero:(s,_rt,slot)=>{if(slot===s.myself)s.endcon=1;},
    // His flashes show his hurt sprite.
    flashSprite:s=>s.hurtsprite},

@@ -9,6 +9,10 @@ function fixture(){
  return {tracker,globals,loadout};
 }
 describe('passive battle run metrics',()=>{
+ it('labels committed-victory timing separately from historical dialogue-counted runs',()=>{
+  const {tracker,globals:g}=fixture();tracker.frame(g);
+  expect(tracker.finish('victory',g)?.rules_version).toBe('battle-v2');
+ });
  it('counts heal then damage in one frame without subtracting earlier losses',()=>{
   const {tracker,globals:g}=fixture();g.hp[1]-=20;g.hp[1]+=10;g.hp[1]-=5;tracker.frame(g);
   expect(tracker.finish('victory',g)?.damage).toBe(25);

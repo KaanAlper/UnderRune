@@ -1,7 +1,7 @@
 import type {Loadout} from './loadout';
 
 /** Increment when scoring semantics or gameplay changes make previous scores incomparable. */
-export const BATTLE_RULES_VERSION='battle-v1';
+export const BATTLE_RULES_VERSION='battle-v2';
 export const scoreBoss=(id:string)=>id.replace(/-enraged$/,'');
 export type RunEquipment={character:number;weapon:number;armor:[number,number]};
 export type RunRecord={id:string;encounter_id:string;rules_version:string;duration_ms:number;damage:number;equipment:RunEquipment[];bag:number[];used_items:number[];no_armor:boolean;no_item:boolean};

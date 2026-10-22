@@ -12,7 +12,7 @@ export class BossDeck{
  private caption=document.createElement('span');
  private selected=0;private chapter=0;private records:EncounterRecord[]=[];
  private choose:(index:number)=>void=()=>{};private launch:()=>void=()=>{};
- constructor(private assets:AssetStore,private onLeaderboard?:(record:EncounterRecord)=>void){
+ constructor(private assets:AssetStore,private onLeaderboard?:(record:EncounterRecord)=>void,private onPractice?:()=>void){
   this.element.className='boss-deck';this.element.setAttribute('aria-label','Boss card deck');
   let startX=0,startY=0,suppressClick=false;
   this.element.addEventListener('pointerdown',e=>{startX=e.clientX;startY=e.clientY;suppressClick=false;});
@@ -74,10 +74,13 @@ export class BossDeck{
    const prepare=document.createElement('button');prepare.className='deck-prepare';prepare.textContent='Prepare party';prepare.addEventListener('click',()=>this.launch());
    const actions=document.createElement('div');actions.className='deck-actions';
    if(this.onLeaderboard){const scores=document.createElement('button');scores.className='deck-leaderboard';scores.textContent='Leaderboard';scores.onclick=()=>this.onLeaderboard!(this.records[this.selected]);scores.onkeydown=event=>{if(event.key.toLowerCase()==='z'){event.preventDefault();event.stopPropagation();scores.click();}};actions.append(scores);}
-   actions.append(prepare);footer.append(labelPicker,this.picker);this.element.append(footer,actions);
+   actions.append(prepare);
+   if(this.onPractice){const practice=document.createElement('button');practice.className='deck-practice';practice.textContent='Attack practice';practice.addEventListener('click',()=>this.onPractice!());actions.append(practice);}
+   footer.append(labelPicker,this.picker);this.element.append(footer,actions);
   }
   this.picker.value=records[selected].id;this.caption.textContent=`${selected+1} / ${records.length}`;
   const scores=this.element.querySelector<HTMLButtonElement>('.deck-leaderboard');if(scores)scores.disabled=!available(records[selected].id);
+  const practice=this.element.querySelector<HTMLButtonElement>('.deck-practice');if(practice)practice.disabled=!available(records[selected].id);
   this.cards.forEach((card,index)=>{
    let offset=(index-selected+records.length)%records.length;if(offset===records.length-1)offset=-1;
    const visible=offset>=-1&&offset<=3,active=offset===0;

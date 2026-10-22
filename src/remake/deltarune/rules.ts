@@ -57,6 +57,8 @@ export function rules(rt:GmRuntime):ChapterRules{
 }
 
 export interface BattleHooks{
+ /** Encounter-specific panel initialization after the shared controller has built its chapter fields. */
+ onControllerCreate?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime):void;
  /** scr_endturn (Chapter 2): the ACTs start with only the first party member's single ACT chosen this turn. */
  soleFirstActor?(enemy:GmInstance,rt:GmRuntime):void;
  /** Redirect a FIGHT hit before HP subtraction. True means the encounter consumed the damage. */
@@ -95,6 +97,10 @@ export interface BattleHooks{
  readonly keepsEnemiesAtOneHp?:boolean;
  /** Where a heal's white flash goes from this enemy's origin (obj_healanim moves every flash by it). */
  readonly healFlashShift?:readonly [number,number];
+ /** Multi-layer battle actors may add their source heal flash after the ordinary body flash. */
+ onHealFlash?(target:GmInstance,effect:GmInstance,rt:GmRuntime):void;
+ /** An actor whose origin differs from a hero's supplies its source healing-particle position and RNG calls. */
+ healParticlePosition?(target:GmInstance,effect:GmInstance,rt:GmRuntime):readonly [number,number];
  /** While this enemy is in the battle, the party's FIGHT damage numbers draw above everything (Rouxls's board). */
  readonly fightNumbersOnTop?:boolean;
  /** This bullet (exactly this object, not its children) can be grazed while inactive (the Knight's tunnel swords). */
@@ -142,6 +148,8 @@ export interface BattleHooks{
  knocksOutHard?(enemy:GmInstance,rt:GmRuntime,slot:number):boolean;
  /** The battle ends its own way (no victory screen, no game over): its outcome once that ending is over. */
  battleOutcome?(enemy:GmInstance,rt:GmRuntime):'victory'|'defeat'|undefined;
+ /** Host confirm may dismiss this enemy's ending text; this never declares a battle outcome. */
+ canSkipEndingText?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** No game over when the whole party is down (the battle ends its own way). */
  preventsGameOver?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** Chapter 3's FIGHT: the enemy blocks the hits now (no slash; onFightBlocked instead). */

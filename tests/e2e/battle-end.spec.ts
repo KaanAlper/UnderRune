@@ -49,6 +49,19 @@ test('a won battle fades out and shows the result',async({page})=>{
  await page.keyboard.press('x');await expect(page.locator('#boss-select')).toBeVisible();
 });
 
+test('Enter skips the victory text and a fresh press restarts immediately',async({page})=>{
+ const failures:string[]=[];page.on('pageerror',e=>failures.push(e.message));
+ await jevil(page);
+ await page.evaluate(()=>(window as any).__underrune.win());
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#outcome')).toBeVisible({timeout:2000});
+ await expect(page.locator('#outcome-again')).toContainText('Z / ENTER');
+ await page.waitForTimeout(160);await page.keyboard.press('Enter');
+ await expect(page.locator('#outcome')).toBeHidden();
+ await expect(status(page)).toContainText('JEVIL / command / TURN 1');
+ expect(failures).toEqual([]);
+});
+
 test('pause continues with Z and leaving takes a second X',async({page})=>{
  await jevil(page);
  await page.keyboard.press('p');await expect(status(page)).toContainText('paused');

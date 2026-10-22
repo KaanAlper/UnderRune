@@ -29,9 +29,9 @@ const CHAR_NAMES:Record<number,string[]>={
 };
 /** The globals obj_initializer / scr_gamestart and the save file give a battle. */
 export function partyGlobals(rt:GmRuntime,p:PartySetup){
- const g=rt.globals;
+ const g=rt.globals,slots=p.char.includes(4)?5:4;
  g.char=[...p.char];g.hp=[...p.hp];g.maxhp=[...p.maxhp];g.at=[...p.at];g.df=[...p.df];g.mag=[...p.mag];
- g.itemat=[[0,0,0],[0,0,0],[0,0,0],[0,0,0]];g.itemdf=[[0,0,0],[0,0,0],[0,0,0],[0,0,0]];g.itemmag=[[0,0,0],[0,0,0],[0,0,0],[0,0,0]];g.charweapon=[0,0,0,0];
+ g.itemat=Array.from({length:slots},()=>[0,0,0]);g.itemdf=Array.from({length:slots},()=>[0,0,0]);g.itemmag=Array.from({length:slots},()=>[0,0,0]);g.charweapon=new Array(slots).fill(0);
  g.chararmor1=new Array(5).fill(0);g.chararmor2=new Array(5).fill(0);
  for(const [id,e] of Object.entries(p.equipped)){const c=Number(id);g.itemat[c]=[...e.itemat];g.itemdf[c]=[...e.itemdf];g.itemmag[c]=[...e.itemmag];g.charweapon[c]=e.weapon;g.chararmor1[c]=e.armor?.[0]??0;g.chararmor2[c]=e.armor?.[1]??0;}
  g.item=new Array(13).fill(0);p.items.slice(0,12).forEach((id,i)=>{g.item[i]=id;});
