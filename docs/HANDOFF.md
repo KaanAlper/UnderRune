@@ -792,6 +792,9 @@ New scripts go in `tools/oracle-scripts.mjs`.
   visible Topic clock/full turn, keyboard navigation, Jevil's continuous turn and equipment-fetch retry. Both
   fresh and actual cached-old-index Knight launches reach Stars without page errors or failed HTTP requests.
   The build retained 14 old JS/CSS assets. The explicit Knight reload/preparation regression suite passes ten tests.
+- Final publication audit also caught omitted Chapter 2 music. Pages now includes cyber_battle, cyber_battle_end,
+  queen_boss and berdly_battle_heartbeat_true. The ending track is extracted from the installed mus directory;
+  a publication regression checks both catalog membership and actual files for released boss/ending music.
 
 ### 19. Requested next (after the release above)
 
