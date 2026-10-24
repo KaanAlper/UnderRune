@@ -1,7 +1,7 @@
 // DELTARUNE battle framework, re-implemented for the remake: the soul and its graze box, the battle box,
 // bullets, the damage formula, screen shake and damage numbers. Object indices are Chapter 1's; event
 // dispatch order depends on them.
-import {moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
+import {gmArray,moveTowardsPoint,type GmInstance,type GmObjectDef,type GmRuntime} from '../gm/runtime';
 import {eq,ge,gt,le,lt,pointDistance,round} from '../gm/math';
 import {C,mergeColor} from '../gm/graphics';
 import {forChapter,rules,withHook,type BattleHooks,type HookedDef} from './rules';
@@ -339,7 +339,7 @@ export function darkMarker(rt:GmRuntime,caller:GmInstance,x:number,y:number,spri
 }
 /** A spared enemy: it flashes white, slides away as fading afterimages and sheds spare stars. All of it runs in Draw. */
 export const spareAnim:GmObjectDef={name:'obj_spareanim',index:306,events:{
- create:(s,rt)=>{s.t=0;s.imageSpeed=0;s.starcount=0;s.afterimage=0;s.tone=0;s.neotone=0;s.star=[];rt.sound?.('snd_spare',1,true);},
+ create:(s,rt)=>{s.t=0;s.imageSpeed=0;s.starcount=0;s.afterimage=0;s.tone=0;s.neotone=0;rt.sound?.('snd_spare',1,true);},
  draw:(s,rt)=>{
   const spr:string=s.sprite??'',frame=s.imageIndex,xs=s.imageXscale,ys=s.imageYscale;
   if(s.t>=6&&s.t<=26){
@@ -352,21 +352,21 @@ export const spareAnim:GmObjectDef={name:'obj_spareanim',index:306,events:{
    s.maxwhite=Math.min(1,s.t/5);
    rt.drawSpriteFog(spr,frame,s.x,s.y,xs,ys,0,C.white,s.maxwhite-s.tone/5);
   }
-  if(s.t>=1&&s.t<=5)for(let i=0;i<2;i++){
+  if(s.t>=1&&s.t<=5)for(s.i=0;s.i<2;s.i++){
    // instance_create(x + random(sprite_width), y + random(sprite_height), ...): arguments run right to left, Y first.
    const y=s.y+rt.random.random(rt.spriteHeight(s)),x=s.x+rt.random.random(rt.spriteWidth(s));
-   const st=rt.create(marker,x,y);s.star[s.starcount]=st.id;
+   const st=rt.create(marker,x,y);gmArray<number>(s,'star')[s.starcount]=st.id;
    st.imageXscale=2;st.imageYscale=2;st.sprite='spr_sparestar_anim';st.imageAlpha=2;st.imageSpeed=0.25;st.hspeed=-3;st.gravity=0.5;st.gravityDirection=0;
    s.starcount+=1;
   }
-  if(s.t>=5&&s.t<=30)for(let i=0;i<s.starcount;i++){
-   const st=rt.byId(s.star[i]);if(!st)continue;
+  if(s.t>=5&&s.t<=30)for(s.i=0;s.i<s.starcount;s.i++){
+   const st=rt.byId(s.star[s.i]);if(!st)continue;
    st.imageAngle+=10;st.imageAlpha=st.imageAlpha-0.1;if(le(st.imageAlpha,0))rt.destroy(st);
   }
   if(s.t>=5&&s.t<10)s.tone+=1;
   if(s.t>=9){
    s.neotone+=1;
-   if(s.neotone>=30){for(let i=0;i<s.starcount;i++){const st=rt.byId(s.star[i]);if(st)rt.destroy(st);}rt.destroy(s);}
+   if(s.neotone>=30){for(s.i=0;s.i<s.starcount;s.i++){const st=rt.byId(s.star[s.i]);if(st)rt.destroy(st);}rt.destroy(s);}
   }
   s.t+=1;
  },

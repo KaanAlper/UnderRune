@@ -90,7 +90,7 @@ it.skipIf(!fs.existsSync('public/generated/remake/ch2/bundle.json'))('starts pub
   const proxy=giga.enemy!,hook=(proxy.object as import('../src/remake/deltarune/rules').HookedDef).hooks!;
   expect(hook.battleOutcome?.(proxy,giga.rt)).toBeUndefined();
   const rocketDef=gigaHost.objects.obj_rocketpunch_bhero;
-  const rocket=giga.rt.create(rocketDef,0,0);rocket.done=1;
+  const rocket=giga.rt.create(rocketDef,0,0);rocket.$rocketPunchComplete=1;
   expect(hook.battleOutcome?.(proxy,giga.rt)).toBe('victory');
   giga.step();
   expect(giga.outcome).toBe('victory');

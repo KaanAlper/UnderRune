@@ -26,3 +26,7 @@ it('applies DEFEND/item specials and displays zero HP on boxing knockout',()=>{
  h.onCommandChosen!(enemy,panel,rt,'item');expect(player.specialcon).toBe(7);player.dead=1;panel.gigaqueencon=0;
  expect(h.partyHudHp!(enemy,rt,0,1)).toBe(0);expect(h.blocksControllerStep!(enemy,panel,rt)).toBe(true);
 });
+it('returns the soul to the machine torso after the soul attack',()=>{
+ const {rt,enemy,player,h}=fixture();player.x=250;player.y=355;
+ expect(h.soulReturnsTo?.(enemy,rt)).toEqual([250,245]);
+});

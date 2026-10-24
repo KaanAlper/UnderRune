@@ -4,6 +4,7 @@ import {START,chapter2RecordingReady,runChapter2Recording} from './parity/chapte
 import {installChapter2BossHost} from '../src/remake/host/chapter2-bosses';
 import type {GmRuntime} from '../src/remake/gm/runtime';
 import {GmRandom} from '../src/remake/gm/random';
+import type {Dump} from './parity/reference';
 import {MUSICAL_SCORE} from '../src/remake/bosses/chapter2-rivals/musical-score-data';
 
 // The other Chapter 2 bosses against the original game, frame by frame and (where the recording has full dumps)
@@ -99,7 +100,7 @@ function soloClock(run:string,play:Play):Clock{
  return clock;
 }
 /** Sound handles the bosses keep (the remake plays no sound in tests). */
-const SOUND_HANDLES:Record<string,string[]>={obj_astream:['mystream','bstream'],o_boxingcontroller:['_xstream'],o_boxingqueen:['punchnoise','kickyell'],obj_queen_explodinghead:['laughsound']};
+const SOUND_HANDLES:Record<string,string[]>={obj_astream:['mystream','bstream'],obj_musical_battle_end:['song1','song2','_mystream','_xsndinstance'],o_boxingcontroller:['_xstream'],o_boxingqueen:['punchnoise','kickyell'],obj_bq_baseball_final:['_xstream'],obj_queen_explodinghead:['laughsound']};
 const BOSS_ENCOUNTERS=new Set(['57','58','59','60','62','63','81','82','83','84','89','94']);
 // The long recordings (-zlong, -menulong, -actlong: to each battle's end) take minutes; they run with LONG_PARITY=1.
 const LONG=process.env.LONG_PARITY==='1';
@@ -110,13 +111,32 @@ for(const name of runs){
  describe.skipIf(!chapter2RecordingReady(RUN))(`Chapter 2 encounter ${name.split('-')[1]} against the original (local recording ${name})`,()=>{
   it('matches every recorded frame',()=>{
    const install=(rt:GmRuntime)=>installChapter2BossHost(rt,{room:'room_battletest'});
-   const restoring=(clock:Clock|undefined,start:number)=>(rt:GmRuntime)=>{restoreStarts(rt);if(clock)rt.soundTrackPosition=()=>clock(rt.frame+start)/30;};
-   const clock=name.startsWith('ch2-62-')?soloClock(RUN,(c,start)=>{
+   const restoring=(clock:Clock|undefined,start:number)=>(rt:GmRuntime)=>{
+    restoreStarts(rt);if(clock)rt.soundTrackPosition=()=>clock(rt.frame+start)/30;
+    // These original recordings use the launcher's encounter-84-only --god callback.
+    // GIGA overwrites starting HP in Create, so refill current HP before each source Step.
+    // Enemy HP, damage, actions, timers, RNG and Draw events remain unmodified.
+    if(/^ch2-84-s11-god-giga(?:win|ending)long$/.test(name)){
+     const step=rt.step.bind(rt);rt.step=()=>{if(rt.instances.some(i=>i.live&&i.object.name==='o_boxingcontroller'))rt.globals.hp[1]=rt.globals.maxhp[1];step();};
+    }
+   };
+   const observed=name==='ch2-62-s11-god-bandpolicywinlong'?JSON.parse(fs.readFileSync(RUN+'.solo.json','utf8')) as Record<number,number>:undefined;
+   const clock=observed?((frame:number)=>observed[frame]??0):name.startsWith('ch2-62-')?soloClock(RUN,(c,start)=>{
     let last:GmRuntime|undefined;
     const r=runChapter2Recording(RUN,install,SOUND_HANDLES,2,rt=>{last=rt;restoring(c,start)(rt);},{start,quiet:true});
     return {mismatch:r.mismatch,random:last!.random.snapshot()};
    }):undefined;
    expect(runChapter2Recording(RUN,install,SOUND_HANDLES,2,restoring(clock,START)).mismatch).toBeUndefined();
+   if(name==='ch2-84-s11-god-gigaendinglong'){
+    const snapshots=[2400,5000,8800,9000].map(frame=>JSON.parse(fs.readFileSync(`${RUN}-f${frame}.json`,'utf8')) as Dump);
+    const instance=(dump:Dump,name:string)=>dump.instances.find(i=>i.objectName===name)!;
+    const finalBall=JSON.parse(fs.readFileSync(`${RUN}-f8000.json`,'utf8')) as Dump;
+    expect(instance(finalBall,'obj_bq_baseball_final')).toBeDefined();
+    expect(snapshots.slice(0,2).map(d=>instance(d,'o_boxinghud').selfVariables.sub_healthbar_count)).toEqual([1,0]);
+    expect(instance(snapshots[2],'obj_rocketpunch_bhero').selfVariables.split).toBe(1);
+    const finished=instance(snapshots[3],'obj_rocketpunch_bhero');
+    expect(finished.selfVariables.con).toBe(1);expect(finished.alarms['0']).toBeUndefined();expect(finished.alarms['1']).toBeUndefined();
+   }
   },LONG?3600000:300000);
  });
 }

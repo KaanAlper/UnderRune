@@ -2,6 +2,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {preservePreviousPageAssets} from './pages-asset-retention.mjs';
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url))),out=path.join(root,'dist-pages'),app=path.join(out,'play');
 const manifest=JSON.parse(await fs.readFile(path.join(root,'public/generated/manifest.json'),'utf8'));
 const records=JSON.parse(await fs.readFile(path.join(root,'src/bosses/catalog.json'),'utf8'));
@@ -29,3 +30,4 @@ const walk=async dir=>{for(const e of await fs.readdir(dir,{withFileTypes:true})
 await walk(out);
 await fs.writeFile(path.join(out,'404.html'),(await fs.readFile(path.join(root,'site/404.html'),'utf8')).replace('__PAGES__',JSON.stringify(pages.sort())));
 console.log(`Pages: theater, ${Object.keys(sprites).length} menu sprites, equipment catalog, every Chapter 1 boss, and Chapter 2's playable bosses, and the Roaring Knight. Native files excluded.`);
+console.log(`Retained ${await preservePreviousPageAssets(root,out)} previous release assets for open tabs.`);

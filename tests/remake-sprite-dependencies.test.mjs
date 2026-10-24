@@ -11,3 +11,8 @@ test('includes metadata-only sprites and precise masks while excluding unrelated
 test('keeps a sprite shared with an explicit draw once and accepts objects without sprites',()=>{
  assert.deepEqual([...remakeSpriteDependencies('obj_a obj_b spr_shared',[{name:'obj_a',sprite:'spr_shared',mask:null},{name:'obj_b',sprite:null}])],['spr_shared']);
 });
+
+test('expands expression portraits only from the current chapter sprite table',()=>{
+ const names=remakeSpriteDependencies("byExpression('spr_face_s', global.fe, 13)",[],new Set(['spr_face_s0','spr_face_s5','spr_face_s_alt','spr_other0']));
+ assert.deepEqual([...names].sort(),['spr_face_s0','spr_face_s5']);
+});

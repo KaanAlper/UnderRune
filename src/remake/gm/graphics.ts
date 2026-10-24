@@ -18,6 +18,8 @@ export interface GmGraphics{
  sprite(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,blend:number,alpha:number):void;
  /** draw_sprite_part_ext: origin-independent crop in untrimmed sprite coordinates. */
  spritePart?(name:string,frame:number,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number):void;
+ /** draw_sprite_pos: a frame mapped to four room-space corners, independent of its origin. */
+ spritePos?(name:string,frame:number,x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,x4:number,y4:number,alpha:number):void;
  spriteFog?(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,color:number,alpha:number):void;
  /** draw_background_tiled_ext: frame 0 repeated over the whole view from (x, y). */
  spriteTiled?(name:string,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number,frame?:number):void;

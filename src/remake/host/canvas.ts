@@ -66,7 +66,7 @@ export class CanvasGraphics implements GmGraphics{
   this.screen=ctx;this.pages=[...assets.pages];this.assets={...assets,pages:this.pages,sprite:name=>this.generated.get(name)??assets.sprite(name)};
   // Scope complete drawing operations, including nine-slice, fonts, fog and cropped/tiled sprites. Nested
   // calls reuse the same raster target; captures, target changes and resource lifetime methods stay direct.
-  for(const key of ['sprite','spritePart','spriteFog','spriteTiled','rect','line','lineColor','circle','circleColor','triangle','triangleColor','text'] as const){
+  for(const key of ['sprite','spritePart','spritePos','spriteFog','spriteTiled','rect','line','lineColor','circle','circleColor','triangle','triangleColor','text'] as const){
    const draw=this[key].bind(this) as (...args:unknown[])=>void;
    Object.defineProperty(this,key,{value:(...args:unknown[])=>this.paint(()=>draw(...args),()=>this.bounds(key,args),key,args)});
   }
@@ -204,6 +204,7 @@ export class CanvasGraphics implements GmGraphics{
    for(const xx of [-s.originX,s.width-s.originX])for(const yy of [-s.originY,s.height-s.originY])points.push({x:x+xx*xs*co-yy*ys*si,y:y+xx*xs*si+yy*ys*co});
    return box(Math.min(...points.map(p=>p.x))-1,Math.min(...points.map(p=>p.y))-1,Math.max(...points.map(p=>p.x))+1,Math.max(...points.map(p=>p.y))+1);
   }
+  if(key==='spritePos')return box(Math.min(a[2],a[4],a[6],a[8]),Math.min(a[3],a[5],a[7],a[9]),Math.max(a[2],a[4],a[6],a[8]),Math.max(a[3],a[5],a[7],a[9]));
   if(key==='spritePart'){const x=a[6],y=a[7],right=x+a[4]*a[8],bottom=y+a[5]*a[9];return box(Math.min(x,right)-1,Math.min(y,bottom)-1,Math.max(x,right)+1,Math.max(y,bottom)+1);}
   if(key==='rect'||key==='line'||key==='lineColor'){const pad=key==='line'?(a[6]??1)/2+1:1;return box(Math.min(a[0],a[2])-pad,Math.min(a[1],a[3])-pad,Math.max(a[0],a[2])+pad+1,Math.max(a[1],a[3])+pad+1);}
   if(key==='circle'||key==='circleColor')return box(a[0]-a[2]-1,a[1]-a[2]-1,a[0]+a[2]+1,a[1]+a[2]+1);
@@ -214,7 +215,7 @@ export class CanvasGraphics implements GmGraphics{
   * it rather than guessing. Opaque primitives and raw surface pixels do retain everything those modes need. */
  private checkRasterSource(key:string,args:unknown[]){
   if(this.testAlpha||!['subtract','dest-alpha-add','dest-alpha-copy'].includes(this.mode))return;
-  const alphaIndex:Record<string,number>={sprite:8,spriteFog:8,spritePart:11,spriteTiled:6,rect:5,line:5,lineColor:6,circle:4,triangle:7,triangleColor:9};
+  const alphaIndex:Record<string,number>={sprite:8,spriteFog:8,spritePart:11,spritePos:10,spriteTiled:6,rect:5,line:5,lineColor:6,circle:4,triangle:7,triangleColor:9};
   if(args[alphaIndex[key]]===0||key==='text')throw Error('Canvas blend mode needs raw RGB for alpha-zero fragments');
   if(!key.startsWith('sprite'))return;
   const s=this.assets.sprite(args[0] as string),f=s&&frameAt(s,key==='spriteTiled'?(args[7] as number??0):args[1] as number);if(!f)return;
@@ -754,6 +755,29 @@ export class CanvasGraphics implements GmGraphics{
   const page=blend===0xffffff?this.assets.pages[f.page]:this.tinted(f,blend);
   this.place(x,y,xscale,yscale,0,alpha);
   this.targetContext.drawImage(page,sx+(blend===0xffffff?f.sx:0),sy+(blend===0xffffff?f.sy:0),sw,sh,l-left,t-top,r-l,b-t);this.targetContext.restore();
+ }
+ /** Point-sampled source draw_sprite_pos maps the cropped atlas frame directly to the supplied corners. */
+ spritePos(name:string,frame:number,x1:number,y1:number,x2:number,y2:number,x3:number,y3:number,x4:number,y4:number,alpha:number){
+  const s=this.assets.sprite(name),f=s&&frameAt(s,frame);if(!s||!f||alpha<=0)return;
+  const ctx=this.targetContext,points=[[x1-this.vx,y1-this.vy,0,0],[x2-this.vx,y2-this.vy,f.sw,0],[x3-this.vx,y3-this.vy,f.sw,f.sh],[x4-this.vx,y4-this.vy,0,f.sh]];
+  const left=Math.max(0,Math.floor(Math.min(...points.map(p=>p[0])))),top=Math.max(0,Math.floor(Math.min(...points.map(p=>p[1])))),right=Math.min(this.rasterSize?.width??ctx.canvas.width,Math.ceil(Math.max(...points.map(p=>p[0])))),bottom=Math.min(this.rasterSize?.height??ctx.canvas.height,Math.ceil(Math.max(...points.map(p=>p[1]))));
+  if(right<=left||bottom<=top)return;
+  const width=right-left,height=bottom-top,image=new ImageData(width,height),source=this.readFrame(f);
+  for(const indices of [[0,1,2],[0,2,3]]){
+   const [a,b,c]=indices.map(i=>points[i]),det=(b[0]-a[0])*(c[1]-a[1])-(c[0]-a[0])*(b[1]-a[1]);if(!det)continue;
+   const edge=(p:number[],q:number[])=>det>0?(q[1]<p[1]||(q[1]===p[1]&&q[0]>p[0])):(p[1]<q[1]||(p[1]===q[1]&&p[0]>q[0]));
+   const e1=edge(b,c),e2=edge(c,a),e3=edge(a,b);
+   for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
+    const v=((x+.5-a[0])*(c[1]-a[1])-(y+.5-a[1])*(c[0]-a[0]))/det,w=((b[0]-a[0])*(y+.5-a[1])-(b[1]-a[1])*(x+.5-a[0]))/det,u=1-v-w;
+    if(u<0||v<0||w<0||u===0&&!e1||v===0&&!e2||w===0&&!e3)continue;
+    const sx=u*a[2]+v*b[2]+w*c[2],sy=u*a[3]+v*b[3]+w*c[3];
+    if(sx<0||sy<0||sx>=f.sw||sy>=f.sh)continue;
+    const src=(Math.floor(sy)*f.sw+Math.floor(sx))*4,dst=((y-top)*width+x-left)*4;
+    image.data[dst]=source.data[src];image.data[dst+1]=source.data[src+1];image.data[dst+2]=source.data[src+2];image.data[dst+3]=Math.round(source.data[src+3]*Math.min(1,alpha));
+   }
+  }
+  const canvas=this.triCanvas??(this.triCanvas=document.createElement('canvas'));if(canvas.width<width)canvas.width=width;if(canvas.height<height)canvas.height=height;
+  const raster=this.triCtx??(this.triCtx=canvas.getContext('2d')!);raster.putImageData(image,0,0);ctx.save();ctx.globalAlpha=1;ctx.drawImage(canvas,0,0,width,height,left,top,width,height);ctx.restore();
  }
  spriteFog(name:string,frame:number,x:number,y:number,xscale:number,yscale:number,angle:number,color:number,alpha:number){
   const s=this.assets.sprite(name);if(!s||alpha<=0)return;const f=frameAt(s,frame);if(!f)return;

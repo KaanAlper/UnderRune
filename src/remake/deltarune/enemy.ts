@@ -17,6 +17,8 @@ type Step=(s:GmInstance,rt:GmRuntime)=>void;
 export interface EnemyStrategy{
  /** Create: the enemy's fields. */
  create:Step;
+ /** Legacy enemies compare mnfight directly, without scr_isphase's caller-variable write. */
+ phase?:(s:GmInstance,rt:GmRuntime,phase:'enemytalk'|'bullets')=>boolean;
  /** Every Step, first. */
  beforeStep?:Step;
  /** The rest of the Step runs only while global.fighting is 1. */
@@ -64,10 +66,10 @@ export interface EnemyStrategy{
 }
 
 /** obj_baseenemy's talk end: the words can be skipped after 15 frames; then the soul flies in and the box opens. */
-function defaultEndTalk(s:GmInstance,rt:GmRuntime){
- if(s.talked!==1||!isPhase(rt,'enemytalk',s))return;
+function defaultEndTalk(s:GmInstance,rt:GmRuntime,phase:(name:'enemytalk'|'bullets')=>boolean){
+ if(s.talked!==1||!phase('enemytalk'))return;
  s.rtimer=0;blconSkip(s,rt,15);
- if(isPhase(rt,'bullets',s)){
+ if(phase('bullets')){
   if(!rt.exists(moveHeart))moveHeartIn(rt);
   if(!rt.exists(growtangle))rt.create(growtangle,rt.view.x+320,rt.view.y+170);
  }
@@ -80,7 +82,8 @@ function templateStep(st:EnemyStrategy):Step{
   if(!rt.exists(darkener))rt.create(darkener,0,0);
   st.talk?.(s,rt);s.talked=1;s.talktimer=0;
  });
- const endTalk=st.endTalk??defaultEndTalk,actsDone=st.actsDone??defaultActsDone,delay=st.attackDelay??12;
+ const phase=(s:GmInstance,rt:GmRuntime,name:'enemytalk'|'bullets')=>st.phase?st.phase(s,rt,name):isPhase(rt,name,s);
+ const endTalk=st.endTalk??((s,rt)=>defaultEndTalk(s,rt,name=>phase(s,rt,name))),actsDone=st.actsDone??defaultActsDone,delay=st.attackDelay??12;
  const attackWait:Step=st.attackWait??((_s,rt)=>turnTimer(rt,120));
  const isAlive=st.isAlive??((s,rt)=>rt.globals.monster[s.myself]===1);
  return (s,rt)=>{
@@ -89,10 +92,10 @@ function templateStep(st:EnemyStrategy):Step{
   if(st.onlyWhileFighting&&g.fighting!==1)return;
   if(isAlive(s,rt)){
    st.beforeTalk?.(s,rt);
-   if(isPhase(rt,'enemytalk',s)&&s.talked===0)startTalk(s,rt);
+   if(phase(s,rt,'enemytalk')&&s.talked===0)startTalk(s,rt);
    st.duringTalk?.(s,rt);
    endTalk(s,rt);
-   if(isPhase(rt,'bullets',s)&&s.attacked===0&&!st.holdsAttack?.(s,rt)){
+   if(phase(s,rt,'bullets')&&s.attacked===0&&!st.holdsAttack?.(s,rt)){
     if(delay>0)s.rtimer+=1;
     if(delay===0||s.rtimer===delay){st.attack(s,rt);if(st.countTurn!==false)s.turns+=1;g.typer=6;g.fc=0;st.statusLine?.(s,rt);s.attacked=1;}
     else attackWait(s,rt);

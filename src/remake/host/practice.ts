@@ -149,6 +149,16 @@ const CLOVER_PATTERNS:readonly PracticePattern[]=[
  {name:'Corner dark clubs (alternating)',afterStep:rt=>{for(const dc of allByName(rt,'obj_dbulletcontroller'))if(!('__practiceFixed' in dc)){dc.__practiceFixed=true;dc.type=4;}}},
 ];
 
+// Clover's Dojo attack chooses one of these before the controller's first Step. Preserve the native branch's
+// complete controller values so practice changes only that selection, including type 33's default ratio.
+const CLOVER_DOJO_PATTERNS:readonly PracticePattern[]=[
+ ['Splitting clubs',30,.7,2],['Corner dark clubs (alternating)',31,.7,1],['Tail barrage',33,1,2],
+].map(([name,type,ratio,timepoints])=>({name:name as string,afterStep:rt=>{
+ for(const dc of allByName(rt,'obj_dbulletcontroller'))if(!('__practiceFixed' in dc)){
+  dc.__practiceFixed=true;dc.type=type;dc.ratio=ratio;dc.grazepoints=5;dc.timepoints=timepoints;
+ }
+}}));
+
 const KROUND_PATTERNS:readonly PracticePattern[]=[
  {name:'Giant stomp',setup:(_rt,e)=>{e.attacktype=0;}},
  {name:'Star kick',setup:(_rt,e)=>{e.attacktype=1;}},
@@ -378,6 +388,7 @@ const PRACTICE_PATTERNS:Readonly<Record<string,readonly PracticePattern[]>>={
  'ch2-61':SPAMTON_NEO_PATTERNS,
  'ch2-62':TRIO_PATTERNS,
  'ch2-63':ROUXLS_PATTERNS,
+ 'ch2-71':CLOVER_DOJO_PATTERNS,
  'ch2-81':WEREWEREWIRE_PATTERNS,
  'ch2-82':BERDLY_CITY_PATTERNS,
  'ch2-83':MAUSWHEEL_PATTERNS,

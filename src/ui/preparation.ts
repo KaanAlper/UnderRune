@@ -9,6 +9,7 @@ type Slot='weapon'|'armor1'|'armor2'|'items';
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string,className?:string)=>{
  const n=document.createElement(tag);if(text)n.textContent=text;if(className)n.className=className;return n;
 };
+const moduleLoadFailed=(error:unknown)=>error instanceof Error&&/Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Loading chunk [\w-]+ failed/i.test(error.message);
 export class PreparationPanel{
  readonly dialog=node('dialog',undefined,'prep');
  private source!:EquipmentSource;private loadout!:Loadout;private record!:EncounterRecord;
@@ -19,7 +20,7 @@ export class PreparationPanel{
  private heading=node('h1');private subtitle=node('p',undefined,'prep-eyebrow');private context=node('h2',undefined,'prep-context');
  private intro=node('p','Equip your party and pack your bag.','prep-intro');
  private search=node('input');private feedback=node('p',undefined,'prep-feedback');private counter=node('span');
- private launch=node('button','START BATTLE','prep-launch');private isLaunching=false;private launchLabel='START BATTLE';private available=true;private practiceOnly=false;
+ private launch=node('button','START BATTLE','prep-launch');private isLaunching=false;private reloadRequired=false;private launchLabel='START BATTLE';private available=true;private practiceOnly=false;
  constructor(private catalog:EquipmentCatalog,private assets:AssetStore,private storage:Pick<Storage,'getItem'|'setItem'>,private onLaunch:(record:EncounterRecord,loadout:Loadout)=>Promise<void>,private onDismiss:()=>void){
   this.dialog.setAttribute('aria-labelledby','prep-title');this.heading.id='prep-title';
   const top=node('div',undefined,'prep-top'),close=node('button','×','prep-close');close.type='button';close.setAttribute('aria-label','Close preparation');close.onclick=()=>this.close();
@@ -51,7 +52,7 @@ export class PreparationPanel{
   const source=this.catalog.chapters[record.chapter];if(!source)throw Error('No equipment catalog for this chapter.');
   const party=preparationParty(record.id);this.members=party.members.filter(id=>!party.locked.includes(id));this.automatic=party.auto;
   this.record=record;this.source=source;this.loadout=readLoadout(this.storage,record.chapter,source);this.opener=document.activeElement instanceof HTMLElement?document.activeElement:null;
-  this.available=options.available??true;this.launchLabel=options.launchLabel??'START BATTLE';this.launch.textContent=this.launchLabel;this.launch.disabled=!this.available;
+  this.available=options.available??true;this.reloadRequired=false;this.launchLabel=options.launchLabel??'START BATTLE';this.launch.textContent=this.launchLabel;this.launch.disabled=!this.available;
   this.practiceOnly=options.practiceOnly??false;
   this.intro.textContent=options.notice??'Equip your party and pack your bag.';
   this.character=this.members[0]??party.members[0];this.slot=this.members.length?'armor1':'items';this.query='';this.search.value='';this.feedback.textContent='';
@@ -186,9 +187,15 @@ export class PreparationPanel{
   }
  }
  private async start(){
-  if(this.isLaunching||!this.available)return;this.isLaunching=true;this.launch.disabled=true;this.launch.textContent='LOADING…';
+  if(this.isLaunching||!this.available)return;
+  if(this.reloadRequired){this.persist();this.isLaunching=true;this.launch.disabled=true;window.location.reload();return;}
+  const focusLaunch=document.activeElement===this.launch;
+  this.isLaunching=true;this.launch.disabled=true;this.launch.textContent='LOADING…';
   try{validateLoadout(this.loadout,this.source);await this.onLaunch(this.record,structuredClone(this.loadout));this.dialog.close();}
-  catch(error){this.feedback.textContent=error instanceof Error?error.message:String(error);}
-  finally{this.isLaunching=false;this.launch.disabled=!this.available;this.launch.textContent=this.launchLabel;}
+  catch(error){
+   this.reloadRequired=moduleLoadFailed(error);
+   this.feedback.textContent=this.reloadRequired?'Battle files could not load. Reload the game to try again. Your preparation is saved.':error instanceof Error?error.message:String(error);
+  }
+  finally{this.isLaunching=false;this.launch.disabled=!this.available;this.launch.textContent=this.reloadRequired?'RELOAD GAME':this.launchLabel;if(this.reloadRequired&&focusLaunch)this.launch.focus();}
  }
 }

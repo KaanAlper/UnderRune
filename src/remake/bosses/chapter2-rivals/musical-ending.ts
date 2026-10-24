@@ -118,7 +118,7 @@ export function createMusicalEnding(object:(name:string)=>GmObjectDef):GmObjectD
  }};
  const BEAT_FRAMES=new Set([237,246,252,259,270,276,432,439,442,448,454]);
  const ending:GmObjectDef={...object('obj_musical_battle_end'),events:{
-  create:(s,rt)=>{Object.assign(s,{con:0,init:0,drawground:0,siner:0});sndFreeAll(rt);s.depth=-100;},
+  create:(s,rt)=>{Object.assign(s,{con:0,init:0,drawground:0,siner:0});sndFreeAll(rt);s.depth=-100;s.xx=rt.view.x;s.yy=rt.view.y;s.cx=rt.view.x+320;s.cy=rt.view.y+240;},
   draw:(s,rt)=>{
    const g=rt.globals,d=rt.drawState;
    s.xx=rt.view.x;s.yy=rt.view.y;s.cx=rt.view.x+320;s.cy=rt.view.y+240;
@@ -126,7 +126,10 @@ export function createMusicalEnding(object:(name:string)=>GmObjectDef):GmObjectD
    const m=(i:number)=>{const inst=rt.byId(s.marker[i]);if(!inst)throw Error('obj_musical_battle_end lost actor '+i);return inst;};
    if(s.con===0){
     s.drawground=0;s.auto=1;
-    s.song2=rt.sourceAudio?.music('cyber_battle_end');
+    // snd_init owns a stream holder and writes its caller before mus_play starts the song.
+    s.initsongvar='mus/cyber_battle_end.ogg';s._mystream=rt.sourceAudio?.music('cyber_battle_end')??'cyber_battle_end';
+    const stream=rt.create(object('obj_astream'),0,0);s._astream=stream.id;stream.mystream=s._mystream;stream.songname='cyber_battle_end.ogg';
+    s.song1=s._mystream;s._xsndinstance=rt.sourceAudio?s._mystream:-1;s.song2=s._xsndinstance;rt.sourceAudio?.volume(s.song2,g.flag[16],0);
     const markers:number[]=[];
     const kris=darkMarker(rt,s,s.xx,s.yy-200,'spr_kris_dance');markers[0]=kris.id;if(g.hp[1]<1){kris.sprite='spr_kris_fallen_dark';kris.y-=2;}
     markers[1]=darkMarker(rt,s,s.xx,s.yy-200,'spr_susie_dance').id;markers[2]=darkMarker(rt,s,s.xx,s.yy-200,'spr_ralsei_dance').id;
@@ -170,7 +173,7 @@ export function createMusicalEnding(object:(name:string)=>GmObjectDef):GmObjectD
      const a=m(s.i);
      if(s.jumptimer>s.i*2&&s.jumped[s.i]===0){a.vspeed=-30;a.gravity=2;s.jumped[s.i]=1;}
      // The source marks the actor (not the ending) as landed, so this repeats every frame once it has.
-     if(a.vspeed>=4&&s.jumped[s.i]===1){a.vspeed=0;a.gravity=0;gmArray(a,'jumped')[s.i]=2;}
+     if(a.vspeed>=4&&s.jumped[s.i]===1){a.vspeed=0;a.gravity=0;gmArray(a,'jumped',()=>Array(s.i+1).fill(0))[s.i]=2;}
     }
    }
    const stopBand=()=>{for(const i of [3,4,5]){const a=m(i);a.updatetimer=0;a.dancetimer=0;a.siner=0;a.musicalnotetimer=0;}};
@@ -179,7 +182,9 @@ export function createMusicalEnding(object:(name:string)=>GmObjectDef):GmObjectD
      if(g.hp[1]>0){const k=m(0);k.sprite='spr_kris_pose';k.y-=18;}
      m(1).sprite='spr_susie_pose';m(2).sprite='spr_ralsei_pose';
      for(s.i=0;s.i<20;s.i++){
-      const n=rt.create(afterimage,s.cx+rt.random.randomRange(-100,100),s.cy-50+rt.random.randomRange(-50,50));s.note=n.id;
+      // GML evaluates instance_create arguments from right to left: the y roll precedes x.
+      const ny=s.cy-50+rt.random.randomRange(-50,50),nx=s.cx+rt.random.randomRange(-100,100);
+      const n=rt.create(afterimage,nx,ny);s.note=n.id;
       n.sprite='spr_musical_notes';n.gravity=.4+rt.random.random(.2);n.vspeed=-2-rt.random.random(5);n.hspeed=rt.random.randomRange(-4,4);n.depth=-500;n.imageAlpha=2;
      }
      s.jumped[0]=3;

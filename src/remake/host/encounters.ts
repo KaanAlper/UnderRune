@@ -25,6 +25,10 @@ const playable:readonly SourceEncounter[]=[
  {id:'ch2-58',chapter:2,name:'Berdly',party:[1,2,3],hp:1985,attack:10,defense:0,music:'berdly_battle_heartbeat_true',practice:true},
  // Berdly in Cyber City's alley, with Kris and Noelle.
  {id:'ch2-82',chapter:2,name:'Berdly',party:[1,4],hp:900,attack:9,defense:0,music:'berdly_battle_heartbeat_true',practice:true},
+ // Native full-battle and browser acceptance completed for the Dojo, band and boxing finale.
+ {id:'ch2-71',chapter:2,name:'Clover',party:[1,2,3],hp:1500,attack:11,defense:0,music:'battle',practice:true},
+ {id:'ch2-62',chapter:2,name:"Sweet & K_K & Cap'n",party:[1,2,3],hp:120,attack:8,defense:0,music:'cyber_battle',practice:true},
+ {id:'ch2-84',chapter:2,name:'GIGA Queen',party:[1],hp:4500,attack:7.5,defense:0,music:'boxing_boss',practice:true},
  {id:'ch1-2',chapter:1,name:'Lancer',party:[1,2],auto:[2],hp:540,attack:5,defense:1,music:'lancerfight',practice:true},
  {id:'ch1-8',chapter:1,name:'Clover',party:[1,3],hp:270,attack:6,defense:1,music:'battle',practice:true},
  // getsusieevent rejoins Ralsei, then Susie. Her gamestart charauto remains set until prisonevent.
@@ -42,12 +46,7 @@ const playable:readonly SourceEncounter[]=[
 export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);
 /** Explicit local verification entry points. Public launches always use sourceEncounter. */
 /** Reserved for EngineBattle fixtures that still need end-to-end verification before public launch. */
-const development:readonly SourceEncounter[]=[
- // The band's S-Action has native coverage; its final music video still needs a reference recording.
- {id:'ch2-62',chapter:2,name:"Sweet & K_K & Cap'n",party:[1,2,3],hp:120,attack:8,defense:0,music:'cyber_battle',practice:true},
- // GIGA's opening round matches the reference; later rounds and the final scene still need native acceptance.
- {id:'ch2-84',chapter:2,name:'GIGA Queen',party:[1],hp:4500,attack:7.5,defense:0,music:'boxing_boss',practice:true},
-];
+const development:readonly SourceEncounter[]=[];
 export const developmentEncounter=(id:string)=>sourceEncounter(id)??development.find(p=>p.id===id);
 export const availableEncounters=(chapter:number)=>playable.filter(p=>p.chapter===chapter);
 export function availabilityLabel(chapter:number){const rows=availableEncounters(chapter);return rows.length?[...new Set(rows.map(p=>p.name.toUpperCase()))].join(' + ')+' AVAILABLE':'NO PLAYABLE BATTLES YET';}

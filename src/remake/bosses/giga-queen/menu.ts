@@ -9,7 +9,8 @@ export function gigaMenuHooks(object:(name:string)=>GmObjectDef):BattleHooks{
   onControllerCreate:(_s,c)=>{c.gigaqueencon=3;},
   hidesTensionBar:(_s,rt)=>{const panel=rt.first(object('obj_battlecontroller'));return !!panel&&panel.gigaqueencon!==0;},
   defeatedByDamage:false,
-  battleOutcome:(_s,rt)=>rt.first(object('obj_rocketpunch_bhero'))?.done===1?'victory':undefined,
+  soulReturnsTo:(_s,rt)=>{const c=player(rt);return [c.x,c.y-110];},
+  battleOutcome:(_s,rt)=>{const hero=rt.first(object('obj_rocketpunch_bhero'));return hero&&'$rocketPunchComplete' in hero&&hero.$rocketPunchComplete===1?'victory':undefined;},
   blocksControllerStep:(_s,c,rt)=>c.gigaqueencon!==0||(player(rt).dead===1&&rt.globals.turntimer<0)||rt.exists(object('obj_boxing_loss_controller'))||rt.exists(object('o_bq_whitefade_persistent')),
   controllerHudOffset:(_s,c)=>{
    const mode=c.gigaqueencon;

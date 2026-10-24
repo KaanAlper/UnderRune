@@ -4,6 +4,11 @@ export function remakeSpriteDependencies(source,objects,spriteNames=new Set()){
  const names=new Set(source.match(/\b(?:spr|bg|IMAGE)_[A-Za-z0-9_]+/g)??[]);
  // Sprites named otherwise (K_K's s_kk parts): any quoted name the chapter's sprite table has.
  for(const [,name] of source.matchAll(/'([A-Za-z0-9_]+)'/g))if(spriteNames.has(name))names.add(name);
+ // Portrait expressions are named dynamically; expand numeric variants from this chapter only.
+ for(const [,prefix] of source.matchAll(/\bbyExpression\(\s*['"]([A-Za-z0-9_]+)['"]/g)){
+  if(!spriteNames.has(prefix))names.delete(prefix);
+  for(const name of spriteNames)if(name.startsWith(prefix)&&/^\d+$/.test(name.slice(prefix.length)))names.add(name);
+ }
  const referencedObjects=new Set(source.match(/\bobj_[A-Za-z0-9_]+/g)??[]);
  for(const object of objects)if(referencedObjects.has(object.name))for(const field of ['sprite','mask'])if(object[field])names.add(object[field]);
  return names;

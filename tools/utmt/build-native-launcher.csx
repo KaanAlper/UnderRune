@@ -31,10 +31,15 @@ for (var slot = 0; slot < 12; slot += 1) global.item[slot] = ini_read_real(""ite
 if (ini_read_real(""oracle"", ""god"", 0) == 1) global.chemg_god_mode = 1;
 ORACLE_HP
 ORACLE_JEVIL_READ
+ORACLE_GIGA_READ
+ORACLE_BAND_READ
+ORACLE_LAYER_READ
 ini_close();
 global.tempflag[4] = 1;
 global.ur_watch = 0;
 ORACLE_JEVIL_WATCH
+ORACLE_GIGA_WATCH
+ORACLE_LAYER_WATCH
 call_later(15, 1, function() {
 if (global.ur_watch == 0 && instance_exists(obj_battlecontroller)) global.ur_watch = 1;
 else if (global.ur_watch == 1 && !instance_exists(obj_battlecontroller)) { global.ur_watch = 2; show_debug_message(""UNDERRUNE_OUTCOME "" + ((room == room_gameover) ? ""defeat"" : ""victory"")); }
@@ -45,6 +50,34 @@ room_goto(room_battletest);
 // Later chapters have no debug no-damage switch: reference runs give the party enough HP instead. Damage itself is unchanged.
 .Replace("ORACLE_HP",chapter==1?"":"if (ini_read_real(\"oracle\", \"god\", 0) == 1) for (var hero = 1; hero <= HERO_MAX; hero += 1) { global.maxhp[hero] = 99999; global.hp[hero] = 99999; }".Replace("HERO_MAX",chapter==1?"3":"4"))
 .Replace("ORACLE_JEVIL_READ",chapter==1?"global.ur_oracle_jevil_turn = ini_read_real(\"oracle\", \"jevil_turn\", -1);":"")
+.Replace("ORACLE_BAND_READ",chapter==2?"global.ur_oracle_band_policy = (global.ur_encounter == 62 && ini_read_real(\"oracle\", \"band_policy\", 0) == 1); global.ur_band_frame = 0; global.ur_band_held = -1; global.ur_band_pressed = -1; global.ur_band_released = -1; global.ur_band_log_text = \"\"; global.ur_band_log_closed = false;":"")
+.Replace("ORACLE_LAYER_READ",chapter==2?"global.ur_layer_probe = ini_read_real(\"oracle\", \"layer_probe\", 0); global.ur_layer_frame = 0; global.ur_layer_log = \"\";":"")
+.Replace("ORACLE_LAYER_WATCH",chapter==2?@"
+// Optional read-only runtime-layer diagnostic. No battle object, input or random state is changed.
+if (global.ur_layer_probe == 1) call_later(1, 1, function() {
+ global.ur_layer_frame++;
+ if (global.ur_layer_frame >= 2180 && global.ur_layer_frame <= 2240) {
+  global.ur_layer_log += ""F,"" + string(global.ur_layer_frame) + "","" + string(global.time) + chr(10);
+  with (all) global.ur_layer_log += ""I,"" + string(id) + "","" + string(object_index) + "","" + string(layer) + "","" + string(depth) + "","" + string(visible) + chr(10);
+  var probe_layers = layer_get_all();
+  for (var probe_i = 0; probe_i < array_length(probe_layers); probe_i++) {
+   var probe_layer = probe_layers[probe_i];
+   global.ur_layer_log += ""L,"" + string(probe_layer) + "","" + layer_get_name(probe_layer) + "","" + string(layer_get_depth(probe_layer)) + chr(10);
+   var probe_elements = layer_get_all_elements(probe_layer);
+   for (var probe_j = 0; probe_j < array_length(probe_elements); probe_j++) global.ur_layer_log += ""E,"" + string(probe_layer) + "","" + string(probe_j) + "","" + string(probe_elements[probe_j]) + "","" + string(layer_get_element_type(probe_elements[probe_j])) + "","" + string(layer_instance_get_instance(probe_elements[probe_j])) + chr(10);
+  }
+ }
+ if (global.ur_layer_frame == 2241) { var probe_file = file_text_open_write(""layer-probe.txt""); file_text_write_string(probe_file, global.ur_layer_log); file_text_close(probe_file); }
+}, true);
+":"")
+.Replace("ORACLE_GIGA_READ",chapter==2?"global.ur_oracle_giga_survival = (global.ur_encounter == 84 && ini_read_real(\"oracle\", \"god\", 0) == 1);":"")
+.Replace("ORACLE_GIGA_WATCH",chapter==2?@"
+// Recording-only survival: GIGA's enemy Create replaces the launcher's starting HP.
+// Refill only current player HP; all damage, attack states and source timers still run.
+if (global.ur_oracle_giga_survival) call_later(1, 1, function() {
+if (instance_exists(o_boxingcontroller)) global.hp[1] = global.maxhp[1];
+}, true);
+":"")
 .Replace("ORACLE_JEVIL_WATCH",chapter==1?@"
 // Test-only initial phase preset; enemy events, damage and attack code stay unchanged.
 if (global.ur_encounter == 25 && global.ur_oracle_jevil_turn >= 0 && global.ur_oracle_jevil_turn <= 19) {
@@ -88,6 +121,16 @@ global.flag[9] = 1;
 ";
 var imports=new CodeImportGroup(Data){AutoCreateAssets=false};
 imports.QueueReplace("gml_Object_obj_initializer2_Step_0",original.Replace(anchor,startup));
+// Optional recording policy changes only simulated keys; the original battle events run in full.
+if (chapter == 2) {
+ var policy=File.ReadAllText(Path.Combine(root,"tools/oracle-band-policy.gml"));
+ var logger=File.ReadAllText(Path.Combine(root,"tools/oracle-band-log.gml"));
+ var input=File.ReadAllText(Path.Combine(root,"extracted/chapter2_windows/code/gml_Object_obj_time_Step_1.gml"));
+ var sweet=File.ReadAllText(Path.Combine(root,"extracted/chapter2_windows/code/gml_Object_obj_sweet_enemy_Step_0.gml"));
+ imports.QueueReplace("gml_Object_obj_time_Step_1","if (variable_global_exists(\"ur_oracle_band_policy\")) {\n"+policy+"\n}\n"+input);
+ imports.QueueReplace("gml_Object_obj_sweet_enemy_Step_0",sweet+"\n"+logger);
+}
+
 imports.QueueReplace("gml_Room_room_battletest_Create",entry);
 imports.Import();
 room.CreationCodeId=Data.Code.First(c=>c.Name.Content=="gml_Room_room_battletest_Create");

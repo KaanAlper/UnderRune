@@ -33,11 +33,12 @@ import {QUEEN_ENCOUNTERS,setupQueenMonster} from '../bosses/queen/setup';
 import {SPAMTON_ENCOUNTERS,createSpamton,setupSpamtonMonster} from '../bosses/spamton';
 import {createRouxls} from '../bosses/rouxls';
 import {createGigaQueen,runGigaSoulBulletController} from '../bosses/giga-queen';
+import {createCloverDojo,CLOVER_DOJO_ENCOUNTERS,setupCloverDojoMonster} from '../bosses/clover-dojo';
 
 /** scr_encountersetup for the ported encounters: enemies (object, type, x, y), the opening line and optional hero
  * positions. */
 type EncounterSetup={monsters:readonly (readonly [string,number,number,number])[];intro:string;kind:string;heroes?:readonly (readonly [number,number])[]};
-const ENCOUNTERS:Record<number,EncounterSetup>={...FIELD_ENCOUNTERS,59:QUEEN_ENCOUNTERS[59],84:QUEEN_ENCOUNTERS[84],58:{...RIVAL_ENCOUNTERS[58],kind:'story'},82:{...RIVAL_ENCOUNTERS[82],kind:'story'},62:{...RIVAL_ENCOUNTERS[62],kind:'story'},63:{...RIVAL_ENCOUNTERS[63],kind:'story'},60:{...SPAMTON_ENCOUNTERS[60],kind:'story'}};
+const ENCOUNTERS:Record<number,EncounterSetup>={...FIELD_ENCOUNTERS,...CLOVER_DOJO_ENCOUNTERS,59:QUEEN_ENCOUNTERS[59],84:QUEEN_ENCOUNTERS[84],58:{...RIVAL_ENCOUNTERS[58],kind:'story'},82:{...RIVAL_ENCOUNTERS[82],kind:'story'},62:{...RIVAL_ENCOUNTERS[62],kind:'story'},63:{...RIVAL_ENCOUNTERS[63],kind:'story'},60:{...SPAMTON_ENCOUNTERS[60],kind:'story'}};
 export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapter2Registry(rt,{metadata,room:options.room}),{object}=registry;
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object),iceHexagon,iceSpell,sleepMist]);
@@ -51,7 +52,8 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  // Rouxls (63): his enemy, the Thrash Machine, his mini-game and attack objects.
  const rouxls=createRouxls(object);registry.register(rouxls.objects);
  registry.register(createGigaQueen(object));
- registry.register([createChapter2BulletController(object,[createChapter2FieldBulletRunner(object),(s,r)=>runBerdlyBulletController(s,r,object),(s,r)=>runBerdlySpearblastController(s,r,object),(s,r)=>runGigaSoulBulletController(s,r,object),spamton.pattern,rouxls.pattern])]);
+ const clover=createCloverDojo(object,options.room);registry.register(clover.objects);
+ registry.register([createChapter2BulletController(object,[createChapter2FieldBulletRunner(object),(s,r)=>runBerdlyBulletController(s,r,object),(s,r)=>runBerdlySpearblastController(s,r,object),(s,r)=>runGigaSoulBulletController(s,r,object),spamton.pattern,rouxls.pattern,clover.pattern])]);
  // The rivals: Berdly on the coaster (58) and in the rematch (82).
  const dialogue={speaker,faceNext:anyFaceNext,terminateWriter:(s:GmInstance,r:GmRuntime)=>!!terminateWriter(s,r)};
  registry.register(createChapter2Rivals(object,{dialogue,monsterAdd,snowgraveScene:(s,r)=>berdlySnowgraveScene(s,r,dialogue,object,()=>{throw Error('scr_losechar (after SnowGrave) is not ported');})}));
@@ -62,7 +64,7 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  // obj_animation plays its sprite once.
  registry.register([{...object('obj_animation'),events:{animationEnd:(s,r)=>r.destroy(s)}}]);
  const plug=object('obj_berdlyplug_enemy');
- rt.battleSetup={monster:(s,r)=>setupFieldMonster(s,r)||setupQueenMonster(s,r,r.exists(plug))||setupRivalMonster(s,r,rivalRoutePhase(r))||setupSpamtonMonster(s,r),encounter:(r,n,enemies)=>{
+ rt.battleSetup={monster:(s,r)=>setupFieldMonster(s,r)||setupQueenMonster(s,r,r.exists(plug))||setupRivalMonster(s,r,rivalRoutePhase(r))||setupSpamtonMonster(s,r)||setupCloverDojoMonster(s,r),encounter:(r,n,enemies)=>{
   const setup=ENCOUNTERS[n];if(!setup||setup.kind==='unused')return false;
   const g=r.globals;g.monstertype=[0,0,0];g.monsterinstancetype=[0,0,0];
   for(const [i,[name,type,x,y]] of setup.monsters.entries()){
@@ -73,5 +75,5 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
   g.battlemsg[0]=sourceText('scr_encountersetup_slash_scr_encountersetup_gml_'+setup.intro);return true;
  }};
  registry.finalize();installSmallFaceWriter(rt,object);
- return {objects:registry.objects,enter:(_enemy:GmInstance)=>{}};
+ return {objects:registry.objects,enter:(_enemy:GmInstance)=>{clover.enter(rt);}};
 }

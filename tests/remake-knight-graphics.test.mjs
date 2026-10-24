@@ -4,6 +4,34 @@ import {existsSync} from 'node:fs';
 import {chromium} from '@playwright/test';
 import {createServer} from 'vite';
 
+
+test('sprite quadrilaterals map the cropped atlas frame, ignore origins and preserve view offsets and shared-edge alpha',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');
+  const source=document.createElement('canvas');source.width=source.height=2;const sc=source.getContext('2d');sc.fillStyle='#ff0000';sc.fillRect(0,0,2,2);
+  const sprite={width:4,height:4,originX:99,originY:88,frames:[{page:0,sx:0,sy:0,sw:2,sh:2,tx:1,ty:1,tw:2,th:2}]};
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=8;
+  const g=new CanvasGraphics(canvas.getContext('2d'),{pages:[source],sprite:()=>sprite,font:()=>undefined},{x:10,y:20});
+  g.spritePos('trim',0,10,20,18,20,18,28,10,28,.5);
+  return Array.from(g.ctx.getImageData(0,0,8,8).data);
+ });
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++)assert.deepEqual(result.slice((y*8+x)*4,(y*8+x+1)*4),[255,0,0,128]);
+});
+
+test('sprite quadrilaterals map collapsed spotlight corners and clipped custom-blend targets',async()=>{
+ const result=await page.evaluate(async()=>{
+  const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');
+  const source=document.createElement('canvas');source.width=source.height=2;source.getContext('2d').fillStyle='#ffffff';source.getContext('2d').fillRect(0,0,2,2);
+  const sprite={width:2,height:2,originX:0,originY:0,frames:[{page:0,sx:0,sy:0,sw:2,sh:2,tx:0,ty:0,tw:2,th:2}]};
+  const canvas=document.createElement('canvas');canvas.width=canvas.height=12;const g=new CanvasGraphics(canvas.getContext('2d'),{pages:[source],sprite:()=>sprite,font:()=>undefined},{x:0,y:0});
+  g.spritePos('cone',0,6,0,6,0,2,6,10,6,.5);const cone=Array.from(g.ctx.getImageData(0,0,12,12).data);
+  g.surfaceCreate(1,12,12);g.surfaceTarget(1);g.surfaceClear(0,0);g.blendMode('add');g.spritePos('quad',0,6,6,10,6,10,10,6,10,1);
+  return {cone,surface:Array.from(g.ctx.getImageData(0,0,12,12).data)};
+ });
+ assert.equal(result.cone.filter((v,i)=>i%4===3&&v===128).length,24,'collapsed top covers the exact mirrored spotlight triangle');
+ for(let y=0;y<12;y++)for(let x=0;x<12;x++)assert.deepEqual(result.surface.slice((y*12+x)*4,(y*12+x+1)*4),x>=6&&x<10&&y>=6&&y<10?[255,255,255,255]:[0,0,0,0]);
+});
+
 test('transparent separate-alpha texels keep RGB and update alpha without per-channel rounding',async()=>{
  const result=await page.evaluate(async()=>{
   const {CanvasGraphics}=await import('/src/remake/host/canvas.ts');

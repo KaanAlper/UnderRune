@@ -47,6 +47,7 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:
  'ch2-84':{n:84,room:'room_battletest',backdrop:true},
  'ch2-81':{n:81,room:'room_dw_mansion_east_4f_b',backdrop:true},
  'ch2-83':{n:83,room:'room_dw_city_mice3_transformed_new2F',backdrop:true},
+ 'ch2-71':{n:71,room:'room_dw_castle_dojo',backdrop:true},
  'ch2-89':{n:89,room:'room_dw_castle_dojo',backdrop:true},
  'ch2-94':{n:94,room:'room_dw_castle_dojo',backdrop:true},
  'ch3-115':{n:115,room:'room_dw_snow_zone',backdrop:true},
