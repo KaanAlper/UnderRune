@@ -108,3 +108,14 @@ test('joining once remembers the player across boss boards and a new panel insta
 test('control characters cannot be saved as a shared player name',async({page})=>{
  await fixture(page);await page.getByRole('button',{name:'Join leaderboard',exact:true}).click();const join=page.getByRole('dialog',{name:'Join leaderboard',exact:true}),input=join.getByLabel('Display name');await input.fill('Bad\u0001name');await join.getByRole('button',{name:'Save name'}).click();await expect(join).toBeVisible();expect(await input.evaluate((el:HTMLInputElement)=>el.checkValidity())).toBe(false);await input.fill('Valid');await join.getByRole('button',{name:'Save name'}).click();await expect(join).toBeHidden();
 });
+
+
+test('a late DELTARUNE publication cannot populate an open UNDERTALE board',async({page})=>{
+ await fixture(page);await page.evaluate(()=>{const s=window as any;s.api.submit=()=>new Promise(resolve=>s.finishPublish=resolve);s.board.offer(s.run);});
+ const publish=page.getByRole('dialog',{name:'Publish your score',exact:true});await publish.getByLabel('Display name').fill('Kris');await publish.getByRole('button',{name:'Publish score',exact:true}).click();await expect(publish.getByRole('status')).toContainText('Publishing');
+ await page.keyboard.press('Escape');await page.evaluate(()=>(window as any).board.openGame('undertale'));const board=page.locator('.leaderboard-browser');await expect(board.getByRole('status')).toContainText('UNDERTALE battles are not available yet');
+ const count=await page.evaluate(()=>(window as any).queries.length);await page.evaluate(()=>(window as any).finishPublish());
+ await expect(page.getByRole('dialog',{name:'Publish your score',exact:true,includeHidden:true}).getByRole('status',{includeHidden:true})).toHaveText('Score published.');
+ await expect(board.getByRole('status')).toContainText('UNDERTALE battles are not available yet');expect(await page.evaluate(()=>(window as any).queries.length)).toBe(count);
+ await page.evaluate(()=>(window as any).board.open('ch1-25'));await expect(board.locator('.lb-game')).toHaveText('DELTARUNE');await expect(board.getByRole('status')).not.toContainText('UNDERTALE');
+});

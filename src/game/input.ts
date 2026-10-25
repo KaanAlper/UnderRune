@@ -18,7 +18,7 @@ export class Input{
   this.edges.clear();const shootReleased=this.confirmRelease;this.confirmRelease=false;return {...f,shootReleased};
  }
  bind(target:Window,onBlur:()=>void){
-  const down=(e:KeyboardEvent)=>{const key=norm(e.key);if(e.ctrlKey||e.altKey||e.metaKey)return;if(e.target instanceof HTMLElement&&(e.target.closest('select,input,textarea,[contenteditable],dialog[open],.leaderboard')||(['Enter',' '].includes(key)&&e.target.closest('.boss-deck button')))){this.clear();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','Enter','Escape','z','x','c','r','p','w','a','s','d','Shift','F1'].includes(key)){e.preventDefault();this.press(key);}};
+  const down=(e:KeyboardEvent)=>{const key=norm(e.key);if(e.ctrlKey||e.altKey||e.metaKey)return;if(e.target instanceof HTMLElement&&(e.target.closest('select,input,textarea,[contenteditable],dialog[open],.leaderboard,#lobby-actions')||(['Enter',' '].includes(key)&&e.target.closest('.boss-deck button')))){this.clear();return;}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','Enter','Escape','z','x','c','r','p','w','a','s','d','Shift','F1'].includes(key)){e.preventDefault();this.press(key);}};
   const up=(e:KeyboardEvent)=>this.release(e.key),blur=()=>{this.clear();onBlur();};
   target.addEventListener('keydown',down);target.addEventListener('keyup',up);target.addEventListener('blur',blur);
   return ()=>{target.removeEventListener('keydown',down);target.removeEventListener('keyup',up);target.removeEventListener('blur',blur);this.clear();};

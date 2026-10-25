@@ -4,8 +4,9 @@
 <body>
 <header><span class="brand">UNDERRUNE <span class="dim">/ LOCAL</span></span><nav aria-label="Game controls"><button id="back" aria-label="Device menu">DEVICE_MENU</button><button id="pause" aria-label="Pause battle">PAUSE</button><button id="mute" aria-label="Mute audio" aria-pressed="false">SOUND ON</button><button id="effects" aria-label="Reduce effects" aria-pressed="false">CRT ON</button><button id="credits">ABOUT</button></nav></header>
 <main>
+ <nav id="lobby-actions" aria-label="Community" hidden><span id="lobby-game">DELTARUNE</span><button id="lobby-leaderboard" aria-label="Game leaderboards">Leaderboards <span aria-hidden="true">↗</span></button></nav>
  <section id="menu-tools" aria-label="Attack practice" hidden><div class="practice-heading"><strong>ATTACK PRACTICE</strong><span id="practice-boss"></span><p>Pick one attack. Train with your equipment.</p></div><div class="practice-controls"><label for="attack-select">Attack pattern</label><select id="attack-select" aria-label="Practice pattern"></select><button id="practice" aria-label="Practice selected boss">PRACTICE ATTACK <kbd>T</kbd></button><small>↑ ↓ CHOOSE · → CONTINUE · Z / ENTER CONFIRM · X BACK</small></div></section>
- <div id="stage"><canvas id="screen" width="640" height="480" aria-label="UnderRune game screen"></canvas><div id="interactions" aria-label="Game choices"></div><div id="scanlines" aria-hidden="true"></div>
+ <div id="stage"><canvas id="screen" width="640" height="480" tabindex="-1" aria-label="UnderRune game screen"></canvas><div id="interactions" aria-label="Game choices"></div><div id="scanlines" aria-hidden="true"></div>
  <section id="loading" role="status"><span>* CONNECTING TO THE DEVICE...</span></section>
  <section id="outcome" role="status" hidden><p id="outcome-text"></p><div><button id="outcome-again">FIGHT AGAIN</button><button id="outcome-score" hidden>Share score</button><button id="outcome-menu">DEVICE_MENU</button></div></section>
  <section id="error" role="alert" hidden><p id="error-text"></p><button id="retry">RETRY</button></section></div>

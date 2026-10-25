@@ -58,6 +58,8 @@ let scene:'theater'|'intro'|'room'|'menu'|'native'|'remake'='theater',chapter=1,
 let remakeLoad:AbortController|null=null;
 let failedChapter:number|null=null;
 const menuRecords=()=>catalog.filter(r=>r.chapter===chapter);
+const lobbyGame=()=>scene==='theater'?(theater.active??theater.selected):'deltarune';
+function focusLobby(){input.clear();element('lobby-leaderboard').focus();}
 let bossDeck:BossDeck|null=null;
 let routePicker:RoutePicker|null=null,chosenRoute:BattleRoute|undefined,choosingRoute=false;
 let leaderboard:LeaderboardPanel|null=null,leaderboardApi:LeaderboardApi|null=null;
@@ -156,6 +158,8 @@ function updateControls(){
  const engineBattle=remake instanceof EngineBattle?remake:null;
  const leaving=performance.now()<leaveArmedUntil,key=[scene,theater?.active,theater?.selected,chapter,selection,native?.paused,remake?.paused,remake?.outcome,engineBattle?.phase,engineBattle?.turn,busy,leaving].join(':');
  if(key===sceneKey)return;sceneKey=key;
+ const lobbyVisible=scene==='theater'||scene==='intro'||scene==='room';
+ element('lobby-actions').hidden=!lobbyVisible;element('lobby-game').textContent=lobbyGame().toUpperCase();
  // Quiet UNDERTALE music from the theater to the encounter menu, one track after another; battles bring their own.
  // Browsers start it at the first click or key press.
  if(audio&&(scene==='theater'||scene==='intro'||scene==='room'||scene==='menu'))audio.playMenu(assets.manifest.menuMusic??[]);else if(audio&&scene==='native')audio.stopMenu();if(scene!=='menu')overlay.replaceChildren();element('menu-tools').hidden=scene!=='menu';element('pause').hidden=scene!=='native'&&scene!=='remake';element('back').hidden=scene==='theater';
@@ -217,12 +221,14 @@ async function placeRun(run:EngineBattle['result'],card:VictoryCard){
 }
 function step(){
  frame++;if(busy)return;if(document.querySelector('dialog[open]')){input.clear();return;}const keys=input.read();
- if(scene==='theater'){if(theater.step(keys)==='enter-deltarune'){audio.unlock();scene='intro';sceneKey='';}}
+ if(scene==='theater'){if(keys.arrows?.includes('down'))focusLobby();if(theater.step(keys)==='enter-deltarune'){audio.unlock();scene='intro';sceneKey='';}}
  else if(scene==='intro'&&keys.confirm){audio.unlock();scene='room';sceneKey='';}
  else if(scene==='intro'&&keys.cancel){openTheater();}
+ else if(scene==='intro'&&keys.arrows?.some(a=>a==='up'||a==='down')){focusLobby();}
  else if(scene==='room'){
   const edge=keys.arrows?.[0],direction=edge?(['left','up'].includes(edge)?-1:1):keys.y||keys.x;
-  if(direction&&(edge||frame-keyCooldown>10)){chapter=(chapter-1+direction+5)%5+1;keyCooldown=frame;sceneKey='';}
+  if(edge==='up'&&chapter===1||edge==='down'&&chapter===5)focusLobby();
+  else if(direction&&(edge||frame-keyCooldown>10)){chapter=(chapter-1+direction+5)%5+1;keyCooldown=frame;sceneKey='';}
   if(keys.confirm)void openChapter(chapter);
   if(keys.cancel){scene='intro';sceneKey='';}
  }else if(scene==='menu'){
@@ -312,6 +318,15 @@ for(const button of document.querySelectorAll<HTMLButtonElement>('[data-key]')){
  const release=()=>{button.classList.remove('down');native?.key(key,false);input.release(key);};button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
 }
 element('outcome-menu').addEventListener('click',goMenu);
+element('lobby-leaderboard').addEventListener('click',()=>{input.clear();leaderboard?.openGame(lobbyGame());});
+element('lobby-actions').addEventListener('keydown',event=>{
+ if(event.altKey||event.ctrlKey||event.metaKey)return;
+ const key=event.key.toLowerCase();if(!['z','enter',' ','x','escape','arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(key))return;
+ event.preventDefault();event.stopPropagation();input.clear();
+ if(['z','enter',' '].includes(key)){if(!event.repeat)element('lobby-leaderboard').click();return;}
+ if(scene==='room'&&['arrowup','arrowdown','w','s'].includes(key)){chapter=key==='arrowup'||key==='w'?5:1;sceneKey='';}
+ canvas.focus();
+});
 element('outcome-score').addEventListener('click',()=>{if(remake instanceof EngineBattle&&remake.result)leaderboard?.offer(remake.result);});
 // The banner stays until a new battle actually launches (closeBattle), so dismissing preparation keeps a way back.
 element('outcome-again').addEventListener('click',()=>{if(remake&&publicLoadout)void launchRemake(activeRemakeRecord(),publicLoadout).catch(showError);else void startBattle(false);});

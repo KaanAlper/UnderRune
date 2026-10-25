@@ -9,3 +9,37 @@
 .lb-profile{display:flex;align-items:flex-end;flex-direction:column;gap:8px;font-size:12px;max-width:45%;overflow-wrap:anywhere}.lb-profile>button{font-size:12px}.lb-field[hidden]{display:none!important}@media(max-width:600px){.lb-profile{align-items:flex-start;max-width:100%}}
 .leaderboard [hidden],.leaderboard-publish [hidden]{display:none!important}
 .lb-boss{margin:4px 0 0;color:#ffff00;font-size:15px;letter-spacing:.04em}.lb-boss[hidden]{display:none}
+
+/* A score sheet over the game, with podium placement rather than dashboard cards. */
+.leaderboard-browser{width:min(900px,calc(100vw - 40px));height:min(690px,calc(100dvh - 64px));margin:auto;border-color:#a994c0;box-shadow:8px 8px 0 #07040b,0 24px 80px #0009}
+.leaderboard-browser::backdrop{background:rgba(5,2,10,.68)}
+.leaderboard-browser .leaderboard{padding:clamp(18px,3vw,30px);background:#100b18;line-height:1.5}
+.leaderboard-browser .lb-header{border-bottom:3px double #8d75a5;gap:24px;padding-bottom:18px;margin-bottom:20px}
+.leaderboard-browser .lb-game{font-size:10px;letter-spacing:.12em;color:#8be3cc;margin:0 0 10px}
+.leaderboard-browser .lb-header h1{font-size:clamp(23px,3.3vw,32px);color:#fff4cb;margin-bottom:10px}
+.leaderboard-browser .lb-header p:not(.lb-game):not(.lb-boss){font-size:11px}
+.lb-results{min-height:100px;margin-bottom:16px}
+.lb-score{padding:16px 10px;border-left:3px solid transparent}
+.lb-score-line{grid-template-columns:36px minmax(0,1fr) auto auto;gap:16px}
+.lb-score .lb-rank{font-size:18px;font-variant-numeric:tabular-nums}
+.lb-score[data-rank="1"]{border-left-color:#ffe761;background:#ffe76108}
+.lb-score[data-rank="1"] .lb-rank{color:#ffe761}
+.lb-score[data-rank="2"] .lb-rank{color:#d5d8ed}
+.lb-score[data-rank="3"] .lb-rank{color:#dfa584}
+.leaderboard-browser .lb-advanced{border-style:dashed}
+.leaderboard-browser .lb-profile{padding-top:4px}
+.leaderboard-browser .lb-profile button{border-color:#8be3cc;color:#b5f3dd}
+.leaderboard-browser>.lb-browser-close{top:12px;right:12px;min-height:40px;width:40px;color:#fff4cb}
+@media(max-width:600px){
+ .leaderboard-browser{width:calc(100vw - 28px);height:min(690px,calc(100dvh - 40px));box-shadow:4px 4px 0 #07040b}
+ .leaderboard-browser .leaderboard{padding:18px 14px}
+ .leaderboard-browser .lb-header{gap:14px;padding-right:40px}
+ .leaderboard-browser .lb-header h1{font-size:23px}
+ .leaderboard-browser .lb-profile{max-width:100%;align-items:flex-start}
+ .lb-score{padding:14px 7px}.lb-score-line{grid-template-columns:26px minmax(0,1fr) auto;gap:8px}
+ .leaderboard-browser .lb-filters{grid-template-columns:1fr}
+ .leaderboard-browser select,.leaderboard-browser input,.leaderboard-browser button{min-height:44px}
+ .leaderboard-browser .lb-filter-actions{flex-wrap:wrap}
+}
+.leaderboard-browser .lb-header{padding:0 48px 18px 0}
+@media(max-width:600px){.leaderboard-browser .lb-header p:not(.lb-game):not(.lb-boss){display:none}}

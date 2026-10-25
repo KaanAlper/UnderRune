@@ -827,15 +827,35 @@ New scripts go in `tools/oracle-scripts.mjs`.
   0-6, reaches victory, produces a solo run record and restarts with party [1].
 - Extracted original sources, native packages, recordings and browser fixture screenshots remain ignored.
 
+### 19g. Lobby leaderboard access and score-sheet overlay (2026-10-26)
+
+- The theater, device intro and chapter hub now expose Game leaderboards outside the canvas. Its Boss selector
+  switches across playable DELTARUNE encounters. Boss-card Leaderboard buttons still open only their own battle.
+- Theater Down/S and chapter-boundary Up/Down reach the lobby action; Z/Enter opens it, X/Escape closes it,
+  arrows/WASD return to the canvas. Closing the modal restores its opener. Existing chapter and battle keyboard
+  paths pass, including uppercase Z/X. The lobby control hides in boss menus and battles.
+- UNDERTALE shows its own unavailable state, not DELTARUNE scores or phantom battles. Game context is stored
+  in the panel and checked on every refresh, including a pending DELTARUNE submission resolving after the
+  user has switched to UNDERTALE. An independent reviewer reproduced that race; its regression now passes.
+- The centered score sheet retains visible scene margins and a translucent backdrop, with game context,
+  podium rank styling, existing filters/profile/pagination and all three NEO route boards. No new dependencies,
+  settings, SQL or auth flow. No motion was added to keyboard navigation.
+- Existing app tests caught a real card-fan pointer blocker: rotated inactive cards covered deck action buttons.
+  A stack context keeps cards below heading/picker/actions/navigation. The mobile stack also moves up and
+  reserves room for all three actions; swipe, focus, reduced motion and prepare/card spacing regressions pass.
+- Verification: 25 input/API/theater unit tests pass; 24 browser checks pass in the combined suite, plus the
+  added chapter-keyboard regression passes in the five-test lobby group. The genuine-public-score write test
+  remains explicitly skipped. Typecheck, production build and static browser acceptance pass.
+- Remaining next work is General chat and the separately proposed shell scene-state refactor. The chat needs
+  a new Supabase migration and weekly cleanup job, shared player identity, two game rooms and the owner's SQL
+  setup. It is not implemented or advertised as available by this release.
+
 ### 19. Requested next (after the release above)
 
 - **General chat**, from Supabase. Separate rooms for UNDERTALE and DELTARUNE. It sits left of the leaderboard on
   the main menu. It uses the leaderboard's player name, and resets weekly (pg_cron) to keep the database small.
   The owner wants the SQL too.
-- **Main-menu leaderboard**: a battle combobox on the main DELTARUNE and UNDERTALE menus' leaderboard, showing
-  that battle's board.
-- **Leaderboard look**: an overlay over the content with a semi-transparent backdrop, not a full-screen tab;
-  styled like the leaderboards of games and challenge events.
+- Main-menu leaderboard access and the overlay appearance are complete; see section 19g.
 - **Shell refactor**: `main.ts` keeps scene state in shared variables, which is where this session's bugs came
   from. Proposed: an explicit scene state machine (enter, exit, input, draw per scene; transitions in one place).
   First list its responsibilities (shortcuts, focus, pause, audio, leaderboard, hooks).

@@ -25,3 +25,13 @@ main:has(#menu-tools:not([hidden])) #stage{width:min(100vw,calc((100dvh - 290px)
  .deck-practice{font-size:2.8cqw;min-height:44px}
  #outcome{padding:10px;font-size:12px}#outcome div{flex-wrap:wrap}
 }
+/* Lobby actions remain outside the canvas and never cover the theater controls. */
+#lobby-actions{width:min(calc(100vw - 32px),920px);display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:0 0 10px;color:#b8a7c9;font-size:10px}
+#lobby-actions[hidden]{display:none}
+#lobby-actions button{min-height:40px;padding:8px 14px;border:2px solid #8f7aa7;color:#efe4ff;background:#120c1c;font:inherit;font-size:12px;cursor:pointer;touch-action:manipulation}
+#lobby-actions button span{margin-left:14px;color:#ffe761}
+#lobby-actions button:focus-visible{outline:2px solid #ffe761;outline-offset:3px}
+#lobby-actions button:active{background:#332342}
+#screen:focus{outline:none}
+@media(hover:hover) and (pointer:fine){#lobby-actions button:hover{border-color:#ffe761}}
+@media(max-width:650px){#lobby-actions{width:calc(100vw - 24px);padding-block:4px 10px}#lobby-actions button{min-height:44px}}

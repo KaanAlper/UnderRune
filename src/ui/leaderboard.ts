@@ -28,12 +28,14 @@ export class LeaderboardPanel{
  private readonly encounters:EncounterRecord[];
  /** The battle's name when the board was opened for one battle (its card's button), in place of the Boss choice. */
  private bossTitle=node('p',undefined,'lb-boss');
+ private gameTitle=node('p','DELTARUNE','lb-game');
+ private game:'deltarune'|'undertale'='deltarune';
  constructor(private api:LeaderboardApi,catalog:EncounterRecord[],private equipment:EquipmentCatalog,_onChapter:(n:number)=>void,storage?:Pick<Storage,'getItem'|'setItem'>){
   try{this.storage=storage??window.localStorage;const saved=JSON.parse(this.storage.getItem('underrune.leaderboard.player.v1')??'null');if(this.validName(saved?.name))this.playerName=saved.name.trim();}catch{/* Storage must never block playing. */}
   this.encounters=catalog.filter(record=>!!sourceEncounter(record.id));
   this.element.hidden=true;this.element.setAttribute('aria-label','Battle leaderboard');
   const header=node('header',undefined,'lb-header'),title=node('div');title.append(node('h1','Leaderboard'),this.bossTitle,node('p','Finish a battle. Leave your mark.'));this.bossTitle.hidden=true;
-  header.append(title,this.profile);this.element.append(header);this.setupProfile();
+  title.prepend(this.gameTitle);header.append(title,this.profile);this.element.append(header);this.setupProfile();
   for(const record of this.encounters)this.boss.append(option(record.id,`${record.name} · Chapter ${record.chapter} · ${record.encounter}`));
   this.order.append(option('damage','Least damage, then fastest'),option('time','Fastest, then least damage'));
   this.field('Boss',this.boss);this.field('Order',this.order);
@@ -79,22 +81,25 @@ export class LeaderboardPanel{
    const select=this.controls.get(key) as HTMLSelectElement;select.replaceChildren(option('','Any'));for(const entry of entries??[])if(entry.id!==0)select.append(option(String(entry.id),entry.name));
   }
  }
- show(encounterId?:string){
+ show(encounterId?:string,game:'deltarune'|'undertale'='deltarune'){
+  this.game=game;this.gameTitle.textContent=game.toUpperCase();this.form.hidden=game==='undertale';
   const base=encounterId?scoreBoss(encounterId).replace(/-weird$/,''):undefined;
   if(base&&this.encounters.some(record=>record.id===base)){this.boss.value=base;this.mode.value=encounterId!.endsWith('-enraged')?'enraged':encounterId!.includes('-weird')?'weird':'normal';this.gearOptions();this.offset=0;}
   this.boss.parentElement!.hidden=false;this.bossTitle.hidden=true;
-  this.active=true;this.element.hidden=false;void this.refresh();
+  this.active=true;this.element.hidden=false;
+  void this.refresh();
  }
  /** Opened for one battle (a boss card's button), the board shows only that battle: the Boss choice is hidden and the
   * battle's name heads the board. Opened without one, the Boss choice picks the battle. */
- open(encounterId?:string){
+ open(encounterId?:string,game:'deltarune'|'undertale'='deltarune'){
   this.browserOpener=document.activeElement instanceof HTMLElement?document.activeElement:null;
   if(this.element.parentElement!==this.browser)this.browser.append(this.element);if(!this.browser.isConnected)document.body.append(this.browser);
-  this.show(encounterId);
+  this.show(encounterId,game);
   const record=encounterId?this.encounters.find(r=>r.id===scoreBoss(encounterId).replace(/-weird$/,'')):undefined;
   this.boss.parentElement!.hidden=!!record;this.bossTitle.hidden=!record;this.bossTitle.textContent=record?`${record.name} · Chapter ${record.chapter}`:'';
-  if(!this.browser.open)this.browser.showModal();(record?this.order:this.boss).focus();
+  if(!this.browser.open)this.browser.showModal();(game==='undertale'?this.browser.querySelector<HTMLElement>('.lb-browser-close'):record?this.order:this.boss)?.focus();
  }
+ openGame(game:'deltarune'|'undertale'){this.open(undefined,game);}
  hide(){this.active=false;this.element.hidden=true;this.abort?.abort();this.revision++;if(this.browser.open)this.browser.close();}
  private filters():LeaderboardFilters{
   const filters:LeaderboardFilters={encounterId:this.boss.value+(this.boss.value==='ch2-61'&&this.mode.value!=='normal'?'-weird'+(this.mode.value==='enraged'?'-enraged':''):''),order:this.order.value as 'damage'|'time',offset:this.offset};
@@ -104,6 +109,10 @@ export class LeaderboardPanel{
  }
  private async refresh(){
   this.abort?.abort();const revision=++this.revision;this.abort=new AbortController();this.previous.disabled=this.next.disabled=true;
+  if(this.game==='undertale'){
+   this.results.replaceChildren();this.results.removeAttribute('aria-busy');this.position.textContent='';
+   this.status.textContent='UNDERTALE battles are not available yet. Their leaderboards will appear here.';return;
+  }
   let filters:LeaderboardFilters;try{filters=this.filters();}catch(error){this.status.textContent=error instanceof Error?error.message:String(error);return;}
   this.status.textContent='Loading scores…';this.results.setAttribute('aria-busy','true');
   try{
@@ -117,7 +126,7 @@ export class LeaderboardPanel{
  }
  private renderRows(rows:LeaderboardRow[]){
   this.results.replaceChildren();for(const [index,row]of rows.entries()){
-   const card=node('article',undefined,'lb-score'),line=node('div',undefined,'lb-score-line');line.append(node('span',String(this.offset+index+1),'lb-rank'),node('strong',row.player_name),node('span',`${row.damage} damage`,'lb-metric'),node('span',seconds(row.duration_ms),'lb-metric'));
+   const card=node('article',undefined,'lb-score'),line=node('div',undefined,'lb-score-line');card.dataset.rank=String(this.offset+index+1);line.append(node('span',String(this.offset+index+1),'lb-rank'),node('strong',row.player_name),node('span',`${row.damage} damage`,'lb-metric'),node('span',seconds(row.duration_ms),'lb-metric'));
    const badges=node('div',undefined,'lb-badges');if(row.no_item)badges.append(node('span','No item'));if(row.no_armor)badges.append(node('span','No armor'));
    const detail=node('details');detail.append(node('summary','Equipment and items'),this.runDetails(row));card.append(line,badges,detail);this.results.append(card);
   }
