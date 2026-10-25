@@ -11,7 +11,7 @@ import {loadPrefs,savePrefs,browserStore} from './game/storage';
 import {NativeBattle,fetchNativeProfiles,type NativeEvent} from './game/native';
 import {PreparationPanel} from './ui/preparation';
 import {RoutePicker} from './ui/route-picker';
-import {battleRoutes,type BattleRoute} from './remake/host/routes';
+import {battleRoutes,isNeoEncounter,type BattleRoute} from './remake/host/routes';
 import {LeaderboardPanel} from './ui/leaderboard';
 import {LeaderboardApi,loadLeaderboardConfig} from './game/leaderboard-api';
 import {loadoutIni,type EquipmentCatalog,type Loadout} from './game/loadout';
@@ -100,9 +100,9 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
  if(busy)return;busy=true;error.hidden=true;loading.hidden=false;loading.textContent='* CONNECTING '+record.name.toUpperCase()+'...';const token=++sessionToken;
  const pattern=Number(element<HTMLSelectElement>('attack-select').value)||0;
  const controller=new AbortController();remakeLoad?.abort();remakeLoad=controller;
- try{const remakeAssets=remakeCache.get(record.chapter)??await loadRemakeAssets(record.chapter);if(token!==sessionToken)return;remakeCache.set(record.chapter,remakeAssets);await audio.prepareEffects(remakeAssets.sounds,controller.signal);const neoHost=record.id==='ch2-61'?(await import('./remake/host/neo')).installNeoHost:undefined;
+ try{const remakeAssets=remakeCache.get(record.chapter)??await loadRemakeAssets(record.chapter);if(token!==sessionToken)return;remakeCache.set(record.chapter,remakeAssets);await audio.prepareEffects(remakeAssets.sounds,controller.signal);const neoHost=isNeoEncounter(record.id)?(await import('./remake/host/neo')).installNeoHost:undefined;
   // Load each chapter's boss registry only when entering one of its battles.
-  const chapterHost=record.chapter===3?(await import('./remake/host/chapter3-bosses')).installChapter3BossHost:record.chapter===2&&record.id!=='ch2-61'?(await import('./remake/host/chapter2-bosses')).installChapter2BossHost:undefined;if(token!==sessionToken)return;closeBattle();setSourceText(remakeAssets.text);publicLoadout=structuredClone(loadout);
+  const chapterHost=record.chapter===3?(await import('./remake/host/chapter3-bosses')).installChapter3BossHost:record.chapter===2&&!isNeoEncounter(record.id)?(await import('./remake/host/chapter2-bosses')).installChapter2BossHost:undefined;if(token!==sessionToken)return;closeBattle();setSourceText(remakeAssets.text);publicLoadout=structuredClone(loadout);
   // The game calls randomize() when it starts: every battle gets its own random seed (tests and comparisons fix it).
   // ?seed=N repeats a run exactly (comparisons with the original's recordings).
   const fixedSeed=new URLSearchParams(location.search).get('seed'),seed=fixedSeed!==null?Number(fixedSeed)>>>0:crypto.getRandomValues(new Uint32Array(1))[0];
@@ -147,7 +147,7 @@ async function startBattle(practice=false){
   else void launchNative(record,'').catch(showError);
   return;
  }
- const playable=!!encounter;
+ const playable=!!playableEncounter(record.id);
  if(prep&&equipment?.chapters[record.chapter])prep.open(record,{routeLabel,practiceOnly:practice,available:playable,launchLabel:playable?practice?'START PRACTICE':'START BATTLE':'IN DEVELOPMENT',notice:playable?practice?'Single attack practice. Use START BATTLE from the encounter list for commands and continuous turns.':'Browser battle: commands, equipment stats and usable bag items. Visuals, sounds and special equipment effects are still being compared with the game.':publicMode?'Browse equipment and save your loadout. This encounter is not playable in the public demo yet.':'Browse equipment and save your loadout. A source battle for this encounter is still in development; the local original engine is unavailable.'});
  else showError('Equipment could not load. Please retry.');
 }
@@ -187,6 +187,10 @@ function updateControls(){
   element('controls-hint').textContent='LEFT / RIGHT CARDS · UP / DOWN ACTIONS · Z SELECT · X BACK';
  }
 }
+function activeRemakeRecord(){
+ const record=menuRecords()[selection];
+ return remake?{...record,id:remake.id}:record;
+}
 function showOutcome(){
  if(!remake?.outcome)return;
  const record=menuRecords()[selection];
@@ -195,7 +199,7 @@ function showOutcome(){
  // A game over ends with the player's own choice on the failure screen: try again, or back to the menu.
  if(remake instanceof EngineBattle&&remake.afterDefeat){
   gameOvers.set(remake.id,remake.rt.globals.tempflag[3]);sessions.set(remake.id,remake.session());
-  if(remake.afterDefeat==='retry'&&publicLoadout)void launchRemake(record,publicLoadout).catch(showError);else goMenu();
+  if(remake.afterDefeat==='retry'&&publicLoadout)void launchRemake(activeRemakeRecord(),publicLoadout).catch(showError);else goMenu();
   return;
  }
  outcomeShownAt=performance.now();
@@ -234,7 +238,7 @@ function step(){
    // The second X leaves the battle: nothing of it is left to read keys this frame.
    else if(keys.cancel){askLeave();if(!remake)return;}
   }else if(keys.pause)setPaused(true);
-  if(keys.restart&&publicLoadout){void launchRemake(menuRecords()[selection],publicLoadout).catch(showError);return;}
+  if(keys.restart&&publicLoadout){void launchRemake(activeRemakeRecord(),publicLoadout).catch(showError);return;}
   const held=remake.rt.input.held;held.clear();if(keys.x<0)held.add(KEY.left);if(keys.x>0)held.add(KEY.right);if(keys.y<0)held.add(KEY.up);if(keys.y>0)held.add(KEY.down);if(keys.slow)held.add(KEY.shift);
   if(remake.paused){remakeMenu=false;remakePressed.clear();remakeReleased.clear();}else{remakeMenu||=keys.menu;
    if(keys.shootReleased)remakeReleased.add(KEY.z);
@@ -310,7 +314,7 @@ for(const button of document.querySelectorAll<HTMLButtonElement>('[data-key]')){
 element('outcome-menu').addEventListener('click',goMenu);
 element('outcome-score').addEventListener('click',()=>{if(remake instanceof EngineBattle&&remake.result)leaderboard?.offer(remake.result);});
 // The banner stays until a new battle actually launches (closeBattle), so dismissing preparation keeps a way back.
-element('outcome-again').addEventListener('click',()=>{if(remake&&publicLoadout)void launchRemake(menuRecords()[selection],publicLoadout).catch(showError);else void startBattle(false);});
+element('outcome-again').addEventListener('click',()=>{if(remake&&publicLoadout)void launchRemake(activeRemakeRecord(),publicLoadout).catch(showError);else void startBattle(false);});
 element('retry').addEventListener('click',()=>{error.hidden=true;if(failedChapter!==null)void openChapter(failedChapter);else if(renderer&&equipment)void startBattle(false);else void initialize();});
 async function initialize(){
  loading.hidden=false;error.hidden=true;try{

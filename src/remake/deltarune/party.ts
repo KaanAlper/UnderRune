@@ -190,6 +190,7 @@ function heroHit(s:GmInstance,rt:GmRuntime){
  const dm=rt.create(dmgWriter,g.monsterx[t],g.monstery[t]-g.hittarget[t]*20+20);s.dm=dm.id;dm.type=s.char===4?6:s.char-1;dm.delay=8;
  if(withHook(rt,'fightNumbersOnTop').length)dm.depth=-999999;
  let damage=round(g.battleat[me]*s.points/20-g.monsterdf[t]*3);
+ for(const [e,h] of withHook(rt,'scalesFightDamage'))damage=h(e,s,rt,damage);
  if(g.monstertype[t]===19)damage=Math.ceil(damage*0.3);
  if(damage<0)damage=0;
  if(damage===0){dm.delay=2;if(m&&m.hurttimer<=15&&m.candodge===1){m.dodgetimer=0;m.state=4;}}

@@ -5,6 +5,7 @@ import {GmInstance,resolveEvent,moveTowardsPoint,type GmEvent,type GmObjectDef,t
 import {C,mergeColor} from '../../gm/graphics';
 import {eq,ge,gt,le,lt,round,lengthdirX,lengthdirY,pointDirection,pointDistance} from '../../gm/math';
 import {rectangleMeets,instancesMeet} from '../../gm/collision';
+import {sideBPhase} from '../../deltarune/chapter2';
 
 export interface NeoSourceHost{
  object(name:string):GmObjectDef;
@@ -122,7 +123,7 @@ export function executeNeoSource(source:string,s:GmInstance,rt:GmRuntime,host:Ne
   stringsetloc:(_s,_fallback,key)=>host.text(key),stringsetsubloc:(_s,_fallback,...a)=>substitute(host.text(a.pop()),a),
   msgset:(_s,n,t)=>{rt.globals.msgno=n;rt.globals.msg[n]=t;},msgsetloc:(_s,n,_fallback,key)=>{rt.globals.msgno=n;rt.globals.msg[n]=host.text(key);},msgsetsubloc:(_s,n,_fallback,...a)=>{rt.globals.msgno=n;rt.globals.msg[n]=substitute(host.text(a.pop()),a);},
   msgnextloc:(_s,_fallback,key)=>{const g=rt.globals;g.msgno++;g.msg[g.msgno]=host.text(key);},
-  scr_sideb_get_phase:()=>{if((rt.globals.flag?.[915]??0)>0||(rt.globals.flag?.[916]??0)>0)throw Error('Spamton NEO side-B source is unavailable');return 0;},
+  scr_sideb_get_phase:()=>sideBPhase(rt),
   variable_instance_set:(_s,id,key,value)=>{proxy(instance(id))[key]=value;},
   variable_instance_get:(_s,id,key)=>{const p=proxy(instance(id));if(!(key in p))throw Error(`Unknown GML member ${key}`);return p[key];},is_string:(_s,value)=>typeof value==='string',is_real:(_s,value)=>typeof value==='number',
  };

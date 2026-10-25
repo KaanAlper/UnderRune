@@ -13,6 +13,7 @@
  "ch2-59": {"party": [1, 2, 3], "basis": "enemy", "note": "Queen: Susie 61x, Ralsei 57x in enemy code; scene25 turns actors into followers"},
  "ch2-60": {"party": [1, 0, 0], "basis": "code", "note": "scr_losechar() after the city Berdly fight; no companions in the alley cutscene or Spamton code"},
  "ch2-61": {"party": [1, 2, 3], "basis": "code", "note": "Spamton NEO room sets the full party"},
+ "ch2-61-weird": {"party": [1, 0, 0], "basis": "code", "note": "The fountain scene's Weird route retains only Kris; uses the solo encounter strategy"},
  "ch2-62": {"party": [1, 2, 3], "basis": "enemy", "note": "Sweet/K_K/Cap'n: Susie 58x, Ralsei 64x; both act in obj_ch2_cyber01"},
  "ch2-63": {"party": [1, 3, 0], "basis": "code", "note": "Acid tunnel loop Create: scr_losechar(); scr_getchar(3)"},
  "ch2-65": {"party": [1, 2, 3], "basis": "story", "note": "Regular encounter, normal party"},

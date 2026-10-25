@@ -33,6 +33,7 @@ import {GAME_END_ROOM,RETRY_ROOM,endBattle,gotoGameOverRoom,hasCommittedGiveUp,i
 /** The encounters whose enemies run on the engine, with their scr_encountersetup number and room. */
 const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:(rt:GmRuntime)=>void}>={
  'ch2-61':{n:61,room:'room_dw_mansion_b_east',backdrop:false},
+ 'ch2-61-weird':{n:61,room:'room_dw_mansion_fountain',backdrop:false},
  'ch2-57':{n:57,room:'room_dw_mansion_east_2f_d',backdrop:true},
  // Queen's story room needs the scene that hangs Berdly's wire (obj_ch2_scene25, not ported); in the battle test room
  // Berdly starts in place, as in the recordings.
@@ -96,17 +97,18 @@ export class EngineBattle{
  constructor(bank:SpriteBank,readonly equipment:EquipmentSource,readonly loadout:Loadout,readonly id:string,seed=11,options:{development?:boolean;neoHost?:typeof installNeoHost;chapterHost?:ChapterHost;chapter2Host?:ChapterHost;scoring?:boolean;rage?:boolean;gameOvers?:number;secretBossAttempts?:number;session?:Session}={}){
   const encounter=options.development?developmentEncounter(id):sourceEncounter(id),setup=ENGINE[id];
   if(!encounter||!setup)throw Error('This battle is not available yet.');
-  if(id==='ch2-61'&&!options.neoHost)throw Error('Load the Chapter 2 source host before starting NEO.');
+  const neoRoute=id==='ch2-61'||id==='ch2-61-weird';
+  if(neoRoute&&!options.neoHost)throw Error('Load the Chapter 2 source host before starting NEO.');
   const host=options.chapterHost??options.chapter2Host;
-  if(encounter.chapter>=2&&id!=='ch2-61'&&!host)throw Error(`Load the Chapter ${encounter.chapter} boss host before starting this battle.`);
+  if(encounter.chapter>=2&&!neoRoute&&!host)throw Error(`Load the Chapter ${encounter.chapter} boss host before starting this battle.`);
   validateLoadout(loadout,equipment);
   this.rt=new GmRuntime(bank,{seed});this.name=encounter.name;this.party=encounter.party;
   const rt=this.rt,gear=(list:typeof equipment.weapons,id:number)=>list.find(g=>g.id===id);
   rt.globals.chapter=encounter.chapter;
-  const neo=id==='ch2-61'?options.neoHost!(rt,{rage:options.rage}):undefined;
+  const neo=neoRoute?options.neoHost!(rt,{rage:options.rage,weird:id==='ch2-61-weird'}):undefined;
   const chapterHost=encounter.chapter>=2&&!neo?host!(rt,{room:setup.room}):undefined;
   rt.room.name=setup.room;
-  if(neo){rt.view.x=1640;rt.room.width=2400;}
+  if(neo&&id==='ch2-61'){rt.view.x=1640;rt.room.width=2400;}
   const charIds=encounter.party.includes(4)?[1,2,3,4]:[1,2,3];
   const equipped:Record<number,EquippedStats>={};
   for(const c of charIds){
@@ -129,6 +131,7 @@ export class EngineBattle{
   }
   // Restore persistent spell progression before the controller builds the spell menus.
   if(options.session){Object.assign(rt.globals,options.session.globals);for(const [i,v] of Object.entries(options.session.flags))rt.globals.flag[Number(i)]=v;}
+  neo?.initialize();
   encounterSetup(rt,setup.n,neo?{'obj_spamton_neo_enemy':neo.objects.obj_spamton_neo_enemy}:chapterHost?chapterHost.objects:engineEnemies(id));
   if(setup.backdrop)rt.create(b.battleBack,0,0);
   // Jevil's room has its own spinning background (drawn by the host view).

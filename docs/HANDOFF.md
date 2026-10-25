@@ -796,6 +796,37 @@ New scripts go in `tools/oracle-scripts.mjs`.
   queen_boss and berdly_battle_heartbeat_true. The ending track is extracted from the installed mus directory;
   a publication regression checks both catalog membership and actual files for released boss/ending music.
 
+### 19f. Solo Kris NEO Weird route (2026-10-25)
+
+- The route picker now offers the playable Weird / Snowgrave encounter before equipment. It has only Kris,
+  source X-Slash (62 TP, two hits), FriedPipis (80 TP, delayed 120 heal), the low-HP defense transition,
+  help calls and Noelle ending. The base catalog remains 23 cards; the variant is not a duplicate boss card.
+- Normal NEO retains the requested three-person, logical-release, rage-disabled policy. Solo NEO uses
+  independent confirm release; repeated BIG SHOTs trigger original rage behavior and its damage changes.
+  Shared projectile families are reused. No overworld or route-progression save import is included.
+- The separate weird.ts strategy owns route logic. weird-fireworks.ts owns the final Pipis controller,
+  three eggs and 54 shootable bullets. Their source damage is fixed at 16, not controller.damage.
+  fountainBoundary models only the battle/world completion boundary, not the surrounding cutscene.
+- Existing chapter-start equipment/stat presets are retained. Native acceptance uses documented test-only
+  survival HP; the ending recording also presets enemy HP to 400 once. These fixtures are not public defaults.
+- Two continuous original-runner recordings pass: 40-4000 (first eight turns) and 40-3600 (defense, all calls,
+  ending). All original RNG and event fields remain checked apart from existing audio backend handles.
+  Three normal NEO recordings still pass. All 16 natural patterns pass both ordinary and enraged smoke runs.
+- Native ending acceptance found missing source audio caller fields and stream ownership. Chapter 2 snd_init,
+  mus_play and mus_loop now preserve them; normal regression and the full test suite pass.
+- FIGHT damage scaling now also reaches Chapter 2's actual damage writer, HP and recoil. Solo defense hits
+  are consistently clamped to the original 5-10 amount. The hook remains generic and strategy-owned.
+- R, source game-over retry and BATTLE AGAIN preserve the active encounter ID, equipment and route input policy.
+  Scores are separate: ch2-61, ch2-61-weird and ch2-61-weird-enraged. Existing battle-v2 SQL accepts these IDs;
+  no new database migration is required. Browser checks never submit fixture scores to the public database.
+- Fresh verification: 1853 non-parity tests pass (three optional skips); 54 tool/graphics tests pass;
+  five NEO continuous native replays pass; 32 solo attack smoke scenarios pass; typecheck and Pages build pass.
+  Browser acceptance includes route keyboard/touch layout, single-character preparation, first attack,
+  route-preserving restart, normal full-turn regression and separate leaderboard filters. A private browser
+  ending fixture uses legal ACT-menu keys after documented low HP and invulnerability setup; it visits calls
+  0-6, reaches victory, produces a solo run record and restarts with party [1].
+- Extracted original sources, native packages, recordings and browser fixture screenshots remain ignored.
+
 ### 19. Requested next (after the release above)
 
 - **General chat**, from Supabase. Separate rooms for UNDERTALE and DELTARUNE. It sits left of the leaderboard on

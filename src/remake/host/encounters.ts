@@ -43,7 +43,11 @@ const playable:readonly SourceEncounter[]=[
  // Chapter 3's secret boss, after the fountain scene (obj_ch3_PTB02).
  {id:'ch3-115',chapter:3,name:'Roaring Knight',party:[1,2,3],hp:7300,attack:40,defense:0,music:'knight',practice:true},
 ];
-export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id);
+/** Route variants share their parent's card; readiness does not add a duplicate menu encounter. */
+const variants:readonly SourceEncounter[]=[
+ {id:'ch2-61-weird',chapter:2,name:'Spamton NEO',party:[1],hp:4809,attack:13,defense:-27,music:'spamton_neo_mix_ex_wip',practice:false},
+];
+export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id)??variants.find(p=>p.id===id);
 /** Explicit local verification entry points. Public launches always use sourceEncounter. */
 /** Reserved for EngineBattle fixtures that still need end-to-end verification before public launch. */
 const development:readonly SourceEncounter[]=[];

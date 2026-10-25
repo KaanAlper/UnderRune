@@ -111,8 +111,9 @@ describe.skipIf(!hasArchive)('exact NEO enemy archive and strict execution',()=>
   const enemy2=rt.create(createNeoEnemy(host),460,80);rt.destroy(enemy2);
   expect(rt.globals.sp).toBe(4);expect(calls.slice(-4).map(c=>c.name)).toEqual(['audio_is_playing','snd_stop','snd_stop','snd_volume']);expect(enemy.live).toBe(true);
  });
- it('rejects side-B globals before normal-route mutation',()=>{
-  const {event,rt}=setup();rt.globals.flag[915]=1;expect(()=>event()).toThrow('side-B source is unavailable');
+ it('lets the source resolve Weird route flags and reset its unavailable mercy',()=>{
+  const {event,rt}=setup();rt.globals.flag[915]=7;rt.globals.mercymod[0]=40;
+  expect(()=>event()).not.toThrow();expect(rt.globals.mercymod[0]).toBe(0);
  });
 });
 

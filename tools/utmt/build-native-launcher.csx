@@ -27,6 +27,14 @@ global.chararmor1[hero] = ini_read_real(""armor1"", string(hero), global.chararm
 global.chararmor2[hero] = ini_read_real(""armor2"", string(hero), global.chararmor2[hero]);
 }
 for (var slot = 0; slot < 12; slot += 1) global.item[slot] = ini_read_real(""items"", string(slot), 0);
+// Reference-only solo route preset; no original enemy or attack event is patched.
+if (global.ur_encounter == 61 && ini_read_real(""oracle"", ""neo_weird"", 0) == 1) {
+ global.char[0] = 1; global.char[1] = 0; global.char[2] = 0;
+ global.flag[915] = 7; global.flag[916] = 0;
+}
+global.ur_oracle_neo_ending = (global.ur_encounter == 61 && ini_read_real(""oracle"", ""neo_ending"", 0) == 1);
+global.ur_neo_preset = false; global.ur_neo_frame = 0; global.ur_neo_held = -1;
+global.ur_neo_pressed = -1; global.ur_neo_released = -1; global.ur_neo_log = """"; global.ur_neo_log_closed = false;
 // Reference recordings only: the debug no-damage switch keeps a run going through many enemy turns.
 if (ini_read_real(""oracle"", ""god"", 0) == 1) global.chemg_god_mode = 1;
 ORACLE_HP
@@ -127,8 +135,12 @@ if (chapter == 2) {
  var logger=File.ReadAllText(Path.Combine(root,"tools/oracle-band-log.gml"));
  var input=File.ReadAllText(Path.Combine(root,"extracted/chapter2_windows/code/gml_Object_obj_time_Step_1.gml"));
  var sweet=File.ReadAllText(Path.Combine(root,"extracted/chapter2_windows/code/gml_Object_obj_sweet_enemy_Step_0.gml"));
- imports.QueueReplace("gml_Object_obj_time_Step_1","if (variable_global_exists(\"ur_oracle_band_policy\")) {\n"+policy+"\n}\n"+input);
+ var neoPolicy=File.ReadAllText(Path.Combine(root,"tools/oracle-neo-policy.gml"));
+ var neoLog=File.ReadAllText(Path.Combine(root,"tools/oracle-neo-log.gml"));
+ var neo=File.ReadAllText(Path.Combine(root,"extracted/chapter2_windows/code/gml_Object_obj_spamton_neo_enemy_Step_0.gml"));
+ imports.QueueReplace("gml_Object_obj_time_Step_1","if (variable_global_exists(\"ur_oracle_band_policy\")) {\n"+policy+"\n}\nif (variable_global_exists(\"ur_oracle_neo_ending\")) {\n"+neoPolicy+"\n}\n"+input);
  imports.QueueReplace("gml_Object_obj_sweet_enemy_Step_0",sweet+"\n"+logger);
+ imports.QueueReplace("gml_Object_obj_spamton_neo_enemy_Step_0",neo+"\n"+neoLog);
 }
 
 imports.QueueReplace("gml_Room_room_battletest_Create",entry);

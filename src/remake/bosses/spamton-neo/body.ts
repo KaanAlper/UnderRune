@@ -10,6 +10,7 @@ import {findController} from '../../deltarune/controller';
 import {drawBodyPart,mergeColor,scriptDelayedOn,setVar,snd} from '../../deltarune/chapter2-battle';
 import {bigLaser,dbulletController,heartAttack,pipisDestroyFx,sneoPhonecall,spamtonShot,wireheart} from './pending';
 import {sneoBulletController} from './bullet-controller';
+import {sideBPhase} from '../../deltarune/chapter2';
 import {vineCut as sneoVineCut,vineTransition as sneoVineTransition} from './vines';
 
 const lerp=(a:number,b:number,t:number)=>a+(b-a)*t;
@@ -66,7 +67,8 @@ function makeWireHearts(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,at=g.monsterat[s.myself];
  const make=(type:number,extra?:(w:GmInstance)=>void)=>{
   const w=rt.create(wireheart,s.x+10,s.y+80);s.wireheart=w.id;w.boss=s.id;w.bossx=s.x+10;w.bossy=s.y+80;w.type=type;w.target=3;
-  extra?.(w);w.damage=Math.floor(at*5*0.6);return w;
+  extra?.(w);const solo=sideBPhase(rt)>2;if(solo)w.target=rt.first(sneoBulletController)!.target;
+  w.damage=Math.floor(at*5*(solo?.8:.6));return w;
  };
  const hellish=(w:GmInstance)=>{w.special=s.hellmode;};
  const ht=s.hearttype,mt=s.makehearttype;
@@ -407,7 +409,7 @@ export function neoBodyDraw(s:GmInstance,rt:GmRuntime){
    if(s.hurttimer2>0)s.hurttimer2-=1;
    if(s.hurttimer2===1){
     if(s.endcon===0){s.shockthreshold=10;s.partmode=1;}
-    if(s.didwejustdie===0&&findController(rt)&&g.monsterhp[g.chartarget[me]]<=0){s.partmode=99;s.dontchangepose=1;}
+    if(s.didwejustdie===0&&findController(rt)&&(g.monsterhp[g.chartarget[me]]<=0||(g.monsterhp[me]<=g.monstermaxhp[me]*.1&&sideBPhase(rt)>2&&s.weirdpathendcon===0))){s.partmode=99;s.dontchangepose=1;}
    }
   }
   if(s.hurttimer2>0)shakevar=rt.random.random(s.hurttimer2)/2-s.hurttimer2/4;

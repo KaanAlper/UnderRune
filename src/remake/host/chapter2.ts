@@ -67,7 +67,10 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
     case 'scr_gameover':return battle.gameOver(r);
     case 'scr_wincombat':return controller.winCombat(r,s);
     case 'scr_get_input_name':return ['LEFT','UP','RIGHT','DOWN','Z','X','C'][args[0]];
-    case 'snd_init':{const id=nextStream--;streamNames.set(id,String(args[0]).replace(/\.ogg$/,''));return id;}
+    case 'snd_init':{
+     const id=nextStream--,file=String(args[0]);streamNames.set(id,file.replace(/\.ogg$/,''));
+     s.initsongvar='mus/'+file;s._mystream=id;const holder=r.create(object('obj_astream'),0,0);s._astream=holder.id;holder.mystream=id;holder.songname=file;return id;
+    }
     case 'snd_play':case 'snd_play_x':case 'snd_play_pitch':{
      const resource=streamNames.get(args[0])??args[0];
      if(typeof resource!=='string')throw Error(`Unknown sound resource ${resource}`);
@@ -81,8 +84,8 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
     case 'audio_sound_get_pitch':return pitches.get(args[0])??1;
     case 'snd_volume':case 'mus_volume':return r.sourceAudio?.volume(audioHandle(args[0]),args[1],args[2]??0);
     case 'snd_free':{const freed=battle.sndFree(r,s,args[0]);if(!freed&&streamNames.has(args[0]))r.soundFree?.(args[0]);streamNames.delete(args[0]);return;}
-    case 'mus_play':return r.sourceAudio?.music(streamNames.get(args[0])??args[0])??args[0];
-    case 'mus_loop':return r.sourceAudio?.loop(audioHandle(args[0]));
+    case 'mus_play':s._xsndinstance=r.sourceAudio?.music(streamNames.get(args[0])??args[0])??args[0];return s._xsndinstance;
+    case 'mus_loop':s._xsndinstance=r.sourceAudio?.loop(audioHandle(args[0]))??args[0];return s._xsndinstance;
     case 'snd_pause':return r.sourceAudio?.pause(audioHandle(args[0]));
     case 'snd_resume':return r.sourceAudio?.resume(audioHandle(args[0]));
     case 'snd_position':return r.sourceAudio?.position(audioHandle(args[0]),args[1]);

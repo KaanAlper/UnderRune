@@ -16,7 +16,7 @@ import {enemyBlcon2} from '../../deltarune/chapter2-objects';
 import {sourceText} from '../../host/text';
 import {chooseNeoAttack} from './chooser';
 import type {HookedDef} from '../../deltarune/rules';
-import {defineEnemy} from '../../deltarune/enemy';
+import {defineEnemy,type EnemyStrategy} from '../../deltarune/enemy';
 import {soulSpark,superchargeEnd} from '../../deltarune/yellow-soul';
 import {neoBodyDraw} from './body';
 import {vineCut as sneoVineCut,vineTransition as sneoVineTransition,vineWeak as sneoVineWeak} from './vines';
@@ -87,7 +87,7 @@ function openingLine(s:GmInstance):[string,number]|undefined{
 /** The balloon after balloon n: [message key, next balloon (0: the last one)]. */
 const FOLLOW_UP:Record<number,[string,number]>={1:['136_0',0],2:['137_0',0],3:['138_0',0],4:['139_0',0],5:['140_0',0],6:['141_0',0],7:['142_0',0],8:['143_0',9],
  9:['144_0',0],10:['145_0',0],11:['146_0',0],12:['147_0',0],13:['163_0',0],15:['173_0',0],25:['207_0',26],26:['208_0',27],27:['209_0',0]};
-function startTalk(s:GmInstance,rt:GmRuntime){
+export function startNeoTalk(s:GmInstance,rt:GmRuntime,select:(s:GmInstance,rt:GmRuntime)=>[string,number]|undefined=openingLine){
  const g=rt.globals,me=s.myself;
  randomTarget(s,rt);
  if(!rt.exists(darkener))rt.create(darkener,0,0);
@@ -95,7 +95,7 @@ function startTalk(s:GmInstance,rt:GmRuntime){
  Object.assign(s,{ballooncon:0,balloonsubcon:0,balloonend:1,talkedcon:0,statustextupdate:0});
  for(const a of rt.all(sneoSusieAct))a.turnsleft-=1;
  g.typer=72;s.rr=-1;chooseNeoAttack(s,rt);
- const open=openingLine(s);
+ const open=select(s,rt);
  if(open){
   msgSet(rt,0,T(open[0]));s.ballooncon=open[1];s.balloonend=open[1]===0?1:0;
   if(open[0]==='93_0')s.finalattackconversationcon=1;
@@ -590,11 +590,11 @@ function neoBigShot(n:GmInstance,shot:GmInstance,soul:GmInstance,rt:GmRuntime){
  }
 }
 /** NEO is the standard enemy (deltarune/enemy.ts) with these steps of his own. */
-export const spamtonNeo:HookedDef=defineEnemy({name:'obj_spamton_neo_enemy',index:702,depth:0,sprite:'spr_sneo_example'},{
+export const neoStrategy:EnemyStrategy={
  create,
  beforeStep:(s,rt)=>{if(s.bigshot===1)rt.globals.sp=5;},
  onlyWhileFighting:true,
- beforeTalk,startTalk,duringTalk,endTalk,
+ beforeTalk,startTalk:startNeoTalk,duringTalk,endTalk,
  attackDelay:15,attack:startAttack,statusLine:attackLine,afterAttack,
  acts,actsDone,afterStep:endings,
  monsterPosition:(s,rt)=>[s.x+rt.spriteWidth(s)/3,s.y+rt.spriteHeight(s)/2],
@@ -640,5 +640,6 @@ export const spamtonNeo:HookedDef=defineEnemy({name:'obj_spamton_neo_enemy',inde
   // Event 10 does nothing: NEO never runs the usual spare-and-leave defeat.
   user10:()=>{},
  },
-});
+};
+export const spamtonNeo:HookedDef=defineEnemy({name:'obj_spamton_neo_enemy',index:702,depth:0,sprite:'spr_sneo_example'},neoStrategy);
 void afterimage;void bigLaser;void first;

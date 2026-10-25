@@ -18,13 +18,13 @@ describe('finale shared source helpers',()=>{
   const {rt,b}=scene();const marker=battle.darkMarker(rt,b,10,20,'spr_pixel_white');
   expect([b.thismarker,marker.x,marker.y,marker.imageXscale,marker.imageYscale,marker.imageSpeed]).toEqual([marker.id,10,20,2,2,0]);
  });
- it.each([false,true])('the host resolves virtual streams before backend cleanup (holder %s)',holder=>{
+ it('the host creates the native stream owner and resolves its virtual handle before cleanup',()=>{
   const {rt,b,objects,host}=scene(),freed:(number|string)[]=[];
   rt.sourceAudio={free:h=>{freed.push(h);}} as typeof rt.sourceAudio;
   const handle=host.call!('snd_init',b,rt,['stream_music.ogg']) as number;
-  const a=holder?rt.restore(objects.obj_astream,100500,0,0,{mystream:handle,bstream:0}):undefined;
+  const a=rt.byId(b._astream)!;expect(a.object.name).toBe('obj_astream');expect(a.mystream).toBe(handle);expect(a.songname).toBe('stream_music.ogg');
   host.call!('snd_free',b,rt,[handle]);
-  expect(freed).toEqual(['stream_music']);if(a)expect(a.live).toBe(false);
+  expect(freed).toEqual(['stream_music']);expect(a.live).toBe(false);
  });
  it('named stream holders release exactly once and use string identity',()=>{
   const {rt,b,objects}=scene(),freed:(number|string)[]=[];

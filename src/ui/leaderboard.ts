@@ -37,7 +37,7 @@ export class LeaderboardPanel{
   for(const record of this.encounters)this.boss.append(option(record.id,`${record.name} · Chapter ${record.chapter} · ${record.encounter}`));
   this.order.append(option('damage','Least damage, then fastest'),option('time','Fastest, then least damage'));
   this.field('Boss',this.boss);this.field('Order',this.order);
-  this.mode.append(option('normal','Normal NEO'),option('enraged','Enraged NEO'));this.field('NEO mode',this.mode);this.modeField=this.mode.parentElement!;
+  this.mode.append(option('normal','Normal · team'),option('weird','Weird · Kris only'),option('enraged','Weird · Enraged'));this.field('NEO route',this.mode);this.modeField=this.mode.parentElement!;
   this.mode.onchange=()=>{this.offset=0;void this.refresh();};
   this.boss.onchange=()=>{this.offset=0;this.mode.value='normal';this.gearOptions();void this.refresh();};
   const details=node('details',undefined,'lb-advanced');details.append(node('summary','Filters: damage, time and equipment'));
@@ -73,14 +73,15 @@ export class LeaderboardPanel{
  }
  private field(label:string,control:HTMLElement,parent:HTMLElement=this.form){control.setAttribute('aria-label',label);const wrapper=node('label',undefined,'lb-field');wrapper.append(node('span',label),control);parent.append(wrapper);}
  private gearOptions(){
-  this.modeField.hidden=this.boss.value!=='ch2-61-weird';
+  this.modeField.hidden=this.boss.value!=='ch2-61';
   const chapter=this.encounters.find(record=>record.id===this.boss.value)?.chapter??1,source=this.equipment.chapters[chapter];
   for(const [key,entries]of [['weapon',source?.weapons],['armor',source?.armors],['bagItem',source?.items],['usedItem',source?.items]] as const){
    const select=this.controls.get(key) as HTMLSelectElement;select.replaceChildren(option('','Any'));for(const entry of entries??[])if(entry.id!==0)select.append(option(String(entry.id),entry.name));
   }
  }
  show(encounterId?:string){
-  if(encounterId&&scoreBoss(encounterId)!==this.boss.value&&this.encounters.some(record=>record.id===scoreBoss(encounterId))){this.boss.value=scoreBoss(encounterId);this.mode.value=encounterId.endsWith('-enraged')?'enraged':'normal';this.gearOptions();this.offset=0;}
+  const base=encounterId?scoreBoss(encounterId).replace(/-weird$/,''):undefined;
+  if(base&&this.encounters.some(record=>record.id===base)){this.boss.value=base;this.mode.value=encounterId!.endsWith('-enraged')?'enraged':encounterId!.includes('-weird')?'weird':'normal';this.gearOptions();this.offset=0;}
   this.boss.parentElement!.hidden=false;this.bossTitle.hidden=true;
   this.active=true;this.element.hidden=false;void this.refresh();
  }
@@ -90,13 +91,13 @@ export class LeaderboardPanel{
   this.browserOpener=document.activeElement instanceof HTMLElement?document.activeElement:null;
   if(this.element.parentElement!==this.browser)this.browser.append(this.element);if(!this.browser.isConnected)document.body.append(this.browser);
   this.show(encounterId);
-  const record=encounterId?this.encounters.find(r=>r.id===scoreBoss(encounterId)):undefined;
+  const record=encounterId?this.encounters.find(r=>r.id===scoreBoss(encounterId).replace(/-weird$/,'')):undefined;
   this.boss.parentElement!.hidden=!!record;this.bossTitle.hidden=!record;this.bossTitle.textContent=record?`${record.name} · Chapter ${record.chapter}`:'';
   if(!this.browser.open)this.browser.showModal();(record?this.order:this.boss).focus();
  }
  hide(){this.active=false;this.element.hidden=true;this.abort?.abort();this.revision++;if(this.browser.open)this.browser.close();}
  private filters():LeaderboardFilters{
-  const filters:LeaderboardFilters={encounterId:this.boss.value+(this.boss.value==='ch2-61-weird'&&this.mode.value==='enraged'?'-enraged':''),order:this.order.value as 'damage'|'time',offset:this.offset};
+  const filters:LeaderboardFilters={encounterId:this.boss.value+(this.boss.value==='ch2-61'&&this.mode.value!=='normal'?'-weird'+(this.mode.value==='enraged'?'-enraged':''):''),order:this.order.value as 'damage'|'time',offset:this.offset};
   for(const [key,control]of this.controls){if(control instanceof HTMLInputElement&&control.type==='checkbox'){if(control.checked)(filters as any)[key]=true;}else if(control.value!=='')(filters as any)[key]=Number(control.value);}
   for(const [min,max,label]of [['minDamage','maxDamage','Damage'],['minSeconds','maxSeconds','Time']] as const){if(filters[min]!==undefined&&filters[max]!==undefined&&filters[min]!>filters[max]!)throw Error(`${label} minimum must not exceed the maximum.`);}
   return filters;
@@ -122,7 +123,7 @@ export class LeaderboardPanel{
   }
  }
  private runDetails(run:RunRecord){
-  const wrapper=node('div',undefined,'lb-equipment'),chapter=this.encounters.find(record=>record.id===scoreBoss(run.encounter_id))?.chapter??1,source=this.equipment.chapters[chapter];
+  const wrapper=node('div',undefined,'lb-equipment'),chapter=this.encounters.find(record=>record.id===scoreBoss(run.encounter_id).replace(/-weird$/,''))?.chapter??1,source=this.equipment.chapters[chapter];
   const name=(id:number,kind:'weapons'|'armors'|'items')=>id===0?'None':source?.[kind].find(entry=>entry.id===id)?.name??`${kind==='items'?'Item':'Equipment'} #${id}`;
   const party=node('div',undefined,'lb-party');for(const member of run.equipment){const character=node('div');character.append(node('strong',CHARACTERS.find(c=>c.id===member.character)?.name??`Character ${member.character}`),node('p',`Weapon: ${name(member.weapon,'weapons')}`),node('p',`Armor: ${member.armor.map(id=>name(id,'armors')).join(' / ')}`));party.append(character);}wrapper.append(party);
   for(const [heading,items]of [['Starting bag',run.bag],['Items used',run.used_items]] as const){const section=node('section');section.append(node('h3',heading));const counts=new Map<number,number>();for(const id of items)counts.set(id,(counts.get(id)??0)+1);if(!counts.size)section.append(node('p','None'));for(const [id,count]of counts)section.append(node('p',`${name(id,'items')} × ${count}`));wrapper.append(section);}
@@ -146,7 +147,7 @@ export class LeaderboardPanel{
  }
  offer(run:RunRecord){
   this.pending=structuredClone(run);this.publishRevision++;this.publishing=false;this.opener=document.activeElement instanceof HTMLElement?document.activeElement:null;
-  this.summary.replaceChildren(node('strong',(this.encounters.find(record=>record.id===scoreBoss(run.encounter_id))?.name??run.encounter_id)+(run.encounter_id.endsWith('-enraged')?' · Enraged':'')),node('p',`${run.damage} damage · ${seconds(run.duration_ms)}`),this.runDetails(run));
+  this.summary.replaceChildren(node('strong',(this.encounters.find(record=>record.id===scoreBoss(run.encounter_id).replace(/-weird$/,''))?.name??run.encounter_id)+(run.encounter_id.includes('-weird')?' · Weird':'' )+(run.encounter_id.endsWith('-enraged')?' · Enraged':'')),node('p',`${run.damage} damage · ${seconds(run.duration_ms)}`),this.runDetails(run));
   this.publish.disabled=!this.api.configured;this.publish.textContent='Publish score';this.name.disabled=!!this.playerName;this.name.required=!this.playerName;this.name.value=this.playerName;this.name.parentElement!.hidden=!!this.playerName;if(this.playerName)this.summary.prepend(node('p',`Playing as ${this.playerName}`));this.publishStatus.textContent=this.api.configured?'Choose a name to publish, or keep playing without publishing.':'Shared leaderboard is not connected yet. This score has not been published.';
   if(!this.dialog.isConnected)document.body.append(this.dialog);if(!this.dialog.open)this.dialog.showModal();if(this.playerName)this.publish.focus();else this.name.focus();
   if(this.api.connect){const revision=this.publishRevision;this.publish.disabled=true;this.publishStatus.textContent='Connecting to leaderboard…';

@@ -14,16 +14,19 @@ async function fixture(page:Page,configured=true){
   document.querySelector('#fixture')!.append(state.board.element);state.board.show('ch2-61');
  },configured);
 }
-test('team NEO exposes only the normal board while solo rage is staged for the Weird route',async({page})=>{
- await fixture(page);await expect(page.getByLabel('NEO mode')).toBeHidden();
+test('NEO has separate team, solo and solo-enraged boards',async({page})=>{
+ await fixture(page);await expect(page.getByLabel('NEO route')).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch2-61');
- await page.getByLabel('Boss',{exact:true}).selectOption('ch1-25');await expect(page.getByLabel('NEO mode')).toBeHidden();
+ await page.getByLabel('NEO route').selectOption('weird');await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch2-61-weird');
+ await page.getByLabel('NEO route').selectOption('enraged');await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch2-61-weird-enraged');
+ await page.getByLabel('Boss',{exact:true}).selectOption('ch1-25');await expect(page.getByLabel('NEO route')).toBeHidden();
 });
 
 test('arrows leave native selectors and open filters with Z without using Tab',async({page})=>{
  await fixture(page);await page.getByRole('button',{name:'Join leaderboard',exact:true}).focus();
  await page.keyboard.press('ArrowDown');await expect(page.getByLabel('Boss',{exact:true})).toBeFocused();
  await page.keyboard.press('ArrowRight');await expect(page.getByLabel('Order',{exact:true})).toBeFocused();
+ await page.keyboard.press('ArrowRight');await expect(page.getByLabel('NEO route')).toBeFocused();
  await page.keyboard.press('ArrowRight');await expect(page.getByText('Filters: damage, time and equipment',{exact:true})).toBeFocused();
  await page.keyboard.press('z');await expect(page.getByLabel('Minimum damage')).toBeVisible();
  await page.keyboard.press('ArrowDown');await expect(page.getByLabel('Minimum damage')).toBeFocused();

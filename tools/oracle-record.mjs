@@ -17,10 +17,12 @@ const option = (name, fallback) => Number(rest.find(a => a.startsWith(`--${name}
 const seed = option('seed', 11), frames = option('frames', 1800);
 const dumps = (rest.find(a => a.startsWith('--dumps='))?.split('=')[1] ?? '').split(',').filter(Boolean).map(Number);
 const god = rest.includes('--god');
+const neoWeird=rest.includes('--neo-weird');
+if(neoWeird&&id!=='ch2-61')throw Error('The solo NEO preset requires encounter ch2-61');
 const layerProbe=rest.includes('--layer-probe');
 if(layerProbe&&id!=='ch2-71')throw Error('Layer probe is scoped to the Clover recording');
 const policy=rest.find(a=>a.startsWith('--policy='))?.slice('--policy='.length);
-if(policy!==undefined&&(policy!=='band'||id!=='ch2-62'))throw Error('Unsupported oracle policy');
+if(policy!==undefined&&!((policy==='band'&&id==='ch2-62')||(policy==='neo-ending'&&id==='ch2-61'&&neoWeird)))throw Error('Unsupported oracle policy');
 const moving=rest.includes('--moving');
 const jevilTurn=option('jevil-turn',-1);
 if(!Number.isInteger(jevilTurn)||jevilTurn < -1||jevilTurn>19|| (jevilTurn>=0&&id!=='ch1-25'))throw Error('Invalid Jevil phase preset');
@@ -53,11 +55,11 @@ try {
   }
   const oracle = {inputs: JSON.stringify(inputs), frames, globals: GLOBALS, dumps};
   // --god: the game's debug no-damage switch, so one run covers many enemy turns.
-  const ini = god||jevilTurn>=0||policy||layerProbe ? '[oracle]\n'+(layerProbe?'layer_probe=1\n':'')+(policy?'band_policy=1\n':'')+(god?'god=1\n':'')+(jevilTurn>=0?'jevil_turn='+jevilTurn+'\n':'') : '';
+  const ini = god||jevilTurn>=0||policy||layerProbe||neoWeird ? '[oracle]\n'+(neoWeird?'neo_weird=1\n':'')+(layerProbe?'layer_probe=1\n':'')+(policy==='band'?'band_policy=1\n':policy==='neo-ending'?'neo_ending=1\n':'')+(god?'god=1\n':'')+(jevilTurn>=0?'jevil_turn='+jevilTurn+'\n':'') : '';
   await page.evaluate(([id, ini, oracle]) => postMessage({source: 'underrune-host', type: 'start', id, ini, oracle}, location.origin), [id, ini, oracle]);
   await page.waitForFunction(() => window.__ev.includes('ended') || window.__ev.includes('failed'), null, {timeout: frames / 30 * 1000 * 4 + 120000});
   const trace = await page.evaluate(() => window.__runner.FS.readFile('/saves/trace.ndjson', {encoding: 'utf8'}));
-  const runName=`${id}-s${seed}${god ? '-god' : ''}${moving?'-moving':''}${jevilTurn>=0?'-j'+jevilTurn:''}${label!=='z'?'-'+label:''}`;
+  const runName=`${id}-s${seed}${god ? '-god' : ''}${neoWeird?'-weird':''}${moving?'-moving':''}${jevilTurn>=0?'-j'+jevilTurn:''}${label!=='z'?'-'+label:''}`;
   const out = path.join(root, '.tools', 'oracle', runName+'.ndjson');
   await fs.mkdir(path.dirname(out), {recursive: true});
   await fs.writeFile(out, trace);
@@ -74,11 +76,12 @@ try {
     await fs.writeFile(path.join(root, '.tools', 'oracle', `${runName}-f${f}.json`), dump);
   }
   if(policy){
-    const raw=await page.evaluate(()=>{
+    const raw=await page.evaluate(policy=>{
       const fs=window.__runner.FS;
-      for(const p of ['/saves/band-policy.csv','/game/chapter2_windows/band-policy.csv','/band-policy.csv'])try{return fs.readFile(p,{encoding:'utf8'});}catch{}
-      throw Error('Band policy log absent; saves: '+fs.readdir('/saves').join(',')+'; cwd: '+fs.cwd());
-    });
+      const file=policy==='band'?'band-policy.csv':'neo-policy.csv';
+      for(const p of ['/saves/'+file,'/game/chapter2_windows/'+file,'/'+file])try{return fs.readFile(p,{encoding:'utf8'});}catch{}
+      throw Error('Policy log absent; saves: '+fs.readdir('/saves').join(',')+'; cwd: '+fs.cwd());
+    },policy);
     const observations=new Map(raw.trim().split('\n').map(line=>{const [time,pressed,released,solo]=line.split(',').map(Number);return [time,{pressed,released,solo}];}));
     const audio={};
     for(const line of trace.trim().split('\n')){
@@ -87,7 +90,7 @@ try {
       inputs[state.f-1]={keysPressed:o.pressed<0?[]:[o.pressed],keysReleased:o.released<0?[]:[o.released]};
       audio[state.f]=o.solo;
     }
-    await fs.writeFile(path.join(path.dirname(out),runName+'.solo.json'),JSON.stringify(audio));
+    if(policy==='band')await fs.writeFile(path.join(path.dirname(out),runName+'.solo.json'),JSON.stringify(audio));
     await fs.writeFile(path.join(path.dirname(out),runName+'.policy.csv'),raw);
   }
   await fs.writeFile(path.join(path.dirname(out),runName+'.inputs.json'),JSON.stringify(inputs));
