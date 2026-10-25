@@ -15,3 +15,9 @@ it('keeps arrows working and leaves browser shortcut combinations alone',()=>{
  const {input,key,unbind}=bound();key('keydown','ArrowRight');expect(input.read().arrows).toEqual(['right']);key('keyup','ArrowRight');
  expect(key('keydown','Z',{ctrlKey:true}).defaultPrevented).toBe(false);expect(input.read().confirm).toBe(false);unbind();
 });
+
+it('does not turn a held key repeat into a fresh press after scene input is cleared',()=>{
+ const {input,key,unbind}=bound();key('keydown','z');input.clear();
+ key('keydown','z',{repeat:true});expect(input.read().confirm).toBe(false);expect(input.read().shoot).toBe(false);
+ key('keyup','z');key('keydown','z');expect(input.read().confirm).toBe(true);unbind();
+});

@@ -1,5 +1,15 @@
 import {assetUrl} from './url';
 import {BATTLE_RULES_VERSION,type RunRecord} from './battle-run';
+import {validPlayerName} from './player-profile';
+
+export type ChatRoom='undertale'|'deltarune';
+export type ChatMessage={id:string;sequence:number;room:ChatRoom;player_name:string;content:string;created_at:string};
+export type ChatSubmission=Pick<ChatMessage,'id'|'room'|'player_name'|'content'>;
+const chatRoom=(room:unknown):room is ChatRoom=>room==='undertale'||room==='deltarune';
+const chatContent=(text:unknown):text is string=>typeof text==='string'&&[...text.trim()].length>=1&&[...text.trim()].length<=500&&new TextEncoder().encode(text.trim()).length<=2000&&!/[\u0000-\u001f\u007f-\u009f]/.test(text);
+// SQL btrim removes ASCII spaces; JavaScript trim also removes NBSP/BOM. Read the
+// bounded stored value as-is so one SQL-valid whitespace message cannot block a room.
+const storedChatText=(text:unknown,max:number,maxBytes?:number):text is string=>typeof text==='string'&&[...text].length>=1&&[...text].length<=max&&(maxBytes===undefined||new TextEncoder().encode(text).length<=maxBytes)&&!/[\u0000-\u001f\u007f-\u009f]/.test(text);
 
 export type LeaderboardFilters={encounterId:string;order?:'damage'|'time';minDamage?:number;maxDamage?:number;minSeconds?:number;maxSeconds?:number;noItem?:boolean;noArmor?:boolean;weapon?:number;armor?:number;bagItem?:number;usedItem?:number;offset?:number};
 export interface LeaderboardRow extends RunRecord{player_name:string;created_at:string}
@@ -23,12 +33,12 @@ async function request(fetcher:typeof fetch,url:string,init:RequestInit={},exter
   const body=await response.text();
   return new Response([204,205,304].includes(response.status)?null:body,{status:response.status,statusText:response.statusText,headers:response.headers});
  }
- catch(error){if(expired)throw Error('Leaderboard request timed out. Please retry.');throw error;}
+ catch(error){if(expired)throw Error('Service request timed out. Please retry.');throw error;}
  finally{clearTimeout(timer);external?.removeEventListener('abort',abort);}
 }
 async function serviceError(response:Response):Promise<Error>{
  let detail='';try{const body=await response.json();if(typeof body.message==='string')detail=body.message;else if(typeof body.msg==='string')detail=body.msg;else if(typeof body.error_description==='string')detail=body.error_description;}catch{/* A proxy may return HTML. */}
- return Error(`Leaderboard service error (${response.status})${detail?`: ${detail.slice(0,240)}`:'. Please retry.'}`);
+ return Error(`Service error (${response.status})${detail?`: ${detail.slice(0,240)}`:'. Please retry.'}`);
 }
 export async function loadLeaderboardConfig():Promise<Config|null>{
  const response=await request(fetch,assetUrl('/leaderboard-config.json'),{cache:'no-store'});
@@ -61,6 +71,22 @@ export class LeaderboardApi{
   }).finally(()=>{this.connecting=null;});return this.connecting;
  }
  private requireConfig():Config{if(!this.config)throw Error('Shared leaderboard is not configured yet.');return this.config;}
+ async listChat(room:ChatRoom,before?:number,signal?:AbortSignal):Promise<ChatMessage[]>{
+  if(!chatRoom(room)||before!==undefined&&(!Number.isSafeInteger(before)||before<1))throw Error('Invalid chat room or page.');
+  const config=this.requireConfig(),response=await request(this.fetcher,`${config.url}/rest/v1/rpc/read_chat_messages`,{method:'POST',headers:this.headers(),body:JSON.stringify({p_room:room,p_before:before??null})},signal);
+  if(!response.ok)throw await serviceError(response);
+  const rows:unknown=await response.json();
+  if(!Array.isArray(rows)||rows.length>50||rows.some((row,index)=>!row||row.room!==room||typeof row.id!=='string'||!Number.isSafeInteger(row.sequence)||row.sequence<1||index>0&&row.sequence>=rows[index-1].sequence||before!==undefined&&row.sequence>=before||!storedChatText(row.player_name,24)||!storedChatText(row.content,500,2000)||typeof row.created_at!=='string'||!Number.isFinite(Date.parse(row.created_at))))throw Error('Chat returned an invalid page.');
+  return rows as ChatMessage[];
+ }
+ async sendChat(message:ChatSubmission):Promise<void>{
+  if(!chatRoom(message.room)||!validPlayerName(message.player_name)||!chatContent(message.content)||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(message.id))throw Error('Choose a name and write 1–500 characters without control characters.');
+  const config=this.requireConfig();let session=await this.authenticate();
+  for(let attempt=0;attempt<2;attempt++){
+   const response=await request(this.fetcher,`${config.url}/rest/v1/rpc/send_chat_message`,{method:'POST',headers:this.headers(session.access_token),body:JSON.stringify({p_id:message.id,p_room:message.room,p_player_name:message.player_name.trim(),p_content:message.content.trim()})});
+   if(response.status===401&&attempt===0){session=await this.authenticate(true);continue;}if(!response.ok)throw await serviceError(response);return;
+  }
+ }
  private headers(token?:string):Headers{const headers=new Headers({'apikey':this.requireConfig().key,'Content-Type':'application/json'});if(token)headers.set('Authorization',`Bearer ${token}`);return headers;}
  async list(filters:LeaderboardFilters,signal?:AbortSignal):Promise<LeaderboardRow[]>{
   const config=this.requireConfig();const params=new URLSearchParams({select:'*',encounter_id:`eq.${filters.encounterId}`,rules_version:`eq.${BATTLE_RULES_VERSION}`,order:filters.order==='time'?'duration_ms.asc,damage.asc,id.asc':'damage.asc,duration_ms.asc,id.asc',limit:'25',offset:String(filters.offset??0)});

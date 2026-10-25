@@ -4,6 +4,7 @@ import {sourceEncounter} from '../remake/host/encounters';
 import type {LeaderboardApi,LeaderboardFilters,LeaderboardRow} from '../game/leaderboard-api';
 import {scoreBoss,type RunRecord} from '../game/battle-run';
 import './leaderboard.css';
+import {PlayerProfile,validPlayerName} from '../game/player-profile';
 
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string,className?:string)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(className)el.className=className;return el;};
 const option=(value:string,text:string)=>{const el=node('option',text);el.value=value;return el;};
@@ -22,7 +23,7 @@ export class LeaderboardPanel{
  private previous=node('button','Previous page');private next=node('button','Next page');private position=node('span');
  private controls=new Map<string,HTMLInputElement|HTMLSelectElement>();
  private abort?:AbortController;private revision=0;private offset=0;private active=false;private opener:HTMLElement|null=null;
- private playerName='';private profile=node('div',undefined,'lb-profile');private profileDialog=node('dialog',undefined,'leaderboard-publish');private storage?:Pick<Storage,'getItem'|'setItem'>;
+ private get playerName(){return this.playerProfile.name;}private playerProfile:PlayerProfile;private profile=node('div',undefined,'lb-profile');private profileDialog=node('dialog',undefined,'leaderboard-publish');
  private pending?:RunRecord;private publishing=false;private publishRevision=0;
  private name=node('input');private publish=node('button','Publish score');private publishStatus=node('p');private summary=node('div',undefined,'lb-run-summary');
  private readonly encounters:EncounterRecord[];
@@ -30,8 +31,8 @@ export class LeaderboardPanel{
  private bossTitle=node('p',undefined,'lb-boss');
  private gameTitle=node('p','DELTARUNE','lb-game');
  private game:'deltarune'|'undertale'='deltarune';
- constructor(private api:LeaderboardApi,catalog:EncounterRecord[],private equipment:EquipmentCatalog,_onChapter:(n:number)=>void,storage?:Pick<Storage,'getItem'|'setItem'>){
-  try{this.storage=storage??window.localStorage;const saved=JSON.parse(this.storage.getItem('underrune.leaderboard.player.v1')??'null');if(this.validName(saved?.name))this.playerName=saved.name.trim();}catch{/* Storage must never block playing. */}
+ constructor(private api:LeaderboardApi,catalog:EncounterRecord[],private equipment:EquipmentCatalog,_onChapter:(n:number)=>void,storage?:Pick<Storage,'getItem'|'setItem'>,profile?:PlayerProfile){
+  this.playerProfile=profile??new PlayerProfile(storage);this.playerProfile.subscribe(()=>this.renderProfile());
   this.encounters=catalog.filter(record=>!!sourceEncounter(record.id));
   this.element.hidden=true;this.element.setAttribute('aria-label','Battle leaderboard');
   const header=node('header',undefined,'lb-header'),title=node('div');title.append(node('h1','Leaderboard'),this.bossTitle,node('p','Finish a battle. Leave your mark.'));this.bossTitle.hidden=true;
@@ -138,8 +139,8 @@ export class LeaderboardPanel{
   for(const [heading,items]of [['Starting bag',run.bag],['Items used',run.used_items]] as const){const section=node('section');section.append(node('h3',heading));const counts=new Map<number,number>();for(const id of items)counts.set(id,(counts.get(id)??0)+1);if(!counts.size)section.append(node('p','None'));for(const [id,count]of counts)section.append(node('p',`${name(id,'items')} × ${count}`));wrapper.append(section);}
   return wrapper;
  }
- private validName(name:unknown):name is string{return typeof name==='string'&&name.trim().length>=1&&name.trim().length<=24&&!/[\u0000-\u001f\u007f-\u009f]/.test(name);}
- private saveName(name:string){this.playerName=name.trim();try{this.storage?.setItem('underrune.leaderboard.player.v1',JSON.stringify({name:this.playerName}));}catch{/* Keep the profile in memory when storage is unavailable. */}this.renderProfile();}
+ private validName(name:unknown):name is string{return validPlayerName(name);}
+ private saveName(name:string){this.playerProfile.setName(name);}
  private renderProfile(){
   const button=node('button',this.playerName?'Change name':'Join leaderboard');button.type='button';button.onclick=()=>{if(!this.profileDialog.isConnected)document.body.append(this.profileDialog);const input=this.profileDialog.querySelector('input')!;input.value=this.playerName;input.setCustomValidity('');this.profileDialog.showModal();input.focus();};
   this.profile.replaceChildren();if(this.playerName)this.profile.append(node('span',`Playing as ${this.playerName}`));this.profile.append(button);

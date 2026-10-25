@@ -850,15 +850,44 @@ New scripts go in `tools/oracle-scripts.mjs`.
   a new Supabase migration and weekly cleanup job, shared player identity, two game rooms and the owner's SQL
   setup. It is not implemented or advertised as available by this release.
 
-### 19. Requested next (after the release above)
+### 19h. General chat and scene lifecycle (2026-10-26)
 
-- **General chat**, from Supabase. Separate rooms for UNDERTALE and DELTARUNE. It sits left of the leaderboard on
-  the main menu. It uses the leaderboard's player name, and resets weekly (pg_cron) to keep the database small.
-  The owner wants the SQL too.
-- Main-menu leaderboard access and the overlay appearance are complete; see section 19g.
-- **Shell refactor**: `main.ts` keeps scene state in shared variables, which is where this session's bugs came
-  from. Proposed: an explicit scene state machine (enter, exit, input, draw per scene; transitions in one place).
-  First list its responsibilities (shortcuts, focus, pause, audio, leaderboard, hooks).
+- The owner assigned these as two independent agent tasks. Chat/API/profile/SQL and the shell refactor were
+  implemented separately, cross-reviewed, then integrated and tested together by the parent.
+- Chat sits left of Leaderboards in the lobby and follows the selected game's theme. Two public rooms share
+  the existing leaderboard display name and anonymous Auth identity. Name changes notify both panels and keep
+  the existing storage key. Chat and leaderboard do not create competing auth sessions.
+- Public reads are capped at 50 messages with sequence cursors. Only the newest visible page refreshes every
+  eight seconds; hiding, older pages and reading above the bottom suspend polling. Per-room drafts and uncertain
+  sends preserve the original UUID/name snapshot; only successful RPC confirmation clears a draft. Text uses
+  textContent. Enter sends while IME composition and text-editing Z/X/arrows remain native.
+- SQL migration: supabase/migrations/202610260001_general_chat.sql. The owner applied it and reported schedule
+  result 1. Live public reads return 200 for both rooms; unauthenticated send is denied 401/42501; anonymous Auth
+  plus an invalid no-write authenticated send reaches server validation 400/P0001. No public QA messages were
+  posted. Monday 00:00 UTC cleanup job creation is confirmed by the owner's result; its first actual scheduled
+  execution remains to be inspected. docs/chat-setup.md contains verification and owner maintenance SQL.
+- The private SQL core was executed in isolated PGlite: revoked direct access, auth, ownership, idempotency,
+  room isolation, validation, two-second/minute/day limits, bounded pagination and cleanup all pass. Public read
+  validation also accepts SQL-valid Unicode whitespace rows; one sender cannot make an entire page fail. Local
+  profiles and outgoing messages keep stricter blank-text checks. No follow-up SQL was needed for that fix.
+- src/game/scene-machine.ts now owns typed scene dispatch and lifecycle adapters; SceneWork owns load cancellation.
+  Every scene has explicit enter/exit/input/draw behavior. Main keeps the battle and UI integration functions,
+  rather than moving gameplay rules. Audit/mapping: docs/superpowers/plans/2026-10-26-scene-lifecycle.md.
+- Focus/input/clock invalidation is centralized. Cancellation wins simultaneous confirmation, held-key repeats
+  cannot leak into a new scene, modal dialogs guard the practice shortcut, and menu audio resumes on focus.
+  Resource-owned battle adapters never dispose a newly installed replacement. Delayed native result banners
+  check both encounter and native-instance identity, including retrying the same catalog record.
+- Verification: the full non-parity unit suite passed 1869 tests (three optional skips). The subsequent stored-text
+  boundary fix passed the focused 35-test API/profile/scene/input group. Combined development browser acceptance
+  passed 33 tests, including chat integration, route retry, game-over/restart/victory, canceled preloads, modal
+  shortcuts and native delayed-result replacement. Production build/typecheck pass; static/live acceptance is
+  checked separately at publication. Physical phone testing is still distinct from headless mobile emulation.
+
+### 19. Remaining work
+
+- The requested General chat and shell scene refactor are complete; see 19h.
+- Further battle/chapter/UNDERTALE content is separate work. Existing public scores remain client-reported,
+  and chat limits are per anonymous identity; neither system claims server-replayed gameplay or global moderation.
 
 ## 6. Where things are
 
