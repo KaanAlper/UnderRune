@@ -9,7 +9,7 @@ import {installNeoHost} from '../src/remake/host/neo';
 import {loadSprites} from './parity/reference';
 const empty={id:0,name:'',description:'',attack:0,defense:0,magic:0,allowed:[1,2,3]};
 const source:EquipmentSource={weapons:[empty],armors:[empty],items:[],bagCapacity:12};
-const ids=['ch1-2','ch1-8','ch1-12','ch1-20','ch1-25','ch1-27','ch1-31','ch1-40','ch2-57','ch2-58','ch2-59','ch2-60','ch2-61','ch2-62','ch2-63','ch2-71','ch2-81','ch2-82','ch2-83','ch2-84','ch2-89','ch2-94','ch3-115'];
+const ids=['ch1-2','ch1-8','ch1-12','ch1-20','ch1-25','ch1-27','ch1-31','ch1-40','ch2-57','ch2-58','ch2-59','ch2-60','ch2-61','ch2-62','ch2-63','ch2-71','ch2-81','ch2-82','ch2-83','ch2-84','ch2-89','ch3-115'];
 const smoke=process.env.RUN_PRACTICE_SMOKE==='1'?it:it.skip;
 smoke.each(ids)('smokes every selected %s attack for 1300 frames or completion',id=>{
  const chapter=Number(id[2]),bank=loadSprites(chapter);

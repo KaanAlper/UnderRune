@@ -8,7 +8,7 @@ async function fixture(page:Page,configured=true){
   const gear=(id:number,name:string)=>({id,name,allowed:[1],attack:0,defense:0,magic:0,description:''});
   const run={id:'run-1',encounter_id:'ch2-61',rules_version:'test',duration_ms:65123,damage:12,equipment:[{character:1,weapon:1,armor:[2,0]}],bag:[3,3],used_items:[3],no_armor:false,no_item:false};state.run=run;
   const api={configured,list:async(filters:any)=>{state.queries.push({...filters});return [{...run,player_name:'<script>name</script>',created_at:'2026-10-16T00:00:00Z'}]},submit:async(run:any,name:string)=>{state.submissions.push({run,name})}};
-  state.api=api;const catalog=[{id:'ch2-61',chapter:2,name:'Spamton NEO',encounter:61},{id:'ch1-25',chapter:1,name:'JEVIL',encounter:25},{id:'ch2-999',chapter:2,name:'Unfinished',encounter:999}];
+  state.api=api;const catalog=[{id:'ch2-61',chapter:2,name:'Spamton NEO',encounter:61},{id:'ch1-25',chapter:1,name:'JEVIL',encounter:25},{id:'ch2-82',chapter:2,name:'Berdly',encounter:82},{id:'ch2-999',chapter:2,name:'Unfinished',encounter:999}];
   const source={weapons:[gear(1,'Wood Blade')],armors:[gear(2,'Iron Shackle')],items:[{id:3,name:'Dark Candy'}],bagCapacity:12};
   state.board=new LeaderboardPanel(api,catalog,{version:1,chapters:{1:source,2:source}},(chapter:number)=>{state.chapter=chapter});
   document.querySelector('#fixture')!.append(state.board.element);state.board.show('ch2-61');
@@ -20,6 +20,13 @@ test('NEO has separate team, solo and solo-enraged boards',async({page})=>{
  await page.getByLabel('NEO route').selectOption('weird');await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch2-61-weird');
  await page.getByLabel('NEO route').selectOption('enraged');await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch2-61-weird-enraged');
  await page.getByLabel('Boss',{exact:true}).selectOption('ch1-25');await expect(page.getByLabel('NEO route')).toBeHidden();
+});
+test('Berdly normal and Weird boards remain separate without an invented enraged variant',async({page})=>{
+ await fixture(page);await page.getByLabel('Boss',{exact:true}).selectOption('ch2-82');const route=page.getByLabel('Berdly route');
+ await expect(route).toBeVisible();await expect(route.locator('option')).toHaveCount(2);
+ await route.selectOption('weird');await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch2-82-weird');
+ await page.evaluate(()=>(window as any).board.show('ch2-82-weird'));await expect(route).toHaveValue('weird');
+ await route.selectOption('normal');await expect.poll(()=>page.evaluate(()=>(window as any).queries.at(-1).encounterId)).toBe('ch2-82');
 });
 
 test('arrows leave native selectors and open filters with Z without using Tab',async({page})=>{

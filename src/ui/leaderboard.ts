@@ -76,7 +76,12 @@ export class LeaderboardPanel{
  }
  private field(label:string,control:HTMLElement,parent:HTMLElement=this.form){control.setAttribute('aria-label',label);const wrapper=node('label',undefined,'lb-field');wrapper.append(node('span',label),control);parent.append(wrapper);}
  private gearOptions(){
-  this.modeField.hidden=this.boss.value!=='ch2-61';
+  const berdly=this.boss.value==='ch2-82',previous=this.mode.value;
+  this.mode.replaceChildren(option('normal',berdly?'Normal · Kris and Noelle':'Normal · team'),option('weird',berdly?'Weird · Snowgrave':'Weird · Kris only'));
+  if(!berdly)this.mode.append(option('enraged','Weird · Enraged'));
+  this.mode.value=previous==='enraged'&&berdly?'normal':previous||'normal';
+  const routeLabel=berdly?'Berdly route':'NEO route';this.mode.setAttribute('aria-label',routeLabel);this.modeField.querySelector('span')!.textContent=routeLabel;
+  this.modeField.hidden=!['ch2-61','ch2-82'].includes(this.boss.value);
   const chapter=this.encounters.find(record=>record.id===this.boss.value)?.chapter??1,source=this.equipment.chapters[chapter];
   for(const [key,entries]of [['weapon',source?.weapons],['armor',source?.armors],['bagItem',source?.items],['usedItem',source?.items]] as const){
    const select=this.controls.get(key) as HTMLSelectElement;select.replaceChildren(option('','Any'));for(const entry of entries??[])if(entry.id!==0)select.append(option(String(entry.id),entry.name));
@@ -103,7 +108,7 @@ export class LeaderboardPanel{
  openGame(game:'deltarune'|'undertale'){this.open(undefined,game);}
  hide(){this.active=false;this.element.hidden=true;this.abort?.abort();this.revision++;if(this.browser.open)this.browser.close();}
  private filters():LeaderboardFilters{
-  const filters:LeaderboardFilters={encounterId:this.boss.value+(this.boss.value==='ch2-61'&&this.mode.value!=='normal'?'-weird'+(this.mode.value==='enraged'?'-enraged':''):''),order:this.order.value as 'damage'|'time',offset:this.offset};
+  const filters:LeaderboardFilters={encounterId:this.boss.value+(['ch2-61','ch2-82'].includes(this.boss.value)&&this.mode.value!=='normal'?'-weird'+(this.mode.value==='enraged'?'-enraged':''):''),order:this.order.value as 'damage'|'time',offset:this.offset};
   for(const [key,control]of this.controls){if(control instanceof HTMLInputElement&&control.type==='checkbox'){if(control.checked)(filters as any)[key]=true;}else if(control.value!=='')(filters as any)[key]=Number(control.value);}
   for(const [min,max,label]of [['minDamage','maxDamage','Damage'],['minSeconds','maxSeconds','Time']] as const){if(filters[min]!==undefined&&filters[max]!==undefined&&filters[min]!>filters[max]!)throw Error(`${label} minimum must not exceed the maximum.`);}
   return filters;

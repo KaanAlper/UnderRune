@@ -5,6 +5,10 @@ export interface SourceEncounter{
  auto?:readonly number[];
  /** Party positions (scr_encountersetup heromakex/heromakey) where they differ from the host's defaults. */
  heroes?:readonly (readonly [number,number])[];
+ /** Story state supplied at route entry, before encounter and hero creation. */
+ storyFlags?:Readonly<Record<number,number>>;
+ spells?:Readonly<Record<number,readonly number[]>>;
+ defaultWeapons?:Readonly<Record<number,number>>;
 }
 const playable:readonly SourceEncounter[]=[
  {id:'ch2-61',chapter:2,name:'Spamton NEO',party:[1,2,3],hp:4809,attack:13,defense:0,music:'spamton_neo_mix_ex_wip',practice:true},
@@ -15,8 +19,6 @@ const playable:readonly SourceEncounter[]=[
  {id:'ch2-60',chapter:2,name:'Spamton',party:[1],hp:600,attack:8,defense:0,music:'spamton_battle',practice:true},
  // The Dojo's Tasque Manager rematch: her quiz decides it (three strikes or the last phase end the battle).
  {id:'ch2-89',chapter:2,name:'Tasque Manager',party:[1,2,3],hp:1367,attack:10,defense:0,music:'battle',practice:true},
- // The Dojo's final round: two Werewerewires.
- {id:'ch2-94',chapter:2,name:'Werewerewire',party:[1,2,3],hp:1753,attack:11,defense:0,music:'battle',practice:true},
  // Rouxls's river battle, with the laser head and stomping feet of the default Thrash Machine.
  {id:'ch2-63',chapter:2,name:'Rouxls',party:[1,3],hp:600,attack:9,defense:0,music:'rouxls_battle',practice:true},
  // Queen, in her mansion's top floor.
@@ -47,6 +49,7 @@ const playable:readonly SourceEncounter[]=[
 ];
 /** Route variants share their parent's card; readiness does not add a duplicate menu encounter. */
 const variants:readonly SourceEncounter[]=[
+ {id:'ch2-82-weird',chapter:2,name:'Berdly',party:[1,4],hp:900,attack:9,defense:0,music:'berdly_battle_heartbeat_true',practice:false,storyFlags:{915:5,916:0,924:0},spells:{4:[2,8,9,10]},defaultWeapons:{4:13}},
  {id:'ch2-61-weird',chapter:2,name:'Spamton NEO',party:[1],hp:4809,attack:13,defense:-27,music:'spamton_neo_mix_ex_wip',practice:false},
 ];
 export const sourceEncounter=(id:string)=>playable.find(p=>p.id===id)??variants.find(p=>p.id===id);

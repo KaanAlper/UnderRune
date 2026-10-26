@@ -20,6 +20,7 @@
  "ch2-71": {"party": [1, 2, 3], "basis": "story", "note": "Regular encounter, normal party"},
  "ch2-81": {"party": [1, 2, 3], "basis": "story", "note": "Cyber Field maze chase enemy"},
  "ch2-82": {"party": [1, 4, 0], "basis": "enemy", "note": "City Berdly: obj_berdlyb2_enemy references Noelle 44x, Susie/Ralsei never"},
+ "ch2-82-weird": {"party": [1, 4, 0], "basis": "code", "note": "obj_ch2_city_berdly retains Kris and Noelle, with scr_spellget(4, 10) on Weird route"},
  "ch2-83": {"party": [1, 2, 3], "basis": "story", "note": "Mansion kitchen, normal party"},
  "ch2-84": {"party": [1, 0, 0], "basis": "code", "note": "obj_ch2_scene26: global.char[1] = 0; global.char[2] = 0 before scr_battle"},
  "ch2-89": {"party": [1, 2, 3], "basis": "story", "note": "Dojo rematch"},

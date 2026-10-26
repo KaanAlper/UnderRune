@@ -50,7 +50,7 @@ describe('Roaring Knight & multi-boss practice patterns',()=>{
   setSourceText(JSON.parse(fs.readFileSync('public/generated/remake/ch2/bundle.json','utf8')).text);
   const sprites=loadSprites(2);
   expect(practicePatterns('ch2-81')).toHaveLength(3);
-  expect(practicePatterns('ch2-94')).toHaveLength(5);
+  expect(practicePatterns('ch2-94')).toEqual([]);
   for(const [index,expected,excluded] of [[1,'obj_werewire_bullet_lasercircle','spr_bullet_werewire_spark'],[2,'spr_bullet_werewire_spark','obj_werewire_bullet_lasercircle']] as const){
    const p=createPracticeBattle(sprites,source,defaultLoadout(),'ch2-81',index,11,{chapterHost:installChapter2BossHost});
    const seen=new Set<string>();
@@ -109,7 +109,7 @@ describe('Roaring Knight & multi-boss practice patterns',()=>{
    }
   }
   setSourceText(ch2Text);
-  for(const id of ['ch2-57','ch2-58','ch2-59','ch2-60','ch2-61','ch2-62','ch2-63','ch2-81','ch2-82','ch2-83','ch2-84','ch2-89','ch2-94']){
+  for(const id of ['ch2-57','ch2-58','ch2-59','ch2-60','ch2-61','ch2-62','ch2-63','ch2-81','ch2-82','ch2-83','ch2-84','ch2-89']){
    const patterns=practicePatterns(id);
    expect(patterns.length).toBeGreaterThan(0);
    for(let i=0;i<patterns.length;i++){

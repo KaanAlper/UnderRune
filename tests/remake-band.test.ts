@@ -19,6 +19,19 @@ const start=(seed=11)=>{
  return new EngineBattle(loadSprites(2),equipment,defaultLoadout(),'ch2-62',seed,{development:true,chapter2Host:installChapter2BossHost});
 };
 describe.skipIf(!fs.existsSync(BUNDLE))("Sweet, K_K and Cap'n",()=>{
+ it('keeps the independent party ACTs locked until the source dance lesson',()=>{
+  const b=start(),rt=b.rt,g=rt.globals;
+  for(let i=0;i<45;i++){b.step();rt.draw();}
+  expect(g.flag[34]).toBe(1);
+  const sweet=rt.instances.find(i=>i.live&&i.object.name==='obj_sweet_enemy')!;
+  expect(sweet.learnedhowtoact).toBe(0);expect(g.canact[0][2]).toBe(1);
+  sweet.dancecon=1.1;g.myfight=3;
+  for(const w of rt.instances.filter(i=>i.live&&i.object.name==='obj_writer'))rt.destroy(w);
+  b.step();
+  expect(g.flag[34]).toBe(0);expect(sweet.learnedhowtoact).toBe(1);
+  expect(g.canact.slice(0,3).map((a:number[])=>a[2])).toEqual([0,0,0]);
+  expect(g.battlespell[1][0]).toBe(-1);expect(g.battlespell[2][0]).toBe(-1);
+ });
  for(const seed of [1,2,3])it(`seed ${seed}: random play for 6000 frames without an event error`,()=>{
   const b=start(seed),rng=new GmRandom(seed*31+7),keys=[KEY.left,KEY.right,KEY.up,KEY.down,KEY.z,KEY.z,KEY.z,KEY.x,KEY.c],held=new Map<number,number>();
   for(let f=0;f<6000&&!b.outcome;f++){

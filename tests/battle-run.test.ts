@@ -9,6 +9,11 @@ function fixture(){
  return {tracker,globals,loadout};
 }
 describe('passive battle run metrics',()=>{
+ it('keeps original party metrics when a companion leaves during committed victory',()=>{
+  const {tracker,globals:g}=fixture();g.hp[3]-=10;tracker.frame(g);g.myfight=7;g.char=[1,0,0];tracker.frame(g);
+  const run=tracker.finish('victory',g)!;expect(run.damage).toBe(10);expect(run.equipment.map(c=>c.character)).toEqual([1,3]);
+  const changed=fixture();changed.globals.myfight=7;changed.globals.char=[1,2,0];changed.tracker.frame(changed.globals);expect(changed.tracker.finish('victory',changed.globals)).toBeNull();
+ });
  it('labels committed-victory timing separately from historical dialogue-counted runs',()=>{
   const {tracker,globals:g}=fixture();tracker.frame(g);
   expect(tracker.finish('victory',g)?.rules_version).toBe('battle-v2');

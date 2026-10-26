@@ -4,6 +4,7 @@ import type {AssetStore} from '../game/assets';
 import './preparation.css';
 import {assetUrl} from '../game/url';
 import {preparationParty} from '../game/preparation-party';
+import {sourceEncounter} from '../remake/host/encounters';
 
 type Slot='weapon'|'armor1'|'armor2'|'items';
 const node=<K extends keyof HTMLElementTagNameMap>(tag:K,text?:string,className?:string)=>{
@@ -125,6 +126,8 @@ export class PreparationPanel{
    else if(direction==='ArrowRight')this.search.focus();else this.focusFooter();
   }
  }
+ private weapon(id:number,character:number){return this.source.weapons.find(g=>g.id===(id||sourceEncounter(this.record.id)?.defaultWeapons?.[character]||0))!;}
+ private defaultWeaponLabel(character:number){const w=this.weapon(0,character);return w.id?`Game default · ${w.name}`:'Game default';}
  private render(){
   const focused=document.activeElement instanceof HTMLElement?document.activeElement.dataset.focus:undefined;
   const color=CHARACTERS.find(c=>c.id===this.character)!.color;this.dialog.style.setProperty('--hero',color);
@@ -141,10 +144,10 @@ export class PreparationPanel{
    for(const [row,[slot,label]] of ([['weapon','Weapon'],['armor1','Armor 1'],['armor2','Armor 2']] as const).entries()){
     const gearId=slot==='weapon'?equipped.weapon:equipped.armor[slot==='armor1'?0:1],gear=(slot==='weapon'?this.source.weapons:this.source.armors).find(g=>g.id===gearId)!;
     const button=node('button',undefined,'prep-slot');button.type='button';button.dataset.character=String(id);button.dataset.slot=slot;button.dataset.row=String(row+1);button.dataset.focus=`slot:${id}:${slot}`;
-    button.setAttribute('aria-pressed',String(this.character===id&&this.slot===slot));button.append(node('span',label),node('strong',gearId===0?(slot==='weapon'?'Game default':'Empty slot'):gear.name));button.setAttribute('aria-label',`${char.name}, ${label}: ${button.querySelector('strong')!.textContent}`);
+    button.setAttribute('aria-pressed',String(this.character===id&&this.slot===slot));button.append(node('span',label),node('strong',gearId===0?(slot==='weapon'?this.defaultWeaponLabel(id):'Empty slot'):gear.name));button.setAttribute('aria-label',`${char.name}, ${label}: ${button.querySelector('strong')!.textContent}`);
     button.onclick=()=>{this.character=id;this.slot=slot;this.query='';this.search.value='';this.render();this.focusEntries();};slots.append(button);
    }
-   const gears=[this.source.weapons.find(g=>g.id===equipped.weapon)!,...equipped.armor.map(armor=>this.source.armors.find(g=>g.id===armor)!)];
+   const gears=[this.weapon(equipped.weapon,id),...equipped.armor.map(armor=>this.source.armors.find(g=>g.id===armor)!)];
    const summary=node('p',`AT ${gears.reduce((v,g)=>v+g.attack,0)}  DF ${gears.reduce((v,g)=>v+g.defense,0)}  MAG ${gears.reduce((v,g)=>v+g.magic,0)}`,'prep-summary');
    summary.setAttribute('aria-label','Equipment bonuses: '+summary.textContent);card.append(slots,summary);this.characterList.append(card);
   }
@@ -172,11 +175,11 @@ export class PreparationPanel{
   for(const entry of entries){
    const item=this.slot==='items',gear=entry as Gear,allowed=item||entry.id===0||gear.allowed.includes(this.character),full=item&&this.loadout.items.length>=this.source.bagCapacity;
    const button=node('button',undefined,'prep-entry');button.type='button';button.dataset.focus=`entry:${entry.id}`;button.disabled=!allowed||full;
-   const title=node('div',undefined,'prep-entrytitle');title.append(node('strong',entry.id===0?(this.slot==='weapon'?'Game default':'Empty slot'):entry.name));
+   const title=node('div',undefined,'prep-entrytitle');title.append(node('strong',entry.id===0?(this.slot==='weapon'?this.defaultWeaponLabel(this.character):'Empty slot'):entry.name));
    const current=this.loadout.characters[this.character],selected=!item&&(this.slot==='weapon'?current.weapon:current.armor[this.slot==='armor1'?0:1])===entry.id;
    title.append(node('span',selected?'Equipped':item?'Add':!allowed?"Can't equip":'Equip','prep-entryaction'));button.append(title);
    if(entry.description)button.append(node('p',entry.description,'prep-description'));
-   button.append(node('span',item?(this.practiceOnly?'Bag preview; items are not used in practice':(entry as {usable:boolean}).usable?'Usable in battle':'Not usable in battle'):this.stats(gear),'prep-entrymeta'));
+   button.append(node('span',item?(this.practiceOnly?'Bag preview; items are not used in practice':(entry as {usable:boolean}).usable?'Usable in battle':'Not usable in battle'):this.stats(this.slot==='weapon'?this.weapon(entry.id,this.character):gear),'prep-entrymeta'));
    if(!allowed)button.append(node('span',CHARACTERS.find(c=>c.id===this.character)!.name+" can't equip this.",'prep-incompatible'));
    button.setAttribute('aria-pressed',String(selected));button.onclick=()=>{
     try{if(item)this.loadout=addItem(this.loadout,entry.id,this.source);else if(this.slot==='weapon')current.weapon=entry.id;else current.armor[this.slot==='armor1'?0:1]=entry.id;

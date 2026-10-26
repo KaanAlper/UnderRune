@@ -45,12 +45,12 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:
  'ch2-63':{n:63,room:'room_battletest',backdrop:true},
  'ch2-58':{n:58,room:'room_battletest',backdrop:true},
  'ch2-82':{n:82,room:'room_battletest',backdrop:true},
+ 'ch2-82-weird':{n:82,room:'room_battletest',backdrop:true},
  'ch2-84':{n:84,room:'room_battletest',backdrop:true},
  'ch2-81':{n:81,room:'room_dw_mansion_east_4f_b',backdrop:true},
  'ch2-83':{n:83,room:'room_dw_city_mice3_transformed_new2F',backdrop:true},
  'ch2-71':{n:71,room:'room_dw_castle_dojo',backdrop:true},
  'ch2-89':{n:89,room:'room_dw_castle_dojo',backdrop:true},
- 'ch2-94':{n:94,room:'room_dw_castle_dojo',backdrop:true},
  'ch3-115':{n:115,room:'room_dw_snow_zone',backdrop:true},
  'ch3-113':{n:113,room:'room_battletest',backdrop:true},
  'ch1-2':{n:2,room:'room_field_start',backdrop:true},
@@ -113,13 +113,15 @@ export class EngineBattle{
   const charIds=encounter.party.includes(4)?[1,2,3,4]:[1,2,3];
   const equipped:Record<number,EquippedStats>={};
   for(const c of charIds){
-   const slot=loadout.characters[c]??{weapon:0,armor:[0,0]},w=gear(equipment.weapons,slot.weapon),a1=gear(equipment.armors,slot.armor[0]),a2=gear(equipment.armors,slot.armor[1]);
+   const slot=loadout.characters[c]??{weapon:0,armor:[0,0]},defaultWeapon=encounter.defaultWeapons?.[c],weapon=slot.weapon??0,w=gear(equipment.weapons,weapon||defaultWeapon||0),a1=gear(equipment.armors,slot.armor[0]),a2=gear(equipment.armors,slot.armor[1]);
    // Weapon 0 is "Game default": scr_gamestart's Wood Blade, Mane Ax and Red Scarf (ids 1, 2, 3; no stats).
-   equipped[c]={weapon:slot.weapon||(c===4?12:c),armor:[...slot.armor],itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
+   equipped[c]={weapon:weapon||defaultWeapon||(c===4?12:c),armor:[...slot.armor],itemat:[w?.attack??0,a1?.attack??0,a2?.attack??0],itemdf:[w?.defense??0,a1?.defense??0,a2?.defense??0],itemmag:[w?.magic??0,a1?.magic??0,a2?.magic??0]};
   }
   const char=[...encounter.party,0,0,0].slice(0,3);
   const startStats=encounter.chapter===2&&encounter.party.includes(4)?chapter2StartStats(true):forChapterStats(encounter.chapter);
   partyGlobals(rt,{char,...startStats,equipped,items:loadout.items,auto:encounter.auto});
+  for(const [i,v] of Object.entries(encounter.storyFlags??{}))rt.globals.flag[Number(i)]=v;
+  for(const [c,spells] of Object.entries(encounter.spells??{}))rt.globals.spell[Number(c)]=Array.from({length:12},(_,i)=>spells[i]??0);
   // global.batmusic: the battle's music, which some enemies pause (Ralsei's lullaby).
   rt.globals.batmusic=[encounter.music,encounter.music];
   if(encounter.chapter>=2){

@@ -13,6 +13,16 @@ test('NEO routes are chosen before equipment, keeping the normal three-member pa
 test('single-route bosses still open equipment directly',async({page})=>{
  await boss(page,1,'ch1-2','Lancer');await expect(page.getByRole('dialog',{name:'Choose route',exact:true})).toBeHidden();await expect(page.getByRole('dialog',{name:'Lancer',exact:true})).toBeVisible();
 });
+test('Berdly offers Weird before equipment and starts with Kris and Noelle',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await boss(page,2,'ch2-82','Berdly');const routes=page.getByRole('dialog',{name:'Choose route',exact:true});await expect(routes).toBeVisible();
+ await routes.getByRole('button',{name:'Weird / Snowgrave route',exact:true}).click();
+ const prep=page.getByRole('dialog',{name:'Berdly',exact:true});await expect(prep.locator('.prep-hero')).toHaveCount(2);await expect(prep).toContainText('Weird / Snowgrave route');
+ await prep.getByRole('button',{name:'START BATTLE',exact:true}).click();await expect(page.locator('#status')).toContainText('Berdly / command',{timeout:20000});
+ await page.waitForTimeout(800);await expect(page.locator('#error')).toBeHidden();
+ if(!process.env.UNDERRUNE_PUBLIC_URL)expect(await page.evaluate(()=>{const b=(window as any).__underrune.inspect();return {id:b.id,party:b.party};})).toEqual({id:'ch2-82-weird',party:[1,4]});
+ expect(errors).toEqual([]);
+});
 test('route selection fits mobile and supports X cancel, arrows and Z confirmation with correct focus',async({page})=>{
  await page.setViewportSize({width:390,height:844});await boss(page,2,'ch2-61','Spamton NEO');const routes=page.getByRole('dialog',{name:'Choose route',exact:true}),normal=routes.getByRole('button',{name:'Normal route',exact:true});
  await expect(normal).toBeFocused();expect(await routes.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);await page.screenshot({path:'test-results/neo-route-selection.png'});

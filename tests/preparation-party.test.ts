@@ -7,7 +7,7 @@ describe('source preparation party',()=>{
  it('agrees with every public battle and preserves story order',()=>{for(const chapter of [1,2])for(const battle of availableEncounters(chapter)){expect(preparationParty(battle.id).members).toEqual(battle.party);expect(preparationParty(battle.id).auto).toEqual(battle.auto??[]);}});
  it('uses two members, a replacement member, or a solo character as the encounter requires',()=>{
   expect(preparationParty('ch1-2').members).toEqual([1,2]);expect(preparationParty('ch1-8').members).toEqual([1,3]);
-  expect(preparationParty('ch2-82').members).toEqual([1,4]);expect(preparationParty('ch4-160').members).toEqual([2]);
+  expect(preparationParty('ch2-82').members).toEqual([1,4]);expect(preparationParty('ch2-82-weird').members).toEqual([1,4]);expect(preparationParty('ch4-160').members).toEqual([2]);
   expect(preparationParty('ch1-2').locked).toEqual([]);
  });
 });

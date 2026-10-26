@@ -57,6 +57,12 @@ export function rules(rt:GmRuntime):ChapterRules{
 }
 
 export interface BattleHooks{
+ /** Source encounter changes to a spell's menu targeting and animation. */
+ adjustSpellInfo?(enemy:GmInstance,caller:GmInstance,rt:GmRuntime,spell:number):void;
+ /** Encounter-owned spell cutscenes. True when the source spell was handled. */
+ castSpecialSpell?(enemy:GmInstance,caller:GmInstance,rt:GmRuntime,spell:number):boolean;
+ /** Source route's alternate hero victory presentation. */
+ onHeroVictory?(enemy:GmInstance,hero:GmInstance,rt:GmRuntime):void;
  /** Encounter-specific panel initialization after the shared controller has built its chapter fields. */
  onControllerCreate?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime):void;
  /** An encounter's name for a merged ACT entry when the enemy types differ. */

@@ -13,7 +13,7 @@ export class Renderer{
  private text(t:string,x:number,y:number,s=2,c='#fff',a:'left'|'center'|'right'='left'){this.assets.text(this.ctx,t,x,y,s,c,a);}
  clear(){this.ctx.imageSmoothingEnabled=false;this.ctx.fillStyle='#000';this.ctx.fillRect(0,0,640,480);}
  intro(frame:number){
-  this.clear();const c=this.ctx;c.strokeStyle='#343039';c.lineWidth=2;c.strokeRect(72,62,496,354);this.text('THE DEVICE',320,153,4,'#fff','center');
+  this.clear();const c=this.ctx;c.strokeStyle='#343039';c.lineWidth=2;c.strokeRect(72,62,496,354);this.text('SURVEY_PROGRAM',320,153,4,'#fff','center');
   this.text('* ARE YOU THERE?',320,224,2,'#bfbac8','center');this.text('[ Z / ENTER ] CONNECT',320,286,2,frame%90<65?'#ffff00':'#b2a941','center');
   this.text(this.publicDemo?'DELTARUNE  /  PUBLIC DEMO':'DELTARUNE  /  LOCAL BOSS BATTLES',320,361,1,'#706b79','center');
  }

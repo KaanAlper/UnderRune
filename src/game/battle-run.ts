@@ -31,7 +31,10 @@ export class BattleRunTracker{
  /** Called only after an active 30 Hz simulation step; paused/hidden/browser loading time is excluded. */
  frame(g:Record<string,any>){
   if(this.ended)return;this.frames++;
-  if(g.hp!==this.hp||JSON.stringify(g.char.filter((id:number)=>id>0))!==JSON.stringify(this.party)||JSON.stringify(this.readEquipment(g))!==JSON.stringify(this.equipment))this.valid=false;
+  const party=g.char.filter((id:number)=>id>0),sameParty=JSON.stringify(party)===JSON.stringify(this.party);
+  // A committed source victory may remove a companion before the controller presents its result.
+  const endingDeparture=g.myfight===7&&JSON.stringify(party)===JSON.stringify(this.party.filter(c=>party.includes(c)));
+  if(g.hp!==this.hp||(!sameParty&&!endingDeparture)||JSON.stringify(this.readEquipment(g))!==JSON.stringify(this.equipment))this.valid=false;
  }
  /** Called when scr_spell actually executes an item, never while browsing/selecting/canceling commands. */
  itemUsed(item:number){if(!this.ended){if(!Number.isInteger(item)||item<=0)this.valid=false;else this.used.push(item);}}

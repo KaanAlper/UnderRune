@@ -92,6 +92,7 @@ export function spellInfo(s:GmInstance,rt:GmRuntime,id:number){
   case 7:set(86,87,88,part.ultimateDescription,0,0,0);break;
  }
  part.spellInfoExtra?.(s,rt,id);
+ for(const [e,h] of withHook(rt,'adjustSpellInfo'))h(e,s,rt,id);
 }
 /** scr_spellinfo_all: the spell tables the menus read, for every character's 12 slots. */
 export function spellInfoAll(rt:GmRuntime,s:GmInstance){

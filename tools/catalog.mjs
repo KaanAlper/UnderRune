@@ -7,9 +7,11 @@ const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 /** Encounters the game defines but never starts, left out of the boss selection: Chapter 1's 15 (a Clover and Hathy
  * pairing) and Chapter 2's 65 (two Werewerewires; nothing sets it as an encounter). */
 const UNUSED=new Set(['ch1-15','ch2-65']);
+// Hidden by the owner's catalog preference; retain the native source census for audits.
+const HIDDEN=new Set(['ch2-94']);
 export function buildCatalog(records){
  const map=new Map();
- for(const r of records){if(UNUSED.has(r.id))continue;const prev=map.get(r.id);if(!prev){map.set(r.id,structuredClone(r));continue;}
+ for(const r of records){if(UNUSED.has(r.id)||HIDDEN.has(r.id))continue;const prev=map.get(r.id);if(!prev){map.set(r.id,structuredClone(r));continue;}
   if(prev.name!==r.name||prev.chapter!==r.chapter||prev.variant!==r.variant)throw Error('Encounter identity conflict');
   prev.sources.push(...r.sources.filter(s=>!prev.sources.some(p=>JSON.stringify(p)===JSON.stringify(s))));
  }

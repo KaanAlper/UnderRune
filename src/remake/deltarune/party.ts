@@ -66,6 +66,7 @@ function heroCreate(s:GmInstance,rt:GmRuntime){
  if(s.object.name==='obj_herosusie'&&rt.globals.charweapon?.[2]===0){s.idlesprite='spr_susieb_idle_unarmed';s.attackreadysprite='spr_susieb_attackready_unarmed';s.attacksprite='spr_susieb_attack_unarmed';}
  [s.actframes,s.actreturnframes,s.attackframes,s.itemframes,s.defendframes,s.spellframes,s.attackspeed,s.mywidth,s.myheight]=f;
  s.victoryframes=rt.bank.get(s.victorysprite)?.frames??1;
+ if(heroParts(rt).sideB){s._sideb=0;s._victoried=0;}
  if(s.object.name==='obj_heronoelle'&&!heroParts(rt).later){
   s._sideb=sideBPhase(rt)>=2?1:0;if(rt.globals.encounterno===73)s.idlesprite='spr_noelle_shocked_dw';
   if(s._sideb===1)Object.assign(s,{attackreadysprite:'spr_noelleb_idle',attacksprite:'spr_noelleb_spell',attackframes:6,victorysprite:'spr_noelleb_pray',victoryframes:10,defendframes:5,defendsprite:'spr_noelleb_defend_sideb',hurtsprite:'spr_noelleb_hurt_sideb',idlesprite:'spr_noelleb_idle_sideb'});
@@ -125,6 +126,7 @@ function heroDraw(s:GmInstance,rt:GmRuntime){
   }
   if(s.state===7){
    s.hurt=0;s.hurttimer=0;
+   for(const [e,h] of withHook(rt,'onHeroVictory'))h(e,s,rt);
    if(s.victoryanim<s.victoryframes){s.thissprite=s.victorysprite;s.index=s.victoryanim;s.victoryanim+=0.334;}
    else{s.thissprite=s.normalsprite;s.index=0;}
   }
@@ -351,11 +353,11 @@ function heroHit3(s:GmInstance,rt:GmRuntime){
 }
 /** The heroes' events per chapter, and what else changed: the target marker over a targeted hero is drawn only in
  * Chapter 1, and Chapter 3 (later) has the new fields and timers. */
-interface HeroParts{readonly later:boolean;readonly targetMarker:boolean;readonly events:Partial<Record<'step'|'draw'|'alarm1'|'alarm4'|'user0',(s:GmInstance,rt:GmRuntime)=>void>>}
+interface HeroParts{readonly sideB:boolean;readonly later:boolean;readonly targetMarker:boolean;readonly events:Partial<Record<'step'|'draw'|'alarm1'|'alarm4'|'user0',(s:GmInstance,rt:GmRuntime)=>void>>}
 const HERO_PARTS:Readonly<Record<number,HeroParts>>={
- 1:{later:false,targetMarker:true,events:{draw:heroDraw,alarm1:heroHit,alarm4:heroSpell}},
- 2:{later:false,targetMarker:false,events:{draw:heroDraw,alarm1:heroHit,alarm4:heroSpell}},
- 3:{later:true,targetMarker:false,events:{step:heroStep3,draw:heroDraw3,user0:()=>{throw Error("Chapter 3 heroes' User 0 (Tenna's and Shutta's battles) is not ported");}}},
+ 1:{sideB:false,later:false,targetMarker:true,events:{draw:heroDraw,alarm1:heroHit,alarm4:heroSpell}},
+ 2:{sideB:true,later:false,targetMarker:false,events:{draw:heroDraw,alarm1:heroHit,alarm4:heroSpell}},
+ 3:{sideB:true,later:true,targetMarker:false,events:{step:heroStep3,draw:heroDraw3,user0:()=>{throw Error("Chapter 3 heroes' User 0 (Tenna's and Shutta's battles) is not ported");}}},
 };
 function heroParts(rt:GmRuntime){return forChapter(rt,HERO_PARTS,'obj_heroparent');}
 const heroEvent=(name:'step'|'draw'|'alarm1'|'alarm4'|'user0')=>(s:GmInstance,rt:GmRuntime)=>heroParts(rt).events[name]?.(s,rt);
@@ -463,10 +465,14 @@ interface SpellRules{
  readonly immuneSleepEffect?:readonly number[];
 }
 const notPorted=(what:string)=>()=>{throw Error(`scr_spell: ${what} is not ported yet`);};
+function castEncounterSnowgrave(s:GmInstance,rt:GmRuntime){
+ if(withHook(rt,'castSpecialSpell').some(([e,h])=>h(e,s,rt,10)))return;
+ notPorted("Noelle's SnowGrave (10)")();
+}
 const SPELLS:Record<number,SpellRules>={
  1:{pacifyImmune:[19,3],pacifyEffect:false,spareOwnEnding:[3],dualHeal:m=>m*4,extra:{}},
  2:{pacifyImmune:[19,3,52,43],pacifyEffect:true,spareOwnEnding:[3,52],dualHeal:m=>Math.ceil(m*5.5),extra:{
-  8:castSleepMist,9:(s,rt)=>castIceShock(s,rt,()=>retargetSpell(s,rt)),10:notPorted("Noelle's SnowGrave (10)"),
+  8:castSleepMist,9:(s,rt)=>castIceShock(s,rt,()=>retargetSpell(s,rt)),10:castEncounterSnowgrave,
   // UltimatHeal: Susie's heal, magic + 1.
   11:(s,rt)=>{
    const g=rt.globals;s.healnum=g.battlemag[s.caster]+1;heal(s,rt,s.star,s.healnum);

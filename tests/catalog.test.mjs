@@ -15,3 +15,7 @@ test('extracts source stats and encounter object connections',()=>{
 test('conflicting encounter identity is rejected',()=>{
  assert.throws(()=>buildCatalog([{id:'a',name:'x',chapter:1,sources:[]},{id:'a',name:'y',chapter:1,sources:[]}]),/conflict/i);
 });
+test('omits the removed Dojo final-round card without hiding Werewerewire 81',()=>{
+ const record=id=>({id,name:'Werewerewire',chapter:2,variant:id,sources:[]});
+ assert.deepEqual(buildCatalog([record('ch2-81'),record('ch2-94')]).map(r=>r.id),['ch2-81']);
+});

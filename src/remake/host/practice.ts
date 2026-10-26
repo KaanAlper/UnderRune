@@ -249,14 +249,6 @@ const WEREWEREWIRE_PATTERNS:readonly PracticePattern[]=[
  werewerewirePattern('Spark spread',['sparks']),
 ];
 
-const WEREWEREWIRE_DOJO_PATTERNS:readonly PracticePattern[]=[
- werewerewirePattern('Double sweeping lasers',['sweeping','sweeping']),
- werewerewirePattern('Sweeping lasers & laser circles',['sweeping','circles']),
- werewerewirePattern('Sweeping lasers & spark spread',['sweeping','sparks']),
- werewerewirePattern('Double laser circles',['circles','circles']),
- werewerewirePattern('Double spark spread',['sparks','sparks']),
-];
-
 const MAUSWHEEL_PATTERNS:readonly PracticePattern[]=[
  {name:'Following cursor (short)',setup:(_rt,e)=>{e.firstturn=1;e.cursor_count=0;}},
  {name:'Following cursor (full)',setup:(_rt,e)=>{e.firstturn=0;e.cursor_count=0;}},
@@ -394,7 +386,6 @@ const PRACTICE_PATTERNS:Readonly<Record<string,readonly PracticePattern[]>>={
  'ch2-83':MAUSWHEEL_PATTERNS,
  'ch2-84':GIGA_QUEEN_PATTERNS,
  'ch2-89':TASQUE_MANAGER_DOJO_PATTERNS,
- 'ch2-94':WEREWEREWIRE_DOJO_PATTERNS,
  'ch3-115':ROARING_KNIGHT_PATTERNS,
 };
 

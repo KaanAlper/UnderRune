@@ -911,6 +911,32 @@ New scripts go in `tools/oracle-scripts.mjs`.
   Original installed packages, local sources, recordings,
   native launchers and test artifacts remain outside the commit and publication. No Supabase migration is needed.
 
+### 19j. Berdly Weird route and lobby corrections (2026-10-27)
+
+- The entrance title and loading message now say `SURVEY_PROGRAM`.
+- Removed encounter `ch2-94` from the catalog, public engine and practice list at the owner's request.
+  The source census and historical reference fixtures remain intact; encounter 81 is still available.
+- Band encounter 62 now starts with source story flag 34 set to 1. The original dance lesson clears it,
+  then exposes independent Susie/Ralsei ACTs. Fresh legal-key lesson and full ending tests pass.
+- Berdly encounter 82 offers Normal / Weird-Snowgrave before equipment. Variant `ch2-82-weird` sets story
+  flags 915/916/924, gives Noelle her fourth spell and defaults to the Thorn Ring. Explicit equipment choices
+  override the default. Preparation displays the route's actual default weapon and equipment bonuses.
+- `chapter2-rivals/snowgrave-spell.ts` ports the original Snowgrave effect, snowflakes, shake and frozen prop,
+  plus the party transition. The existing enemy owns refusals and the ending dialogue. Ordinary IceShock can
+  also abort the route through the original post-battle Noelle actor. Shared spells use named hooks, not boss checks.
+- The score observer preserves starting-party equipment if a companion leaves during committed victory;
+  active-battle party changes and equipment changes still invalidate a run. Berdly boards separate normal/Weird.
+- Verification: 1905 non-parity tests passed; full Weird legal-key playback compares every 20 frames against
+  the original GML Draw event in the test-only source interpreter, including all instance fields and RNG.
+  A separate browser tour reaches the ending with no missing sprites; Snowgrave rendering p95 was 7.9 ms
+  and the slowest observed frame was 19.2 ms on this machine. These measurements are local, not cross-device guarantees.
+- This route has source-event comparisons and fresh menu/ending acceptance, not a new full native Weird
+  recording. The host still uses its existing Chapter 2 base-stat policy rather than loading a story save.
+- Regression verification also passed six native Berdly encounter-58/82 recording comparisons and 29 browser
+  tests covering route selection, preparation and leaderboard. Typecheck and the Pages build pass.
+- Next requested work: Chapter 4 Hammer of Justice. Do not resume old agents; the owner asked to avoid their
+  context overhead. Keep the new battle gated until its chapter strategy, source events and acceptance are complete.
+
 ### 19. Remaining work
 
 - The requested General chat and shell scene refactor are complete; see 19h.

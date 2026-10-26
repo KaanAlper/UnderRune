@@ -8,6 +8,7 @@ import {battleBalloon2,enemyBlcon2} from '../../deltarune/chapter2-objects';
 import {writer} from '../../deltarune/writer';
 import {sourceText} from '../../host/text';
 import {berdlyRematchActs,type RivalDialogue} from './berdly-acts';
+import {castBerdlySnowgrave} from './snowgrave-spell';
 
 export interface BerdlyRematchServices{
  dialogue:RivalDialogue;
@@ -86,6 +87,11 @@ export function createBerdlyRematch(object:(name:string)=>GmObjectDef,services:B
   statusLine:(s,rt)=>{const g=rt.globals;if(!s.sideb_route&&monsterPop(rt)===1)s.attack_phase=(s.attack_phase+1)%3;s.rr=rt.random.choose(0,1,2,3,4,5);g.battlemsg[0]=T(['124_0','125_0','126_0','127_0','338_0','339_0'][s.rr]);if(rivalRoutePhase(rt)>0)g.battlemsg[0]=' ';},
   acts:(s,rt)=>berdlyRematchActs(s,rt,services.dialogue,rivalRoutePhase(rt)),actsDone:()=>{},
   afterStep:services.snowgraveScene,
+  hooks:{
+   onHeroVictory:(_e,s,rt)=>{if(s._sideb===1&&s._victoried===0){const seq=rt.create(object('obj_noellevictory_example'),s.x,s.y);s._victorysequence=seq.id;seq.depth=s.depth-1;s._victoried=1;s.imageAlpha=0;}},
+   adjustSpellInfo:(_e,s,rt,id)=>{if(id===10){if(rt.globals.flag[924]<4)s.spelltarget=3;else s.spellanim=1;}},
+   castSpecialSpell:(_e,s,rt,id)=>{if(id!==10)return false;castBerdlySnowgrave(s,rt,object);return true;},
+  },
   events:{alarm5:s=>{s.sidebcon++;},alarm6:s=>{s.kris_defeat_con++;},alarm7:s=>{s.balloon_con++;},alarm8:(s,rt)=>{rt.globals.mnfight=2;s.rtimer=0;},user10:(s,rt)=>monsterDefeat(s,rt),
    draw:(s,rt)=>{
     const g=rt.globals;if(s.state===3){s.hurttimer--;if(s.hurttimer<0&&g.monster[s.myself]===1)s.state=0;

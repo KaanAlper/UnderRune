@@ -25,7 +25,8 @@ import {createQueenThrow} from '../bosses/queen/throw';
 import {createQueenUltimate} from '../bosses/queen/ultimate';
 import {createChapter2Rivals,runBerdlyBulletController} from '../bosses/chapter2-rivals';
 import {runBerdlySpearblastController} from '../bosses/chapter2-rivals/spearblast';
-import {berdlySnowgraveScene} from '../bosses/chapter2-rivals/berdly-snowgrave';
+import {berdlySnowgraveScene,createBerdlyPostBattleNoelle} from '../bosses/chapter2-rivals/berdly-snowgrave';
+import {createSnowgraveObjects,snowgraveLoseChar} from '../bosses/chapter2-rivals/snowgrave-spell';
 import {RIVAL_ENCOUNTERS,setupRivalMonster} from '../bosses/chapter2-rivals/setup';
 import {rivalRoutePhase} from '../bosses/chapter2-rivals/berdly-rematch';
 import {anyFaceNext,monsterAdd,speaker,terminateWriter} from '../deltarune/chapter2-enemy';
@@ -56,7 +57,8 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  registry.register([createChapter2BulletController(object,[createChapter2FieldBulletRunner(object),(s,r)=>runBerdlyBulletController(s,r,object),(s,r)=>runBerdlySpearblastController(s,r,object),(s,r)=>runGigaSoulBulletController(s,r,object),spamton.pattern,rouxls.pattern,clover.pattern])]);
  // The rivals: Berdly on the coaster (58) and in the rematch (82).
  const dialogue={speaker,faceNext:anyFaceNext,terminateWriter:(s:GmInstance,r:GmRuntime)=>!!terminateWriter(s,r)};
- registry.register(createChapter2Rivals(object,{dialogue,monsterAdd,snowgraveScene:(s,r)=>berdlySnowgraveScene(s,r,dialogue,object,()=>{throw Error('scr_losechar (after SnowGrave) is not ported');})}));
+ registry.register(createChapter2Rivals(object,{dialogue,monsterAdd,snowgraveScene:(s,r)=>berdlySnowgraveScene(s,r,dialogue,object,(caller,runtime)=>snowgraveLoseChar(caller,runtime,object))}));
+ registry.register([...createSnowgraveObjects(object),createBerdlyPostBattleNoelle(object)]);
  // Queen (59): her enemy, shield, bullet controller and attack objects.
  registry.register([...createQueenObjects(object),...createQueenProjectiles(object),...createQueenExplosions(object),...createQueenBerdly(object),...createQueenWine(object),...createQueenSearch(object),...createQueenSocial(object),...createQueenElectric(object),...createQueenThrow(object),...createQueenUltimate(object)]);
  // obj_heartmarker has no events: a place the soul is moved to.
@@ -67,6 +69,8 @@ export function installChapter2BossHost(rt:GmRuntime,options:{room:string}){
  rt.battleSetup={monster:(s,r)=>setupFieldMonster(s,r)||setupQueenMonster(s,r,r.exists(plug))||setupRivalMonster(s,r,rivalRoutePhase(r))||setupSpamtonMonster(s,r)||setupCloverDojoMonster(s,r),encounter:(r,n,enemies)=>{
   const setup=ENCOUNTERS[n];if(!setup||setup.kind==='unused')return false;
   const g=r.globals;g.monstertype=[0,0,0];g.monsterinstancetype=[0,0,0];
+  // scr_gamestart_chapter_override locks independent S/R ACTs until the band's lesson clears flag 34.
+  if(n===62)g.flag[34]=1;
   for(const [i,[name,type,x,y]] of setup.monsters.entries()){
    const def=enemies[name];if(!def)throw Error(`Encounter ${n} needs ${name}`);g.monsterinstancetype[i]=def;g.monstertype[i]=type;g.monstermakex[i]=r.view.x+x;g.monstermakey[i]=r.view.y+y;
   }
