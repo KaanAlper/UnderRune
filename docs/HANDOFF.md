@@ -934,8 +934,22 @@ New scripts go in `tools/oracle-scripts.mjs`.
   recording. The host still uses its existing Chapter 2 base-stat policy rather than loading a story save.
 - Regression verification also passed six native Berdly encounter-58/82 recording comparisons and 29 browser
   tests covering route selection, preparation and leaderboard. Typecheck and the Pages build pass.
+- Published source `94f61ca`, Pages `57f2a04`; the Pages build completed and the live Berdly Weird launch passed.
 - Next requested work: Chapter 4 Hammer of Justice. Do not resume old agents; the owner asked to avoid their
   context overhead. Keep the new battle gated until its chapter strategy, source events and acceptance are complete.
+
+### 19k. Hammer of Justice starting point (2026-10-27)
+
+- Active implementation plan: `docs/superpowers/plans/2026-10-27-hammer-of-justice.md`.
+  Work inline; do not revive old agents. The boss has not been enabled in the public encounter registry.
+- Source-backed initial modules: `bosses/hammer-of-justice/setup.ts` (type 105, encounter 160, solo Susie,
+  test-room/church positions and the disabled Susie ACT) and `spear-pattern.ts` (reset/append scripts).
+- Seventy tests compare both original spear scripts, all named aliases, numeric/unknown directions, five/six/seven
+  argument calls, preserved array tails, original monster setup and both room-position branches. Typecheck passes.
+- The asset builder scopes this folder to Chapter 4, avoiding accidental resources in existing chapter bundles.
+- Next: audit shared Chapter 4 event differences and add an explicit development host/strategies. Do not alias
+  Chapter 3 blindly. Continue with the source enemy Create/alarms, attack controller and projectile families.
+  No enemy Step/Draw, actual attack hitboxes or finale has been ported for Hammer yet.
 
 ### 19. Remaining work
 
