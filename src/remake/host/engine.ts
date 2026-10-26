@@ -22,7 +22,7 @@ import {chapter2StartStats} from '../deltarune/chapter2';
 import {chapter3StartStats} from '../deltarune/chapter3';
 import {withHook} from '../deltarune/rules';
 /** Globals and flags a retry keeps: the Knight's loss advice and UltraHeal's growth survive GO BACK's room change. */
-const SESSION={globals:['knight_battle_losses'],flags:[1045,1263,1264]} as const;
+const SESSION={globals:['knight_battle_losses','elninalosscount'],flags:[1045,1263,1264]} as const;
 export type Session={globals:Record<string,unknown>;flags:Record<number,number>};
 import type {installNeoHost} from './neo';
 import type {installChapter2BossHost} from './chapter2-bosses';
@@ -52,6 +52,7 @@ const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:
  'ch2-89':{n:89,room:'room_dw_castle_dojo',backdrop:true},
  'ch2-94':{n:94,room:'room_dw_castle_dojo',backdrop:true},
  'ch3-115':{n:115,room:'room_dw_snow_zone',backdrop:true},
+ 'ch3-113':{n:113,room:'room_battletest',backdrop:true},
  'ch1-2':{n:2,room:'room_field_start',backdrop:true},
  'ch1-8':{n:8,room:'room_forest_area3',backdrop:true},
  'ch1-20':{n:20,room:'room_field_puzzletutorial',backdrop:true},

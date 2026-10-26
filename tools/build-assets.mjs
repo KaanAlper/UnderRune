@@ -62,7 +62,7 @@ try{
   manifest.utFont={...font,url:'/generated/ut-font.png'};}
  console.log('UNDERTALE: theater sprites and font');
 }catch(error){if(error.code!=='ENOENT')throw error;console.log('UNDERTALE not extracted; the theater uses its text fallback.');}
-const tracks=['nightmare_boss_heavy','joker','kingboss','lancerfight','lancer_susie','checkers','battle','cyber_battle','cyber_battle_end','queen_boss','boxing_boss','berdly_battle','berdly_battle_heartbeat_true','spamton_battle','spamton_neo_mix_ex_wip','spamton_neo_meeting','spamton_happy','ruruskaado','rouxls_battle','smart_race','knight','tenna_battle','gerson_theme_nointro','titan_battle','titan_spawn','ch4_battle','pink','flowery','flowery_iog','battle_vapor'];
+const tracks=['nightmare_boss_heavy','joker','kingboss','lancerfight','lancer_susie','checkers','battle','cyber_battle','cyber_battle_end','queen_boss','boxing_boss','berdly_battle','berdly_battle_heartbeat_true','spamton_battle','spamton_neo_mix_ex_wip','spamton_neo_meeting','spamton_happy','ruruskaado','rouxls_battle','smart_race','knight','tenna_battle','gerson_theme_nointro','titan_battle','titan_spawn','ch4_battle','pink','flowery','flowery_iog','battle_vapor','rudebuster_boss'];
 await fs.mkdir(path.join(output,'music'),{recursive:true});
 // The game over's music: Chapter 1's drone, Chapter 2's theme and the darkness after giving up.
 for(const name of [...tracks,'AUDIO_DRONE','AUDIO_DEFEAT','AUDIO_DARKNESS']){const file=name+'.ogg';try{await fs.copyFile(path.join(game,'mus',file),path.join(output,'music',file));manifest.music.push(name);}catch{}}

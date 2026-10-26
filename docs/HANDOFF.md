@@ -883,6 +883,34 @@ New scripts go in `tools/oracle-scripts.mjs`.
   shortcuts and native delayed-result replacement. Production build/typecheck pass; static/live acceptance is
   checked separately at publication. Physical phone testing is still distinct from headless mobile emulation.
 
+### 19i. First Lanino and Elnina battle (2026-10-26)
+
+- Normal Chapter 3 encounter 113 is ported through the shared engine. Encounter 141 (the rematch), Rouxls,
+  Tenna and the other Chapter 3 cards are still gated. The weather battle does not yet offer isolated practice.
+- Enemy strategies retain both multipart actors, Check/ILoveTV/ILoveTVX, simultaneous Susie/Ralsei actions,
+  hurt and dialogue poses. Elnina creates the external director in the original order. The director owns the
+  introduction, forecast/choice state, weather boosts, TV counter, breakup dialogue, all seven turns and 99-TV ending.
+- Type 130 owns the normal fight's five mascot attack variants. Forecast IDs 68-71 are planning values here,
+  not additional spawned attacks. Merging/canceling projectile collisions, compatibility-mode inclusive bbox
+  edges, source caller ownership of interpolation fields and continued events after destruction are retained.
+- Tenna's ordinary weather presentation presets are ported; unrelated minigame modes remain named errors.
+  Source sprite IDs written during dialogue and delayed arm/chest resets resolve through a chapter-local table.
+  Static asset references include every mascot, portrait and ACT/final-attack text key, with an asset coverage test.
+- Existing generic hooks suspend commands during the introduction and rename the mixed-party ACT entries.
+  Shared additions preserve Chapter 3 choice remote fields/local Draw counters, real flag-array/music defaults,
+  TV voice pitch initialization, hero victory fields and ordinary Chapter 3 victory text/rewards. Level-up paths
+  outside the accepted weather ending remain explicitly unsupported. Knight-only entry adjustments stay gated.
+- Native recordings are local: ch3-113-s11-god (1600), -menu (6000), and -ending (9000). Continuous replays compare
+  RNG, instances and every available full-state dump from frame 40. Exemptions are only backend audio handles;
+  Tenna motion is restored from his recorded v_hspeed/v_vspeed because snapshots omit built-in velocity.
+  The ending replay includes the original victory. Fresh-start and packed-resource tests complete the whole fight
+  through legal menu inputs with documented survival HP, and separate browser tests cover the public first turn.
+- Verification: 1899 non-parity tests pass; three weather native replays and the existing Knight replay group pass.
+  Browser checks cover the weather development/public first turn, streamed music, upper/lowercase keyboard flow
+  and Knight's stale-chunk recovery. Typecheck and the static Pages build pass. No fake public scores were posted.
+  Original installed packages, local sources, recordings,
+  native launchers and test artifacts remain outside the commit and publication. No Supabase migration is needed.
+
 ### 19. Remaining work
 
 - The requested General chat and shell scene refactor are complete; see 19h.

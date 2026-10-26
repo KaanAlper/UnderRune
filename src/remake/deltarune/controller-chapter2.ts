@@ -14,7 +14,7 @@ interface HudChapter{later:boolean;cost:(v:number)=>number;}
 const HUD_CHAPTERS:Readonly<Record<number,HudChapter>>={2:{later:false,cost:round},3:{later:true,cost:Math.floor}};
 const hud=(rt:GmRuntime)=>forChapter(rt,HUD_CHAPTERS,'battle panel');
 /** Chapter 3 objects whose battles change or hide the panel in ways not ported yet. */
-const UNPORTED_PANELS=['obj_shadowman_sharpshoot_cursor','obj_actor_tenna','obj_tenna_zoom','obj_susiezilla_gamecontroller','obj_chefs_game','obj_rhythmgame',
+const UNPORTED_PANELS=['obj_shadowman_sharpshoot_cursor','obj_tenna_zoom','obj_susiezilla_gamecontroller','obj_chefs_game','obj_rhythmgame',
  'obj_tenna_minigame_ui','obj_shootout_controller','obj_rouxls_ch3_enemy','obj_tenna_board4_enemy','obj_pippins_enemy','obj_tenna_enemy_bg','obj_tennabattleconvo_controller'];
 const BOARD_ROOMS=new Set(['room_board_1','room_board_2','room_board_3']);
 const isA=(i:GmInstance,name:string)=>{for(let d=i.object;d;d=d.parent!)if(d.name===name)return true;return false;};

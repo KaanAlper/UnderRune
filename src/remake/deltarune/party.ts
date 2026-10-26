@@ -74,7 +74,7 @@ function heroCreate(s:GmInstance,rt:GmRuntime){
  if(heroParts(rt).later){
   if(rt.instances.some(i=>i.live&&i.object.name==='obj_tenna_board4_enemy'))throw Error("Chapter 3 heroes in Tenna's board battle are not ported");
   // Susie's fallen sprite in encounter 115 comes from the Roaring Knight's Create (and his defeatSprite hook).
-  Object.assign(s,{maxframes:0,force:0,finishattacktimer:0,spelltimer:0,gotupcon:0,gachapondead:0,thissprite:s.idlesprite,actspriteobject:-1,caster:0});
+  Object.assign(s,{_sideb:0,_victoried:0,maxframes:0,force:0,finishattacktimer:0,spelltimer:0,gotupcon:0,gachapondead:0,thissprite:s.idlesprite,actspriteobject:-1,caster:0});
  }
 }
 function heroDraw(s:GmInstance,rt:GmRuntime){

@@ -23,17 +23,24 @@ import {createBlockVfx,createFadeToWhite,createFountain} from '../bosses/roaring
 import {createBattleMarker} from '../deltarune/guard-peek';
 import {sourceText} from './text';
 import {findController} from '../deltarune/controller';
+import {createWeatherEnemies} from '../bosses/lanino-elnina/enemies';
+import {createWeatherPresentation} from '../bosses/lanino-elnina/tenna';
+import {createWeatherController} from '../bosses/lanino-elnina/controller';
+import {createWeatherAttacks} from '../bosses/lanino-elnina/attacks';
+import {setupWeatherEncounter,setupWeatherMonster} from '../bosses/lanino-elnina/setup';
 
 export function installChapter3BossHost(rt:GmRuntime,options:{room:string}){
  const registry=createChapterRegistry(rt,{chapter:3,metadata,room:options.room}),{object}=registry;
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object)]);
  registry.register([doom,lerpvar,afterimageCut,fadeOut]);
  const slashEffects=createSlashEffects(object);
- const attacks=[createStars(object),createTrackingSwords(object),createFlurry(object),createSwordTunnel(object),createRotatingSlash(object,slashEffects),createSwordVortex(object),createRoar(object,slashEffects),{pattern:()=>false,objects:slashEffects.objects}];
+ const attacks=[createStars(object),createTrackingSwords(object),createFlurry(object),createSwordTunnel(object),createRotatingSlash(object,slashEffects),createSwordVortex(object),createRoar(object,slashEffects),createWeatherAttacks(object),{pattern:()=>false,objects:slashEffects.objects}];
  registry.register([createChapter2BulletController(object,attacks.map(a=>a.pattern)),createBattleMarker(object),...attacks.flatMap(a=>a.objects)]);
  const fountain=createFountain(object),blockVfx=createBlockVfx(object),fadeToWhite=createFadeToWhite(object);
  registry.register([fountain,blockVfx,fadeToWhite,createKnight(object,fountain,blockVfx,fadeToWhite)]);
- rt.battleSetup={monster:setupKnightMonster,encounter:(r,n,enemies)=>{
+ registry.register([...createWeatherPresentation(object),...createWeatherController(object,registry.host).objects,...createWeatherEnemies(object)]);
+ rt.battleSetup={monster:(s,r)=>setupKnightMonster(s,r)||setupWeatherMonster(s,r),encounter:(r,n,enemies)=>{
+  if(setupWeatherEncounter(r,n,enemies))return true;
   if(n!==KNIGHT_ENCOUNTER.n)return false;
   const g=r.globals,{name,type,x,y}=KNIGHT_ENCOUNTER.monster,def=enemies[name];
   if(!def)throw Error(`Encounter ${n} needs ${name}`);
@@ -45,6 +52,7 @@ export function installChapter3BossHost(rt:GmRuntime,options:{room:string}){
  }};
  registry.finalize();installSmallFaceWriter(rt,object);
  return {objects:registry.objects,enter:(_enemy:GmInstance)=>{
+  if(_enemy.object.name!=='obj_knight_enemy')return;
   // Knight Create runs inside the shared controller's Create, before heroes exist and before its final
   // cantspare reset. Apply these scene-dependent writes once the fresh controller and party are ready.
   const controller=findController(rt);if(controller)controller.cantspare[0]=1;

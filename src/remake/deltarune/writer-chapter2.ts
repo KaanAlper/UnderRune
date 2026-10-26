@@ -274,7 +274,7 @@ const WRITER_CHAPTERS:Readonly<Record<number,WriterChapter>>={
  3:{
   voices:{...VOICES,
    17:g=>g.darkzone===1?big('snd_txtund'):main('snd_txtund'),
-   79:big('snd_txtsusral'),80:big('snd_tv_voice_short'),81:{...dotum('snd_tv_voice_short'),extra:{extra_ja_vspace:2}},
+   79:big('snd_txtsusral'),80:big('snd_tv_voice_short'),81:dotum('snd_tv_voice_short'),
    100:(_g,rt)=>({...main('snd_text',1,16,20),font:BOARD_ROOMS.has(rt.room.name)?'fnt_8bit_mixed':'fnt_8bit',charline:22}),
    101:{...main('snd_text',1,16,20),font:'fnt_8bit_mixed',charline:22},
   },

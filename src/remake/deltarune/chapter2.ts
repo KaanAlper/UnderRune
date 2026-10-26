@@ -80,6 +80,9 @@ export function spellMenuSetupChapter2(rt:GmRuntime,caller:GmInstance){
    g.battlespell[i][j]=-1;g.battleactcount[i]=j+1;g.battlespellcost[i][j]=acts.cost[j];
    const generic=char===2?1053:char===3?1057:1061;
    g.battlespellname[i][j]=mixed&&char!==1?sourceText(`scr_monstersetup_slash_scr_monstersetup_gml_${generic}_0`):acts.name[j];
+   if(mixed)for(const [enemy,rename] of withHook(rt,'mixedActName')){
+    const name=rename(enemy,rt,char,j,g.battlespellname[i][j]);if(name!==undefined)g.battlespellname[i][j]=name;
+   }
    g.battlespelldesc[i][j]=acts.desc[j];g.battlespelltarget[i][j]=char===1?0:2;g.battlespellspecial[i][j]=char;
   }
  }

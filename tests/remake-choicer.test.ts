@@ -23,6 +23,11 @@ function run(f:ReturnType<typeof fixture>,event:GmEvent){resolveEvent(f.c.object
 function state(s:ReturnType<typeof fixture>['c']){return Object.fromEntries(Object.entries(s).filter(([k,v])=>k!=='layerEntry'&&k!=='object'&&typeof v!=='function'));}
 
 describe('shared battle choices',()=>{
+ it('uses the Chapter 3 remote controls and keeps the Draw loop local',()=>{
+  const f=fixture(3,3);f.c.controlled=false;f.c.remoter=1;run(f,'alarm1');run(f,'step');
+  expect(f.c.mychoice).toBe(1);f.c.remote1=1;run(f,'step');expect(f.rt.globals.choice).toBe(1);
+  run(f,'draw');expect('i' in f.c).toBe(false);expect(f.c.heartSprite).toBe('spr_heartsmall');expect(f.c.boardwriter).toBe(0);
+ });
  it.each([2,3])('uses Chapter %i metadata and the shared object alias',chapter=>{
   const f=fixture(chapter);expect(f.c.object.index).toBe(f.object('obj_choicer_neo').index);expect(f.rt.first(f.object('obj_choicer_neo'))).toBe(f.c);
  });

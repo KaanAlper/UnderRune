@@ -139,6 +139,7 @@ export const controllerScripts3:ControllerScripts={
  ultimateDescription:'scr_spellinfo_slash_scr_spellinfo_gml_93_0_b',
  spellInfoExtra:spellInfoExtra(spellRows3),
  afterCreate:afterCreate3,
- victoryText:()=>{throw Error("Chapter 3's victory message is not ported");},
- victoryLevelUp:()=>{throw Error("Chapter 3's victory level-up is not ported");},
+ tensionGoldMultiplier:3,
+ victoryText:rt=>{rt.globals.battletyper=4;return controllerScripts2.victoryText(rt);},
+ victoryLevelUp:rt=>{if(rt.globals.flag[63]===1)throw Error("Chapter 3's victory level-up is not ported");},
 };

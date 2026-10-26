@@ -56,10 +56,7 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
     case 'scr_monstersetup':return monsterSetup(s,r);
     case 'scr_nextact':return controller.nextAct(r,s);
     case 'scr_attackphase':return controller.attackPhase(r);
-    case 'scr_spellmenu_setup':
-     // Chapter 3 renames two spells while Elnina and Lanino's controller is up.
-     if(chapter===3&&r.exists(object('obj_elnina_lanino_controller')))throw Error('scr_spellmenu_setup: Chapter 3 spell names during Elnina and Lanino are not ported');
-     return spellMenuSetupChapter2(r,s);
+    case 'scr_spellmenu_setup':return spellMenuSetupChapter2(r,s);
     case 'scr_randomtarget':return controller.randomTarget(s,r);
     case 'scr_battletext_default':return writer.battleTextDefault(r,s).id;
     case 'scr_battletext':return writer.battleText(r,s).id;
@@ -82,10 +79,16 @@ export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOpti
     case 'snd_stop':case 'audio_stop_sound':return r.soundStop?.(audioHandle(args[0]));
     case 'snd_pitch':pitches.set(args[0],args[1]);return r.soundPitch?.(audioHandle(args[0]),args[1]);
     case 'audio_sound_get_pitch':return pitches.get(args[0])??1;
-    case 'snd_volume':case 'mus_volume':return r.sourceAudio?.volume(audioHandle(args[0]),args[1],args[2]??0);
+    case 'snd_volume':return r.sourceAudio?.volume(audioHandle(args[0]),args[1],args[2]??0);
+    case 'mus_volume':return r.sourceAudio?.volume(audioHandle(args[0]),args[1]*g.flag[16],args[2]??0);
     case 'snd_free':{const freed=battle.sndFree(r,s,args[0]);if(!freed&&streamNames.has(args[0]))r.soundFree?.(args[0]);streamNames.delete(args[0]);return;}
     case 'mus_play':s._xsndinstance=r.sourceAudio?.music(streamNames.get(args[0])??args[0])??args[0];return s._xsndinstance;
     case 'mus_loop':s._xsndinstance=r.sourceAudio?.loop(audioHandle(args[0]))??args[0];return s._xsndinstance;
+    case 'mus_loop_ext':
+     r.sourceAudio?.music(String(audioHandle(args[0])));
+     r.sourceAudio?.volume(audioHandle(args[0]),args[1]*g.flag[16],0);
+     pitches.set(args[0],args[2]);r.soundPitch?.(audioHandle(args[0]),args[2]);
+     s._xsndinstance=r.sourceAudio?.loop(audioHandle(args[0]))??args[0];return s._xsndinstance;
     case 'snd_pause':return r.sourceAudio?.pause(audioHandle(args[0]));
     case 'snd_resume':return r.sourceAudio?.resume(audioHandle(args[0]));
     case 'snd_position':return r.sourceAudio?.position(audioHandle(args[0]),args[1]);

@@ -42,6 +42,8 @@ const playable:readonly SourceEncounter[]=[
  {id:'ch1-40',chapter:1,name:'King',party:[1,2,3],hp:2800,attack:8,defense:0,music:'kingboss',practice:true},
  // Chapter 3's secret boss, after the fountain scene (obj_ch3_PTB02).
  {id:'ch3-115',chapter:3,name:'Roaring Knight',party:[1,2,3],hp:7300,attack:40,defense:0,music:'knight',practice:true},
+ // First weather duo fight; original introduction, choices and the 99-TV ending are accepted.
+ {id:'ch3-113',chapter:3,name:'Lanino & Elnina',party:[1,2,3],hp:8880,attack:12,defense:0,music:'battle',practice:false},
 ];
 /** Route variants share their parent's card; readiness does not add a duplicate menu encounter. */
 const variants:readonly SourceEncounter[]=[

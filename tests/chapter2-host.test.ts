@@ -45,6 +45,14 @@ describe('Chapter 2 common registry',()=>{
   const self=a.rt.restore(a.object('obj_marker'),100100,0,0),handle=a.host.call('snd_init',self,a.rt,['test.ogg']);
   a.host.call('snd_pitch',self,a.rt,[handle,.65]);expect(seen).toEqual([['test',.65]]);expect(a.rt.soundGetPitch!(handle)).toBe(.65);
  });
+ it('loops a streamed track with source music gain, pitch, caller fields and later fades',()=>{
+  const a=fixture(),seen:unknown[][]=[];a.rt.globals.flag=Array(20).fill(0);a.rt.globals.flag[16]=0.85;
+  a.rt.sourceAudio={music:(name:string)=>{seen.push(['music',name]);return name;},volume:(...args:unknown[])=>seen.push(['gain',...args]),pitch:(...args:unknown[])=>seen.push(['pitch',...args]),loop:(...args:unknown[])=>{seen.push(['loop',...args]);return 123;}} as any;
+  const s=a.rt.restore(a.object('obj_marker'),100100,0,0),handle=a.host.call('snd_init',s,a.rt,['rudebuster_boss.ogg']);
+  expect(a.host.call('mus_loop_ext',s,a.rt,[handle,0.7,1.1])).toBe(123);expect(s._xsndinstance).toBe(123);
+  a.host.call('mus_volume',s,a.rt,[handle,0.5,60]);
+  expect(seen).toEqual([['music','rudebuster_boss'],['gain','rudebuster_boss',0.7*0.85,0],['pitch','rudebuster_boss',1.1],['loop','rudebuster_boss'],['gain','rudebuster_boss',0.5*0.85,60]]);
+ });
  it('resolves inherited events and old aliases after later parent replacements',()=>{
   const {rt,object,register,finalize}=fixture(),old=object('obj_monsterparent');
   register([{name:'obj_test_child',index:99999,parent:old}]);

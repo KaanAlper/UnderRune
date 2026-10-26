@@ -3,6 +3,8 @@
 import {gmArray,type GmObjectDef} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {KEY,button1_p,held} from './keys';
+import {forChapter} from './rules';
+const CHOICE_PARTS:Readonly<Record<number,{remote:boolean;localDrawLoop:boolean}>>={2:{remote:false,localDrawLoop:false},3:{remote:true,localDrawLoop:true}};
 
 export const choicerNeo:GmObjectDef={name:'obj_choicer_neo',index:0,depth:-600,events:{
  create:(s,rt)=>{
@@ -19,6 +21,10 @@ export const choicerNeo:GmObjectDef={name:'obj_choicer_neo',index:0,depth:-600,e
   s.chx=140*s.dar+s.xx;s.chy=(36+s.d_add)*s.dar+s.yy+s.fighting*30;s.hx=s.chx;s.hy=s.chy;
   s.mychoice=-1;g.choice=-1;s.choiced=0;s.choicetotal=3;
   s.textposx=[0,0,0,0];s.textposy=[0,0,0,0];
+  if(forChapter(rt,CHOICE_PARTS,'choice dialog').remote){
+   if(rt.instances.some(i=>i.live&&i.object.name==='obj_board_writer'))throw Error('Board-writer choice layout is not ported');
+   Object.assign(s,{boardwriter:0,heartSprite:'spr_heartsmall',choicerstyle:0,controlled:true,remoteu:0,remoted:0,remotel:0,remoter:0,remote1:0});
+  }
  },
  // Alarm 1: choosing opens three frames in (the heart moves for three answers in the Dark World).
  alarm1:(s,rt)=>{s.canchoose=1;if(rt.globals.darkzone===1&&s.choicetotal===2){s.hy+=39;s.hx+=31;}},
@@ -33,12 +39,13 @@ export const choicerNeo:GmObjectDef={name:'obj_choicer_neo',index:0,depth:-600,e
   g.flag[33]+=1;
   if(!('textinit' in s)){if(s.choicetotal===1){if(g.darkzone===0)s.yy-=2;if(g.darkzone===1){s.yy-=3;if(g.lang==='ja')s.yy-=2;}}s.textinit=1;}
   if(s.canchoose===1){
-   if(s.mychoice>=0&&button1_p(rt))rt.userEvent(s,0);
+   const remote=forChapter(rt,CHOICE_PARTS,'choice dialog').remote&&!s.controlled;
+   if(s.mychoice>=0&&(remote?s.remote1:button1_p(rt)))rt.userEvent(s,0);
    if(s.choiced===0){
-    if(held(rt,KEY.left))s.mychoice=0;
-    if(s.choicetotal>=1&&held(rt,KEY.right))s.mychoice=1;
-    if(s.choicetotal>=2&&held(rt,KEY.up))s.mychoice=2;
-    if(s.choicetotal>=3&&held(rt,KEY.down))s.mychoice=3;
+    if(remote?s.remotel:held(rt,KEY.left))s.mychoice=0;
+    if(s.choicetotal>=1&&(remote?s.remoter:held(rt,KEY.right)))s.mychoice=1;
+    if(s.choicetotal>=2&&(remote?s.remoteu:held(rt,KEY.up)))s.mychoice=2;
+    if(s.choicetotal>=3&&(remote?s.remoted:held(rt,KEY.down)))s.mychoice=3;
    }
   }
   rt.drawState.font=dar===1?'fnt_main':'fnt_mainbig';
@@ -66,10 +73,13 @@ export const choicerNeo:GmObjectDef={name:'obj_choicer_neo',index:0,depth:-600,e
  draw:(s,rt)=>{
   if(s.canchoose!==1)return;
   const g=rt.globals,d=rt.drawState;d.font=s.dar===1?'fnt_main':'fnt_mainbig';s.textx=s.xx;s.texty=s.yy;
-  for(s.i=0;s.i<s.choicetotal+1;s.i+=1){
-   d.color=s.mychoice===s.i?C.yellow:C.white;s.textx=s.textposx[s.i];s.texty=s.textposy[s.i];
-   rt.drawText(s.textx,s.texty,String(g.choicemsg[s.i]).replace(/#/g,'\n'));
+  const local=forChapter(rt,CHOICE_PARTS,'choice dialog').localDrawLoop;
+  for(let i=0;i<s.choicetotal+1;i+=1){
+   if(!local)s.i=i;
+   d.color=s.mychoice===i?C.yellow:C.white;s.textx=s.textposx[i];s.texty=s.textposy[i];
+   rt.drawText(s.textx,s.texty,String(g.choicemsg[i]).replace(/#/g,'\n'));
   }
+  if(!local)s.i=s.choicetotal+1;
   rt.drawSprite('spr_heartsmall',0,s.hx,s.hy,s.imageXscale,s.imageYscale,0,C.white,1);
  },
 }};

@@ -59,6 +59,8 @@ export function rules(rt:GmRuntime):ChapterRules{
 export interface BattleHooks{
  /** Encounter-specific panel initialization after the shared controller has built its chapter fields. */
  onControllerCreate?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime):void;
+ /** An encounter's name for a merged ACT entry when the enemy types differ. */
+ mixedActName?(enemy:GmInstance,rt:GmRuntime,character:number,slot:number,name:string):string|undefined;
  /** scr_endturn (Chapter 2): the ACTs start with only the first party member's single ACT chosen this turn. */
  soleFirstActor?(enemy:GmInstance,rt:GmRuntime):void;
  /** Redirect a FIGHT hit before HP subtraction. True means the encounter consumed the damage. */

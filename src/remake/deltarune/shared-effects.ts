@@ -66,9 +66,14 @@ export function scrDoom(rt:GmRuntime,target:number,delay:number){
 /** scr_lerpvar, run by `s`: eases s[varname] from a to b over `time` frames, kept in s.___lerpvar (the instance
  * script keeps it in __lerpvar too). */
 export function scrLerpvar(s:GmInstance,rt:GmRuntime,varname:string,a:number|string,b:number,time:number,easetype?:number,easeinout?:string){
- const l=rt.create(lerpvar,0,0);s.__lerpvar=l.id;
- l.target=s.id;l.varname=varname;l.pointa=a;l.pointb=b;l.maxtime=time;
+ const l=scrLerpvarInstance(s,rt,s.id,varname,a,b,time,easetype,easeinout);
+ s.___lerpvar=l.id;return l;
+}
+/** scr_lerpvar_instance writes the caller's __lerpvar even when it animates another instance. */
+export function scrLerpvarInstance(caller:GmInstance,rt:GmRuntime,target:number,varname:string,a:number|string,b:number,time:number,easetype?:number,easeinout?:string){
+ const l=rt.create(lerpvar,0,0);caller.__lerpvar=l.id;
+ l.target=target;l.varname=varname;l.pointa=a;l.pointb=b;l.maxtime=time;
  if(easetype!==undefined)l.easetype=easetype;
  if(easeinout!==undefined)l.easeinout=easeinout;
- s.___lerpvar=l.id;return l;
+ return l;
 }

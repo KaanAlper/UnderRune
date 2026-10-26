@@ -42,9 +42,11 @@ export function partyGlobals(rt:GmRuntime,p:PartySetup){
  if(p.char.includes(4)){g.spell[4]=new Array(13).fill(0);g.spell[4][0]=2;g.spell[4][1]=8;g.spell[4][2]=9;}
  g.charname=[' ',...forChapter(rt,CHAR_NAMES,'party names').map(key=>lang(key))];
  g.charauto=new Array(p.char.includes(4)?5:4).fill(0);for(const c of p.auto??[])g.charauto[c]=1;
- g.flag??=new Array(1000).fill(0);g.tempflag??=new Array(100).fill(0);
+ if(!g.flag){g.flag=new Array(9999).fill(0);g.flag[15]=1;g.flag[16]=0.85;g.flag[17]=0.6;}
+ g.tempflag??=new Array(100).fill(0);
  g.maxtension=250;g.inv=-1;g.invc=1;g.time=0;g.lang='en';g.charselect=-1;g.chemg_god_mode=false;g.gold??=0;g.xp??=0;
  g.msg=new Array(100).fill(' ');g.battlemsg=new Array(100).fill(' ');g.turntimer=0;
+ g.choicemsg=new Array(4).fill(' ');
  g.targeted=[0,0,0];g.charaction=[0,0,0];g.charspecial=[0,0,0];g.acting=[0,0,0];g.faceaction=[0,0,0];g.temptension=[0,0,0];
  g.monster=[0,0,0];g.monsterinstance=[0,0,0];g.monstertype=[0,0,0];
 }
