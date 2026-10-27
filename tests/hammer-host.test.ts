@@ -1,0 +1,21 @@
+import {it,expect} from 'vitest';
+import {GmRuntime,resolveEvent} from '../src/remake/gm/runtime';
+import {loadSprites} from './parity/reference';
+import {installChapter4BossHost} from '../src/remake/host/chapter4-bosses';
+import {chapter4StartStats} from '../src/remake/deltarune/chapter4';
+import {partyGlobals,encounterSetup} from '../src/remake/deltarune/encounter';
+import {moveHeartIn} from '../src/remake/deltarune/battle';
+import {sourceEncounter} from '../src/remake/host/encounters';
+import {chapterText} from './parity/chapter2-runner';
+import {setSourceText} from '../src/remake/host/text';
+it('installs Chapter 4 source identity and Hammer initialization while keeping incomplete events gated',()=>{
+ setSourceText(chapterText(4));const rt=new GmRuntime(loadSprites(4));rt.globals.chapter=4;const h=installChapter4BossHost(rt,{room:'room_battletest'});
+ partyGlobals(rt,{char:[2,0,0],...chapter4StartStats(),equipped:{1:{weapon:1,itemat:[0,0,0],itemdf:[0,0,0],itemmag:[0,0,0]},2:{weapon:2,itemat:[0,0,0],itemdf:[0,0,0],itemmag:[0,0,0]},3:{weapon:3,itemat:[0,0,0],itemdf:[0,0,0],itemmag:[0,0,0]}},items:[]});
+ encounterSetup(rt,160,h.objects);const g=rt.globals;expect(g.char).toEqual([2,0,0]);expect(g.heromakex.slice(0,2)).toEqual([108,108]);expect(g.hp[2]).toBe(230);expect(rt.paths.add()).toBe(14);
+ rt.restore(h.objects.obj_battlecontroller,90000,0,0,{depth:44});const susie=rt.restore(h.objects.obj_herosusie,90001,108,149);
+ const enemy=rt.create(h.objects.obj_hammer_of_justice_enemy,g.monstermakex[0],g.monstermakey[0]);expect(g.invc).toBe(.5);expect(g.spell[2].slice(0,2)).toEqual([4,11]);expect(enemy.savebattlecontrollerdepth).toBe(44);
+ rt.userEvent(enemy,0);expect(enemy.attackcountmax).toBeGreaterThan(0);expect(enemy.trueturn).toBe(1);
+ const soul=moveHeartIn(rt);expect([soul.x,soul.y]).toEqual([susie.x-250,susie.y+40]);expect(g.inv).toBe(0);
+ expect(()=>resolveEvent(enemy.object,'step')!(enemy,rt)).toThrow(/Hammer of Justice Step/);expect(()=>resolveEvent(enemy.object,'draw')!(enemy,rt)).toThrow(/Hammer of Justice Draw/);
+ expect(()=>rt.create(h.objects.obj_titan_enemy,0,0)).toThrow(/not implemented/);expect(sourceEncounter('ch4-160')).toBeUndefined();
+});

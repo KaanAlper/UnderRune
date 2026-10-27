@@ -4,7 +4,7 @@ import {assetUrl} from '../../game/url';
 import type {SourceSound} from '../../game/audio';
 type Bundle=Omit<RawSpriteFile,'sprites'>&{pages:string[];sprites:(RawSpriteFile['sprites'][number]&{frameRects:(FrameRef|null)[]})[];fonts:Record<string,FontData|{kind:'bitmap';image:string;size:number;glyphs:Record<number,any>}>;sounds?:Record<string,{file:string;volume:number;pitch:number}>;text?:Record<string,string>};
 export async function loadRemakeAssets(chapter=1):Promise<{bank:SpriteBank;draw:DrawAssets;sounds:Record<string,SourceSound>;text:Record<string,string>} >{
- if(chapter!==1&&chapter!==2&&chapter!==3)throw Error('Source assets unavailable for this chapter');
+ if(chapter!==1&&chapter!==2&&chapter!==3&&chapter!==4)throw Error('Source assets unavailable for this chapter');
  const base=assetUrl(`/generated/remake/ch${chapter}/`);
  const response=await fetch(base+'bundle.json');if(!response.ok)throw Error('Practice assets could not load. Please retry.');
  const bundle=await response.json() as Bundle;

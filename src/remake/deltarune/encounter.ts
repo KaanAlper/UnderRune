@@ -26,6 +26,7 @@ const CHAR_NAMES:Record<number,string[]>={
  1:['obj_initializer_slash_Create_0_gml_48_0','obj_initializer_slash_Create_0_gml_49_0','obj_initializer_slash_Create_0_gml_50_0'],
  2:['scr_gamestart_slash_scr_gamestart_gml_99_0','scr_gamestart_slash_scr_gamestart_gml_100_0','scr_gamestart_slash_scr_gamestart_gml_101_0','scr_gamestart_slash_scr_gamestart_gml_105_0'],
  3:['scr_gamestart_slash_scr_gamestart_gml_99_0','scr_gamestart_slash_scr_gamestart_gml_100_0','scr_gamestart_slash_scr_gamestart_gml_101_0','scr_gamestart_slash_scr_gamestart_gml_105_0'],
+ 4:['scr_gamestart_slash_scr_gamestart_gml_99_0','scr_gamestart_slash_scr_gamestart_gml_100_0','scr_gamestart_slash_scr_gamestart_gml_101_0','scr_gamestart_slash_scr_gamestart_gml_105_0'],
 };
 /** The globals obj_initializer / scr_gamestart and the save file give a battle. */
 export function partyGlobals(rt:GmRuntime,p:PartySetup){
@@ -89,7 +90,7 @@ export function encounterSetup(rt:GmRuntime,n:number,enemies:Record<string,GmObj
 }
 
 /** From Chapter 2, scr_monstersetup starts by clearing the enemy's ACTs (scr_monster_actreset). */
-const SETUP_RESETS_ACTS:Record<number,boolean>={1:false,2:true,3:true};
+const SETUP_RESETS_ACTS:Record<number,boolean>={1:false,2:true,3:true,4:true};
 /** scr_monstersetup, run by the enemy (from its event 12): name, stats, rewards, mercy and ACTs. */
 export function monsterSetup(s:GmInstance,rt:GmRuntime){
  if(forChapter(rt,SETUP_RESETS_ACTS,'scr_monstersetup'))monsterActReset(s,rt,s.myself);

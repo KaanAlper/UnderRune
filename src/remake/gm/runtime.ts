@@ -282,6 +282,13 @@ export class GmRuntime{
  soundTrackPosition?:(handle:number|string)=>number|undefined;
  soundFree?:(handle:number|string)=>void;
  readonly dynamicSprites=new Map<string,SpriteData>();
+ /** sprite_set_offset uses integer resource coordinates, scoped to this battle's sprite table. */
+ setSpriteOffset(name:string,x:number,y:number){
+  const sprite=this.bank.get(name);if(!sprite)return;
+  const originX=Math.trunc(x),originY=Math.trunc(y);
+  if(this.gfx&&!this.gfx.spriteOffset)throw Error('Renderer lacks mutable sprite origins');
+  this.dynamicSprites.set(name,{...sprite,originX,originY});this.gfx?.spriteOffset?.(name,originX,originY);
+ }
  private newSprites:boolean[]=[];
  /** The name sprite_create_from_surface gives a new sprite: "__newsprite<index>", the first deleted slot after the
   * game's own sprites, or a new one at the end (the runner reuses freed slots, keeping their names). */

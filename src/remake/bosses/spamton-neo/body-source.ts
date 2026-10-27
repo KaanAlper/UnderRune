@@ -32,14 +32,14 @@ function compile(source:string):Compiled{
 }
 const aliases:Record<string,string>={sprite_index:'sprite',mask_index:'mask',object_index:'object',image_index:'imageIndex',image_speed:'imageSpeed',image_xscale:'imageXscale',image_yscale:'imageYscale',image_angle:'imageAngle',image_alpha:'imageAlpha',image_blend:'imageBlend',gravity_direction:'gravityDirection'};
 const rawInstance=new WeakMap<object,GmInstance>();
-const native=(v:any):any=>typeof v==='object'&&v!==null?(rawInstance.get(v)?.id??('events' in v||'index' in v&&'name' in v?v.index:v)):v;
+const native=(v:any):any=>typeof v==='boolean'?Number(v):typeof v==='object'&&v!==null?(rawInstance.get(v)?.id??('events' in v||'index' in v&&'name' in v?v.index:v)):v;
 const equal=(a:any,b:any)=>typeof native(a)==='number'&&typeof native(b)==='number'?eq(native(a),native(b)):native(a)===native(b);
 const operators={ '==':equal,'!=':(a:any,b:any)=>!equal(a,b),'<>':(a:any,b:any)=>!equal(a,b),'<':(a:any,b:any)=>lt(native(a),native(b)),'>':(a:any,b:any)=>gt(native(a),native(b)),'<=':(a:any,b:any)=>le(native(a),native(b)),'>=':(a:any,b:any)=>ge(native(a),native(b))};
 const isDef=(v:any):v is GmObjectDef=>!!v&&typeof v==='object'&&typeof v.name==='string'&&typeof v.index==='number';
 const substitute=(text:string,args:any[])=>text.replace(/~(\d+)/g,(_,n)=>String(args[Number(n)-1]));
 
 /** Executes Draw as logic too: release timers, wireheart creation and strings must run in headless tests. */
-export function executeNeoSource(source:string,s:GmInstance,rt:GmRuntime,host:NeoSourceHost,other?:GmInstance,event?:GmEvent,args?:any[],entryName?:string):any{
+export function executeNeoSource(source:string,s:GmInstance,rt:GmRuntime,host:NeoSourceHost,other?:GmInstance,event?:GmEvent,args?:any[],entryName?:string,drawContext?:{fog?:number}):any{
  const compiled=compile(source),proxies=new WeakMap<GmInstance,Record<string,any>>(),arrays=new WeakMap<any[],any[]>();
  // Native destruction is deferred until the current event finishes. Existence is
  // already false, but the captured self/other and IDs from this event remain readable.
@@ -75,10 +75,11 @@ export function executeNeoSource(source:string,s:GmInstance,rt:GmRuntime,host:Ne
  // the preceding entries. Missing reads never grow arrays or substitute a value.
  for(const key of compiled.arrays)if(!(key in s)&&!['global','argument'].includes(key))s[key]=[];
  const sprite=(name:string)=>{const data=rt.bank.get(name);if(!data)throw Error(`NEO missing source sprite ${name}`);return data;};
- let fog:number|undefined;
+ // Script calls share the event's renderer state; a nested helper must see its caller's fog.
+ const drawing=drawContext??{};
  const drawSprite=(name:string,frame:number,x:number,y:number,xs:number,ys:number,angle:number,color:number,alpha:number)=>{
   if(name===null||name as any===-1)return;
-  if(fog!==undefined)rt.drawSpriteFog(name,frame,x,y,xs,ys,angle,fog,alpha);else rt.drawSprite(name,frame,x,y,xs,ys,angle,color,alpha);
+  if(drawing.fog!==undefined)rt.drawSpriteFog(name,frame,x,y,xs,ys,angle,drawing.fog,alpha);else rt.drawSprite(name,frame,x,y,xs,ys,angle,color,alpha);
  };
  const builtins:Record<string,(self:Record<string,any>,...args:any[])=>any>={
   abs:(_s,v)=>Math.abs(v),sin:(_s,v)=>Math.sin(v),cos:(_s,v)=>Math.cos(v),floor:(_s,v)=>Math.floor(v),ceil:(_s,v)=>Math.ceil(v),round:(_s,v)=>round(v),min:(_s,...v)=>Math.min(...v),max:(_s,...v)=>Math.max(...v),clamp:(_s,v,a,b)=>Math.max(a,Math.min(b,v)),lerp:(_s,a,b,t)=>a+(b-a)*t,sqrt:(_s,v)=>Math.sqrt(v),power:(_s,a,b)=>a**b,sign:(_s,v)=>Math.sign(v),degtorad:(_s,v)=>v*Math.PI/180,
@@ -114,7 +115,7 @@ export function executeNeoSource(source:string,s:GmInstance,rt:GmRuntime,host:Ne
   draw_set_color:(_s,c)=>{rt.drawState.color=c;},draw_set_colour:(_s,c)=>{rt.drawState.color=c;},draw_set_alpha:(_s,a)=>{rt.drawState.alpha=a;},draw_set_font:(_s,v)=>{rt.drawState.font=v;},draw_set_halign:(_s,v)=>{rt.drawState.halign=v;},draw_set_valign:(_s,v)=>{rt.drawState.valign=v;},
   draw_get_alpha:()=>rt.drawState.alpha,draw_get_color:()=>rt.drawState.color,
   draw_triangle:(_s,x1,y1,x2,y2,x3,y3,outline)=>rt.drawTriangle(x1,y1,x2,y2,x3,y3,!!outline),
-  d3d_set_fog:(_s,on,c)=>{fog=on?c:undefined;},draw_sprite_ext:(_s,...a)=>drawSprite(...a as [string,number,number,number,number,number,number,number,number]),draw_self:p=>rt.drawSelf(instance(p)),
+  d3d_set_fog:(_s,on,c)=>{drawing.fog=on?c:undefined;},draw_sprite_ext:(_s,...a)=>drawSprite(...a as [string,number,number,number,number,number,number,number,number]),draw_self:p=>rt.drawSelf(instance(p)),
   draw_line_width:(_s,a,b,c,d,w)=>rt.drawLine(a,b,c,d,w),draw_line:(_s,a,b,c,d)=>rt.drawLine(a,b,c,d),draw_circle:(_s,a,b,r,o)=>rt.drawCircle(a,b,r,!!o),draw_rectangle:(_s,a,b,c,d,o)=>rt.drawRect(a,b,c,d,!!o),
   draw_sprite:(_s,n,f,x,y)=>drawSprite(n,f,x,y,1,1,0,C.white,1),draw_text:(_s,x,y,t)=>rt.drawText(x,y,String(t)),
   draw_sprite_part_ext:(_s,...a)=>rt.drawSpritePart(...a as [string,number,number,number,number,number,number,number,number,number,number,number]),
@@ -129,12 +130,12 @@ export function executeNeoSource(source:string,s:GmInstance,rt:GmRuntime,host:Ne
  };
  const invoke=(name:string,p:Record<string,any>,...a:any[]):any=>{
   if(builtins[name])return builtins[name](p,...a);
-  const script=host.scripts?.[name];if(script)return executeNeoSource(script,instance(p),rt,host,other,event,a,name);
+  const script=host.scripts?.[name];if(script)return executeNeoSource(script,instance(p),rt,host,other,event,a,name,drawing);
   return host.call(name,instance(p),rt,a);
  };
  builtins.script_execute=(p,name,...a)=>invoke(name,p,...a);
  const calls=new Proxy({}, {get:(_o,k)=>typeof k==='string'?(p:Record<string,any>,...a:any[])=>invoke(k,p,...a):undefined}) as Record<string,(self:Record<string,any>,...args:any[])=>any>;
- const constants:Record<string,any>={global:rt.globals,room:host.room??'room_dw_mansion_b_east',room_width:rt.room.width,room_height:rt.room.height,room_speed:rt.bank.roomSpeed,view_wport:[rt.view.width],view_hport:[rt.view.height],e__VW:{XView:0,YView:1,WView:2,HView:3},noone:-4,all:-3,c_white:C.white,c_black:C.black,c_green:C.green,c_lime:C.lime,c_purple:C.purple,c_orange:C.orange,c_red:C.red,c_blue:0xff0000,c_yellow:C.yellow,c_aqua:C.aqua,c_gray:C.gray,c_ltgray:C.ltgray,c_teal:0x808000,c_silver:0xc0c0c0,c_fuchsia:0xff00ff,c_maroon:0x000080,c_navy:0x800000,c_olive:0x008080,vk_f1:112,gp_stickr:32780,vk_enter:13,vk_shift:16,vk_control:17,vk_space:32,vk_left:37,vk_up:38,vk_right:39,vk_down:40,pi:Math.PI};
+ const constants:Record<string,any>={global:rt.globals,room:host.room??'room_dw_mansion_b_east',room_width:rt.room.width,room_height:rt.room.height,room_speed:rt.bank.roomSpeed,view_wport:[rt.view.width],view_hport:[rt.view.height],e__VW:{XView:0,YView:1,WView:2,HView:3},fa_left:0,fa_center:1,fa_right:2,noone:-4,all:-3,c_white:C.white,c_black:C.black,c_green:C.green,c_lime:C.lime,c_purple:C.purple,c_orange:C.orange,c_red:C.red,c_blue:0xff0000,c_yellow:C.yellow,c_aqua:C.aqua,c_gray:C.gray,c_ltgray:C.ltgray,c_teal:0x808000,c_silver:0xc0c0c0,c_fuchsia:0xff00ff,c_maroon:0x000080,c_navy:0x800000,c_olive:0x008080,vk_f1:112,gp_stickr:32780,vk_enter:13,vk_shift:16,vk_control:17,vk_space:32,vk_left:37,vk_up:38,vk_right:39,vk_down:40,pi:Math.PI};
  const environment=new Proxy(constants,{
   has:(_o,k)=>typeof k==='string'&&(k in constants||/^(obj_|o_|spr_|bg_|snd_|room_|scr_|mus_)/.test(k)),
   get:(o,k)=>typeof k!=='string'?undefined:k in o?o[k]:/^(obj_|o_)/.test(k)?host.object(k):/^(spr_|bg_|snd_|room_|scr_|mus_)/.test(k)?k:undefined,

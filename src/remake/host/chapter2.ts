@@ -22,7 +22,7 @@ export interface Chapter2RegistryOptions{
  chapter?:number;
  metadata:readonly NeoSourceMetadata[];scripts?:Readonly<Record<string,string>>;room:string;battleBoundary?:(scene:GmInstance,rt:GmRuntime)=>void;}
 /** The path resources in each chapter's data.win (path_add numbers new paths after them). */
-const PATH_RESOURCES:Readonly<Record<number,number>>={2:14,3:31};
+const PATH_RESOURCES:Readonly<Record<number,number>>={2:14,3:31,4:14};
 export function createChapter2Registry(rt:GmRuntime,options:Chapter2RegistryOptions){
  const chapter=options.chapter??2;
  rt.paths.reserve(PATH_RESOURCES[chapter]??0);

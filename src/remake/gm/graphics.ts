@@ -9,6 +9,8 @@ export interface GmGraphics{
  surfaceSprite?(id:number,name:string,left:number,top:number,width:number,height:number,originX:number,originY:number):void;
  surfaceFree?(id:number):void;
  spriteDelete?(name:string):void;
+ /** sprite_set_offset: changes this runtime's sprite origin, retaining its atlas frames. */
+ spriteOffset?(name:string,x:number,y:number):void;
  /** sprite_create_from_surface(application_surface, ...): the screen as last drawn, as a new sprite. */
  screenSprite?(name:string,width:number,height:number):void;
  /** string_width in a font (absent: 0). */

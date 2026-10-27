@@ -949,7 +949,44 @@ New scripts go in `tools/oracle-scripts.mjs`.
 - The asset builder scopes this folder to Chapter 4, avoiding accidental resources in existing chapter bundles.
 - Next: audit shared Chapter 4 event differences and add an explicit development host/strategies. Do not alias
   Chapter 3 blindly. Continue with the source enemy Create/alarms, attack controller and projectile families.
-  No enemy Step/Draw, actual attack hitboxes or finale has been ported for Hammer yet.
+  This was the initial checkpoint; see 19l for subsequent work.
+
+### 19l. Hammer controller, shield and spear ports (2026-10-27)
+
+- Continue inline. Chapter 4 encounter 160 remains unavailable in the public registry and main engine switch.
+  The development registry accepts explicit Hammer script integrations; absent integrations fail by name.
+  Do not replace these gates with idle placeholders or approximate damage/menu scripts.
+- `host/chapter4-resources.json` contains object identity metadata only. Native PATH resource count is 14.
+  `deltarune/chapter4.ts` supplies source starting stats. Shared rules, soul entry/directions, buffering,
+  move-heart and graze tables have explicit Chapter 4 parts; old chapter behavior is covered by regressions.
+- New boss modules: source Create/init; full queue builder `patterns-*`; full Step `scene-*` / `step.ts`;
+  full Draw `draw-*`; End Step `box.ts`; CleanUp `cleanup.ts`; source shield/pieces/just particles;
+  64 spear-dispatch branches and all six obj_spearshot events in `projectile-*`.
+- The event ports are static TypeScript. Offline generators, parser ASTs, source audits, atlases and local
+  recording material remain ignored under `.tools`, `extracted` and `public/generated`. No installed package changed.
+- Keep the required `HammerSceneScripts`, `HammerDrawScripts` and `HammerProjectileScripts` boundaries.
+  Existing source tests mock those child-script protocols explicitly; they do not establish real Chapter 4
+  HP/armor accounting, writer behavior, menu control or a full playable victory/defeat path.
+- Source details: Chapter 4 Draw does not advance hurt timing; Step does. CleanUp retains party slot zero,
+  clears slots 1/2, then appends Susie and Ralsei without deduplication. Preserve that event behavior; inspect
+  the full ending/room lifecycle before deciding whether party normalization belongs elsewhere.
+- `sprite_set_offset` updates a runtime-local sprite table and Canvas metadata, preserving shared atlases.
+  New contexts preserve deferred destroyed IDs without copying every instance for every projectile.
+- The test-only original-event adapter now shares fog across nested script calls and compares native
+  boolean/number values consistently. The browser combination test caught numeric 0 versus literal false
+  in the shield-radius branch; unit projectile fixtures now use the real numeric source flags too.
+- Private source edge cases: debug pattern 5.5 reads unset local `prev`; dialogue states 31/32 read absent
+  `dialogue_string33/34`. Normal source turn selection skips these. Tests require the corresponding errors.
+- Verification: the final focused run passed 860 comparisons; the broader non-parity run passed 2765 tests
+  with 57 skipped. Typecheck and the production build pass. Nine headless browser tests pass, covering the
+  three new components, lowercase/uppercase keyboard-only flow and existing Canvas rendering checks.
+  Browser body/shield/spear components have no missing sprites. Correct-direction blocking and the opposite
+  direction's damage callback both work. Those are component fixtures, not native full-battle acceptance.
+- Next: remaining spear child actors (green switch/teleports/hammer/box/bell families), Rude Buster reflection
+  actors, then full Chapter 4 core integrations. Controller/hero/writer differ substantially from Chapter 3;
+  spell 11 is OKHeal, not Chapter 3 ULTRAHEAL. Damage has Hammer's gothitlastturn update; items 60-63 and
+  game over also need their Chapter 4 source versions. Chapter 4 generated assets exist locally only.
+- Public release remains source `94f61ca` / Pages `57f2a04`. Do not deploy this incomplete battle.
 
 ### 19. Remaining work
 

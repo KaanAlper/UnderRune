@@ -43,6 +43,8 @@ const CHAPTER2:ChapterRules={chapter:2,tensionCountsMercy:false,bulletMakerKnows
 /** Chapter 3 keeps Chapter 2's rules: each was checked in its code (scr_moveheart, scr_randomtarget, obj_tensionbar,
  * scr_isphase, obj_heart, obj_heroparent's poison and the auto-Susie mark, which still addresses the wrong instance). */
 const CHAPTER3:ChapterRules={chapter:3,tensionCountsMercy:true,bulletMakerKnowsSpawner:true,commandRow3:true,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
+/** Chapter 4 drops the Chapter 3 DEFEND/mercy counters; source bullet makers still retain creatorid. */
+const CHAPTER4:ChapterRules={chapter:4,tensionCountsMercy:false,bulletMakerKnowsSpawner:true,commandRow3:false,soulHasModes:true,slowSoulSetting:true,heroesCanBePoisoned:true,moveHeartEndsInvincibility:true,autoSusieMarksKill:false,enemiesTargetWholeParty:true,tensionBarFollowsView:true,tensionBarSurface:true,phaseScript:true};
 /** A component's part for the running battle's chapter, from the table of its versions next to it. */
 export function forChapter<T>(rt:GmRuntime,versions:Readonly<Record<number,T>>,what:string):T{
  const v=versions[rt.globals.chapter??1];
@@ -51,12 +53,16 @@ export function forChapter<T>(rt:GmRuntime,versions:Readonly<Record<number,T>>,w
 }
 /** The running battle's chapter rules (global.chapter). */
 export function rules(rt:GmRuntime):ChapterRules{
- const r=({1:CHAPTER1,2:CHAPTER2,3:CHAPTER3} as Record<number,ChapterRules>)[rt.globals.chapter??1];
+ const r=({1:CHAPTER1,2:CHAPTER2,3:CHAPTER3,4:CHAPTER4} as Record<number,ChapterRules>)[rt.globals.chapter??1];
  if(!r)throw Error(`No battle rules for chapter ${rt.globals.chapter}`);
  return r;
 }
 
 export interface BattleHooks{
+ /** Source actors can consume directional input before the soul's movement vector is computed. */
+ soulDirections?(actor:GmInstance,soul:GmInstance,rt:GmRuntime):void;
+ /** Encounter-specific source position from which scr_moveheart begins the soul's flight. */
+ soulEntry?(actor:GmInstance,rt:GmRuntime):readonly [number,number]|undefined;
  /** Source encounter changes to a spell's menu targeting and animation. */
  adjustSpellInfo?(enemy:GmInstance,caller:GmInstance,rt:GmRuntime,spell:number):void;
  /** Encounter-owned spell cutscenes. True when the source spell was handled. */

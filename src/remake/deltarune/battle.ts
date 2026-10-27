@@ -69,11 +69,12 @@ export const returnHeart:GmObjectDef={name:'obj_returnheart',index:220,sprite:'s
 /** The soul leaves Kris and flies to the arena in eight original game frames. */
 /** Per chapter: from Chapter 2 the soul flies to the box's own place (custom boxes are moved) and is not made twice. */
 /** Chapter 3's soul takes the flying soul's sprite and mask (an attack can change them before it lands). */
-const MOVE_HEART:Record<number,{toBox:boolean;once:boolean;passSprite?:boolean}>={1:{toBox:false,once:false},2:{toBox:true,once:true},3:{toBox:true,once:true,passSprite:true}};
+const MOVE_HEART:Record<number,{toBox:boolean;once:boolean;passSprite?:boolean;darkAlpha?:boolean;remember?:boolean}>={1:{toBox:false,once:false},2:{toBox:true,once:true},3:{toBox:true,once:true,passSprite:true},4:{toBox:true,once:true,darkAlpha:true,remember:true}};
 const named=(rt:GmRuntime,name:string)=>rt.instances.find(i=>i.live&&i.object.name===name);
 export const moveHeart:GmObjectDef={name:'obj_moveheart',index:219,sprite:'spr_dodgeheart',events:{
  create:(s,rt)=>{
   s.burst=0;s.shift=1;s.imageAlpha=0;s.flytime=8;
+  if(forChapter(rt,MOVE_HEART,'obj_moveheart').darkAlpha)s.darkalpha=0;
   const marker=named(rt,'obj_heartmarker'),box=rt.first(growtangle);
   if(marker){s.distx=marker.x;s.disty=marker.y;}
   else if(!forChapter(rt,MOVE_HEART,'obj_moveheart').toBox||!box){s.distx=rt.view.x+310;s.disty=rt.view.y+160;}
@@ -84,7 +85,7 @@ export const moveHeart:GmObjectDef={name:'obj_moveheart',index:219,sprite:'spr_d
  alarm0:(s,rt)=>{
   s.x=s.distx;s.y=s.disty;
   const rules=forChapter(rt,MOVE_HEART,'obj_moveheart');
-  if(!rules.once||!rt.exists(heart)){const h=rt.create(heart,s.x,s.y);h.depth=1;if(rules.passSprite){s.heart=h.id;h.sprite=s.sprite;h.mask=s.mask;}}
+  if(!rules.once||!rt.exists(heart)){const h=rt.create(heart,s.x,s.y);h.depth=1;if(rules.passSprite||rules.remember)s.heart=h.id;if(rules.passSprite){h.sprite=s.sprite;h.mask=s.mask;}}
   rt.destroy(s);
  },
 }};
@@ -93,6 +94,7 @@ export const moveHeart:GmObjectDef={name:'obj_moveheart',index:219,sprite:'spr_d
 /** scr_moveheart: the soul leaves Kris for the box. */
 export function moveHeartIn(rt:GmRuntime){
  if(rules(rt).moveHeartEndsInvincibility)rt.globals.inv=0;
+ for(const [actor,entry] of withHook(rt,'soulEntry')){const at=entry(actor,rt);if(at)return rt.create(moveHeart,at[0],at[1]);}
  const k=rt.first(heroKris)!;return rt.create(moveHeart,k.x+10,k.y+40);
 }
 export const astream:GmObjectDef={name:'obj_astream',index:134,depth:-200,sprite:'spr_heart',events:{
@@ -386,7 +388,8 @@ export function tensionHeal(rt:GmRuntime,amount:number){
 
 /** The soul: moves 4 px per frame (2 while holding cancel), slides along the box walls, stays on screen. */
 /** The soul's colour modes (scr_heartcolor): red only moves; yellow also shoots (yellow-soul.ts). */
-const SOUL_MODES:Record<number,{step?:(s:GmInstance,rt:GmRuntime)=>void;draw?:(s:GmInstance,rt:GmRuntime)=>void}>={0:{},1:yellowSoul};
+const SOUL_MODES:Record<number,{step?:(s:GmInstance,rt:GmRuntime)=>void;draw?:(s:GmInstance,rt:GmRuntime)=>void}>={0:{},1:yellowSoul,2:{}};
+const SOUL_BUFFER:Readonly<Record<number,boolean>>={2:true,3:true,4:false};
 const soulMode=(s:GmInstance)=>{const m=SOUL_MODES[s.color];if(!m)throw Error(`The soul has no mode ${s.color}`);return m;};
 export const heart:GmObjectDef={name:'obj_heart',index:313,depth:1,sprite:'spr_dodgeheart',mask:'spr_dodgeheartmask',
  events:{
@@ -411,6 +414,7 @@ function heartStep(s:GmInstance,rt:GmRuntime){
  const meet=(x:number,y:number)=>rt.placeMeeting(s,x,y,battleSolid);
  s.wallcheck=0;s.bkx=0;s.bky=0;s.bkxy=0;s.jelly=2;
  s.press_l=input.left(rt)?1:0;s.press_r=input.right(rt)?1:0;s.press_u=input.up(rt)?1:0;s.press_d=input.down(rt)?1:0;
+ for(const [actor,hook] of withHook(rt,'soulDirections'))hook(actor,s,rt);
  let px=0,py=0;const w=s.wspeed,r=rules(rt);
  // A frozen soul (Chapter 2's canmove) ignores the arrows; X slows it unless that is turned off (flag 22).
  if(!r.soulHasModes||s.canmove){
@@ -421,7 +425,7 @@ function heartStep(s:GmInstance,rt:GmRuntime){
   if(input.cancel(rt)&&(!r.slowSoulSetting||rt.globals.flag[22]===0)){if(s.disableslow===0){px=Math.ceil(px*0.5);py=Math.ceil(py*0.5);}}
   else s.disableslow=0;
  }
- if(r.soulHasModes&&s.color===0)s.remove_slow_z_buffer+=0.5;
+ if(r.soulHasModes&&s.color===0&&forChapter(rt,SOUL_BUFFER,'soul input buffer'))s.remove_slow_z_buffer+=0.5;
  s.xmeet=0;s.ymeet=0;s.xymeet=0;
  if(meet(s.x+px,s.y+py))s.xymeet=1;
  // The loop counters (g, i, j) and mvd are the soul's own variables, as in the original.
@@ -479,6 +483,7 @@ const GRAZE:Record<number,{repeat:number;inactiveCount:boolean;counts?:boolean;a
  1:{repeat:20,inactiveCount:true},
  2:{repeat:30,inactiveCount:false,armor:{tp:[[15,0.1]],time:[[14,0.1]],size:[[3,0.2],[9,0.25]]}},
  3:{repeat:30,inactiveCount:false,counts:true,armor:{tp:[[15,0.1],[24,0.05],[3,-0.2],[9,-0.25]],time:[[14,0.1],[3,-0.2],[9,-0.25]],size:[[3,0.2],[9,0.25]]}},
+ 4:{repeat:30,inactiveCount:false,armor:{tp:[[15,0.1],[24,0.05],[3,-0.2],[9,-0.25]],time:[[14,0.1],[3,-0.2],[9,-0.25]],size:[[3,0.2],[9,0.25]]}},
 };
 /** scr_armorcheck_equipped_party: how many of this armor the party wears. */
 export function partyWears(rt:GmRuntime,armor:number){
