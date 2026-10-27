@@ -15,7 +15,8 @@ function refreshParty(rt:GmRuntime,object:(name:string)=>GmObjectDef){
 export function cleanupHammer(s:GmInstance,rt:GmRuntime,object:(name:string)=>GmObjectDef){
  const g=rt.globals;rt.setSpriteOffset('spr_spearblocker',32,32);g.invc=1;g.sp=4;
  g.char[2]=0;g.char[1]=0;refreshParty(rt,object);g.submenu=0;g.charselect=-1;
- for(s.i=0;s.i<36;s.i++)g.submenucoord[s.i]=0;
+ // The source indexed write allocates this global even in a fresh battle-only session.
+ g.submenucoord??=[];for(s.i=0;s.i<36;s.i++)g.submenucoord[s.i]=0;
  for(const character of [2,3]){
   s.getchar=0;
   for(let slot=0;slot<3;slot++)if(g.char[slot]===0&&s.getchar===0){g.char[slot]=character;s.getchar=1;}

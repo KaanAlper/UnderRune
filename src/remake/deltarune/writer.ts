@@ -208,7 +208,7 @@ const SPEAKER_TYPERS:Record<string,(g:Record<string,any>)=>number>={
 };
 
 /** Each chapter owns its writer execution, selected once at the shared event boundary. */
-const WRITER:Readonly<Record<number,WriterPart>>={1:writer1,2:writer2,3:writer2};
+const WRITER:Readonly<Record<number,WriterPart>>={1:writer1,2:writer2,3:writer2,4:writer2};
 export function textType(s:GmInstance,rt:GmRuntime){forChapter(rt,WRITER,'writer').textType(s,rt);}
 export const writer:GmObjectDef={name:'obj_writer',index:10,events:{
  create:(s,rt)=>forChapter(rt,WRITER,'writer').create(s,rt),
@@ -231,7 +231,7 @@ interface FaceRules{
  asgoreExpressions:number;berdlyDark:boolean;rurusHat:boolean;queen:boolean;
  /** Chapter 3: expression 61 shows the placeholder portrait; a battle timer (battletimer) drives Tenna's pointing
   * hand, drawn whenever he speaks (fc 22). */
- placeholder:boolean;tennaHand:boolean;
+ placeholder:boolean;tennaHand:boolean;fourth?:boolean;
 }
 const FACES:Record<number,FaceRules>={
  1:{
@@ -262,6 +262,8 @@ const FACES:Record<number,FaceRules>={
   asgoreExpressions:8,berdlyDark:true,rurusHat:true,queen:true,placeholder:true,tennaHand:true,
  },
 };
+// Chapter 4 retains the later portraits, replacing Tenna with Carol.
+FACES[4]={...FACES[3],tennaHand:false,fourth:true};
 export const faceParent:GmObjectDef={name:'obj_face_parent',index:6,depth:10};
 /** Speaker portraits beside the battle text; their mouths move with the voice blips. */
 export const face:GmObjectDef={name:'obj_face',index:7,parent:faceParent,events:{
@@ -286,9 +288,16 @@ export const face:GmObjectDef={name:'obj_face',index:7,parent:faceParent,events:
    const indexed=(sprite:string,dx:number,dy:number)=>{s.face=sprite;s.face_index=fe;draw(dx,dy);};
    switch(g.fc){
     case 1:r.susie(s,rt,draw);break;
-    case 2:s.face=r.ralsei(rt);s.face_index=fe;draw(-15,-10);break;
+    case 2:
+     s.face=r.ralsei(rt);s.face_index=fe;draw(-15,-10);
+     if(r.fourth&&g.flag[1591]===1)rt.drawSprite('spr_face_r_blood',[41,48,49].includes(s.face_index)?1:0,s.x-15,s.y-10,f,f,0,C.white,1);
+     break;
     case 3:r.noelle(s,rt);draw(-12,-10);break;
-    case 4:rt.drawSprite('spr_face_tbody',0,s.x-7,s.y+29,f,f,0,C.white,1);s.face=byExpression('spr_face_t',fe,9);draw(0,0);break;
+    case 4:{
+     const church=r.fourth&&g.plot>=15&&g.plot<40;rt.drawSprite(church?'spr_face_tbody_church':'spr_face_tbody',0,s.x-7-(church?1:0),s.y+29,f,f,0,C.white,1);
+     s.face=byExpression('spr_face_t',fe,9);draw(0,0);
+     if(r.fourth&&g.flag[778]>0)rt.drawSprite('spr_face_torielblush',0,s.x,s.y,f,f,0,C.white,1);
+     break;}
     case 5:indexed('spr_face_l0',-15,-10);break;
     case 6:s.face=byExpression('spr_face_sans',fe,5);draw(0,0);break;
     case 9:indexed('spr_face_undyne',-10,0);break;
@@ -297,9 +306,9 @@ export const face:GmObjectDef={name:'obj_face',index:7,parent:faceParent,events:
     case 12:
      // Expressions 6-9 reuse the first one.
      s.face=fe>=6&&fe<=9?'spr_face_b1':byExpression('spr_face_b',fe,5);
-     if(r.berdlyDark&&g.darkzone===1){s.face='spr_face_berdly_dark';s.face_index=fe;}
+     if(r.berdlyDark&&g.darkzone===1){s.face='spr_face_berdly_dark';s.face_index=fe;}else if(r.fourth){s.face='spr_face_berdly';s.face_index=fe;}
      draw(-10,0);break;
-    case 13:s.face=byExpression('spr_face_c',fe,2);draw(-10,0);break;
+    case 13:if(r.fourth)indexed('spr_face_catti',-10,0);else{s.face=byExpression('spr_face_c',fe,2);draw(-10,0);}break;
     // Jockington's checks all test expression 1, so expression 1 shows his last face and every other his first.
     case 14:s.face=fe===1?'spr_face_jock9':'spr_face_jock0';draw(-10,0);break;
     case 15:indexed('spr_face_rudy',-12,-10);break;
@@ -312,6 +321,7 @@ export const face:GmObjectDef={name:'obj_face',index:7,parent:faceParent,events:
     case 19:indexed('spr_face_burgerpants',-5,-5);break;
     case 20:indexed('spr_face_king',-5,-5);break;
     case 21:if(r.queen)indexed('spr_face_queen',0,0);break;
+    case 22:if(r.fourth)indexed('spr_face_carol',-9,-4);break;
    }
   }
   if(r.tennaHand&&g.fc===22){

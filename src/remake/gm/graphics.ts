@@ -38,6 +38,10 @@ export interface GmGraphics{
  blendMode?(mode:BlendMode):void;
  /** gpu_set_colorwriteenable's alpha channel: false keeps the target's alpha as it is. */
  alphaWrite?(enabled:boolean):void;
+ /** An unblended alpha-only rectangle, preserving RGB. Kept separately on opaque presentation targets. */
+ alphaMaskRect?(x1:number,y1:number,x2:number,y2:number,alpha:number):void;
+ /** shd_linear_alpha: texture alpha minus one plus vertex alpha, clamped at zero. */
+ linearAlpha?(enabled:boolean):void;
  /** With blending disabled and alpha 0, a shape clears what it covers (to transparent black). */
  eraseRect?(x1:number,y1:number,x2:number,y2:number):void;
  eraseTriangle?(x1:number,y1:number,x2:number,y2:number,x3:number,y3:number):void;
@@ -61,7 +65,7 @@ export interface GmGraphics{
  text(x:number,y:number,text:string,style:TextStyle):void;
 }
 /** GameMaker blend modes the remake draws with. */
-export type BlendMode='normal'|'add'|'subtract'|'add-preserve-alpha'|'normal-preserve-alpha'|'dest-alpha-add'|'dest-alpha-copy'|'multiply';
+export type BlendMode='normal'|'add'|'subtract'|'add-preserve-alpha'|'normal-preserve-alpha'|'dest-alpha-add'|'dest-alpha-copy'|'dest-alpha-inverse'|'multiply';
 /** GML draw state (draw_set_color, draw_set_alpha, draw_set_font, draw_set_halign/valign). */
 export interface DrawState{color:number;alpha:number;font:string;halign:HAlign;valign:HAlign}
 export const C={white:0xffffff,black:0,red:0x0000ff,lime:0x00ff00,green:0x008000,aqua:0xffff00,purple:0x800080,gray:0x808080,ltgray:0xc0c0c0,yellow:0x00ffff,orange:0x40a0ff};

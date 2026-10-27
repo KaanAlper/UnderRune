@@ -248,6 +248,8 @@ export class GmRuntime{
   this.gfx.spritePos(name,frame,x1,y1,x2,y2,x3,y3,x4,y4,alpha);
  }
  drawRect(x1:number,y1:number,x2:number,y2:number,outline=false){this.gfx?.rect(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,outline);}
+ drawAlphaMaskRect(x1:number,y1:number,x2:number,y2:number,alpha:number){if(!this.gfx)return;if(!this.gfx.alphaMaskRect)throw Error('Renderer cannot write an alpha-only rectangle');this.gfx.alphaMaskRect(x1,y1,x2,y2,alpha);}
+ drawLinearAlpha(enabled:boolean){if(!this.gfx)return;if(!this.gfx.linearAlpha)throw Error('Renderer cannot draw linear texture alpha');this.gfx.linearAlpha(enabled);}
  drawLine(x1:number,y1:number,x2:number,y2:number,width?:number){if(!this.gfx)return;if(!this.gfx.line)throw Error('Graphics backend does not support line drawing');if(width===undefined)this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha);else this.gfx.line(x1,y1,x2,y2,this.drawState.color,this.drawState.alpha,width);}
  drawLineColor(x1:number,y1:number,x2:number,y2:number,color1:number,color2:number){if(!this.gfx)return;if(!this.gfx.lineColor)throw Error('Graphics backend does not support gradient lines');this.gfx.lineColor(x1,y1,x2,y2,color1,color2,this.drawState.alpha);}
  drawAlphaWrite(enabled:boolean){if(!this.gfx)return;if(!this.gfx.alphaWrite)throw Error('Renderer cannot mask alpha writes');this.gfx.alphaWrite(enabled);}

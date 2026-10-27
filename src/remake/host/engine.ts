@@ -20,9 +20,10 @@ import {sourceText} from './text';
 import {sourceEncounter,developmentEncounter} from './encounters';
 import {chapter2StartStats} from '../deltarune/chapter2';
 import {chapter3StartStats} from '../deltarune/chapter3';
+import {chapter4StartStats} from '../deltarune/chapter4';
 import {withHook} from '../deltarune/rules';
 /** Globals and flags a retry keeps: the Knight's loss advice and UltraHeal's growth survive GO BACK's room change. */
-const SESSION={globals:['knight_battle_losses','elninalosscount'],flags:[1045,1263,1264]} as const;
+const SESSION={globals:['knight_battle_losses','elninalosscount','justice_reached_25_first_time','justice_reached_50_first_time','justice_reached_75_first_time','justice_attacked_twice','justice_healed','justice_rudebuster','justice_item','justice_attempts'],flags:[1045,1263,1264]} as const;
 export type Session={globals:Record<string,unknown>;flags:Record<number,number>};
 import type {installNeoHost} from './neo';
 import type {installChapter2BossHost} from './chapter2-bosses';
@@ -32,6 +33,7 @@ import {GAME_END_ROOM,RETRY_ROOM,endBattle,gotoGameOverRoom,hasCommittedGiveUp,i
 
 /** The encounters whose enemies run on the engine, with their scr_encountersetup number and room. */
 const ENGINE:Record<string,{n:number;room:string;backdrop:boolean;presentation?:(rt:GmRuntime)=>void}>={
+ 'ch4-160':{n:160,room:'room_battletest',backdrop:false},
  'ch2-61':{n:61,room:'room_dw_mansion_b_east',backdrop:false},
  'ch2-61-weird':{n:61,room:'room_dw_mansion_fountain',backdrop:false},
  'ch2-57':{n:57,room:'room_dw_mansion_east_2f_d',backdrop:true},
@@ -67,7 +69,7 @@ export const runsOnEngine=(id:string)=>id in ENGINE;
 type ChapterHost=(rt:GmRuntime,options:{room:string})=>{objects:Record<string,GmObjectDef>;enter:(enemy:GmInstance)=>void};
 /** Each chapter's party stats at its start (Chapter 1's: BASE). */
 const START_STATS:Record<number,()=>{hp:number[];maxhp:number[];at:number[];df:number[];mag:number[]}>={
- 1:()=>({...BASE,maxhp:BASE.hp}),2:()=>chapter2StartStats(),3:()=>chapter3StartStats(),
+ 1:()=>({...BASE,maxhp:BASE.hp}),2:()=>chapter2StartStats(),3:()=>chapter3StartStats(),4:()=>chapter4StartStats(),
 };
 function forChapterStats(chapter:number){const stats=START_STATS[chapter];if(!stats)throw Error(`No Chapter ${chapter} party stats`);return stats();}
 /** Party base stats (HP, AT, DF, MAGIC for Kris, Susie, Ralsei) at this point of Chapter 1. */
@@ -192,6 +194,7 @@ export class EngineBattle{
   // Let the controller apply its normal rewards, revival and chapter hooks before removing its text.
   const c=findController(rt);
   this.scoring?.frame(g);
+  for(const [e,h] of withHook(rt,'scoringOutcome')){const how=h(e,rt);if(how){this.finishScore(how);break;}}
   if(c?.victoried===1)this.finishScore('victory');
   if(confirmSkip&&c?.victoried===1){this.skipVictory();return;}
   if(before===2&&g.mnfight===0&&!this.ending)this.turn+=1;

@@ -988,6 +988,31 @@ New scripts go in `tools/oracle-scripts.mjs`.
   game over also need their Chapter 4 source versions. Chapter 4 generated assets exist locally only.
 - Public release remains source `94f61ca` / Pages `57f2a04`. Do not deploy this incomplete battle.
 
+### 19m. Hammer full browser integration (2026-10-28)
+
+- The new Chapter 4 host binds the static enemy/shield/projectile events to 55 child actor families,
+  the type-250 sine stream, source party/controller/menu/writer/damage parts and real Canvas surfaces.
+  Main now lazy-loads Chapter 4; encounter 160 has the solo Susie public entry. Other Chapter 4 bosses stay gated.
+- Interaction acceptance covers all 21 source-selected turn queues, keyboard item selection/theft and command
+  lockout, growing OKHeal/FULL, timed Rude Buster hit-back, both source endings, damage/game over, Retry/Give Up,
+  and persistent justice dialogue history. The source ending freezes scoring before its presentation/party cleanup.
+- Keep the native empty-character stats: HP 200, max HP 250, AT 10, DF 2, MAGIC 0. The return shot reads the
+  corresponding unused battle slot. Numeric target resources 1281/1436 are object selectors, not instance IDs.
+- Sound resource discovery includes motor_* as well as snd_*. The Chapter 4 atlas/text/sound bundle and
+  gerson_theme_intro music are part of the Pages allowlist. Public builds exclude original packages/raw GML.
+- Canvas implements alpha-only rectangle masks on opaque presentation targets and shd_linear_alpha's actual
+  texture/vertex alpha formula. Pixel tests and source actor graph tests cover these operations.
+- A fresh narrow review found no active-path P1/P2 issue; its FULL indicator finding was reproduced and fixed.
+  Private debug patterns and Sound of Justice-only branches remain named unsupported operations. Do not enable
+  those encounters by assuming their shared actors prove readiness.
+- This is source-event/component and full browser-host acceptance, not a complete native frame replay of the fight.
+  Do not claim 100% audiovisual/entire-equipment parity. Follow-up validation can add native recordings.
+- Publication status is recorded after the final verification/deployment below; prior checkpoint 19l is historical.
+- Final verification: 3345 non-parity tests passed, 57 skipped; a subsequent affected-contract run passed
+  203 tests. Twelve headless browser checks and 55 tool tests passed. Typecheck and production build passed.
+  Browser actor fixtures reported no missing sprites; sampled p95 Step+Draw times were 2.5/8/11.3 ms for
+  source turns 5/10/20 on this machine (not a guarantee for all hardware).
+
 ### 19. Remaining work
 
 - The requested General chat and shell scene refactor are complete; see 19h.

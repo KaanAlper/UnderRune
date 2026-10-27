@@ -97,10 +97,10 @@ for (const name of fontNames) {
 const missing = [...names].filter(n => !sprites.some(s => s.name === n));
 const gameRoot=process.env.DELTARUNE_DIR??'C:/Program Files (x86)/Steam/steamapps/common/DELTARUNE';
 const gameChapter=path.join(gameRoot,`chapter${chapter}_windows`),data=await fs.readFile(path.join(gameChapter,'data.win'));
-const soundNames=new Set(text.match(/\bsnd_[A-Za-z0-9_]+/g)??[]),sounds={},banks=new Map([[0,data]]);
+const soundNames=new Set(text.match(/\b(?:snd_|motor_)[A-Za-z0-9_]+/g)??[]),sounds={},banks=new Map([[0,data]]);
 await fs.mkdir(path.join(out,'sounds'),{recursive:true});
 for(const sound of parseSounds(data,soundNames)){
- if(!/^snd_[A-Za-z0-9_]+$/.test(sound.name)||sound.group<0||sound.volume<0||!Number.isFinite(sound.pitch))throw Error('Invalid sound metadata');
+ if(!/^(?:snd_|motor_)[A-Za-z0-9_]+$/.test(sound.name)||sound.group<0||sound.volume<0||!Number.isFinite(sound.pitch))throw Error('Invalid sound metadata');
  if(sound.audio>=0&&!banks.has(sound.group))banks.set(sound.group,await fs.readFile(path.join(gameChapter,`audiogroup${sound.group}.dat`)));
  const sample=sound.audio===-1?await fs.readFile(path.join(gameChapter,sound.name+'.ogg')):embeddedAudio(banks.get(sound.group),sound.audio),format=sample.toString('ascii',0,4),extension=format==='RIFF'?'wav':format==='OggS'?'ogg':null;if(!extension)throw Error('Unsupported source audio: '+sound.name);
  const file=`sounds/${sound.name}.${extension}`;await fs.writeFile(path.join(out,file),sample);sounds[sound.name]={file,volume:sound.volume,pitch:sound.pitch};

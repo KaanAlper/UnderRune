@@ -101,7 +101,7 @@ export function drawBlock3({ s, rt, g, v, scripts, object, resolve, targets, cre
             (resolve(s.attack).maxindex = 4);
             (s.progress += 4);
             scripts.tensionHeal(s, 60);
-            scripts.stop(s, s.motor_swing_down);
+            scripts.stop(s, "motor_swing_down");
             (s.imageAlpha = 0);
             if (sceneTruth(lt(nativeSceneValue(g.justice_attacked_twice), nativeSceneValue(2)))) {
                 (g.justice_attacked_twice++);

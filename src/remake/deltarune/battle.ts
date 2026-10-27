@@ -25,7 +25,7 @@ export const heroRalsei:GmObjectDef={name:'obj_heroralsei',index:215,depth:100,p
 export const heroNoelle:GmObjectDef={name:'obj_heronoelle',index:378,depth:0,parent:heroParent,sprite:'spr_krisplace'};
 /** The enemy turn's darkness: it fades the screen and the heroes in; with darken = 0 it closes the box and fades out. */
 /** Per chapter: from Chapter 2 the darkener sets its own depth when made. */
-const DARKENER:Record<number,{depth?:number}>={1:{},2:{depth:205},3:{depth:205}};
+const DARKENER:Record<number,{depth?:number}>={1:{},2:{depth:205},3:{depth:205},4:{depth:205}};
 export const darkener:GmObjectDef={name:'obj_darkener',index:205,depth:200,events:{
  create:(s,rt)=>{
   const depth=forChapter(rt,DARKENER,'obj_darkener').depth;if(depth!==undefined)s.depth=depth;
@@ -59,8 +59,9 @@ export const heartBurst:GmObjectDef={name:'obj_heartburst',index:209,sprite:'spr
 export const returnHeart:GmObjectDef={name:'obj_returnheart',index:220,sprite:'spr_dodgeheart',events:{
  create:(s,rt)=>{
   s.burst=0;s.shift=1;s.imageAlpha=1;s.flytime=8;
-  const kris=rt.first(heroKris)!;s.distx=kris.x+10;s.disty=kris.y+40;
-  for(const [e,to] of withHook(rt,'soulReturnsTo'))[s.distx,s.disty]=to(e,rt);
+  const destinations=withHook(rt,'soulReturnsTo');
+  if(destinations.length){for(const [e,to] of destinations)[s.distx,s.disty]=to(e,rt);}
+  else{const kris=rt.first(heroKris)!;s.distx=kris.x+10;s.disty=kris.y+40;}
   s.dist=pointDistance(s.x,s.y,s.distx,s.disty);moveTowardsPoint(s,s.distx,s.disty,s.dist/s.flytime);
   s.alarm[0]=s.flytime;s.imageSpeed=0;
  },
@@ -117,7 +118,7 @@ export function sndFree(rt:GmRuntime,caller:GmInstance,handle:number|string){
 function freeStream(rt:GmRuntime,handle:number|string){if(rt.soundFree)rt.soundFree(handle);else rt.sourceAudio?.free(handle);}
 
 /** Per chapter: from Chapter 2 an afterimage's fading speed is its own variable (fadeSpeed), so makers can change it. */
-const AFTERIMAGE:Record<number,{ownSpeed:boolean}>={1:{ownSpeed:false},2:{ownSpeed:true},3:{ownSpeed:true}};
+const AFTERIMAGE:Record<number,{ownSpeed:boolean}>={1:{ownSpeed:false},2:{ownSpeed:true},3:{ownSpeed:true},4:{ownSpeed:true}};
 /** Fades out and goes. */
 export const afterimage:GmObjectDef={name:'obj_afterimage',index:192,events:{
  create:(s,rt)=>{if(forChapter(rt,AFTERIMAGE,'obj_afterimage').ownSpeed)s.fadeSpeed=0.04;},
@@ -130,7 +131,7 @@ export function afterImage(s:GmInstance,rt:GmRuntime){
  a.imageXscale=s.imageXscale;a.imageYscale=s.imageYscale;a.imageAngle=s.imageAngle;
  return a;
 }
-const AFTERIMAGE_GROW:Record<number,{follow:boolean}>={1:{follow:false},2:{follow:false},3:{follow:true}};
+const AFTERIMAGE_GROW:Record<number,{follow:boolean}>={1:{follow:false},2:{follow:false},3:{follow:true},4:{follow:true}};
 export const afterimageGrow:GmObjectDef={name:'obj_afterimage_grow',index:193,events:{
  create:(s,rt)=>{s.xrate=.2;s.yrate=.2;s.fade=.1;if(forChapter(rt,AFTERIMAGE_GROW,'obj_afterimage_grow').follow){s.target=-4;s.destroytime=-1;}},
  step:(s,rt)=>{
@@ -144,7 +145,7 @@ export const afterimageGrow:GmObjectDef={name:'obj_afterimage_grow',index:193,ev
 /** Camera shake: offsets the view, alternating sides, shrinking by a pixel per swing. */
 /** Per chapter: Chapter 2 keeps one shake at a time and restores the view only once it has moved it. Its
  * remembered view position has another name there (mycamerax). */
-const SHAKE:Record<number,{single:boolean;x:string;y:string}>={1:{single:false,x:'camerax',y:'cameray'},2:{single:true,x:'mycamerax',y:'mycameray'},3:{single:true,x:'mycamerax',y:'mycameray'}};
+const SHAKE:Record<number,{single:boolean;x:string;y:string}>={1:{single:false,x:'camerax',y:'cameray'},2:{single:true,x:'mycamerax',y:'mycameray'},3:{single:true,x:'mycamerax',y:'mycameray'},4:{single:true,x:'mycamerax',y:'mycameray'}};
 export const shake:GmObjectDef={name:'obj_shake',index:147,events:{
  create:(s,rt)=>{
   s.camera=0;s.shakespeed=1;s.shakesign=1;s.shakex=4;s.shakey=4;s.siner=0;s.active=0;s.permashake=0;
@@ -178,7 +179,7 @@ export {mergeColor};
  * a yellow type 6 and more messages, and is kept inside the view while fighting. Chapter 3 counts its frames
  * (mercytimer, which scr_mercyadd reads) and has two more messages: type 12 (frame 13 in red, a hero knocked out hard)
  * and type 13 (frame 14 in a blue aqua). */
-const DMG_WRITER:Record<number,{mercy:boolean;timer:boolean}>={1:{mercy:false,timer:false},2:{mercy:true,timer:false},3:{mercy:true,timer:true}};
+const DMG_WRITER:Record<number,{mercy:boolean;timer:boolean;rounded?:boolean}>={1:{mercy:false,timer:false},2:{mercy:true,timer:false},3:{mercy:true,timer:true},4:{mercy:true,timer:true,rounded:true}};
 /** The battle message sprite frame and blend for each message (blend undefined: the current colour). */
 const BATTLE_MESSAGES:Record<number,[number,number|undefined]>={1:[0,undefined],2:[1,C.red],3:[2,C.lime],4:[3,C.lime],
  5:[5,C.lime],6:[8,C.white],7:[9,C.white],8:[10,C.white],9:[11,C.white]};
@@ -190,6 +191,7 @@ export const dmgWriter:GmObjectDef={name:'obj_dmgwriter',index:312,events:{
   s.stretch=0.2;s.stretchgo=1;s.lightf=mergeColor(C.purple,C.white,0.6);s.lightb=mergeColor(C.aqua,C.white,0.5);s.lightg=mergeColor(C.lime,C.white,0.5);
   if(mercy){s.lighty=mergeColor(C.yellow,C.white,0.3);s.init=0;}
   if(forChapter(rt,DMG_WRITER,'obj_dmgwriter').timer){s.mercytimer=0;s.aqcolor=mergeColor(C.aqua,0xff0000,0.3);}
+  if(forChapter(rt,DMG_WRITER,'obj_dmgwriter').rounded){s.dkgreen=mergeColor(C.green,C.black,.05);s.nohbounce=false;}
   s.kill=0;s.killtimer=0;s.killactive=0;
   for(const o of rt.all(dmgWriter))if(o.type!==3)o.killtimer=0;
   s.specialmessage=0;
@@ -201,11 +203,11 @@ export const dmgWriter:GmObjectDef={name:'obj_dmgwriter',index:312,events:{
   s.delaytimer+=1;
   if(forChapter(rt,DMG_WRITER,'obj_dmgwriter').timer)s.mercytimer++;
   if(s.delaytimer===s.delay){s.vspeed=-5-rt.random.random(2);s.hspeed=10;s.vstart=s.vspeed;s.flip=90;}
-  if(s.delaytimer>=s.delay)writeDamage(s,rt,mercy,forChapter(rt,DMG_WRITER,'obj_dmgwriter').timer);
+  if(s.delaytimer>=s.delay)writeDamage(s,rt,mercy,forChapter(rt,DMG_WRITER,'obj_dmgwriter').timer,!!forChapter(rt,DMG_WRITER,'obj_dmgwriter').rounded);
   if(mercy&&rt.globals.fighting===1&&s.stayincamera===1&&s.x>=s.xx+600)s.x=s.xx+600;
  },
 }};
-function writeDamage(s:GmInstance,rt:GmRuntime,mercy:boolean,later:boolean){
+function writeDamage(s:GmInstance,rt:GmRuntime,mercy:boolean,later:boolean,rounded=false){
  const d=rt.drawState;
  d.color=s.type===0?s.lightb:s.type===1?s.lightf:s.type===2?s.lightg:s.type===3?C.lime:s.type===4?C.red:C.white;
  if(mercy&&s.type===5&&s.damage<0)d.color=C.ltgray;
@@ -214,21 +216,24 @@ function writeDamage(s:GmInstance,rt:GmRuntime,mercy:boolean,later:boolean){
  if(mercy&&s.type===5&&s.damage===100)s.message=5;
  if(later&&s.type===12)s.message=10;
  if(later&&s.type===13){s.message=13;d.color=s.aqcolor;}
+ if(rounded&&s.type===1.5)d.color=s.dkgreen;
+ if(rounded&&s.type===14){s.message=14;d.color=s.aqcolor;}
  d.font=mercy&&s.type===5?'damagefontgold':'damagefont';
  if(gt(s.hspeed,0))s.hspeed=s.hspeed-1;
  if(lt(s.hspeed,0))s.hspeed=s.hspeed+1;
  if(lt(Math.abs(s.hspeed),1))s.hspeed=0;
+ if(rounded&&s.nohbounce)s.hspeed=0;
  if(mercy&&s.init===0){
-  s.damagemessage=String(s.damage);
-  if(s.type===5)s.damagemessage='+'+String(s.damage)+'%';
-  if(s.type===5&&s.damage<0)s.damagemessage=String(s.damage)+'%';
+  const amount=rounded?round(s.damage):s.damage;s.damagemessage=String(amount);
+  if(s.type===5)s.damagemessage='+'+String(amount)+'%';
+  if(s.type===5&&s.damage<0)s.damagemessage=String(amount)+'%';
   s.init=1;
  }
  if(s.message===0){
   d.alpha=1-s.kill;d.halign=2;rt.drawText(s.x+30,s.y,mercy?s.damagemessage:String(s.damage),2-s.stretch,s.stretch+s.kill,s.spec===1?90:0);d.halign=0;d.alpha=1;
  }else{
   // Chapter 1 has the first four messages only.
-  const m=later&&s.message===10?[13,C.red] as const:later&&s.message===13?[14,s.aqcolor] as const:BATTLE_MESSAGES[s.message];
+  const m=rounded&&s.message===14?[16,s.aqcolor] as const:later&&s.message===10?[13,C.red] as const:later&&s.message===13?[14,s.aqcolor] as const:BATTLE_MESSAGES[s.message];
   if(m&&(mercy||s.message<=4))rt.drawSprite(mercy?s.message_sprite:'spr_battlemsg',m[0],s.x+30,s.y,2-s.stretch,s.stretch+s.kill,0,m[1]??d.color,1-s.kill);
  }
  if(s.bounces<2)s.vspeed=s.vspeed+1;
@@ -279,7 +284,7 @@ export const bulletParent:GmObjectDef={name:'obj_bulletparent',index:199};
 /** A bullet that hurts the soul on contact (User Event 5 runs the damage, then the bullet is gone). */
 /** Per chapter: Chapter 2 bullets start from scr_bullet_init, may survive a hit (destroyonhit), reach further out of
  * view before they go, and can turn with their direction, spin or fade near the bottom. */
-const BULLETS:Record<number,{v2:boolean;bounds:[number,number,number,number]}>={1:{v2:false,bounds:[40,680,40,520]},2:{v2:true,bounds:[80,760,80,580]},3:{v2:true,bounds:[80,760,80,580]}};
+const BULLETS:Record<number,{v2:boolean;bounds:[number,number,number,number]}>={1:{v2:false,bounds:[40,680,40,520]},2:{v2:true,bounds:[80,760,80,580]},3:{v2:true,bounds:[80,760,80,580]},4:{v2:true,bounds:[80,760,80,580]}};
 /** scr_bullet_init (Chapter 2): a bullet's starting fields. */
 export function bulletInit(s:GmInstance){
  Object.assign(s,{grazed:0,grazetimer:0,destroyonhit:1,target:0,inv:60,damage:10,element:0,grazepoints:1,timepoints:1,active:1,updateimageangle:0});
@@ -577,6 +582,8 @@ export function damageCheck(rt:GmRuntime,before:number[]){
 }
 /** What differs in scr_damage between chapters. */
 interface DamageRules{
+ readonly cacheContact?:boolean;
+ readonly proportionalAll?:boolean;
  /** Chapter 1 honours its debug god switch (global.chemg_god_mode). */
  readonly godSwitch:boolean;
  /** The damage a hit does through the defense of the hero in this party slot. */
@@ -599,6 +606,7 @@ const DAMAGE:Record<number,DamageRules>={
   partyHit:(rt,d,slot)=>[d,rt.globals.charaction[slot]===10?Math.ceil(d/2):d]},
  2:{godSwitch:false,elements:true,invFrames:40,allChecks:true,yarnShake:false,defense:damageCalculation,partyHit:partyHit2},
  3:{godSwitch:false,elements:true,invFrames:30,allChecks:false,yarnShake:true,defense:damageCalculation,partyHit:partyHit2},
+ 4:{godSwitch:false,elements:true,invFrames:40,allChecks:false,yarnShake:true,defense:damageCalculation,partyHit:partyHit2,cacheContact:true,proportionalAll:true},
 };
 /** Chapter 2 on: defense, then the enemy's cut, then element resistance (unless a cut was made), then defending. */
 function partyHit2(rt:GmRuntime,d:number,slot:number,element:number,reduce:(slot:number,damage:number)=>number|undefined,mantle:{cut:boolean}):[number,number]{
@@ -647,6 +655,7 @@ function damageContact(s:GmInstance,rt:GmRuntime,contact:{defense:boolean;defend
  const g=rt.globals,r=forChapter(rt,DAMAGE,'scr_damage');
  if(g.inv>=0||(r.godSwitch&&g.chemg_god_mode))return;
  const before=hpOf(rt),hook=<K extends keyof BattleHooks>(name:K):[GmInstance,NonNullable<BattleHooks[K]>][]=>contact.hooks?withHook(rt,name):[];
+ if(r.cacheContact)g.damage_cache=[...before];
  for(const [e,h] of hook('onPartyHit'))h(e,rt);
  const element=r.elements&&'element' in s&&typeof s.element==='number'?s.element:0;
  if(s.target<3&&le(g.hp[g.char[s.target]],0)){
@@ -696,6 +705,7 @@ function damageContact(s:GmInstance,rt:GmRuntime,contact:{defense:boolean;defend
     else{s.hpdiff=Math.abs(g.hp[ct]-g.maxhp[ct]/2);s.doomtype=4;g.hp[ct]=round(-g.maxhp[ct]/2);dead(rt,s.target);}
    }
   }
+  for(const [e,h] of hook('prepareContactDamageText'))h(e,s,rt);
   const ci=rt.byId(g.charinstance[s.target])!;
   const w=rt.create(dmgWriter,ci.x,ci.y+ci.myheight-24);s.dmgwriter=w.id;w.damage=s.hpdiff;w.type=s.doomtype;
  }
@@ -720,10 +730,11 @@ function damageContact(s:GmInstance,rt:GmRuntime,contact:{defense:boolean;defend
  if(remtarget!==-1)s.target=remtarget;
 }
 /** scr_damage_all: the bullet hits every standing party member. */
-export function damageAll(s:GmInstance,rt:GmRuntime){
+export function damageAll(s:GmInstance,rt:GmRuntime,proportion=1){
  const g=rt.globals;if(g.inv>=0)return;
  const before=hpOf(rt);s.remdamage=s.damage;s._temptarget=s.target;
- for(s.ti=0;s.ti<3;s.ti+=1){g.inv=-1;s.damage=s.remdamage;s.target=s.ti;if(gt(g.hp[g.char[s.ti]],0)&&g.char[s.ti]!==0)damage(s,rt);}
+ const profile=forChapter(rt,DAMAGE,'scr_damage_all');
+ for(s.ti=0;s.ti<3;s.ti+=1){g.inv=-1;s.damage=s.remdamage;if(profile.proportionalAll)s.damage*=g.hp[g.char[s.ti]]/g.maxhp[g.char[s.ti]]*(1-proportion)+proportion;s.target=s.ti;if(gt(g.hp[g.char[s.ti]],0)&&g.char[s.ti]!==0)damage(s,rt);}
  const r=forChapter(rt,DAMAGE,'scr_damage_all');g.inv=g.invc*r.invFrames;s.target=s._temptarget;if(r.allChecks)damageCheck(rt,before);
 }
 /** scr_damage_proportional: late attack contact uses current HP bands, then the old defense calculation.

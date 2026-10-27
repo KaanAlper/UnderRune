@@ -53,7 +53,7 @@ export function stepControllerMenus2(s:GmInstance,rt:GmRuntime){
    s.onebuffer=2;g.bmenuno=0;s.selnoise=1;itemInfo(s,s.tempitem[cur()][t()],rt);
    if(s.itemtarget===0||s.itemtarget===2){
     const item=s.tempitem[cur()][t()];
-    if(item>=27&&item<=29){
+    if(item>=27&&item<=29&&!withHook(rt,'takesImmediateItem').some(([e,h])=>h(e,s,rt,item))){
      tensionHeal(rt,item===27?80:item===28?Math.ceil(g.maxtension/2):Math.ceil(g.maxtension));
      const host=g.onChapter2TensionItemSound as ((name:string,pitch:number,volume:number)=>void)|undefined;
      if(host)host('snd_cardrive',1.4,0.8);else if(rt.sourceAudio)rt.sourceAudio.effect('snd_cardrive',1.4,0.8);else rt.sound?.('snd_cardrive',1.4);

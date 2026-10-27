@@ -144,6 +144,10 @@ export interface BattleHooks{
  catchesKnockout?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** scr_damage (Chapter 3) first tells the enemy the party was hit (the Roaring Knight's progamer). */
  onPartyHit?(enemy:GmInstance,rt:GmRuntime):void;
+ /** After HP is deducted, before contact damage text is created. */
+ prepareContactDamageText?(enemy:GmInstance,bullet:GmInstance,rt:GmRuntime):void;
+ /** Encounter-owned item interception before an immediate TP item takes effect. */
+ takesImmediateItem?(enemy:GmInstance,controller:GmInstance,rt:GmRuntime,item:number):boolean;
  /** While this object exists, hits skip defense, defending, armor and element (the Knight's roar). */
  dealsTrueDamage?(self:GmInstance,rt:GmRuntime):boolean;
  /** Before an ordinary hit is measured, the enemy may change its target (the bullet's target field). */
@@ -164,6 +168,8 @@ export interface BattleHooks{
  battleOutcome?(enemy:GmInstance,rt:GmRuntime):'victory'|'defeat'|undefined;
  /** Host confirm may dismiss this enemy's ending text; this never declares a battle outcome. */
  canSkipEndingText?(enemy:GmInstance,rt:GmRuntime):boolean;
+ /** A source-committed result freezes scoring while its ending presentation continues. */
+ scoringOutcome?(enemy:GmInstance,rt:GmRuntime):'victory'|'defeat'|undefined;
  /** No game over when the whole party is down (the battle ends its own way). */
  preventsGameOver?(enemy:GmInstance,rt:GmRuntime):boolean;
  /** Chapter 3's FIGHT: the enemy blocks the hits now (no slash; onFightBlocked instead). */

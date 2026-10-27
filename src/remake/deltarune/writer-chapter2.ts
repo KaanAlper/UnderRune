@@ -42,7 +42,7 @@ function playSound(rt:GmRuntime,name:string,pitch=1,volume?:number){
  rt.sound?.(name,pitch);return name;
 }
 function textSound2(s:GmInstance,rt:GmRuntime){
- s.playtextsound=skipHeld(rt)?0:1;if(s.skippable===0)s.playtextsound=1;if(s.playtextsound!==1)return;
+ s.playtextsound=skipHeld(rt)&&!(wch(rt).fourth&&s.runcheck)?0:1;if(s.skippable===0)s.playtextsound=1;if(s.playtextsound!==1)return;
  s.getchar=at(s.mystring,s.rate<=2?s.pos:s.pos-1);s.play=1;s.playcheck=0;
  if(s.getchar==='&'||s.getchar==='\n'){if(lt(s.rate,3)){s.playcheck=1;s.getchar=at(s.mystring,s.pos+1);}else s.play=0;}
  if(SILENT.has(s.getchar))s.play=0;if(s.play!==1)return;
@@ -52,6 +52,10 @@ function textSound2(s:GmInstance,rt:GmRuntime){
   rt.soundStop?.('snd_txtspam2');playSound(rt,'snd_txtspam2',1.2,.8);s.sound_timer=2;
  }else if(s.textsound==='snd_txtsans'){
   rt.soundStop?.('snd_txtsans');s.qv=playSound(rt,'snd_txtsans');s.sound_timer=2;
+ }else if(wch(rt).fourth&&(s.textsound==='snd_txtjack_high_cute'||s.textsound==='snd_txtjack_low2')){
+  rt.soundStop?.(s.textsound);s.qv=playSound(rt,s.textsound);s.qp=.75+rt.random.random(.5);rt.soundPitch?.(s.qv,s.qp);s.sound_timer=3;
+ }else if(wch(rt).fourth&&s.textsound==='snd_txger'){
+  rt.soundStop?.('snd_txger');const pitch=rt.random.choose(1,1,1-rt.random.random(.2));rt.random.choose(82);s.qv=playSound(rt,'snd_txger',pitch);s.sound_timer=3;
  }else if(s.textsound==='snd_tv_voice_short'){
   const g=rt.globals,clip=rt.random.irandom(8)+1;if(g.flag[1054]<=0)g.flag[1054]=1;
   const pitch=(.86+rt.random.random(.35))*g.flag[1054],name='snd_tv_voice_short'+(clip>=2?'_'+clip:'');
@@ -73,6 +77,7 @@ function create(s:GmInstance,rt:GmRuntime){
  Object.assign(s,{skipme:0,forcebutton1:0,textsound:'snd_text',charline:33,originalcharline:33,hspace:8,vspace:18,rate:1,mycolor:C.white,myfont:'fnt_main',shake:0,special:0,skippable:rt.globals.flag[6]===1?0:1,automash_timer:0,f:rt.globals.darkzone===1?2:1,prevent_mash_buffer:0,formattext:true});
  // The end sound keeps the original's sound number (only fixed text sets reachedend_sound_play).
  if(later)Object.assign(s,{textalpha:1,textalphagain:0,fadeonend:0,shadcolor:0x6fd213,reachedend_sound:259,reachedend_sound_played:0,reachedend_sound_play:0});
+ if(wch(rt).fourth){Object.assign(s,{runcheck:false,disablebutton1:false,preventcskip:false,hangonpos:false,reachedend_sound:305});delete s.shadcolor;}
  textType2(s,rt);
  Object.assign(s,{autoaster:1,drawaster:1,pos:2,lineno:0,aster:0,halt:0,reachedend:0,xcolor:C.black,wxskip:0,msgno:0,first_alarm:0,firstnoise:0,noiseskip:0,formatted:0,colorchange:0,fontchange:0,sound_played:0,sound_timer:0,sound_count:0,jpspecial:0,jpused:0,writingx:s.x,writingy:s.y,dialoguer:0,smallface:505050,faced:0,facedever:0,facer:0,siner:0,specfade:1,autocenter:0,miniface_current_pos:-1,miniface_pos:0,miniface_drawn:0});
  for(s.i=0;s.i<7;s.i++){gmArray(s,'specx')[s.i]=s.i*6;gmArray(s,'specy')[s.i]=s.i*6;}
@@ -101,6 +106,7 @@ function alarm0(s:GmInstance,rt:GmRuntime){
  end();
 }
 const FACES:Readonly<Record<string,number>>={'0':0,S:1,R:2,N:3,T:4,L:5,s:6,U:9,A:10,a:11,B:12,b:19,r:15,u:18,K:20,Q:21};
+const CHAPTER4_FACES:Readonly<Record<string,number>>={...FACES,C:22,y:17,i:13};
 function expression(s:GmInstance,rt:GmRuntime){
  s.__nextface=s.nextchar2.charCodeAt(0);
  if(s.__nextface>=48&&s.__nextface<=57)rt.globals.fe=Number(s.nextchar2);
@@ -113,7 +119,7 @@ function format(s:GmInstance,rt:GmRuntime){
  if(s.dialoguer===1){
   s.charline=g.fc===0?s.originalcharline:26;
   // Chapter 3: Tenna's lines are longer and further apart (30 between lines, as a writer is always there).
-  if(wch(rt).later&&g.fc===22){s.charline=30;s.vspace=28;if(rt.instances.some(i=>i.live&&belongsTo(i,'obj_writer')))s.vspace=30;}
+  if(wch(rt).tenna&&g.fc===22){s.charline=30;s.vspace=28;if(rt.instances.some(i=>i.live&&belongsTo(i,'obj_writer')))s.vspace=30;}
   s.writingx=g.fc===0?s.x:s.x+58*s.f;
   const dialoguer=rt.instances.find(i=>i.live&&belongsTo(i,'obj_dialoguer'));
   if(dialoguer?.zurasucon===2)s.writingx=rt.view.x+dialoguer.remwriterx+(g.fc>0?58*s.f:0);
@@ -128,7 +134,7 @@ function format(s:GmInstance,rt:GmRuntime){
    if(gt(s.charpos,-1))s.charpos-=3;
    if(s.dialoguer===1){s.nextchar=at(s.mystring,s.i+1);s.nextchar2=at(s.mystring,s.i+2);
     if(s.nextchar==='E')expression(s,rt);
-    if(s.nextchar==='F'){if(FACES[s.nextchar2]!==undefined&&s.nextchar2!=='b')g.fc=FACES[s.nextchar2];s.charline=g.fc===0?s.originalcharline:26;s.writingx=g.fc===0?s.x:s.x+58*s.f;}
+    if(s.nextchar==='F'){if((wch(rt).fourth?CHAPTER4_FACES:FACES)[s.nextchar2]!==undefined&&s.nextchar2!=='b')g.fc=(wch(rt).fourth?CHAPTER4_FACES:FACES)[s.nextchar2];s.charline=g.fc===0?s.originalcharline:26;s.writingx=g.fc===0?s.x:s.x+58*s.f;}
     if(s.nextchar==='m')s.drawaster=0;if(s.nextchar==='s'&&s.nextchar2==='0')s.skippable=0;
     if(s.nextchar==='O'&&wch(rt).later)throw Error('Chapter 3 writer objects (\\O) are not ported');
    }
@@ -174,7 +180,7 @@ function drawCharacter(s:GmInstance,rt:GmRuntime){
   for(const [x,y] of [[1,0],[-1,0],[0,1],[0,-1]])rt.drawText(s.wx+x,s.wy+y,s.mychar);
   d.alpha=(.08+Math.sin(s.siner/14)*.04)*s.specfade;for(const [x,y] of [[1,1],[-1,-1],[-1,1],[1,-1]])rt.drawText(s.wx+x,s.wy+y,s.mychar);d.alpha=1;
  }
- if(s.special===5){
+ if(s.special===5&&!wch(rt).fourth){
   // Arguments run right to left: each shake draws y's offset before x's.
   d.alpha=.25;d.color=s.shadcolor;
   {const [x,y]=shake();rt.drawText(s.wx+x,s.wy+1+y,s.mychar);}
@@ -200,10 +206,11 @@ function draw(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,d=rt.drawState;Object.assign(s,{button1:0,button2:0,button3:0,miniface_drawn:-1});
  if(confirm(rt)&&le(s.prevent_mash_buffer,0))s.button1=1;if(skipHeld(rt)&&le(s.prevent_mash_buffer,0))s.button2=1;
  // scr_debug() in the installed game returns 0; automash is enabled by flag 10.
- if(g.flag[10]===1&&rt.input.held.has(KEY.c)){s.prevent_mash_buffer=3;s.automash_timer=s.automash_timer===0?1:0;if(s.automash_timer===0)s.button1=1;else s.button2=1;}
+ if(g.flag[10]===1&&(!wch(rt).fourth||!s.preventcskip||rt.input.pressed.has(KEY.c)||rt.input.pressed.has(KEY.ctrl))&&(rt.input.held.has(KEY.c)||(wch(rt).fourth&&rt.input.held.has(KEY.ctrl)))){s.prevent_mash_buffer=3;s.automash_timer=s.automash_timer===0?1:0;if(s.automash_timer===0)s.button1=1;else s.button2=1;}
+ if(wch(rt).fourth&&s.disablebutton1)s.button1=0;
  if(s.forcebutton1)s.button1=1;s.prevent_mash_buffer--;
  const ch=wch(rt);
- if(ch.later&&rt.instances.some(i=>i.live&&belongsTo(i,'obj_rouxls_ch3_enemy')))throw Error("Chapter 3 Rouxls's writer spacing (vspacechange) is not ported");
+ if(ch.tenna&&rt.instances.some(i=>i.live&&belongsTo(i,'obj_rouxls_ch3_enemy')))throw Error("Chapter 3 Rouxls's writer spacing (vspacechange) is not ported");
  if(s.formatted===0)format(s,rt);
  s.accept=0;s.wx=s.writingx;s.wy=s.writingy;s.colorchange=0;d.font=s.myfont;d.color=s.mycolor;
  if(ch.later){
@@ -211,7 +218,8 @@ function draw(s:GmInstance,rt:GmRuntime){
   if(s.textalphagain!==0)s.textalpha=Math.max(0,Math.min(1,s.textalpha+s.textalphagain));
   if(s.textalpha!==1)d.alpha=s.textalpha;
  }
- if(s.halt===0&&s.button2===1&&lt(s.pos,s.length)&&s.skippable===1)s.skipme=1;
+ if(ch.fourth&&s.runcheck&&((!skipHeld(rt)&&!rt.input.pressed.has(KEY.x)&&!rt.input.pressed.has(KEY.shift))||rt.input.held.has(KEY.c)||rt.input.pressed.has(KEY.c)||rt.input.held.has(KEY.ctrl)||rt.input.pressed.has(KEY.ctrl)))s.runcheck=false;
+ if((!ch.fourth||!s.runcheck)&&s.halt===0&&s.button2===1&&lt(s.pos,s.length)&&s.skippable===1)s.skipme=1;
  if(s.skipme===1){s.pos=s.mystring.length+1;s.reachedend=1;s.alarm[0]=-1;s.alarm[1]=-1;}
  for(s.n=1;lt(s.n,s.pos);s.n++){
   s.accept=1;s.mychar=at(s.mystring,s.n);
@@ -227,7 +235,7 @@ function draw(s:GmInstance,rt:GmRuntime){
    s.nextchar=at(s.mystring,s.n+1);s.nextchar2=at(s.mystring,s.n+2);
    if(s.nextchar==='E')expression(s,rt);
    if(s.nextchar==='F'){
-    if(FACES[s.nextchar2]!==undefined)g.fc=FACES[s.nextchar2];if(s.dialoguer===1){s.charline=g.fc===0?s.originalcharline:26;s.wx=g.fc===0?s.x:s.x+58*s.f;}
+    if((ch.fourth?CHAPTER4_FACES:FACES)[s.nextchar2]!==undefined)g.fc=(ch.fourth?CHAPTER4_FACES:FACES)[s.nextchar2];if(s.dialoguer===1){s.charline=g.fc===0?s.originalcharline:26;s.wx=g.fc===0?s.x:s.x+58*s.f;}
    }
    if(s.nextchar==='f'&&s.faced===0){if(!g.onChapter2SmallFace)throw Error('Chapter 2 writer small-face host is not installed');g.onChapter2SmallFace(s,s.nextchar2);}
    if(s.nextchar==='*')throw Error('Chapter 2 writer button sprite resolver is not ported');
@@ -267,7 +275,7 @@ function draw(s:GmInstance,rt:GmRuntime){
 /** The writer's chapter differences. */
 interface WriterChapter{voices:Readonly<Record<number,VoiceOf>>;speakers:Readonly<Record<string,(g:Record<string,any>)=>number>>;colors:Readonly<Record<string,number>>;
  /** Chapter 3's additions: fading text, the end sound, writer objects, special style 5, Tenna's spacing. */
- later:boolean;}
+ later:boolean;tenna?:boolean;fourth?:boolean;}
 const BOARD_ROOMS=new Set(['room_board_preshadowmantle','room_shadowmantle','room_board_dungeon_2']);
 const WRITER_CHAPTERS:Readonly<Record<number,WriterChapter>>={
  2:{voices:VOICES,speakers:SPEAKERS,colors:COLORS,later:false},
@@ -280,7 +288,12 @@ const WRITER_CHAPTERS:Readonly<Record<number,WriterChapter>>={
   },
   speakers:{...SPEAKERS,v:g=>g.fighting===1?81:80},
   colors:{...COLORS,I:0xffc081},
-  later:true,
+  later:true,tenna:true,
+ },
+ 4:{
+  voices:{...VOICES,17:main('snd_txtund'),79:big('snd_txtsus',36,2,18),80:main('snd_nosound'),81:{...dotum('snd_nosound'),color:C.white},82:big('snd_txtjack_high_cute'),83:big('snd_txtjack_low2'),84:big('snd_tv_voice_short'),85:big('snd_txger'),86:dotum('snd_txger'),87:main('snd_txtcar'),88:dotum('snd_txtjack_low2'),100:{...main('snd_text',1,16,20),font:'fnt_8bit',charline:22}},
+  speakers:{...SPEAKERS,C:()=>87,k:()=>82,j:()=>83,g:()=>85,v:()=>84},
+  colors:{...COLORS,O:0x00a5ff,A:0xffae00},later:true,fourth:true,
  },
 };
 const wch=(rt:GmRuntime)=>forChapter(rt,WRITER_CHAPTERS,'writer');

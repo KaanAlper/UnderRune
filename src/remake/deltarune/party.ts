@@ -13,6 +13,7 @@ import {attackPhase,button1_p,button2_p,button3_p,itemShift,mercyAdd,monsterDefe
 import {spellMenuSetupChapter2,teaAmountChapter2,sideBPhase} from './chapter2';
 import {forChapter,hooksOf,rules,withHook} from './rules';
 import {castSleepMist,castIceShock} from './noelle-spells';
+import type {} from './chapter4-party-hooks';
 
 const destroyId=(rt:GmRuntime,id:number)=>{const i=rt.byId(id);if(i)rt.destroy(i);};
 const isHero=(i:GmInstance,name:string)=>i.object.name===name;
@@ -55,6 +56,7 @@ const HERO_LOOKS:Record<number,{sprites:Record<string,Record<string,string>>;fra
  1:{sprites:SPRITES,frames:FRAMES},
  2:{sprites:{...SPRITES,obj_heroralsei:RALSEI_CH2,obj_heronoelle:NOELLE_CH2},frames:{...FRAMES,obj_heroralsei:[8,12,6,6,7,10,0.5,52,86],obj_heronoelle:[7,11,4,9,0,6,0.5,52,86]}},
  3:{sprites:{...SPRITES,obj_heroralsei:RALSEI_CH2,obj_heronoelle:NOELLE_CH2},frames:{...FRAMES,obj_heroralsei:[7,10,6,6,7,10,0.5,52,86],obj_heronoelle:[7,10,4,9,0,6,0.5,52,86]}},
+ 4:{sprites:{...SPRITES,obj_heroralsei:RALSEI_CH2,obj_heronoelle:NOELLE_CH2},frames:{...FRAMES,obj_heroralsei:[7,10,6,6,7,10,0.5,52,86],obj_heronoelle:[7,10,4,9,0,6,0.5,52,86]}},
 };
 function heroCreate(s:GmInstance,rt:GmRuntime){
  Object.assign(s,{char:0,myself:0,points:0,becomeflash:0,state:0,flash:0,siner:0,fsiner:0,attacktimer:0,attacked:0,combatdarken:1,darkentimer:0,darkify:0,
@@ -76,6 +78,7 @@ function heroCreate(s:GmInstance,rt:GmRuntime){
   if(rt.instances.some(i=>i.live&&i.object.name==='obj_tenna_board4_enemy'))throw Error("Chapter 3 heroes in Tenna's board battle are not ported");
   // Susie's fallen sprite in encounter 115 comes from the Roaring Knight's Create (and his defeatSprite hook).
   Object.assign(s,{_sideb:0,_victoried:0,maxframes:0,force:0,finishattacktimer:0,spelltimer:0,gotupcon:0,gachapondead:0,thissprite:s.idlesprite,actspriteobject:-1,caster:0});
+  if(rt.globals.chapter===4){delete s.gotupcon;delete s.gachapondead;s.remspellframes=s.spellframes;s.remspellsprite=s.spellsprite;s.showdarkness=true;}
  }
 }
 function heroDraw(s:GmInstance,rt:GmRuntime){
@@ -227,7 +230,7 @@ function heroSpell(s:GmInstance,rt:GmRuntime){
 function heroStep3(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,me=s.myself as number;
  if(g.hp[g.char[me]]>0){
-  if(s.gachapondead){s.gachapondead=0;s.x=s.xstart;s.y=s.ystart;}
+  if(g.chapter===3&&s.gachapondead){s.gachapondead=0;s.x=s.xstart;s.y=s.ystart;}
   if(g.myfight===3&&g.faceaction[me]===6&&s.state!==8)s.state=6;
   if(s.state===0&&s.hurt===0){
    s.acttimer=0;s.thissprite=s.idlesprite;
@@ -245,6 +248,7 @@ function heroStep3(s:GmInstance,rt:GmRuntime){
    if(s.attacked===0){
     const pitch=isHero(s,'obj_heroralsei')?1.15:isHero(s,'obj_herosusie')?0.9:isHero(s,'obj_heronoelle')?1.5:1;
     rt.sound?.('snd_laz_c',pitch,true);
+    if(g.chapter===4)for(const [e,h] of withHook(rt,'onHeroAttackStart'))h(e,s,rt);
     if(s.points===150){
      rt.sound?.('snd_criticalswing',1,true);
      for(let i=0;i<3;i++){
@@ -272,6 +276,7 @@ function heroStep3(s:GmInstance,rt:GmRuntime){
    s.imageIndex=s.attacktimer<s.itemframes?s.attacktimer:s.itemframes;
    if(monsterPop(rt)===0)s.attacktimer=0;
    s.index=s.imageIndex;s.thissprite=s.itemsprite;s.attacktimer+=0.5;
+   if(g.chapter===4&&eq(s.attacktimer,2))for(const [e,h] of withHook(rt,'onHeroItemAnimation'))h(e,s,rt);
   }
   if(s.state===6){
    if(g.myfight===3){if(s.acttimer<s.actframes)s.acttimer+=0.5;}else s.acttimer+=0.5;
@@ -284,7 +289,7 @@ function heroStep3(s:GmInstance,rt:GmRuntime){
    if(s.victoryanim<s.victoryframes){s.thissprite=s.victorysprite;s.index=s.victoryanim;s.victoryanim+=0.334;}
    else{s.thissprite=s.normalsprite;s.index=0;}
   }
-  if(s.state===8&&ge(s.imageIndex+s.imageSpeed,s.maxframes)&&s.maxframes!==0){s.state=0;s.hurt=0;s.attacktimer=0;s.maxframes=0;}
+  if(s.state===8&&ge(s.imageIndex+s.imageSpeed,s.maxframes)&&s.maxframes!==0){s.state=0;s.hurt=0;s.attacktimer=0;s.maxframes=0;if(g.chapter===4){g.faceaction[me]=0;s.thissprite=s.idlesprite;}}
   if(s.hurt===1&&g.hp[g.char[me]]>0){
    s.hurtindex=Math.min(2,s.hurttimer/2);
    if(g.charcond[me]===5){g.faceaction[me]=5;g.charmove[me]=1;g.charcond[me]=0;}
@@ -292,10 +297,10 @@ function heroStep3(s:GmInstance,rt:GmRuntime){
    if(s.hurttimer>15){s.hurttimer=0;s.hurt=0;if(g.faceaction[me]===5)g.faceaction[me]=0;}
    s.hurttimer+=1;
   }
-  if(s.gotupcon===1)s.gotupcon=0;
+  if(g.chapter===3&&s.gotupcon===1)s.gotupcon=0;
  }else{
   g.charcond[me]=0;s.hurttimer=0;s.hurt=0;
-  for(const [e,h] of withHook(rt,'defeatSprite')){const sprite=h(e,s,rt);if(sprite!==undefined)s.defeatsprite=sprite;}
+  if(g.chapter===3)for(const [e,h] of withHook(rt,'defeatSprite')){const sprite=h(e,s,rt);if(sprite!==undefined)s.defeatsprite=sprite;}
   s.thissprite=s.defeatsprite;s.index=0;s.siner+=1;
  }
  if(g.targeted[me]!==1&&s.combatdarken===1&&rt.instances.some(i=>i.live&&i.object.name==='obj_darkener')&&s.darkify===1){
@@ -313,16 +318,16 @@ function heroStep3(s:GmInstance,rt:GmRuntime){
  }
 }
 function heroDraw3(s:GmInstance,rt:GmRuntime){
- const g=rt.globals,me=s.myself as number,scale=s.normalsprite==='spr_gameshow_drowningRalsei_ralsei_origin_edit'?1:2;
+ const g=rt.globals,me=s.myself as number,scale=g.chapter===3&&s.normalsprite==='spr_gameshow_drowningRalsei_ralsei_origin_edit'?1:2;
  if(s.hurt===1&&s.state!==8&&g.hp[g.char[me]]>0){
   s.specdraw=1;
   if(g.faceaction[me]!==4)rt.drawSprite(s.hurtsprite,s.hurtindex,s.x-20+s.hurtindex*10,s.y,scale,scale,0,s.imageBlend,s.imageAlpha);
   else{s.thissprite=s.defendsprite;s.index=s.defendtimer;rt.drawSprite(s.defendsprite,s.defendtimer,s.x-20+s.hurtindex*10,s.y,scale,scale,0,s.imageBlend,s.imageAlpha);}
  }
  if(s.specdraw===0&&s.state!==8){
-  // The blend is reset to white before drawing, so the darkening the Step computes does not show.
-  s.sprite=s.thissprite;s.imageIndex=s.index;s.imageBlend=C.white;
-  rt.drawSprite(s.thissprite,s.index,s.x,s.y,scale,scale,0,s.imageBlend,s.imageAlpha);
+  // Chapter 3 resets the blend to white; Chapter 4 retains the Step's darkening.
+  s.sprite=s.thissprite;s.imageIndex=s.index;if(g.chapter!==4)s.imageBlend=C.white;
+  rt.drawSprite(s.thissprite,s.index,s.x,s.y,g.chapter===4&&s.imageXscale===-2?-2:scale,scale,0,s.imageBlend,s.imageAlpha);
   if(s.flash===1){s.fsiner+=1;rt.drawSpriteFog(s.thissprite,s.index,s.x,s.y,scale,scale,0,C.white,-Math.cos(s.fsiner/5)*0.4+0.6);}
  }
  if(s.state===8)rt.drawSelf(s);
@@ -339,6 +344,11 @@ function heroHit3(s:GmInstance,rt:GmRuntime){
  for(const [e,h] of withHook(rt,'scalesFightDamage'))s.damage=h(e,s,rt,s.damage);
  damageEnemy(s,rt,t,s.damage);
  const dm=rt.byId(s.dm)!;dm.type=s.char===4?6:s.char-1;dm.delay=8;
+ if(g.chapter===4&&s.object.name==='obj_herosusie'&&g.charweapon.includes(54)){
+  let healing={target:1,amount:Math.ceil(g.maxhp[2]*0.1)};
+  for(const [e,h] of withHook(rt,'modifyFightHeal'))healing=h(e,s,rt,healing);
+  s.star=healing.target;healItemUnmodified(s,rt,healing.amount);
+ }
  if(s.damage>0){
   tensionHeal(rt,round(s.points/10));
   if(blocked)for(const [e,h] of withHook(rt,'onFightBlocked'))h(e,rt);
@@ -358,6 +368,7 @@ const HERO_PARTS:Readonly<Record<number,HeroParts>>={
  1:{sideB:false,later:false,targetMarker:true,events:{draw:heroDraw,alarm1:heroHit,alarm4:heroSpell}},
  2:{sideB:true,later:false,targetMarker:false,events:{draw:heroDraw,alarm1:heroHit,alarm4:heroSpell}},
  3:{sideB:true,later:true,targetMarker:false,events:{step:heroStep3,draw:heroDraw3,user0:()=>{throw Error("Chapter 3 heroes' User 0 (Tenna's and Shutta's battles) is not ported");}}},
+ 4:{sideB:true,later:true,targetMarker:false,events:{step:heroStep3,draw:heroDraw3}},
 };
 function heroParts(rt:GmRuntime){return forChapter(rt,HERO_PARTS,'obj_heroparent');}
 const heroEvent=(name:'step'|'draw'|'alarm1'|'alarm4'|'user0')=>(s:GmInstance,rt:GmRuntime)=>heroParts(rt).events[name]?.(s,rt);
@@ -398,7 +409,11 @@ export function healShow(h:GmInstance,rt:GmRuntime,amount:number){
 }
 /** scr_healitemspell, run by the caster: heals party slot `star`. */
 export function healItem(s:GmInstance,rt:GmRuntime,amount:number){
- const g=rt.globals;amount=healByEquipment(s,rt,amount);heal(s,rt,s.star,amount);g.spelldelay=15;
+ return healItemUnmodified(s,rt,healByEquipment(s,rt,amount));
+}
+/** Call sites without scr_heal_amount_modify_by_equipment retain their literal amount. */
+function healItemUnmodified(s:GmInstance,rt:GmRuntime,amount:number){
+ const g=rt.globals;heal(s,rt,s.star,amount);g.spelldelay=15;
  const h=rt.byId(g.charinstance[s.star]);return h?healShow(h,rt,amount):undefined;
 }
 /** scr_healallitemspell, run by the caster. */
@@ -492,6 +507,19 @@ const SPELLS:Record<number,SpellRules>={
   },
  }},
 };
+// Chapter 4 keeps the tired-enemy and IceShock paths, but replaces Susie's growing heal.
+SPELLS[4]={pacifyImmune:[19,3,52,43],pacifyEffect:true,spareOwnEnding:[3,52],dualHeal:m=>Math.ceil(m*5.5),healsByEquipment:true,immuneSleepEffect:[52],extra:{
+ 8:castSleepMist,9:(s,rt)=>castIceShock(s,rt,()=>retargetSpell(s,rt)),10:notPorted("Noelle's SnowGrave (10)"),
+ 11:(s,rt)=>{
+  const g=rt.globals;g.flag[20]=1;g.flag[1045]=Math.min(15,(g.flag[1045]??0)+1);
+  let amount=g.battlemag[s.caster]*(g.flag[852]===1?7:5)+15+2*g.flag[1045];
+  for(const [e,h] of withHook(rt,'modifyHealSpell'))amount=h(e,s,rt,11,amount);
+  s.healnum=Math.ceil(healByEquipment(s,rt,amount));heal(s,rt,s.star,s.healnum);
+  const h=rt.byId(g.charinstance[s.star]);if(h){h.healnum=s.healnum;healShow(h,rt,h.healnum);}
+  g.spelldelay=15;for(const [e,hook] of withHook(rt,'afterHealSpell'))hook(e,s,rt,11);
+  spellMenuSetupChapter2(rt,s);
+ },
+}};
 /** Pacify on a tired enemy, as that enemy (scr_spell runs it in a with block). */
 function pacified(m:GmInstance,s:GmInstance,rt:GmRuntime,r:SpellRules){
  const g=rt.globals,type=g.monstertype[m.myself];
@@ -511,13 +539,14 @@ function pacified(m:GmInstance,s:GmInstance,rt:GmRuntime,r:SpellRules){
 export function castSpell(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
  const g=rt.globals,r=forChapter(rt,SPELLS,'scr_spell');
  s.spell=spell;s.caster=caster;s.star=g.chartarget[caster];g.spelldelay=10;
+ if(withHook(rt,'beforeCastSpell').some(([e,h])=>h(e,s,rt,spell,caster)))return;
  const heroOf=(slot:number)=>rt.byId(g.charinstance[slot]);
  switch(spell){
   case 0:break;
   case 1:{
    s.cancelattack=0;if(g.monster[s.star]===0)retargetSpell(s,rt);
    if(s.cancelattack===0){
-    s.damage=Math.ceil(g.battleat[caster]*10-g.monsterdf[s.star]*3);if(g.automiss[s.star]===1)s.damage=0;
+    s.damage=Math.ceil(g.chapter===4?healByEquipment(s,rt,g.battleat[caster]*10-g.monsterdf[s.star]*3):g.battleat[caster]*10-g.monsterdf[s.star]*3);if(g.automiss[s.star]===1)s.damage=0;
     damageEnemy(s,rt,s.star,s.damage);
     const y=g.monstery[s.star]+rt.random.random(6),x=g.monsterx[s.star]+rt.random.random(6);
     const a=rt.create(basicAttack,x,y);s.attack=a.id;a.sprite='spr_attack_mash1';
@@ -526,7 +555,7 @@ export function castSpell(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
    g.spelldelay=30;break;
   }
   case 2:{
-   s.healnum=healByEquipment(s,rt,g.battlemag[caster]*5);heal(s,rt,s.star,s.healnum);
+   s.healnum=healByEquipment(s,rt,g.battlemag[caster]*5);if(g.chapter===4)s.healnum=Math.ceil(s.healnum);heal(s,rt,s.star,s.healnum);
    const h=heroOf(s.star);if(h){h.healnum=s.healnum;healShow(h,rt,h.healnum);}
    g.spelldelay=15;break;
   }
@@ -551,11 +580,13 @@ export function castSpell(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
     if(g.automiss[s.star]===1)s.damage=0;
     const sus=rt.first(heroSusie)!;
     const a=rt.create(rudeBusterAnim,sus.x,sus.y);s.attack=a.id;a.damage=s.damage;a.star=s.star;a.caster=s.caster;a.target=g.monsterinstance[s.star];if(spell===5)a.red=1;
+    for(const [e,h] of withHook(rt,'onSpellCast'))h(e,s,rt,spell,caster);
    }
    break;
   }
   case 6:{
    s.healnum=r.dualHeal(g.battlemag[caster]);
+   if(g.chapter===4)s.healnum=g.flag[852]===1?round((g.battlemag[1]+g.battlemag[2])*6):round(healByEquipment(s,rt,(g.battlemag[1]+g.battlemag[2])*3.5));
    for(s.i=0;s.i<3;s.i+=1){heal(s,rt,s.i,s.healnum);const h=heroOf(s.i);if(h){h.healnum=s.healnum;healShow(h,rt,h.healnum);}}
    g.spelldelay=15;break;
   }
@@ -640,7 +671,30 @@ const itemsChapter3:ItemUse=(s,rt,spell)=>{
   default:itemsChapter2(s,rt,spell);
  }
 };
-const ITEMS:Record<number,ItemUse>={1:itemsChapter1,2:itemsChapter2,3:itemsChapter3};
+/** Chapter 4 applies equipment bonuses once at the call boundary (healItem already does that). */
+const itemsChapter4:ItemUse=(s,rt,spell)=>{
+ const g=rt.globals;
+ const raw=(amount:number)=>healItemUnmodified(s,rt,amount);
+ switch(spell){
+  case 201:healItem(s,rt,120);break;
+  case 207:healAllItem(s,rt,160);break;
+  case 210:raw(4);break;
+  case 232:{const h=rt.byId(g.charinstance[s.star]);if(h)h.poisonamount=60;rt.sound?.('snd_hurt1');const a=raw(40);if(a)a.particlecolor=0xff00ff;break;}
+  case 260:healItem(s,rt,g.char[s.star]===1?400:40);break;
+  case 261:healItem(s,rt,115);break;
+  case 262:
+   if(g.char[s.star]===4){healItem(s,rt,155);heal(s,rt,0,5);const h=rt.byId(g.charinstance[0]);if(h)healShow(h,rt,5);}
+   else{heal(s,rt,s.star,160);g.spelldelay=15;const h=rt.byId(g.charinstance[s.star]);if(h)healShow(h,rt,160);}
+   break;
+  case 263:healItem(s,rt,Math.ceil(g.maxhp[g.char[s.star]])+Math.abs(g.hp[g.char[s.star]]));break;
+  // ReviveBright modifies only its living-target heal; the revive itself remains 999.
+  case 231:
+   for(let j=0;j<3;j++)if(g.char[j]>0){s.star=j;if(g.hp[g.char[j]]<=0){heal(s,rt,j,999);const h=rt.byId(g.charinstance[j]);if(h)healShow(h,rt,999);g.spelldelay=15;}else healItem(s,rt,50);}
+   break;
+  default:itemsChapter3(s,rt,spell);
+ }
+};
+const ITEMS:Record<number,ItemUse>={1:itemsChapter1,2:itemsChapter2,3:itemsChapter3,4:itemsChapter4};
 /** scr_spelltext: the battle line for a spell or item, in global.msg. */
 /** scr_spelltext's one-line spells and items: line numbers per chapter (or a key from another script). Chapter 2 adds its new spells and items (whose
  * lines also reset msgno; one has a second page). */
@@ -654,13 +708,16 @@ const SPELL_TEXT:Record<number,{lines:Record<number,number|string>;before?:(g:Re
 const ROTTEN_TEA='scr_text_slash_scr_text_gml_10567_0';
 SPELL_TEXT[3]={lines:{...SPELL_TEXT[2].lines,11:68,218:ROTTEN_TEA,219:ROTTEN_TEA,220:ROTTEN_TEA,221:ROTTEN_TEA,234:303,235:306,236:309,237:312,238:315,239:318},
  before:SPELL_TEXT[2].before};
+SPELL_TEXT[4]={lines:{...SPELL_TEXT[3].lines,11:76,201:118,260:329,261:332,262:335,263:338},before:(g,spell,L)=>{
+ SPELL_TEXT[2].before?.(g,spell,L);if(spell>=234&&spell<=239||spell>=260&&spell<=263)g.msgno=0;
+}};
 export function spellText(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
  const g=rt.globals,L=(n:number)=>lang(`scr_spelltext_slash_scr_spelltext_gml_${n}_0`),name=g.charname[g.char[caster]];
  s.spell=spell;s.caster=caster;s.star=g.chartarget[caster];s.spelltext=' ';
  const text=forChapter(rt,SPELL_TEXT,'scr_spelltext');text.before?.(g,spell,L);
  const one=text.lines;
  // A line number in scr_spelltext, or another script's key.
- const line=one[spell];if(line!==undefined){g.msg[0]=subst(typeof line==='string'?lang(line):L(line),name);return;}
+ const line=g.chapter===4&&spell===11&&g.flag[852]===1?77:one[spell];if(line!==undefined){g.msg[0]=subst(typeof line==='string'?lang(line):L(line),g.chapter===4&&spell===6?g.charname[2]:name);for(const [e,h] of withHook(rt,'afterSpellText'))h(e,s,rt,spell,caster);return;}
  if(spell===3){
   g.msg[0]=subst(L(23),name);retargetSpell(s,rt);
   if(g.monster[s.star]===1&&g.monsterstatus[s.star]!==1){g.msg[0]=subst(L(33),name);if(g.mercymod[s.star]>=100)g.msg[0]=subst(L(36),name);}
@@ -672,6 +729,7 @@ export function spellText(s:GmInstance,rt:GmRuntime,spell:number,caster:number){
   if(s.cancelattack===1)g.msg[0]=subst(L(73),name);
  }
  if(spell===203||spell===204){g.msg[0]=subst(L(spell===203?86:122),name);g.msg[1]=L(spell===203?87:123);}
+ for(const [e,h] of withHook(rt,'afterSpellText'))h(e,s,rt,spell,caster);
 }
 
 // ---- The FIGHT bar (obj_attackpress) ----
@@ -686,6 +744,7 @@ const FIGHT_BAR:Record<number,{method:'mymethod'|'my_method';lanesWhenFighting:b
  1:{method:'mymethod',lanesWhenFighting:false,laneX:0,laneHeight:2,boxY:[0,1],fadeTop:-1,boxes:{1:[0xff0000,1],2:[C.purple,2],3:[C.green,3]},fourBuffers:false,keepsEnemyTurn:false},
  2:{method:'my_method',lanesWhenFighting:true,laneX:77,laneHeight:1,boxY:[1,2],fadeTop:0,boxes:{1:[0xff0000,1],2:[C.purple,2],3:[C.green,3],4:[C.yellow,2]},fourBuffers:false,keepsEnemyTurn:false},
  3:{method:'my_method',lanesWhenFighting:true,laneX:77,laneHeight:1,boxY:[0,2],fadeTop:0,boxes:{1:[0xff0000,1],2:[C.purple,2],3:[C.green,3],4:[C.yellow,2]},fourBuffers:true,keepsEnemyTurn:true},
+ 4:{method:'my_method',lanesWhenFighting:true,laneX:77,laneHeight:1,boxY:[1,2],fadeTop:0,boxes:{1:[0xff0000,1],2:[C.purple,2],3:[C.green,3],4:[C.yellow,2]},fourBuffers:true,keepsEnemyTurn:true},
 };
 /** A bolt is hit: points by how close it was, and a burst coloured by it (yellow and bigger for a perfect hit). */
 function burstBoltAt(s:GmInstance,rt:GmRuntime,bolt:number,bc:number){
@@ -874,7 +933,7 @@ export const attackPress:GmObjectDef={name:'obj_attackpress',index:194,depth:1,s
 
 // ---- Spells and items, one caster after another ----
 /** Per chapter: Chapter 2's spell phase marks one encounter (92) as funny each step. */
-const SPELL_PHASE:Record<number,{funnyEncounter?:number}>={1:{},2:{funnyEncounter:92},3:{funnyEncounter:92}};
+const SPELL_PHASE:Record<number,{funnyEncounter?:number}>={1:{},2:{funnyEncounter:92},3:{funnyEncounter:92},4:{funnyEncounter:92}};
 export const spellPhase:GmObjectDef={name:'obj_spellphase',index:308,events:{
  create:s=>{s.spelltimer=0;s.spellmax=40;s.spelltotal=0;s.char=0;s.castyet=0;s.re_castyet=0;s.active=0;s.alarm[0]=5;},
  alarm0:(s,rt)=>{
@@ -945,7 +1004,7 @@ export const healAnim:GmObjectDef={name:'obj_healanim',index:301,sprite:'spr_spa
 }};
 /** Per chapter: from Chapter 2 a pacified enemy's sleep (con 20) sends nine Z's out from it, and the spell outlives
  * its target in that state. */
-const PACIFY:Record<number,{sleepZs:boolean}>={1:{sleepZs:false},2:{sleepZs:true},3:{sleepZs:true}};
+const PACIFY:Record<number,{sleepZs:boolean}>={1:{sleepZs:false},2:{sleepZs:true},3:{sleepZs:true},4:{sleepZs:true}};
 export const pacifySpell:GmObjectDef={name:'obj_pacifyspell',index:298,events:{
  create:(s,rt)=>{
   s.target=439493;s.con=1;s.siner=0;s.xx=rt.view.x;s.yy=rt.view.y;s.alarm[4]=50;s.fail=0;s.flashcolor=0xff0000;
@@ -984,7 +1043,7 @@ export const pacifySpell:GmObjectDef={name:'obj_pacifyspell',index:298,events:{
 /** Per chapter: from Chapter 2 Rude Buster also works outside battle (battlemode 0: Susie absent from the battle, or
  * not fighting), where it flies at its target's middle and only flashes it. (GIGA Queen's shield, which takes the bolt
  * in Chapter 2, belongs to her port.) */
-const RUDE_BUSTER:Record<number,{battlemode:boolean;flightTiming:boolean}>={1:{battlemode:false,flightTiming:false},2:{battlemode:true,flightTiming:false},3:{battlemode:true,flightTiming:true}};
+const RUDE_BUSTER:Record<number,{battlemode:boolean;flightTiming:boolean}>={1:{battlemode:false,flightTiming:false},2:{battlemode:true,flightTiming:false},3:{battlemode:true,flightTiming:true},4:{battlemode:true,flightTiming:true}};
 export const rudeBusterAnim:GmObjectDef={name:'obj_rudebuster_anim',index:303,sprite:'spr_susie_rudebuster',events:{
  create:(s,rt)=>{
   s.t=0;s.imageSpeed=0;s.target=9897887;s.imageXscale=2;s.imageYscale=2;s.damage=1;s.caster=0;s.star=0;
@@ -992,6 +1051,7 @@ export const rudeBusterAnim:GmObjectDef={name:'obj_rudebuster_anim',index:303,sp
   if(forChapter(rt,RUDE_BUSTER,'obj_rudebuster_anim').battlemode){s.battlemode=1;if(sus){s.depth=sus.depth;for(const h of rt.all(heroSusie))h.visible=false;}else s.battlemode=0;}
   else{s.depth=sus!.depth;for(const h of rt.all(heroSusie))h.visible=false;}
   s.red=0;
+  if(rt.globals.chapter===4){s.init=0;s.dualbuster=false;}
  },
  step:(s,rt)=>{
   s.imageIndex=s.t/2;
@@ -1015,6 +1075,7 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
   s.prevx=[];s.prevy=[];for(s.i=0;s.i<10;s.i+=1){s.prevx[s.i]=s.x;s.prevy[s.i]=s.y;}
   Object.assign(s,{a:0,targetx:0,targety:0,t:0,tmax:4,siner:0,explode:0,maxaft:0,bolt_timer:0,chosen_bolt:0,final_bolt:0,red:0});
   if(forChapter(rt,RUDE_BUSTER,'obj_rudebuster_bolt').battlemode){s.battlemode=1;if(rt.globals.fighting===0)s.battlemode=0;}
+  if(rt.globals.chapter===4){Object.assign(s,{speedmax:24,lockdamage:false,hurtflashalpha:0,gersonswingtimer:0,gersonoffset:0,misswritercreated:false});for(const [e,h] of withHook(rt,'onRudeBusterCreate'))h(e,s,rt);}
  },
  step:(s,rt)=>{
   const g=rt.globals,modes=forChapter(rt,RUDE_BUSTER,'obj_rudebuster_bolt').battlemode,inBattle=!modes||s.battlemode===1;
@@ -1024,14 +1085,17 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
    if(inBattle){if(!withHook(rt,'aimsRudeBuster').some(([e,h])=>h(e,rt,s))){s.targetx=g.monsterx[target!.myself];s.targety=g.monstery[target!.myself];}}
    else if(target){s.targetx=target.x+rt.spriteWidth(target)/2;s.targety=target.y+rt.spriteHeight(target)/2;}
    s.cx=s.targetx;s.cy=s.targety;
-   s.direction=pointDirection(s.x,s.y,s.cx,s.cy)-20;s.speed=24;s.friction=-1.5;s.imageAngle=s.direction;
+   s.direction=pointDirection(s.x,s.y,s.cx,s.cy)-20+(g.chapter===4?s.gersonoffset:0);s.speed=g.chapter===4?s.speedmax:24;s.friction=-1.5;
+   for(const [e,h] of withHook(rt,'onRudeBusterFlightStart'))h(e,s,rt);s.imageAngle=s.direction;
    if(s.red===1){s.sprite='spr_rudebuster_beam_red';s.imageXscale=2.5;s.imageYscale=2.5;}
   }
+  for(const [e,h] of withHook(rt,'onRudeBusterStep'))h(e,s,rt);
   if(s.t>=1&&s.explode===0){
    s.bolt_timer+=1;
-   if(button1_p(rt)&&s.bolt_timer>=4&&s.chosen_bolt===0)s.chosen_bolt=s.bolt_timer;
-   s.dir=pointDirection(s.x,s.y,s.cx,s.cy);s.direction=s.direction+angleDifference(s.dir,s.direction)/4;s.imageAngle=s.direction;
-   if(pointDistance(s.x,s.y,s.cx,s.cy)<=40){s.final_bolt=forChapter(rt,RUDE_BUSTER,'obj_rudebuster_bolt').flightTiming?s.bolt_timer:s.chosen_bolt;s.visible=false;s.explode=1;s.t=1;}
+   if(button1_p(rt)&&s.bolt_timer>=4&&s.chosen_bolt===0&&(g.chapter!==4||!s.lockdamage)){s.chosen_bolt=s.bolt_timer;if(g.chapter===4)s.lockdamage=true;}
+   s.dir=pointDirection(s.x,s.y,s.cx,s.cy);s.direction=s.direction+angleDifference(s.dir,s.direction)/4;
+   const reflected=withHook(rt,'onRudeBusterFlight').some(([e,h])=>h(e,s,rt));s.imageAngle=s.direction;
+   if(!reflected&&pointDistance(s.x,s.y,s.cx,s.cy)<=40){s.final_bolt=forChapter(rt,RUDE_BUSTER,'obj_rudebuster_bolt').flightTiming?s.bolt_timer:s.chosen_bolt;s.visible=false;s.explode=1;s.t=1;}
   }
   if(s.explode===1){
    if(s.t===1){
@@ -1043,19 +1107,20 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
      if(Math.abs(s.chosen_bolt-s.final_bolt)<=2){s.bonus_anim=1;rt.sound?.('snd_scytheburst');}
     }
     if(s.red===1)s.damage+=90;
-    if(inBattle){g.hittarget[s.star]=0;for(const [e,h] of withHook(rt,'scalesRudeBusterImpact'))s.damage=h(e,rt,s.damage);const redirected=withHook(rt,'interceptSpellDamage').some(([enemy,intercept])=>intercept(enemy,s,rt,s.star,s.damage,4));if(!redirected)damageEnemy(s,rt,s.star,s.damage);if(g.monstertype[0]!==20)boltFlash(s,rt);}
+    if(inBattle){g.hittarget[s.star]=0;for(const [e,h] of withHook(rt,'scalesRudeBusterImpact'))s.damage=h(e,rt,s.damage);const redirected=withHook(rt,'interceptSpellDamage').some(([enemy,intercept])=>intercept(enemy,s,rt,s.star,s.damage,4));if(!redirected)damageEnemy(s,rt,s.star,s.damage);if(g.monstertype[0]!==20&&!withHook(rt,'suppressesRudeBusterFlash').length)boltFlash(s,rt);}
     else boltFlash(s,rt);
     rt.sound?.('snd_rudebuster_hit');
     const burst=gmArray(s,'burst');
     for(s.i=0;s.i<8;s.i+=1){
-     const b=afterImage(s,rt);burst[s.i]=b.id;b.imageSpeed=0.5;b.x=s.cx;b.y=s.cy;b.imageAngle=45+s.i*90;b.direction=b.imageAngle;b.speed=25;b.depth=s.depth-10;
+     const b=afterImage(s,rt);burst[s.i]=b.id;b.imageSpeed=0.5;b.x=s.cx;b.y=s.cy;b.imageAngle=45+s.i*90;b.direction=b.imageAngle;b.speed=g.chapter===4&&s.bonus_anim===1?40:25;b.depth=s.depth-10;
     }
    }
    if(s.t>=2)for(s.i=0;s.i<8;s.i+=1){const b=rt.byId(s.burst[s.i]);if(b){b.speed=b.speed*(s.i<4?0.75:0.8);b.imageXscale=b.imageXscale*0.8;}}
    if(s.t>=18)rt.destroy(s);
   }
-  if(s.explode===0){
+  if(s.explode===0&&(g.chapter!==4||s.speed!==0)){
    const a=afterImage(s,rt);gmArray(s,'aft')[s.maxaft]=a.id;a.imageYscale=1.8;a.imageAngle=s.imageAngle;a.imageIndex=4;a.imageSpeed=0.5;a.imageAlpha=s.imageAlpha-0.2;s.maxaft+=1;
+   for(const [e,h] of withHook(rt,'onRudeBusterAfterimage'))h(e,s,a,rt);
   }
   for(s.i=0;s.i<s.maxaft;s.i+=1){
    let a=rt.byId(s.aft[s.i]);if(a){a.imageYscale=a.imageYscale-0.1;if(a.imageYscale<=0.1)rt.destroy(a);}
@@ -1063,6 +1128,12 @@ export const rudeBusterBolt:GmObjectDef={name:'obj_rudebuster_bolt',index:304,de
    if(s.explode===1&&a){a.imageAlpha=a.imageAlpha-0.07;a.imageYscale=a.imageYscale*0.9;if(a.imageYscale<=0.1)rt.destroy(a);}
   }
   s.a+=1;s.t+=1;
+ },
+ draw:(s,rt)=>{rt.drawSelf(s);if(rt.globals.chapter===4&&s.hurtflashalpha>0&&s.sprite){rt.drawSpriteFog(s.sprite,s.imageIndex,s.x,s.y,s.imageXscale,s.imageYscale,s.imageAngle,C.white,s.hurtflashalpha);s.hurtflashalpha-=0.1;}},
+ user0:(s,rt)=>{
+  if(rt.globals.chapter!==4)return;
+  rt.sound?.('snd_rudebuster_hit');const burst=gmArray(s,'burst');
+  for(s.i=0;s.i<8;s.i++){const b=afterImage(s,rt);burst[s.i]=b.id;Object.assign(b,{imageSpeed:0.5,x:s.cx,y:s.cy,imageAngle:45+s.i*90,direction:45+s.i*90,speed:25,depth:s.depth-10});}
  },
 }};
 /** obj_defeatanim (scr_defeatrun): a beaten enemy sweats, then runs off in a trail of copies. */

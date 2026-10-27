@@ -12,6 +12,7 @@ import {forChapter} from './rules';
 const LERPVAR:Record<number,{create(s:GmInstance):void;paused(s:GmInstance,rt:GmRuntime):boolean}>={
  2:{create:()=>{},paused:()=>false},
  3:{create:s=>{s.respectglobalinteract=false;},paused:(s,rt)=>s.respectglobalinteract===true&&rt.globals.interact!==0},
+ 4:{create:s=>{s.respectglobalinteract=false;},paused:(s,rt)=>s.respectglobalinteract===true&&rt.globals.interact!==0},
 };
 export const doom:GmObjectDef={name:'obj_doom',index:1101,depth:0,visible:false,events:{
  alarm0:(s,rt)=>{const t=rt.byId(s.target);if(t)rt.destroy(t);rt.destroy(s);},

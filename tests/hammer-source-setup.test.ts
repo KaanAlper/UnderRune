@@ -37,6 +37,6 @@ describe.skipIf(!available)('Hammer of Justice source setup',()=>{
   for(const {s,rt} of [a,b]){s.myself=0;rt.globals={monstertype:[105],monstername:[],monstermaxhp:[],monsterhp:[],monsterat:[],monsterdf:[],monsterexp:[],monstergold:[],sparepoint:[],canactsus:[Array(6).fill(0)],actnamesus:[Array(6).fill('')],actdesc:[Array(6).fill('')]};}
   expect(setupHammerMonster(a.s,a.rt)).toBe(true);const original=source('gml_GlobalScript_scr_monstersetup'),start=original.indexOf('if (global.monstertype[myself] == 105)'),end=original.indexOf('if (global.monstertype[myself] == 106)',start);
   executeNeoSource(original.slice(start,end),b.s,b.rt,{object:n=>({name:n,index:100}),text:k=>k,call:n=>{throw Error(n);}});
-  expect(a.rt.globals).toEqual(b.rt.globals);expect(a.rt.globals.canactsus[0][0]).toBe(0);expect(HAMMER_ENCOUNTER.party).toEqual([2]);expect(sourceEncounter('ch4-160')).toBeUndefined();
+  expect(a.rt.globals).toEqual(b.rt.globals);expect(a.rt.globals.canactsus[0][0]).toBe(0);expect(HAMMER_ENCOUNTER.party).toEqual([2]);expect(sourceEncounter('ch4-160')?.party).toEqual([2]);
  });
 });

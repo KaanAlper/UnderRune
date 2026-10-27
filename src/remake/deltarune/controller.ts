@@ -20,6 +20,8 @@ import {drawController2} from './controller-chapter2';
 import {snd} from './sound';
 import {controllerTail2,stepControllerMenus2} from './controller-menu2';
 import {controllerScripts2,controllerScripts3,type ControllerScripts} from './controller-script-parts';
+import {controllerScripts4} from './chapter4-controller-scripts';
+import {itemInfo4} from './chapter4-menu-info';
 
 /** Small script differences alongside the controller; the frame/turn pipeline itself is shared. */
 const CONTROLLER_SCRIPTS:Record<number,ControllerScripts>={
@@ -29,6 +31,7 @@ const CONTROLLER_SCRIPTS:Record<number,ControllerScripts>={
   victoryText:rt=>subst(lang('obj_battlecontroller_slash_Step_0_gml_40_0'),rt.globals.monsterexp[3],rt.globals.monstergold[3]),victoryLevelUp:()=>{},reward:()=>{},afterVictory:()=>{},},
  2:controllerScripts2,
  3:controllerScripts3,
+ 4:controllerScripts4,
 };
 const controllerScripts=(rt:GmRuntime)=>forChapter(rt,CONTROLLER_SCRIPTS,'battle controller scripts');
 export const left_p=(rt:GmRuntime)=>pressed(rt,KEY.left);
@@ -65,6 +68,7 @@ const MERCY_ADD:Record<number,(caller:GmInstance,rt:GmRuntime,enemy:number,amoun
  1:(_caller,rt,enemy,amount)=>{const g=rt.globals;g.mercymod[enemy]+=amount;if(g.mercymod[enemy]<0)g.mercymod[enemy]=0;},
  2:mercyAdd2,
  3:(caller,rt,enemy,amount)=>mercyAdd2(caller,rt,enemy,amount,true),
+ 4:mercyAdd2,
 };
 export function mercyAdd(caller:GmInstance,rt:GmRuntime,enemy:number,amount:number){forChapter(rt,MERCY_ADD,'scr_mercyadd')(caller,rt,enemy,amount);}
 /** scr_charcan: can this party slot still choose a command? */
@@ -77,6 +81,7 @@ function charCan(s:GmInstance,rt:GmRuntime,slot:number){
 /** scr_spellinfo: name, battle name and description, cost and target kind of a spell. */
 export function spellInfo(s:GmInstance,rt:GmRuntime,id:number){
  const part=controllerScripts(rt),L=(n:number|string)=>part.text(typeof n==='string'?n:`scr_spellinfo_slash_scr_spellinfo_gml_${n}_0`);
+ if(part.fullSpellInfo){part.fullSpellInfo(s,rt,id);for(const [e,h] of withHook(rt,'adjustSpellInfo'))h(e,s,rt,id);return;}
  s.cost=-1;s.spelltarget=1;s.spellname=' ';s.spellnameb=' ';s.spelldescb=' ';s.spelldesc=' ';s.spellanim=0;s.spellusable=0;s.spelltext=' ';
  const set=(name:number,nameb:number,descb:number,desc:number|string|null,target:number,cost:number,usable:number)=>{
   s.spellname=L(name);s.spellnameb=L(nameb);s.spelldescb=L(descb);s.spelldesc=desc===null?' ':L(desc);s.spelltarget=target;s.cost=cost;s.spellusable=usable;
@@ -117,7 +122,7 @@ function itemInfo1(s:GmInstance,id:number){
  s.itemnameb=lang(`scr_iteminfo_slash_scr_iteminfo_gml_${it[0]}_0`);s.itemdescb=lang(`scr_iteminfo_slash_scr_iteminfo_gml_${it[1]}_0`);
  s.itemtarget=it[2];s.value=it[3];s.usable=it[4];
 }
-const ITEM_INFO:Record<number,(s:GmInstance,id:number,rt:GmRuntime)=>void>={1:itemInfo1,2:(s,id,rt)=>itemInfoChapter2(s,rt,id),3:(s,id,rt)=>itemInfoChapter2(s,rt,id)};
+const ITEM_INFO:Record<number,(s:GmInstance,id:number,rt:GmRuntime)=>void>={1:itemInfo1,2:(s,id,rt)=>itemInfoChapter2(s,rt,id),3:(s,id,rt)=>itemInfoChapter2(s,rt,id),4:(s,id,rt)=>itemInfo4(s,rt,id)};
 export function itemInfo(s:GmInstance,id:number,rt?:GmRuntime){if(rt)forChapter(rt,ITEM_INFO,'scr_iteminfo')(s,id,rt);else itemInfo1(s,id);}
 export function itemInfoTemp(s:GmInstance,slot:number,rt:GmRuntime){
  gmArray(s,'tempitemnameb',()=>grid(13,3,' '));gmArray(s,'tempitemdescb',()=>grid(13,3,' '));gmArray(s,'tempitemvalue',()=>grid(13,3,0));gmArray(s,'tempitemusable',()=>grid(13,3,0));
@@ -195,7 +200,7 @@ function endTurn(s:GmInstance,rt:GmRuntime){
 /** scr_nextact: enemies call this after the current ACT's writer/animation completes. */
 /** After an ACT, per chapter: Chapter 1 goes on to the attack phase; Chapter 2's scr_nextact first hands over to the
  * next hero's single ACT and says whether the attack phase starts. */
-const NEXT_ACT:Record<number,(rt:GmRuntime,caller:GmInstance)=>boolean>={1:()=>true,2:nextActChapter2,3:nextActChapter2};
+const NEXT_ACT:Record<number,(rt:GmRuntime,caller:GmInstance)=>boolean>={1:()=>true,2:nextActChapter2,3:nextActChapter2,4:nextActChapter2};
 export function nextAct(rt:GmRuntime,caller:GmInstance){if(forChapter(rt,NEXT_ACT,'scr_nextact')(rt,caller))attackPhase(rt);}
 /** scr_attackphase (run in the battle controller): spells and items first (obj_spellphase), then the FIGHT bar
  * (obj_attackpress); with no enemy left, the battle is won. */
@@ -224,7 +229,7 @@ export function winCombat(rt:GmRuntime,caller:GmInstance){
 /** What scr_monsterdefeat adds after Chapter 1: frozen enemies (Noelle's IceShock, flag 6: counted in flag 45 with 24
  * more D$), fatal kills (flag 44), the encounter's own result flag (flag 54 names it) and, in Chapter 2 only, a frozen
  * enemy beside any other ending counting as violence. */
-const MONSTER_DEFEAT:Record<number,{frozen:boolean;frozenWithOthersIsViolence:boolean}>={1:{frozen:false,frozenWithOthersIsViolence:false},2:{frozen:true,frozenWithOthersIsViolence:true},3:{frozen:true,frozenWithOthersIsViolence:false}};
+const MONSTER_DEFEAT:Record<number,{frozen:boolean;frozenWithOthersIsViolence:boolean}>={1:{frozen:false,frozenWithOthersIsViolence:false},2:{frozen:true,frozenWithOthersIsViolence:true},3:{frozen:true,frozenWithOthersIsViolence:false},4:{frozen:true,frozenWithOthersIsViolence:false}};
 /** scr_monsterdefeat, run by the enemy: rewards, the battle's outcome flags, then the enemy's own event 11. Its counters
  * (_spared, d_i, ...) are the enemy's own variables, as in the script. */
 export function monsterDefeat(m:GmInstance,rt:GmRuntime){
@@ -327,6 +332,7 @@ function create(s:GmInstance,rt:GmRuntime){
  s.bcolor=mergeColor(mergeColor(C.purple,C.black,0.7),0x404040,0.5);
  Object.assign(s,{tp:0,tpy:50,bp:0,bpy:152,intro:1,chartotal:0,charpos:[-1,-1,-1],havechar:[0,0,0],mmy:[0,0,0]});
  g.charinstance=[12129292,12129292,12129292];
+ controllerScripts(rt).beforeHeroes?.(s,rt);
  for(let i=0;i<3;i++){
   const c=g.char[i];if(c!==0)s.chartotal+=1;
   if(c>=1&&c<=HERO_DEFS.length){
@@ -356,8 +362,9 @@ export function commandMenu(s:GmInstance,rt:GmRuntime){
     if(rt.instances.some(i=>i.live&&i.object.name===name))throw Error(`Chapter 3 command row with ${name} is not ported`);
    if(!rt.byId(s.battlewriter)){g.msg[0]=g.battlemsg[0];g.typer=g.battletyper;s.battlewriter=battleText(rt,s).id;}
    const skipTech=(to:number)=>{if(row3&&s.disablesusieact===1&&g.charturn===1&&coord[0][t()]===1)coord[0][t()]=to;};
-   if(left_p(rt)&&s.lbuffer<0){if(coord[0][t()]===0)coord[0][t()]=4;else coord[0][t()]-=1;s.movenoise=1;s.rbuffer=1;skipTech(0);}
-   if(right_p(rt)&&s.rbuffer<0){if(coord[0][t()]===4)coord[0][t()]=0;else coord[0][t()]+=1;s.movenoise=1;s.lbuffer=1;skipTech(2);}
+   const skipFourth=(right:boolean)=>{if(g.chapter!==4)return;if(s.disableitembutton===1&&coord[0][t()]===2)coord[0][t()]=right?3:1;if(s.disablesusieattack===1&&g.charturn===1&&coord[0][t()]===0)coord[0][t()]=right?1:4;};
+   if(left_p(rt)&&s.lbuffer<0){if(coord[0][t()]===0)coord[0][t()]=4;else coord[0][t()]-=1;s.movenoise=1;s.rbuffer=1;skipTech(0);skipFourth(false);}
+   if(right_p(rt)&&s.rbuffer<0){if(coord[0][t()]===4)coord[0][t()]=0;else coord[0][t()]+=1;s.movenoise=1;s.lbuffer=1;skipTech(2);skipFourth(true);}
    if(button1_p(rt)&&s.twobuffer<0){
     s.onebuffer=1;s.selnoise=1;const c=coord[0][t()];
     if(c===0)g.bmenuno=1;
@@ -503,8 +510,8 @@ function stepMenus1(s:GmInstance,rt:GmRuntime){
    }
   }
 }
-const CONTROLLER_MENUS:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:stepMenus1,2:stepControllerMenus2,3:stepControllerMenus2};
-const CONTROLLER_TAIL:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:()=>{},2:controllerTail2,3:controllerTail2};
+const CONTROLLER_MENUS:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:stepMenus1,2:stepControllerMenus2,3:stepControllerMenus2,4:stepControllerMenus2};
+const CONTROLLER_TAIL:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:()=>{},2:controllerTail2,3:controllerTail2,4:controllerTail2};
 function step(s:GmInstance,rt:GmRuntime){
  const g=rt.globals,t=()=>g.charturn as number;
  if(withHook(rt,'blocksControllerStep').some(([e,h])=>h(e,s,rt)))return;
@@ -692,7 +699,7 @@ function draw1(s:GmInstance,rt:GmRuntime){
  }
  d.color=C.white;d.alpha=1;
 }
-const CONTROLLER_DRAW:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:draw1,2:(s,rt)=>drawController2(s,rt,nameWidth),3:(s,rt)=>drawController2(s,rt,nameWidth)};
+const CONTROLLER_DRAW:Record<number,(s:GmInstance,rt:GmRuntime)=>void>={1:draw1,2:(s,rt)=>drawController2(s,rt,nameWidth),3:(s,rt)=>drawController2(s,rt,nameWidth),4:(s,rt)=>drawController2(s,rt,nameWidth)};
 function draw(s:GmInstance,rt:GmRuntime){forChapter(rt,CONTROLLER_DRAW,'battle controller HUD')(s,rt);}
 /** Alarm 2: the enemy turn is over; the next turn starts, unless an enemy takes over (rules.ts onTurnEnd). */
 function alarm2(s:GmInstance,rt:GmRuntime){
@@ -708,7 +715,7 @@ export const battleControllerFull:GmObjectDef={...controllerBase,parent:controll
  * and is drawn through a surface (its cutout rounds the fill) with the logo and percentage drawn last. */
 /** Chapter 3's tension bar: it can slide 90 up out of the way (yoffset, for Rouxls's button grid), and its pulse
  * counter (tsiner) runs on while no TP cost is shown. */
-const TENSION_BAR:Readonly<Record<number,{readonly slides:boolean;readonly selectionProbe:boolean}>>={1:{slides:false,selectionProbe:false},2:{slides:false,selectionProbe:true},3:{slides:true,selectionProbe:false}};
+const TENSION_BAR:Readonly<Record<number,{readonly slides:boolean;readonly selectionProbe:boolean}>>={1:{slides:false,selectionProbe:false},2:{slides:false,selectionProbe:true},3:{slides:true,selectionProbe:false},4:{slides:false,selectionProbe:false}};
 export const tensionBar:GmObjectDef={name:'obj_tensionbar',index:333,depth:1,sprite:'spr_tensionbar',events:{
  create:(s,rt)=>{
   const g=rt.globals;s.tsiner=0;g.tensionselect=0;s.apparent=g.tension;s.current=g.tension;s.change=0;s.changetimer=15;s.red=0;s.redtimer=0;

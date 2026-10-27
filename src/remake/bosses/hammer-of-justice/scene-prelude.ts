@@ -32,7 +32,9 @@ export function scenePrelude({ s, rt, g, v, scripts, object, resolve, targets, c
         (g.canactsus[s.myself][0] = 0);
         (g.actnamesus[s.myself][0] = "");
         (g.actsimulsus[s.myself][0] = 0);
-        (g.actactorsus[s.myself][0] = 0);
+        // GML indexed writes allocate this otherwise-unused global array on first assignment.
+        const actors = g.actactorsus ?? (g.actactorsus = []);
+        (actors[s.myself] ?? (actors[s.myself] = []))[0] = 0;
         (g.actcostsus[s.myself][0] = 0);
         (g.battlespell[1][0] = 0);
         (g.battlespell[1][0] = (-1));

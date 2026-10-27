@@ -10,8 +10,8 @@ import {forChapter,withHook} from './rules';
 import {sourceText} from '../host/text';
 
 const nl=(v:unknown)=>String(v).replace(/#/g,'\n');
-interface HudChapter{later:boolean;cost:(v:number)=>number;}
-const HUD_CHAPTERS:Readonly<Record<number,HudChapter>>={2:{later:false,cost:round},3:{later:true,cost:Math.floor}};
+interface HudChapter{later:boolean;cost:(v:number)=>number;fourth?:boolean;}
+const HUD_CHAPTERS:Readonly<Record<number,HudChapter>>={2:{later:false,cost:round},3:{later:true,cost:Math.floor},4:{later:true,cost:Math.floor,fourth:true}};
 const hud=(rt:GmRuntime)=>forChapter(rt,HUD_CHAPTERS,'battle panel');
 /** Chapter 3 objects whose battles change or hide the panel in ways not ported yet. */
 const UNPORTED_PANELS=['obj_shadowman_sharpshoot_cursor','obj_tenna_zoom','obj_susiezilla_gamecontroller','obj_chefs_game','obj_rhythmgame',
@@ -53,7 +53,7 @@ function charBox(s:GmInstance,rt:GmRuntime){
    s.spare_glow=0;for(s.sglowi=0;s.sglowi<3;s.sglowi++)if(g.monster[s.sglowi]===1&&g.mercymod[s.sglowi]>=100)s.spare_glow=1;
    s.pacify_glow=0;
    if(c===2||c===3){pacifyGlow(s,rt);if(g.tension<(c===3?80:40))s.pacify_glow=0;}
-   rt.drawSprite('spr_btfight',s.btc[0],x+20,y+5);rt.drawSprite(c===0?'spr_btact':hud(rt).later&&s.disablesusieact===1&&c===1?'spr_ja_bttech_grey':'spr_bttech',s.btc[1],x+55,y+5);
+   rt.drawSprite('spr_btfight',s.btc[0],x+20,y+5);rt.drawSprite(c===0?'spr_btact':hud(rt).later&&!hud(rt).fourth&&s.disablesusieact===1&&c===1?'spr_ja_bttech_grey':'spr_bttech',s.btc[1],x+55,y+5);
    rt.drawSprite('spr_btitem',s.btc[2],x+90,y+5);rt.drawSprite('spr_btspare',s.btc[3],x+125,y+5);rt.drawSprite('spr_btdefend',s.btc[4],x+160,y+5);
    const glow=0.4+Math.sin(g.time/6)*0.4;
    if(s.spare_glow===1&&s.gc===pos)rt.drawSprite('spr_btspare',2,x+125,y+5,1,1,0,C.white,glow);
@@ -113,7 +113,7 @@ export function drawController2(s:GmInstance,rt:GmRuntime,width:(text:string)=>n
    if(panel.later&&t===2)s.aqcolor=mergeColor(mergeColor(C.aqua,0xff0000,0.3),C.white,0.5+Math.sin(s.t_siner/4)*0.5);
    if(g.monsterstatus[i]===1)s.tireddraw=1;if(g.mercymod[i]>=g.mercymax[i])s.mercydraw=1;s.namewidth=width(nl(g.monstername[i]));
    if(s.tireddraw===1){if(!withHook(rt,'suppressesPacifyHighlight').some(([e,h])=>h(e,rt))){d.color=s.aqcolor;s.mnamecolor1=s.aqcolor;s.mnamecolor2=s.aqcolor;}rt.drawSprite('spr_tiredmark',0,s.xx+80+s.namewidth+40,s.yy+385+i*30);}
-   if(s.mercydraw===1){d.color=C.yellow;s.mnamecolor1=C.yellow;if(s.tireddraw===0)s.mnamecolor2=C.yellow;if(s.hidemercy===0)rt.drawSprite('spr_sparestar',0,s.xx+80+s.namewidth+20,s.yy+385+i*30);}
+   if(s.mercydraw===1&&(!panel.fourth||s.hidestar===0)){d.color=C.yellow;s.mnamecolor1=C.yellow;if(s.tireddraw===0)s.mnamecolor2=C.yellow;if(s.hidemercy===0)rt.drawSprite('spr_sparestar',0,s.xx+80+s.namewidth+20,s.yy+385+i*30);}
    rt.drawTextColor(s.xx+80,s.yy+375+i*30,nl(g.monstername[i]),s.mnamecolor1,s.mnamecolor2,1);
    if(m!==13){
     d.color=C.gray;text(80+s.namewidth+60,375+i*30,g.monstercomment[i]);d.color=0x000080;rt.drawRect(s.xx+420,s.yy+380+i*30,s.xx+500,s.yy+395+i*30);
@@ -128,11 +128,12 @@ export function drawController2(s:GmInstance,rt:GmRuntime,width:(text:string)=>n
    }
    s.mercyamt=Math.min(g.mercymod[i],100);
    if(s.hidemercy===0){
-    const percent=Math.min(Math.ceil(g.mercymod[i]/g.mercymax[i]*100),100);d.color=mergeColor(C.orange,C.red,0.5);rt.drawRect(s.xx+520,s.yy+380+i*30,s.xx+600,s.yy+395+i*30);
-    d.color=C.yellow;if(s.mercyamt>0&&s.cantspare[i]===0)rt.drawRect(s.xx+520,s.yy+380+i*30,s.xx+520+percent*0.8,s.yy+395+i*30);
+    const question=panel.fourth&&s.questionmercy[i]===1,percent=Math.min((panel.fourth?round:Math.ceil)(g.mercymod[i]/g.mercymax[i]*100),100);d.color=mergeColor(C.orange,C.red,0.5);rt.drawRect(s.xx+520,s.yy+380+i*30,s.xx+600,s.yy+395+i*30);
+    d.color=C.yellow;if(s.mercyamt>0&&s.cantspare[i]===0&&!question)rt.drawRect(s.xx+520,s.yy+380+i*30,s.xx+520+percent*0.8,s.yy+395+i*30);
     d.color=C.white;text(524,364,sourceText('obj_battlecontroller_slash_Draw_0_gml_208_0'),1,0.5);d.color=0x000080;
-    if(s.cantspare[i]===0)text(524,380+i*30,percent+'%',1,0.5);
-    if(s.cantspare[i]===1){rt.drawLine(s.xx+519,s.yy+380+i*30,s.xx+600,s.yy+395+i*30,2);rt.drawLine(s.xx+519,s.yy+395+i*30,s.xx+600,s.yy+380+i*30,2);}
+    if(s.cantspare[i]===0&&!question)text(524,380+i*30,percent+'%',1,0.5);
+    if(s.cantspare[i]===1&&!question){rt.drawLine(s.xx+519,s.yy+380+i*30,s.xx+600,s.yy+395+i*30,2);rt.drawLine(s.xx+519,s.yy+395+i*30,s.xx+600,s.yy+380+i*30,2);}
+    if(question){d.color=C.white;text(524,379,sourceText('obj_battlecontroller_slash_Draw_0_gml_264_0'),1,.5);}
    }
   }
  }

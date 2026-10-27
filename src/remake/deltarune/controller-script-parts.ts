@@ -10,6 +10,8 @@ import {withHook} from './rules';
 import {sourceText} from '../host/text';
 
 export interface ControllerScripts{
+ fullSpellInfo?(s:GmInstance,rt:GmRuntime,id:number):void;
+ beforeHeroes?(s:GmInstance,rt:GmRuntime):void;
  spellInfoExtra?(s:GmInstance,rt:GmRuntime,id:number):void;
  readonly spellRows:number;
  readonly text:(key:string)=>string;

@@ -11,7 +11,7 @@ test('Hammer body layers and source Draw transitions render against Chapter 4 at
    const rt=new GmRuntime(assets.bank,{seed:45}),defs=new Map(meta.default.map((d:any)=>[d.name,{...d,parent:undefined,sprite:d.sprite??undefined,mask:d.mask??undefined}]));for(const d of meta.default)if(d.parent)(defs.get(d.name) as any).parent=defs.get(d.parent);
    const object=(name:string)=>defs.get(name) as any;
    rt.globals={chapter:4,invc:1,spell:[[],[],Array(12).fill(0)],flag:Array(9999).fill(0),mercymod:[0],mercymax:[100],turntimer:500,chartarget:[0],monsterx:[460],monstery:[161]};
-   rt.create(object('obj_battlecontroller'),0,0);const s=rt.create(object('obj_hammer_of_justice_enemy'),460,161);initializeHammer(s,rt,object);Object.assign(s,{myself:0,state,flash:1,becomeflash:1,saverudebusterstarcount:8,motor_swing_down:99});
+   rt.create(object('obj_battlecontroller'),0,0);const s=rt.create(object('obj_hammer_of_justice_enemy'),460,161);initializeHammer(s,rt,object);Object.assign(s,{myself:0,state,flash:1,becomeflash:1,saverudebusterstarcount:8});
    const gfx=new CanvasGraphics(ctx,assets.draw,rt.view);rt.gfx=gfx;
    for(const method of ['drawSprite','drawSpriteFog'] as const){const draw=rt[method].bind(rt);rt[method]=(name:string,...args:any[])=>{if(name&&!gfx.assets.sprite(name)&&!missing.includes(name))missing.push(name);return draw(name,...args);};}
    // Isolated source Draw component: audio, shake and tension integrations are recorded boundaries.

@@ -31,7 +31,7 @@ function compare(prepare:(r:ReturnType<typeof fixture>)=>void,frames=75){
  return a;
 }
 describe.skipIf(!ready)('Hammer source Draw and source-owned animation events',()=>{
- for(const state of [0,3,10,11,12,13,14])for(const flash of [0,1])it(`state ${state}, flash ${flash}`,()=>{compare(({s})=>{s.state=state;s.flash=flash;s.becomeflash=flash;s.saverudebusterstarcount=8;s.motor_swing_down=750;});});
+ for(const state of [0,3,10,11,12,13,14])for(const flash of [0,1])it(`state ${state}, flash ${flash}`,()=>{compare(({s})=>{s.state=state;s.flash=flash;s.becomeflash=flash;s.saverudebusterstarcount=8;});});
  for(const gold of [0,1])for(const timer of [0,100])it(`gold ${gold}, timer ${timer}`,()=>{compare(({s,rt})=>{s.goldcon=gold;rt.globals.turntimer=timer;s.goldalpha=.1;s.rudebusterflashcon=1;s.rudebusterflashtimer=2;});});
  for(const nohair of [false,true])it(`final animation, no hair ${nohair}`,()=>{compare(({s})=>{s.endcon=5;s.endtimer=25;s.nohairsprite=nohair;});});
  it('does not advance Chapter 4 hurt timing in Draw',()=>{const a=compare(({s})=>{s.state=3;s.hurttimer=6;},3);expect(a.s.hurttimer).toBe(6);});

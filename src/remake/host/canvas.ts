@@ -33,6 +33,18 @@ export class CanvasGraphics implements GmGraphics{
  private writeAlpha=true;
  private mode:BlendMode='normal';
  private testAlpha=false;
+ private useLinearAlpha=false;
+ linearAlpha(enabled:boolean){this.useLinearAlpha=enabled;}
+ private screenAlphaMask:Uint8Array|null=null;
+ /** Native application surfaces retain alpha even when presentation uses an opaque Canvas. */
+ alphaMaskRect(x1:number,y1:number,x2:number,y2:number,alpha:number){
+  if(this.targetSurface!==null)throw Error('Alpha-only rectangles on offscreen targets are not implemented');
+  const w=this.screen.canvas.width,h=this.screen.canvas.height;
+  if(this.screenAlphaMask?.length!==w*h)this.screenAlphaMask=new Uint8Array(w*h).fill(255);
+  const l=Math.max(0,Math.ceil(Math.min(x1,x2)-this.vx-.5)),t=Math.max(0,Math.ceil(Math.min(y1,y2)-this.vy-.5)),r=Math.min(w,Math.ceil(Math.max(x1,x2)-this.vx+.5)),b=Math.min(h,Math.ceil(Math.max(y1,y2)-this.vy+.5)),a=Math.round(255*Math.max(0,Math.min(1,alpha)));
+  for(let y=t;y<b;y++)if(r>l)this.screenAlphaMask!.fill(a,y*w+l,y*w+r);
+ }
+ private maskAlpha(x:number,y:number){return this.targetSurface===null&&this.screenAlphaMask?this.screenAlphaMask[y*this.screen.canvas.width+x]/255:undefined;}
  private raster:CanvasRenderingContext2D|null=null;
  private scratch:HTMLCanvasElement|null=null;
  private surfacePixels=new Map<number,ImageData>();
@@ -298,20 +310,21 @@ export class CanvasGraphics implements GmGraphics{
     const u=Math.floor((lx+s.originX-f.tx)*ux),v=Math.floor((ly+s.originY-f.ty)*uy);
     if(u<0||v<0||u>=f.sw||v>=f.sh)continue;
     const j=(v*f.sw+u)*4,aByte=src[j+3];if(aByte===0)continue;
-    const sa=aByte===255?alpha:aByte/255*alpha;if(sa===0)continue;
+    const sa=aByte===255?alpha:this.useLinearAlpha?Math.max(aByte/255-1+alpha,0):aByte/255*alpha;if(sa===0)continue;
     const r=fog?fr:Math.round(src[j]*tr),g=fog?fg:Math.round(src[j+1]*tg),b=fog?fb:Math.round(src[j+2]*tb),i=((y-oy)*iw+x-ox)*4;
     if(sa===1&&normalWrite){dst[i]=r;dst[i+1]=g;dst[i+2]=b;dst[i+3]=255;continue;}
     if(aByte===255&&addWrite){dst[i]=Math.round(r*sa+dst[i]);dst[i+1]=Math.round(g*sa+dst[i+1]);dst[i+2]=Math.round(b*sa+dst[i+2]);dst[i+3]=Math.round(saSq255+dst[i+3]);continue;}
-    this.pixel(dst,i,r,g,b,sa);
+    this.pixel(dst,i,r,g,b,sa,this.mode==='dest-alpha-inverse'?this.maskAlpha(x,y):undefined);
    }
   }
   if(!screen){this.dirtySurfaces.add(this.targetSurface!);return true;}
   target.putImageData(image,left,top);return true;
  }
- private pixel(dst:Uint8ClampedArray,i:number,r:number,g:number,b:number,sa:number){
+ private pixel(dst:Uint8ClampedArray,i:number,r:number,g:number,b:number,sa:number,maskAlpha?:number){
   if(this.testAlpha&&sa===0)return;
-  const da=dst[i+3]/255,keepAlpha=this.writeAlpha?-1:dst[i+3];
+  const da=maskAlpha??dst[i+3]/255,keepAlpha=this.writeAlpha?-1:dst[i+3];
   this.blendPixel(dst,i,r,g,b,sa,da);
+  if(maskAlpha!==undefined&&this.targetSurface===null)dst[i+3]=255;
   if(keepAlpha>=0)dst[i+3]=keepAlpha;
  }
  private blendPixel(dst:Uint8ClampedArray,i:number,r:number,g:number,b:number,sa:number,da:number){
@@ -320,13 +333,13 @@ export class CanvasGraphics implements GmGraphics{
   if(this.mode==='subtract'){
    dst[i]=Math.round(dst[i]*(1-r/255));dst[i+1]=Math.round(dst[i+1]*(1-g/255));dst[i+2]=Math.round(dst[i+2]*(1-b/255));dst[i+3]=Math.round(dst[i+3]*(1-sa));return;
   }
-  const sf=this.mode==='dest-alpha-add'||this.mode==='dest-alpha-copy'?da:sa;
-  const df=this.mode==='dest-alpha-copy'?0:this.mode==='dest-alpha-add'?da:this.mode==='add'||this.mode==='add-preserve-alpha'?1:1-sa;
+  const sf=this.mode==='dest-alpha-add'||this.mode==='dest-alpha-copy'||this.mode==='dest-alpha-inverse'?da:sa;
+  const df=this.mode==='dest-alpha-copy'?0:this.mode==='dest-alpha-inverse'?1-da:this.mode==='dest-alpha-add'?da:this.mode==='add'||this.mode==='add-preserve-alpha'?1:1-sa;
   dst[i]=Math.round(r*sf+dst[i]*df);dst[i+1]=Math.round(g*sf+dst[i+1]*df);dst[i+2]=Math.round(b*sf+dst[i+2]*df);
   dst[i+3]=Math.round(255*(this.mode==='add-preserve-alpha'||this.mode==='normal-preserve-alpha'?sa*da:sa*sf+da*df));
  }
  private paint(draw:()=>void,bounds:()=>Bounds|null,key:string,args:unknown[]){
-  if(this.raster||(this.targetSurface===null&&(this.mode==='normal'||this.mode==='add'))){draw();return;}
+  if(this.raster||(this.targetSurface===null&&!this.useLinearAlpha&&(this.mode==='normal'||this.mode==='add'))){draw();return;}
   if(this.targetSurface!==null){
    const id=this.targetSurface;
    if(key==='spriteTiled'&&!this.targetContext.imageSmoothingEnabled&&!this.testAlpha&&this.writeAlpha){
@@ -517,7 +530,7 @@ export class CanvasGraphics implements GmGraphics{
  /** Drawing on the game's opaque presentation target in normal or additive mode, untinted: Canvas compositing gives
   * the same visible RGB as the raw blend (the screen is filled black every frame). */
  private opaqueScreenBlend(blend:number){
-  return this.targetSurface===null&&this.screen.getContextAttributes().alpha===false&&!this.testAlpha&&this.writeAlpha&&blend===0xffffff&&(this.mode==='normal'||this.mode==='add');
+  return this.targetSurface===null&&!this.useLinearAlpha&&this.screen.getContextAttributes().alpha===false&&!this.testAlpha&&this.writeAlpha&&blend===0xffffff&&(this.mode==='normal'||this.mode==='add');
  }
  private sample(source:ImageData,left:number,top:number,width:number,height:number,x:number,y:number,xscale:number,yscale:number,blend:number,alpha:number,fog=false,preblended=false){
   if(alpha<=0&&(this.mode==='normal'||this.mode==='add'))return;
@@ -597,7 +610,7 @@ export class CanvasGraphics implements GmGraphics{
     // A zero-alpha mask contributes no RGB in either separate-alpha blend. It still clears
     // destination alpha when enabled; do that directly instead of blending four channels.
     if(aByte===0&&separate){if(write)data[i+3]=0;continue;}
-    const sa=aByte===255?ar:aByte/255*ar;if(sa===0&&skipZero)continue;
+    const sa=aByte===255?ar:this.useLinearAlpha?Math.max(aByte/255-1+ar,0):aByte/255*ar;if(sa===0&&skipZero)continue;
     const r0=fog?255:pixels[j],g0=fog?255:pixels[j+1],b0=fog?255:pixels[j+2];
     if((sa===1&&(mode==='normal'||mode==='normal-preserve-alpha'))||(aByte===255&&(mode==='add'||mode==='add-preserve-alpha'))){
      if(add){data[i]+=tint[r0];data[i+1]+=tint[256+g0];data[i+2]+=tint[512+b0];}
@@ -624,6 +637,7 @@ export class CanvasGraphics implements GmGraphics{
      continue;
     }
     const red=fog?fr:r0*tr,green=fog?fg:g0*tg,blue=fog?fb:b0*tb,da=data[i+3]/255;
+    if(mode==='dest-alpha-inverse'){this.pixel(data,i,red,green,blue,sa,this.maskAlpha(l+col,yy));continue;}
     if(subtract){data[i]=Math.round(data[i]*(1-red/255));data[i+1]=Math.round(data[i+1]*(1-green/255));data[i+2]=Math.round(data[i+2]*(1-blue/255));if(write)data[i+3]=Math.round(data[i+3]*(1-sa));}
     else if(multiply){data[i]=Math.round(data[i]*red/255);data[i+1]=Math.round(data[i+1]*green/255);data[i+2]=Math.round(data[i+2]*blue/255);if(write)data[i+3]=Math.round(data[i+3]*sa);}
     else{

@@ -48,11 +48,12 @@ function music(rt:GmRuntime,name:string,loop:boolean){
  * (obj_mainchara, global.cinstance) and shows the overworld again; the remake's battles have no overworld, so there is
  * nobody to run back to: the heroes stay gone (scr_endcombat removed them) and the alarm is the 15 frames it is
  * without them. */
+const END_BATTLE:Readonly<Record<number,{rememberTension:boolean}>>={1:{rememberTension:false},2:{rememberTension:false},3:{rememberTension:false},4:{rememberTension:true}};
 export const endBattle:GmObjectDef={name:'obj_endbattle',index:310,events:{
  create:(s,rt)=>{
   const g=rt.globals;s.alarm[0]=15;s.con=0;
   for(const b of rt.withInstances(battleBack))b.destroy=1;
-  s.count=0;g.tension=0;
+  s.count=0;if(forChapter(rt,END_BATTLE,'obj_endbattle').rememberTension)g.flag[49]=g.tension;g.tension=0;
   if(g.flag[9]===1)rt.sourceAudio?.volume(g.batmusic[1],0,s.alarm[0]);
  },
  alarm0:(s,rt)=>{const g=rt.globals;if(g.specialbattle===0||g.specialbattle===2)g.interact=0;rt.destroy(s);},
@@ -67,7 +68,7 @@ export const fadeOut:GmObjectDef={name:'obj_fadeout',index:143,depth:-99999,spri
 
 /** obj_gameover_init per chapter: from Chapter 3 the 4-Z skip fades to white before the retry, and in the Knight's
  * battle (tempflag 93) the soul does not break: it floats up to the top of the screen. */
-const GAME_OVER_INIT:Readonly<Record<number,{later:boolean}>>={1:{later:false},2:{later:false},3:{later:true}};
+const GAME_OVER_INIT:Readonly<Record<number,{later:boolean;knight?:boolean}>>={1:{later:false},2:{later:false},3:{later:true,knight:true},4:{later:true}};
 /** Where the soul's six shards start, from its top left corner. */
 const SHARDS=[[-2,0],[0,3],[2,6],[8,0],[10,3],[12,6]];
 /** obj_gameover_init: the last battle frame for a second, then the soul alone in the dark; it cracks, then shatters.
@@ -77,7 +78,9 @@ export const gameOverInit:GmObjectDef={name:'obj_gameover_init',index:135,depth:
   const g=rt.globals;s.imageSpeed=0;s.visible=false;
   const bg=rt.create(marker,0,0);bg.sprite=g.screenshot;bg.imageSpeed=0;s.bg=bg.id;
   s.timer=0;s.Z_COUNT=0;
-  if(forChapter(rt,GAME_OVER_INIT,'obj_gameover_init').later){s.special=0;s.timerb=0;s.knight_mode=g.tempflag[93]===1?1:0;}
+  const rules=forChapter(rt,GAME_OVER_INIT,'obj_gameover_init');
+  if(rules.later)s.timerb=0;
+  if(rules.knight){s.special=0;s.knight_mode=g.tempflag[93]===1?1:0;}
   g.interact=0;
  },
  step:(s,rt)=>{
@@ -91,7 +94,7 @@ export const gameOverInit:GmObjectDef={name:'obj_gameover_init',index:135,depth:
   if(s.timer===30){const bg=rt.byId(s.bg);if(bg)rt.destroy(bg);s.visible=true;s.x=g.heartx;s.y=g.hearty;}
   if(s.timer===31)rt.deleteSprite(g.screenshot);
   const later=forChapter(rt,GAME_OVER_INIT,'obj_gameover_init').later;
-  if(later&&s.knight_mode){
+  if(later&&forChapter(rt,GAME_OVER_INIT,'obj_gameover_init').knight&&s.knight_mode){
    if(s.timer===80){scrLerpvar(s,rt,'x',s.x,312,30,2,'out');scrLerpvar(s,rt,'y',s.y,rt.view.y+80,30,2,'out');}
   }else{
   if(s.timer===50){rt.sound?.('snd_break1');s.sprite='spr_heartbreak';s.x-=2;}
@@ -111,7 +114,7 @@ export const gameOverInit:GmObjectDef={name:'obj_gameover_init',index:135,depth:
   }
   }
   if(later&&s.timerb>0){s.timerb++;if(s.timerb===40)rt.pendingRoom=RETRY_ROOM;}
-  if(s.timer===150&&(!later||s.special===0))rt.pendingRoom='PLACE_FAILURE';
+  if(s.timer===150&&(!later||!('special' in s)||s.special===0))rt.pendingRoom='PLACE_FAILURE';
  },
 }};
 
@@ -192,6 +195,8 @@ FAILURE[3]={...FAILURE[2],choiceSlides:true,
  create:(s,rt)=>{s.text_timer=30;knightFailureCreate(s,rt);if(!s.knight_mode)gameOverTitle(rt);},
  step:(s,rt)=>{if(s.knight_mode)knightFailureStep(s,rt);},
 };
+// Chapter 4's DEVICE_FAILURE retains the normal Chapter 2 prompts and stationary choices.
+FAILURE[4]={...FAILURE[2]};
 const failure=(rt:GmRuntime)=>forChapter(rt,FAILURE,'DEVICE_FAILURE');
 function gameOverTitle(rt:GmRuntime){const bg=rt.create(gameOverBg,0,20);bg.depth=100000-(bg.y*10+rt.spriteHeight(bg)*10);}
 /** Chapter 3's failure screen after losing to the Roaring Knight (tempflag 93): a small soul at the top, and when he

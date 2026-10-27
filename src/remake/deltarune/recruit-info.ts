@@ -57,7 +57,8 @@ const RECRUITS3:Readonly<Record<number,()=>Info>>={
  60:()=>({_sprite:'spr_elnina_idle_left',_name:T('scr_recruit_info_slash_scr_recruit_info_gml_410_0'),_desc:T('scr_recruit_info_slash_scr_recruit_info_gml_411_0'),_like:T('scr_recruit_info_slash_scr_recruit_info_gml_412_0'),_dislike:T('scr_recruit_info_slash_scr_recruit_info_gml_413_0'),_chapter:3,_level:22,_attack:21,_defense:22,_element:T('scr_recruit_info_slash_scr_recruit_info_gml_418_0'),_dialogue_0:T('scr_recruit_info_slash_scr_recruit_info_gml_419_0'),_recruitcount:1}),
  61:()=>({_sprite:'spr_lanino_idle_left',_name:T('scr_recruit_info_slash_scr_recruit_info_gml_425_0'),_desc:T('scr_recruit_info_slash_scr_recruit_info_gml_426_0'),_like:T('scr_recruit_info_slash_scr_recruit_info_gml_427_0'),_dislike:T('scr_recruit_info_slash_scr_recruit_info_gml_428_0'),_chapter:3,_level:22,_attack:22,_defense:21,_element:T('scr_recruit_info_slash_scr_recruit_info_gml_433_0'),_dialogue_0:T('scr_recruit_info_slash_scr_recruit_info_gml_434_0'),_recruitcount:1}),
 };
-const RECRUITS:Readonly<Record<number,Readonly<Record<number,()=>Info>>>>={2:RECRUITS2,3:RECRUITS3};
+// Hammer (105) has no case in Chapter 4 scr_recruit_info; it follows the source default path.
+const RECRUITS:Readonly<Record<number,Readonly<Record<number,()=>Info>>>>={2:RECRUITS2,3:RECRUITS3,4:{}};
 
 /** scr_recruit_info, run by `s` for enemy type `type`. A type with no entry gets a random sprite number (one random
  * call) and cannot be placed. */

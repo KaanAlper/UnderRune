@@ -111,7 +111,7 @@ async function launchRemake(record:EncounterRecord,loadout:Loadout){
  remakeLoad=token;
  try{const remakeAssets=remakeCache.get(record.chapter)??await loadRemakeAssets(record.chapter);if(!sceneWork.current(token))return;remakeCache.set(record.chapter,remakeAssets);await audio.prepareEffects(remakeAssets.sounds,token.signal);const neoHost=isNeoEncounter(record.id)?(await import('./remake/host/neo')).installNeoHost:undefined;
   // Load each chapter's boss registry only when entering one of its battles.
-  const chapterHost=record.chapter===3?(await import('./remake/host/chapter3-bosses')).installChapter3BossHost:record.chapter===2&&!isNeoEncounter(record.id)?(await import('./remake/host/chapter2-bosses')).installChapter2BossHost:undefined;if(!sceneWork.current(token))return;closeBattle();setSourceText(remakeAssets.text);publicLoadout=structuredClone(loadout);
+  const chapterHost=record.chapter===4?(await import('./remake/host/chapter4-bosses')).installChapter4BossHost:record.chapter===3?(await import('./remake/host/chapter3-bosses')).installChapter3BossHost:record.chapter===2&&!isNeoEncounter(record.id)?(await import('./remake/host/chapter2-bosses')).installChapter2BossHost:undefined;if(!sceneWork.current(token))return;closeBattle();setSourceText(remakeAssets.text);publicLoadout=structuredClone(loadout);
   // The game calls randomize() when it starts: every battle gets its own random seed (tests and comparisons fix it).
   // ?seed=N repeats a run exactly (comparisons with the original's recordings).
   const fixedSeed=new URLSearchParams(location.search).get('seed'),seed=fixedSeed!==null?Number(fixedSeed)>>>0:crypto.getRandomValues(new Uint32Array(1))[0];

@@ -14,7 +14,7 @@ import {forChapter} from './rules';
 type Balloon=readonly [sprite:string,frame:number,auto?:boolean,side?:number];
 interface BalloonRules{
  /** Where the writer starts below the balloon's corner. */
- readonly writerY:number;
+ readonly writerY:number;readonly fourth?:boolean;
  /** A self-sizing balloon has its writer lay out the text at once (the writer's User 5), so it fits from the first frame. */
  readonly formatNow:boolean;
  readonly kinds:Readonly<Record<number,Balloon|null>>;
@@ -25,7 +25,7 @@ const KINDS2:Readonly<Record<number,Balloon|null>>={0:null,1:['spr_battleblcon',
 const KINDS3:Readonly<Record<number,Balloon|null>>={...KINDS2,4:['spr_battleblcon_long',0],5:['spr_battleblcon_long',1],
  11:['spr_battleblcon_v2_left',-1],12:['spr_battleblcon_v2_right',-1],12.1:['spr_battleblcon_v2_right2',-1],12.2:['spr_battleblcon_v2_right3',-1],
  12.3:['spr_battleblcon_v2_right4',-1],12.4:['spr_battleblcon_v2_right5',-1],13:['spr_battleblcon_long',-1,true,2],14:['spr_battleblcon_long',-1,true,-1]};
-const BALLOON:Readonly<Record<number,BalloonRules>>={2:{writerY:5,formatNow:false,kinds:KINDS2},3:{writerY:3,formatNow:true,kinds:KINDS3}};
+const BALLOON:Readonly<Record<number,BalloonRules>>={2:{writerY:5,formatNow:false,kinds:KINDS2},3:{writerY:3,formatNow:true,kinds:KINDS3},4:{writerY:3,formatNow:true,fourth:true,kinds:{...KINDS2,4:['spr_battleblcon_long',0],5:['spr_battleblcon_long',1],11:['spr_battleblcon_z',-1]}}};
 const balloon=(rt:GmRuntime)=>forChapter(rt,BALLOON,'obj_battleblcon');
 
 /** obj_battleblcon (Chapter 2 on): a balloon with a writer inside; with auto_length it is drawn around the text. */
@@ -33,6 +33,7 @@ export const battleBalloon2:GmObjectDef={name:'obj_battleblcon',index:875,sprite
  create:(s,rt)=>{
   const w=rt.create(writer,s.x+5,s.y+balloon(rt).writerY);w.depth=9999999;s.mywriter=w.id;
   Object.assign(s,{auto_length:0,side:1,xoffset:0,init:0,reformatted:0,remx:s.x,remy:s.y,remmsgno:-1,initwritingx:-1,initwritingy:-1});
+  if(balloon(rt).fourth)s.creator=-1;
  },
  step:(s,rt)=>{if(!rt.byId(s.mywriter))rt.destroy(s);},
  draw:(s,rt)=>{
@@ -54,7 +55,7 @@ export const battleBalloon2:GmObjectDef={name:'obj_battleblcon',index:875,sprite
     s.writingx=s.initwritingx;s.writingy=s.initwritingy-s.balloonheight/2;
    }
    // Above the speaker (only Chapter 3's kind 13 makes one).
-   if(s.side===2){
+   if(s.side===2&&!balloon(rt).fourth){
     w.writingx=s.initwritingx-s.balloonwidth/2;w.writingy=s.initwritingy-(s.balloonheight+20);
     s.writingx=s.initwritingx-s.balloonwidth/2;s.writingy=s.initwritingy-(s.balloonheight+20);
    }
@@ -64,7 +65,7 @@ export const battleBalloon2:GmObjectDef={name:'obj_battleblcon',index:875,sprite
    s.blconscale=s.balloonheight<40?0.5:1;
    if(s.side===1)rt.drawSprite('spr_battleblcon_parts',4,s.x,s.y,1,s.blconscale,0,C.white,1);
    if(s.side===-1)rt.drawSprite('spr_battleblcon_parts',4,s.x-s.xoffset,s.y,-1,s.blconscale,0,C.white,1);
-   if(s.side===2)rt.drawSprite('spr_battleblcon_parts',4,s.x,s.y,1,1,-90,C.white,1);
+   if(s.side===2){if(balloon(rt).fourth)rt.drawSprite('spr_battleblcon_parts',6,s.writingx-6+s.balloonwidth/2,s.writingy+s.balloonheight+6,1,s.blconscale,0,C.white,1);else rt.drawSprite('spr_battleblcon_parts',4,s.x,s.y,1,1,-90,C.white,1);}
    rt.drawState.color=C.white;
    rt.drawRect(s.writingx-10,s.writingy-5,s.writingx+s.balloonwidth,s.writingy+s.balloonheight-5,false);
    rt.drawRect(s.writingx-5,s.writingy-10,s.writingx+s.balloonwidth-5,s.writingy+s.balloonheight,false);
@@ -92,7 +93,7 @@ export function enemyBlcon2(s:GmInstance,rt:GmRuntime,x:number,y:number,kind:num
  * relative to the full size; Chapter 3 builds it at the size of its stretched hitbox sprite, rounds only odd sizes,
  * and scales it by the growth fraction (sizer) times growscale. */
 interface BoxRules{readonly sizer:boolean;}
-const GROWTANGLE:Readonly<Record<number,BoxRules>>={2:{sizer:false},3:{sizer:true}};
+const GROWTANGLE:Readonly<Record<number,BoxRules>>={2:{sizer:false},3:{sizer:true},4:{sizer:true}};
 /** The custom box's drawing scale while it grows. */
 const boxScale=(s:GmInstance,rt:GmRuntime):[number,number]=>forChapter(rt,GROWTANGLE,'obj_growtangle').sizer?[s.sizer*s.growscale,s.sizer*s.growscale]:[s.imageXscale/(s.maxxscale/2),s.imageYscale/(s.maxyscale/2)];
 export const growtangle2:GmObjectDef={name:'obj_growtangle',index:877,depth:5,parent:battleSolid,sprite:'spr_battlebg_0',mask:'spr_battlebg_0',events:{

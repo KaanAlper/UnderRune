@@ -6,7 +6,7 @@ import {forChapter} from './rules';
 export type Chapter2BulletRunner=((self:GmInstance,rt:GmRuntime)=>boolean)&{destroy?:(self:GmInstance,rt:GmRuntime)=>void};
 /** The source controller's shared prelude; pattern ownership is delegated to independent encounter factories. */
 /** Chapter 3's bullet maker also starts with a random base direction (basedir), a counter and four empty end texts. */
-const BULLET_MAKER:Readonly<Record<number,{later:boolean}>>={2:{later:false},3:{later:true}};
+const BULLET_MAKER:Readonly<Record<number,{later:boolean;counter?:boolean}>>={2:{later:false},3:{later:true},4:{later:false,counter:true}};
 export function createChapter2BulletController(object:(name:string)=>GmObjectDef,patterns:readonly Chapter2BulletRunner[]):GmObjectDef{
  return {name:'obj_dbulletcontroller',index:394,parent:object('obj_bulletgenparent'),sprite:'spr_grazemask',visible:false,events:{
   create:(s,rt)=>{
@@ -14,6 +14,7 @@ export function createChapter2BulletController(object:(name:string)=>GmObjectDef
    const population=monsterPop(rt);if(population===2)s.ratio=1.6;if(population===3)s.ratio=2.3;
    Object.assign(s,{side:1,difficulty:0,made:0,special:0,roundcount:0,init:0,sameattack:0,sameattacker:0,miny:999,maxy:999,maxx:999,creator:0});
    if(forChapter(rt,BULLET_MAKER,'obj_dbulletcontroller').later){s.basedir=rt.random.irandom(360);s.n=0;s.endtext2='';s.endtext3='';s.endtext4='';s.endtext5='';}
+   if(forChapter(rt,BULLET_MAKER,'obj_dbulletcontroller').counter)s.n=0;
   },
   step:(s,rt)=>{
    if(s.init===0){

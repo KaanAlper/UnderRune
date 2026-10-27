@@ -4,7 +4,7 @@ import {gmArray,type GmObjectDef} from '../gm/runtime';
 import {C} from '../gm/graphics';
 import {KEY,button1_p,held} from './keys';
 import {forChapter} from './rules';
-const CHOICE_PARTS:Readonly<Record<number,{remote:boolean;localDrawLoop:boolean}>>={2:{remote:false,localDrawLoop:false},3:{remote:true,localDrawLoop:true}};
+const CHOICE_PARTS:Readonly<Record<number,{remote:boolean;localDrawLoop:boolean;style?:boolean}>>={2:{remote:false,localDrawLoop:false},3:{remote:true,localDrawLoop:true},4:{remote:false,localDrawLoop:false,style:true}};
 
 export const choicerNeo:GmObjectDef={name:'obj_choicer_neo',index:0,depth:-600,events:{
  create:(s,rt)=>{
@@ -21,6 +21,7 @@ export const choicerNeo:GmObjectDef={name:'obj_choicer_neo',index:0,depth:-600,e
   s.chx=140*s.dar+s.xx;s.chy=(36+s.d_add)*s.dar+s.yy+s.fighting*30;s.hx=s.chx;s.hy=s.chy;
   s.mychoice=-1;g.choice=-1;s.choiced=0;s.choicetotal=3;
   s.textposx=[0,0,0,0];s.textposy=[0,0,0,0];
+  if(forChapter(rt,CHOICE_PARTS,'choice dialog').style)Object.assign(s,{boardwriter:0,heartSprite:'spr_heartsmall',choicerstyle:0});
   if(forChapter(rt,CHOICE_PARTS,'choice dialog').remote){
    if(rt.instances.some(i=>i.live&&i.object.name==='obj_board_writer'))throw Error('Board-writer choice layout is not ported');
    Object.assign(s,{boardwriter:0,heartSprite:'spr_heartsmall',choicerstyle:0,controlled:true,remoteu:0,remoted:0,remotel:0,remoter:0,remote1:0});

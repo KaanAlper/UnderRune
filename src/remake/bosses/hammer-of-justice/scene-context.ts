@@ -57,7 +57,7 @@ export function createObjectContext(s:GmInstance,rt:GmRuntime,object:(name:strin
  const targets=(value:any):GmInstance[]=>{
   if(value instanceof GmInstance)return value.live?[value]:[];
   if(value&&typeof value==='object'&&'index'in value)return rt.all(value);
-  if(typeof value==='number'){const i=rt.byId(value);return i?[i]:[];}
+  if(typeof value==='number'){const i=rt.byId(value);if(i)return [i];return rt.instances.filter(i=>{if(!i.live)return false;for(let d:GmObjectDef|undefined=i.object;d;d=d.parent)if(d.index===value)return true;return false;});}
   throw Error(`Invalid Hammer instance target ${String(value)}`);
  };
  const resolve=(value:any)=>{

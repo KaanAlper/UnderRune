@@ -137,8 +137,8 @@ export function executeNeoSource(source:string,s:GmInstance,rt:GmRuntime,host:Ne
  const calls=new Proxy({}, {get:(_o,k)=>typeof k==='string'?(p:Record<string,any>,...a:any[])=>invoke(k,p,...a):undefined}) as Record<string,(self:Record<string,any>,...args:any[])=>any>;
  const constants:Record<string,any>={global:rt.globals,room:host.room??'room_dw_mansion_b_east',room_width:rt.room.width,room_height:rt.room.height,room_speed:rt.bank.roomSpeed,view_wport:[rt.view.width],view_hport:[rt.view.height],e__VW:{XView:0,YView:1,WView:2,HView:3},fa_left:0,fa_center:1,fa_right:2,noone:-4,all:-3,c_white:C.white,c_black:C.black,c_green:C.green,c_lime:C.lime,c_purple:C.purple,c_orange:C.orange,c_red:C.red,c_blue:0xff0000,c_yellow:C.yellow,c_aqua:C.aqua,c_gray:C.gray,c_ltgray:C.ltgray,c_teal:0x808000,c_silver:0xc0c0c0,c_fuchsia:0xff00ff,c_maroon:0x000080,c_navy:0x800000,c_olive:0x008080,vk_f1:112,gp_stickr:32780,vk_enter:13,vk_shift:16,vk_control:17,vk_space:32,vk_left:37,vk_up:38,vk_right:39,vk_down:40,pi:Math.PI};
  const environment=new Proxy(constants,{
-  has:(_o,k)=>typeof k==='string'&&(k in constants||/^(obj_|o_|spr_|bg_|snd_|room_|scr_|mus_)/.test(k)),
-  get:(o,k)=>typeof k!=='string'?undefined:k in o?o[k]:/^(obj_|o_)/.test(k)?host.object(k):/^(spr_|bg_|snd_|room_|scr_|mus_)/.test(k)?k:undefined,
+  has:(_o,k)=>typeof k==='string'&&(k in constants||/^(obj_|o_|spr_|bg_|snd_|motor_|room_|scr_|mus_)/.test(k)),
+  get:(o,k)=>typeof k!=='string'?undefined:k in o?o[k]:/^(obj_|o_)/.test(k)?host.object(k):/^(spr_|bg_|snd_|motor_|room_|scr_|mus_)/.test(k)?k:undefined,
  });
  let program=compiled.program;
  if(args){const declared=program.statements.find(n=>n.kind==='function'&&(!entryName||n.name===entryName));if(!declared)throw Error(`NEO script has no declared function ${entryName??''}`);program={statements:[...program.statements,{kind:'return',value:{kind:'call',callee:{kind:'identifier',name:declared.name},args:args.map(value=>({kind:'literal',value}))}}]};}
