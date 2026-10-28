@@ -45,8 +45,8 @@ const playable:readonly SourceEncounter[]=[
  // Chapter 3's secret boss, after the fountain scene (obj_ch3_PTB02).
  {id:'ch3-115',chapter:3,name:'Roaring Knight',party:[1,2,3],hp:7300,attack:40,defense:0,music:'knight',practice:true},
  // First weather duo fight; original introduction, choices and the 99-TV ending are accepted.
- {id:'ch3-113',chapter:3,name:'Lanino & Elnina',party:[1,2,3],hp:8880,attack:12,defense:0,music:'battle',practice:false},
- {id:'ch4-160',chapter:4,name:'Hammer of Justice',party:[2],hp:1350,attack:14,defense:0,music:'gerson_theme_intro',practice:false},
+ {id:'ch3-113',chapter:3,name:'Lanino & Elnina',party:[1,2,3],hp:8880,attack:12,defense:0,music:'battle',practice:true},
+ {id:'ch4-160',chapter:4,name:'Hammer of Justice',party:[2],hp:1350,attack:14,defense:0,music:'gerson_theme_intro',practice:true},
 ];
 /** Route variants share their parent's card; readiness does not add a duplicate menu encounter. */
 const variants:readonly SourceEncounter[]=[

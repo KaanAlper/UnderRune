@@ -64,6 +64,8 @@ it('opens a fresh Hammer battle with solo Susie and a real command menu',()=>{
  for(let f=0;f<50;f++){b.step();b.rt.draw();}
  expect(b.rt.globals.char).toEqual([2,0,0]);expect(b.phase).toBe('command');
  const enemy=b.rt.instances.find(s=>s.live&&s.object.name==='obj_hammer_of_justice_enemy')!;expect(enemy).toBeDefined();
+ expect(b.rt.globals.monsterhp[0]).toBe(1350);expect(b.rt.globals.monsterat[0]).toBe(14);expect(b.rt.globals.monsterdf[0]).toBe(0);
+ expect(b.rt.globals.monstername[0]).toBeTruthy();expect(b.rt.globals.monsterx[0]).toBe(b.rt.globals.monstermakex[0]+b.rt.spriteWidth(enemy)/2);expect(b.rt.globals.monstery[0]).toBe(b.rt.globals.monstermakey[0]+b.rt.spriteHeight(enemy)/2);
  expect(b.rt.instances.filter(s=>s.live&&s.object.name==='obj_herosusie')).toHaveLength(1);
 });
 for(const turn of [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20])it(`runs source turn ${turn} through the real actor registry`,()=>{

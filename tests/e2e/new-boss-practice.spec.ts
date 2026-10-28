@@ -1,0 +1,7 @@
+import {test,expect} from '@playwright/test';
+for(const [chapter,id,name,count] of [[3,'ch3-113','Lanino & Elnina',14],[4,'ch4-160','Hammer of Justice',19]] as const)test(`${name} exposes selectable practice attacks and launches the selected one`,async({page})=>{
+ test.setTimeout(60000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(process.env.UNDERRUNE_PUBLIC_URL??'http://127.0.0.1:5173/?demo=1');
+ for(const label of ['DELTARUNE remote','Connect DELTARUNE','Connect device'])await page.getByRole('button',{name:label,exact:true}).click();await page.getByRole('button',{name:'Chapter '+chapter,exact:true}).click();await page.locator('#boss-select').selectOption(id);
+ const select=page.getByRole('combobox',{name:'Practice pattern',exact:true});await expect(select).toBeEnabled();await expect(select.locator('option')).toHaveCount(count);await select.selectOption(String(count-1));const selected=await select.locator('option:checked').innerText();await page.getByRole('button',{name:'Practice selected boss',exact:true}).click();await page.getByRole('button',{name:'START PRACTICE',exact:true}).click();
+ await expect(page.locator('#loading')).toBeHidden({timeout:25000});await expect(page.locator('#status')).toContainText(selected);await expect(page.locator('#status')).toContainText('PRACTICE');await page.waitForTimeout(1800);await expect(page.locator('#error')).toBeHidden();expect(errors).toEqual([]);
+});

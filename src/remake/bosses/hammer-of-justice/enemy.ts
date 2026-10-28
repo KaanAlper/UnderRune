@@ -22,6 +22,6 @@ export function createHammerEnemy(object:(name:string)=>GmObjectDef,integrations
  const enemy:HookedDef={...object('obj_hammer_of_justice_enemy'),hooks:{soulEntry:(_s,rt)=>{const h=rt.first(object('obj_herosusie'));if(!h)throw Error('Hammer soul entry requires Susie');return [h.x-250,h.y+40];}},events:{
   create:(s,rt)=>initializeHammer(s,rt,object),step:integrations?(s,rt)=>stepHammer(s,rt,object,integrations.scene):missing('Step integration'),draw:integrations?(s,rt)=>drawHammer(s,rt,object,integrations.draw):missing('Draw integration'),endStep:(s,rt)=>constrainHammerSoul(s,rt,object),cleanup:(s,rt)=>cleanupHammer(s,rt,object),
   alarm4:s=>{s.con++;},alarm6:s=>{if(s.balloonend===1)s.talked=1;else{s.talked=.6;s.talktimer=0;}},alarm7:s=>{s.talktimer=0;},
-  user0:buildHammerPattern,user1:()=>{},user2:(s,rt)=>{const g=rt.globals;g.monsterx[s.myself]=s.x+rt.spriteWidth(s)/2;g.monstery[s.myself]=s.y+rt.spriteHeight(s)/2;monsterSetup(s,rt);},user3:()=>{},user14:(s,rt)=>clearHammerAttack(s,rt,object),
+  user0:buildHammerPattern,user11:()=>{},user12:(s,rt)=>{const g=rt.globals;g.monsterx[s.myself]=s.x+rt.spriteWidth(s)/2;g.monstery[s.myself]=s.y+rt.spriteHeight(s)/2;monsterSetup(s,rt);},user13:()=>{},user14:(s,rt)=>clearHammerAttack(s,rt,object),
  }};return enemy;
 }

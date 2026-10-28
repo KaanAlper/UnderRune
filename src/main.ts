@@ -188,6 +188,7 @@ function updateControls(){
   const rows=menuRecords();if(bossDeck){const mounted=!overlay.contains(bossDeck.element);if(mounted)overlay.replaceChildren(bossDeck.element);bossDeck.update(rows,selection,chapter,prefs.completed,id=>publicMode?!!playableEncounter(id):nativeIds.has(id)||!!playableEncounter(id),index=>{selection=index;sceneKey='';},()=>{if(scenes.current!=='menu')return;audio.unlock();void startBattle(false);});if(mounted)bossDeck.focusSelected();}
   const selectedId=rows[selection].id,patterns=practicePatterns(selectedId);
   const select=element<HTMLSelectElement>('attack-select'),previous=patternEncounterId===selectedId?select.value:'0';patternEncounterId=selectedId;select.replaceChildren();for(const [i,a]of patterns.entries()){const opt=document.createElement('option');opt.value=String(i);opt.textContent=a.name;select.append(opt);}select.value=Number(previous)<patterns.length?previous:'0';
+  if(!patterns.length){const opt=document.createElement('option');opt.value='0';opt.textContent='Practice not available yet';select.append(opt);select.value='0';}
   select.disabled=!playableEncounter(selectedId)?.practice||!patterns.length;element<HTMLButtonElement>('practice').disabled=select.disabled;
   const practiceLink=bossDeck?.element.querySelector<HTMLButtonElement>('.deck-practice');if(practiceLink)practiceLink.disabled=select.disabled;
   element('practice-boss').textContent=rows[selection].name;

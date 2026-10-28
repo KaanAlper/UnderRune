@@ -8,6 +8,8 @@ import {bulletController} from '../bosses/jevil/controller';
 import {jokerBody} from '../bosses/jevil/body';
 import {EngineBattle} from './engine';
 import type {installNeoHost} from './neo';
+import {HAMMER_PATTERNS} from './hammer-practice';
+import {WEATHER_PATTERNS} from './weather-practice';
 
 // Practice selections follow obj_joker Other_15; this host is not the full battle AI or command menu.
 export const JEVIL_PATTERNS=[
@@ -387,6 +389,8 @@ const PRACTICE_PATTERNS:Readonly<Record<string,readonly PracticePattern[]>>={
  'ch2-84':GIGA_QUEEN_PATTERNS,
  'ch2-89':TASQUE_MANAGER_DOJO_PATTERNS,
  'ch3-115':ROARING_KNIGHT_PATTERNS,
+ 'ch3-113':WEATHER_PATTERNS,
+ 'ch4-160':HAMMER_PATTERNS,
 };
 
 export function practicePatterns(encounterId:string):readonly PracticePattern[]{

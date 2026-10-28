@@ -1013,6 +1013,23 @@ New scripts go in `tools/oracle-scripts.mjs`.
   Browser actor fixtures reported no missing sprites; sampled p95 Step+Draw times were 2.5/8/11.3 ms for
   source turns 5/10/20 on this machine (not a guarantee for all hardware).
 
+### 19n. Public startup contracts and practice correction (2026-10-28)
+
+- The first Hammer publication afbfc5e / Pages fdc774e had a setup binding defect: native Other 22 was
+  exposed as user2 rather than user12. The common controller calls user12, so monster positions and stats
+  remained at their reset values. MISS and enemy balloons appeared at the origin. Correct the event mapping
+  (Other 21/22/23 -> user11/12/13); never compensate by moving the text renderer or special-casing its coordinates.
+- Added actual public EngineBattle launch contracts across all 26 source routes: independently evaluated source
+  monster HP/AT/DF/name, nonzero finite target positions, party/auto/status/menu values and idle drawing.
+  Knight's concealed name and Weird Noelle's ThornRing idle drain are intentional source behavior.
+- New real practice choices: Hammer's 19 distinct normal queues (excluding debug-only source patterns), and
+  Weather's 14 source special/forecast/favored-side choices. Source box/heart/timers/reset own completion;
+  practice adapters do not change HP or invincibility and never synthesize a scored victory.
+- Preparation/keyboard UI tests now select and launch both new practice lists. Public Hammer browser tests
+  inspect the actual MISS draw coordinates, rather than only checking that no exception was thrown.
+- Scoring freeze, Rude hit-back, item theft, both endings and defeat/Retry/Give Up tests remain part of Hammer's
+  real-host acceptance. Native full-frame replay parity is still a separate validation limit.
+
 ### 19. Remaining work
 
 - The requested General chat and shell scene refactor are complete; see 19h.
