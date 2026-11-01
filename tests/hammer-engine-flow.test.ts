@@ -92,3 +92,13 @@ it('keyboard FIGHT proceeds through the source introduction into live green-soul
  }
  expect(green).toBe(true);expect(spears).toBe(true);
 });
+it('survives an unparried reflected Rude Buster and shows the source OKHeal cost',()=>{
+ setSourceText(chapterText(4));const b=new EngineBattle(loadSprites(4),equipment,defaultLoadout(),'ch4-160',11,{development:true,chapterHost:installChapter4BossHost}),rt=b.rt,g=rt.globals;
+ for(let f=0;f<50;f++)b.step();const enemy=b.enemy!,c=findController(rt)!;
+ // The arena follows the piano puzzle, so Susie's heal is OKHeal at 212.5 TP rather than "Heal" at 255.
+ expect(g.battlespellname[0][1]).toBe('OKHeal');expect(g.battlespellcost[0][1]).toBeLessThan(g.maxtension);
+ Object.assign(enemy,{introtalkcon:-1,talked:1,attacked:1});g.myfight=4;g.mnfight=-1;g.chartarget[0]=0;castSpell(c,rt,4,0);
+ // Never press confirm: the hit-back is missed, Susie is flashed by obj_oflash_gerson_buster and the fight continues.
+ for(let f=0;f<1500;f++){rt.input.pressed=new Set();b.step();rt.draw();}
+ expect(enemy.susiehitbyrudebustercount).toBeGreaterThanOrEqual(1);expect(b.ending).toBeNull();
+},60000);
