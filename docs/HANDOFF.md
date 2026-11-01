@@ -1077,3 +1077,16 @@ New scripts go in `tools/oracle-scripts.mjs`.
   being rewritten. It was not: the fixes were targeted, and the new full-state test is what found them.
 - Do not steal window focus. The recorder runs headless.
 - Restart the dev server after new files appear in `public/generated`. Otherwise Vite serves `index.html` for them.
+
+### 19o. Hammer fixes, boss object audit and Chapter 3/4 box nine-slice (2026-11-01)
+
+- Hammer's battle music is `ch4_extra_boss` (obj_dw_church_arena sets global.batmusic); `gerson_theme_intro` is the cutscene track.
+- The reflected Rude Buster hit-back froze the battle: `obj_oflash_gerson_buster` was an unported stub whose create throws. Also ported
+  `obj_shakedirectional`, `obj_gerson_animation`, `obj_arrow_long_particle`. `tests/boss-object-audit.test.ts` now fails if any object a
+  boss port creates is still a stub; add new bosses to its `BOSSES` table.
+- Susie's heal showed "Heal" at 255 TP because flag 850 was 0; the arena follows the piano puzzle (flag 850 = 7), set in the Hammer battle
+  setup, which restores OKHeal at 212.5 TP.
+- Chapter 3 and 4 `sprites.json` had been exported before nine-slice metadata was kept (Chapter 2 was fixed in section 11), so the Knight's
+  non-square boxes had thick side borders. Re-exported both with `tools/utmt/export-sprites.csx` (LL_EXPORT_DIR per chapter, read-only on
+  data.win) and rebuilt their remake bundles. Chapters 1 and 5 exports still lack it; redo them the same way before porting bosses that use
+  non-square boxes. `tests/box-nine-slice-bundles.test.ts` guards the generated bundles when present.

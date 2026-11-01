@@ -30,6 +30,38 @@ export function installChapter4BossHost(rt:GmRuntime,options:{room:string;hammer
  const baseEnemy=createHammerEnemy(object,services) as HookedDef,enemy:HookedDef={...baseEnemy,hooks:{...baseEnemy.hooks,...hammerHooks(object,native.attack)}};
  registry.register([battleBalloon2,growtangle2,battleCleanup,animator,recruitAnim,createSmallFace(object),doom,lerpvar,afterimageCut,scriptDelayed,fadeOut]);
  registry.register([...createHammerAttackFamilies(object,native.attack).objects,enemy,...createHammerShield(object),createHammerProjectile(object,services.projectile)]);
+ // obj_oflash_gerson_buster: the white flash on Susie when the reflected Rude Buster hits (it follows her hurt frame).
+ registry.register([{...object('obj_oflash_gerson_buster'),events:{
+  create:s=>{Object.assign(s,{flashspeed:1,siner:0,target:43843843,imageSpeed:0,flashcolor:0xffffff,angle:0});},
+  draw:(s,rt)=>{
+   const t=rt.byId(s.target);
+   if(t)s.x=t.x-20+t.hurtindex*10;
+   s.siner+=s.flashspeed;
+   if(s.sprite)rt.drawSpriteFog(s.sprite,s.imageIndex,s.x,s.y,s.imageXscale,s.imageYscale,s.angle,s.flashcolor,Math.sin(s.siner/3));
+   if(s.siner>4&&Math.sin(s.siner/3)<0)rt.destroy(s);
+  },
+ }}]);
+ // Small source objects the Hammer attacks create: directional box/bell shake, the shell spin copy, long-note sparks.
+ registry.register([
+  {...object('obj_shakedirectional'),events:{
+   create:s=>{Object.assign(s,{timer:0,dir:0,target:-1,fakespeed:0});},
+   step:(s,rt)=>{
+    s.timer++;const t=rt.byId(s.target);
+    if(s.dir===0){if(s.timer===1)s.fakespeed=10;if(t){t.x+=s.fakespeed;if(s.timer===6)t.x=t.xstart;}s.fakespeed-=5;}
+    if(s.dir===180){if(s.timer===1)s.fakespeed=-10;if(t){t.x+=s.fakespeed;if(s.timer===6)t.x=t.xstart;}s.fakespeed+=4;}
+    if(s.timer===6)rt.destroy(s);
+   }}},
+  {...object('obj_gerson_animation'),events:{
+   create:s=>{Object.assign(s,{timer:0,spinindex:0,imageSpeed:0});},
+   draw:(s,rt)=>{
+    s.timer++;if(s.timer===2){rt.destroy(s);return;}
+    rt.drawSprite('spr_bounce_shell_idle',s.spinindex,s.x,s.y,s.imageXscale,s.imageXscale,s.imageAngle,0xffffff,s.imageAlpha);
+    rt.drawSpriteFog('spr_bounce_shell_idle_color',s.spinindex,s.x,s.y,s.imageXscale,s.imageXscale,s.imageAngle,0x00ffff,s.imageAlpha);
+   }}},
+  {...object('obj_arrow_long_particle'),events:{
+   create:(s,rt)=>{s.imageXscale=1.5;s.imageYscale=1.5;s.direction=-45+rt.random.irandom(90);s.speed=3;s.imageSpeed=0;},
+   step:(s,rt)=>{s.imageXscale-=0.2;s.imageYscale-=0.2;s.speed-=0.3;if(s.speed<0)rt.destroy(s);}}},
+ ]);
  registry.register([...createHammerSineStream(object),{...object('obj_animation'),events:{animationEnd:(s,r)=>r.destroy(s)}}]);
  registry.register([createScreenAfterimage(object),{...object('obj_particle_generic'),events:{
   create:s=>{Object.assign(s,{fade_rate:0,shrink_rate:0,acceleration_type:0,acceleration_rate:0,acceleration_goal:0,imageBlend:0xfd4dcc});},
@@ -40,7 +72,8 @@ export function installChapter4BossHost(rt:GmRuntime,options:{room:string;hammer
  registry.register([{...object('obj_gamecontroller'),events:{create:s=>{s.gamepad_active=0;}}}]);
  rt.battleSetup={monster:setupHammerMonster,encounter:(r,n,enemies)=>{
   if(n!==HAMMER_ENCOUNTER.number)return false;
-  const g=r.globals;g.monstertype=[0,0,0];g.monsterinstancetype=[0,0,0];
+  const g=r.globals;g.flag[850]=7; // the arena follows the piano puzzle; below 6 scr_spellinfo shows Susie's heal as "Can't use" at 255 TP
+  g.monstertype=[0,0,0];g.monsterinstancetype=[0,0,0];
   for(const [i,[name,type,x,y]] of HAMMER_ENCOUNTER.monsters.entries()){const def=enemies[name];if(!def)throw Error(`Encounter ${n} needs ${name}`);g.monsterinstancetype[i]=def;g.monstertype[i]=type;g.monstermakex[i]=r.view.x+x;g.monstermakey[i]=r.view.y+y;}
   for(const [i,[x,y]] of hammerHeroPositions(options.room).entries()){g.heromakex[i]=x;g.heromakey[i]=y;}
   g.battlemsg[0]=sourceText('scr_encountersetup_slash_scr_encountersetup_gml_'+HAMMER_ENCOUNTER.intro);return true;
