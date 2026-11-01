@@ -22,24 +22,6 @@ Press **PLAY**, choose the DELTARUNE remote, connect through the TV, and select 
 - **Outcome:** victory and defeat are detected; won battles are marked in the menu.
 - **Source practice:** Jevil's separate practice mode (`PRACTICE [T]`) uses the source attack objects. Without a local native profile, supported encounters run on the source engine; unsupported encounters keep preparation previews with launch disabled. The former generic approximation engine has been removed.
 
-## How it works
-
-```mermaid
-flowchart LR
-  A[App<br/>Vite + TypeScript] -- public / supported source port --> E[Source controller + enemies<br/>browser runtime]
-  A -- local native profile --> B[/native/ player<br/>iframe/]
-  B -- UnderRune.ini --> C[Butterscotch WASM<br/>patched runtime]
-  D[(Installed DELTARUNE)] -- data.win copy + launcher --> C
-  D -- sounds, music, language files --> C
-  C -- victory / defeat --> A
-  E -- victory / defeat --> A
-```
-
-- **Launcher** (`tools/utmt/build-native-launcher.csx`): in a **copy** of each chapter's `data.win`, only the startup step and the test room's creation code change. The chosen encounter starts through the game's own `scr_battle` call. Battle code, bosses and every other script stay untouched; the installed game's file hashes are verified on every build.
-- **Party:** each encounter's party is derived from the game code and stored with its evidence in `src/bosses/parties.json`. For example, Susie fights Hammer of Justice alone, and Kris and Ralsei face Susie & Lancer. Raw evidence lives in `docs/encounter-parties.json`.
-- **Runtime patch** (`runtime/patches/browser-compat.patch`): adds missing APIs such as positional audio and texture repeat. GameMaker's GLSL ES 1.00 shaders are compiled as GLSL ES 3.00 on WebGL2, so palette swappers and blur effects work.
-- **Browser support:** browsers with JSPI get the fast runtime; others get the portable (Asyncify) runtime automatically.
-
 ## Requirements
 
 - Windows 10/11, [Node.js](https://nodejs.org/) 24+, Git
